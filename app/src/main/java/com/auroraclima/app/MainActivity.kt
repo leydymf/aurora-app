@@ -4,46 +4,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.auroraclima.app.core.ui.theme.AuroraTheme
+import com.auroraclima.app.weather.ui.WeatherScreen
+import com.auroraclima.app.weather.ui.WeatherViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val weatherViewModel: WeatherViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             AuroraTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                val state by weatherViewModel.uiState.collectAsState()
+                WeatherScreen(
+                    state = state,
+                    onSearchQueryChange = weatherViewModel::onSearchQueryChange
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AuroraTheme {
-        Greeting("Android")
     }
 }

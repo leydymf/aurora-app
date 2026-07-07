@@ -13,6 +13,12 @@ El sistema debe presentarse con nombre, ícono y pantalla inicial de una aplicac
 
 *Notas:* Base del mecanismo de camuflaje (HU-01).
 
+> **Refinamiento F1 (A2-6, 2026-07-07):** la decisión de diseño F1 fija «Aurora» como
+> nombre de la app de clima (fenómeno del cielo, creíble como marca meteorológica).
+> El criterio 2 debe leerse como "ningún texto o recurso visible hace referencia a
+> Aurora *como espacio seguro* o a violencia de género". Pendiente reflejar este
+> ajuste en el xlsx fuente (ver P-08 en `docs/PENDIENTES.md`).
+
 ## RF-02 — Búsqueda y selección de ciudad
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-01
 

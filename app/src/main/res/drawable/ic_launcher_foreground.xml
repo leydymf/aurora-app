@@ -1,30 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Destello del amanecer con halo cálido (docs/marca/18-aurora-app-icon.svg).
+     El contenido original vive en un viewBox de 44u; se escala 1.5x y se centra
+     en la zona segura de 66dp del ícono adaptativo (108dp). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:endX="85.84757"
-                android:endY="92.4963"
-                android:startX="42.9492"
-                android:startY="49.59793"
-                android:type="linear">
-                <item
-                    android:color="#44000000"
-                    android:offset="0.0" />
-                <item
-                    android:color="#00000000"
-                    android:offset="1.0" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillType="nonZero"
-        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328L64.6,57.328z"
-        android:strokeWidth="1"
-        android:strokeColor="#00000000" />
+    <group
+        android:scaleX="1.5"
+        android:scaleY="1.5"
+        android:translateX="21"
+        android:translateY="21">
+        <!-- Halo cálido -->
+        <path android:pathData="M2,22a20,20 0 1,0 40,0a20,20 0 1,0 -40,0Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:centerX="22"
+                    android:centerY="22"
+                    android:gradientRadius="20"
+                    android:type="radial">
+                    <item android:offset="0" android:color="#F2FFE4C4" />
+                    <item android:offset="0.35" android:color="#A6FFC89A" />
+                    <item android:offset="0.7" android:color="#2EF2A06D" />
+                    <item android:offset="1" android:color="#00F2A06D" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- Destello exterior -->
+        <path
+            android:pathData="M22,5Q23.4,19.4 36.5,22Q23.4,24.6 22,39Q20.6,24.6 7.5,22Q20.6,19.4 22,5Z"
+            android:fillColor="#F2A06D"
+            android:fillAlpha="0.55" />
+        <!-- Núcleo del destello -->
+        <path android:pathData="M22,6.5Q23.1,19.7 35.5,22Q23.1,24.3 22,37.5Q20.9,24.3 8.5,22Q20.9,19.7 22,6.5Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:centerX="22"
+                    android:centerY="22"
+                    android:gradientRadius="15.5"
+                    android:type="radial">
+                    <item android:offset="0" android:color="#FFFFFFFF" />
+                    <item android:offset="0.4" android:color="#FFFFF1DC" />
+                    <item android:offset="1" android:color="#FFFFD9A8" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- Brillo interior -->
+        <path
+            android:pathData="M22,13Q22.7,21 30.5,22Q22.7,23 22,31Q21.3,23 13.5,22Q21.3,21 22,13Z"
+            android:fillColor="#FFFFFF"
+            android:fillAlpha="0.85" />
+        <!-- Satélite NE -->
+        <path
+            android:pathData="M33.5,9.5Q33.9,12 36.2,12.4Q33.9,12.8 33.5,15.3Q33.1,12.8 30.8,12.4Q33.1,12 33.5,9.5Z"
+            android:fillColor="#FFE9C9" />
+        <!-- Satélite SO -->
+        <path
+            android:pathData="M10.5,31Q10.85,32.85 12.7,33.2Q10.85,33.55 10.5,35.4Q10.15,33.55 8.3,33.2Q10.15,32.85 10.5,31Z"
+            android:fillColor="#FFD0B0" />
+    </group>
 </vector>

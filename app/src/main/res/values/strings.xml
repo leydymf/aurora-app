@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">aurora</string>
+    <string name="app_name">Aurora</string>
+    <string name="weather_search_hint">Buscar ciudad…</string>
+    <string name="weather_empty_message">Busca una ciudad para ver el clima</string>
 </resources>

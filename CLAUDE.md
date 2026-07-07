@@ -20,13 +20,15 @@ App Android nativa que se presenta como una app de clima funcional ("fachada"), 
 3. Salida rápida: un gesto/botón regresa inmediatamente a la fachada de clima y limpia estado sensible (RF-16, RNF-03).
 4. Nunca registrar en logs, crashlytics ni analytics nada del doble fondo. Sin analytics de terceros.
 5. Datos sensibles siempre cifrados en reposo (SQLCipher) y en tránsito; minimización de datos (RNF-01, RNF-04).
-6. Strings, paquete, ícono y notificaciones solo con identidad de clima (RNF-05). El nombre "Aurora" y su propósito no aparecen en la app visible.
+6. Strings, paquete, ícono y notificaciones solo con identidad de clima (RNF-05). "Aurora" se usa únicamente como marca de app de clima (decisión F1 del entregable A2-6: fenómeno del cielo, creíble en una app meteorológica; en la fachada solo sans neutra, sin símbolo squircle ni serif Marcellus). El propósito real no aparece en ningún elemento visible.
 7. Nada de contenido sensible sin consentimiento informado previo (RF-17, RF-18).
 
 ## Documentos de referencia (leer antes de implementar una funcionalidad)
 - `docs/ARQUITECTURA.md` — reglas de arquitectura y diseño de código. OBLIGATORIO cumplirlas; toda estructura nueva sigue esta guía.
 - `docs/REQUERIMIENTOS.md` — todos los RF/RNF con criterios de aceptación. Cada tarea cita sus RF.
 - `docs/PLAN_PRUEBAS.md` — casos de prueba CP-xx que la implementación debe pasar.
+- `docs/mockups/` — wireframes y diseños de alta fidelidad (PNG). Ver el que corresponda ANTES de implementar cada pantalla.
+- `docs/manual-de-marca.pdf` y `docs/marca/` — identidad visual y logos SVG.
 - `PLAN_FASE3.md` — plan de la semana y alcance del MVP.
 
 ## Convenciones de trabajo
