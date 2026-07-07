@@ -1,0 +1,40 @@
+# Aurora — Plan de Pruebas (extracto)
+
+- **CP-01** (PS, fase 4) — RQ: RF-01 — Verificar que ícono, nombre y pantalla inicial corresponden a una app de clima sin referencias al propósito real.
+- **CP-02** (PI + CN, fase 3 y 4) — RQ: RF-02, RF-03, RF-04 — Búsqueda y selección de ciudad, clima actual real, últimos datos sin conexión y pronóstico de 5 días.
+- **CP-03** (PS, fase 4) — RQ: RF-05, RF-06 — Activación inicial solo con el código; exploración completa sin hallar indicios del doble fondo.
+- **CP-04** (PU + CN, fase 3 y 4) — RQ: RF-07 — Creación de cuenta: caso válido, correo duplicado y contraseña débil.
+- **CP-05** (PU + PS, fase 3 y 4) — RQ: RF-08, RF-09 — Creación y cambio de código: reglas de longitud y ciudad, almacenamiento no legible, confirmación de contraseña.
+- **CP-06** (CN + US, fase 4) — RQ: RF-10, RF-11 — Tutorial con práctica de ingreso y salida rápida; reapertura desde configuración.
+- **CP-07** (PI + PS, fase 3 y 4) — RQ: RF-12, RF-13, RF-14 — Apertura por código exacto, respuesta indistinguible para otras entradas, barra limpia sin historial ni autocompletado.
+- **CP-08** (PU + CN, fase 3 y 4) — RQ: RF-15 — Inicio de sesión: acceso correcto, error genérico, bloqueo tras 5 intentos.
+- **CP-09** (PI + US, fase 3 y 4) — RQ: RF-16 — Salida rápida: retorno al clima en menos de 1 s, sin regreso posible por navegación ni rastro de sesión.
+- **CP-10** (CN, fase 4) — RQ: RF-17, RF-18 — Consentimiento bloqueante sin preselección; rechazo sin recolección de datos; relectura posterior.
+- **CP-11** (CN, fase 4) — RQ: RF-19 — Cierre de sesión y exigencia de credenciales en el siguiente acceso.
+- **CP-12** (CN + PS, fase 4) — RQ: RF-20 — Eliminación de cuenta con doble confirmación y supresión total en dispositivo y nube.
+- **CP-13** (CN, fase 4) — RQ: RF-21, RF-22 — Contenido completo y navegable de tipos de violencia y rutas de atención.
+- **CP-14** (PI, fase 3) — RQ: RF-23 — Llamada con un toque mediante el marcador, sin registro en la app.
+- **CP-15** (PI, fase 3) — RQ: RF-24, RF-25 — Actualización de contenido publicado y tolerancia a fallos mostrando la última versión.
+- **CP-16** (CN, fase 4) — RQ: RF-26, RNF-08 — Modo avión: contenido completo disponible con carga ≤ 2 s.
+- **CP-17** (CN + US, fase 4) — RQ: RF-27, RF-28 — Cuestionario navegable con abandono sin persistencia; descarte de respuestas con salida rápida.
+- **CP-18** (CN, fase 4) — RQ: RF-29, RF-30 — Nivel orientativo correcto según respuestas, accesos a rutas y aviso visible sin desplazamiento.
+- **CP-19** (CN + PS, fase 4) — RQ: RF-31 — El resultado solo persiste con confirmación expresa; descartar no deja registro.
+- **CP-20** (PU + CN, fase 3 y 4) — RQ: RF-32 — Registro de incidente con validación de obligatorios sin pérdida de lo diligenciado.
+- **CP-21** (PI, fase 3) — RQ: RF-33 — Evidencias adjuntas protegidas y visibles solo dentro de Aurora.
+- **CP-22** (PU + CN, fase 3 y 4) — RQ: RF-34, RF-35, RF-36 — Listado cronológico, edición persistida y eliminación con doble confirmación incluyendo evidencias.
+- **CP-23** (PI + PS, fase 3 y 4) — RQ: RF-37, RF-38 — Sincronización por canal seguro con acceso restringido; cola de cambios sin conexión.
+- **CP-24** (CN, fase 4) — RQ: RF-39 — Recuperación íntegra de registros y evidencias en un segundo dispositivo.
+- **CP-25** (PS, fase 4) — RQ: RF-40 — Acceso al panel con rol de administradora; denegación a cuentas sin rol.
+- **CP-26** (CN, fase 4) — RQ: RF-41, RF-42, RF-44 — Gestión de contenido y rutas, integridad al eliminar entidades y reflejo de lo publicado en la app.
+- **CP-27** (CN, fase 4) — RQ: RF-43 — Gestión del cuestionario y bloqueo de publicaciones incompletas.
+- **CP-28** (PS, fase 4) — RQ: RNF-01 — Cifrado: almacenamiento ilegible sin llave y tráfico sin datos en claro.
+- **CP-29** (PS, fase 4) — RQ: RNF-02 — Bloqueo de capturas y ocultamiento en aplicaciones recientes.
+- **CP-30** (PS, fase 4) — RQ: RNF-03 — Cierre automático de sesión a los 5 minutos de inactividad.
+- **CP-31** (PS, fase 4) — RQ: RNF-04 — Auditoría del almacenamiento contra el inventario de datos aprobado.
+- **CP-32** (PS, fase 4) — RQ: RNF-05 — Lista de verificación de camuflaje aplicada ítem por ítem.
+- **CP-33** (PS, fase 4) — RQ: RNF-06 — Separación de acceso: petición administrativa a datos de usuarias rechazada.
+- **CP-34** (PI, fase 3) — RQ: RNF-07 — Arranque ≤ 3 s e interacciones locales ≤ 2 s en dispositivo de gama media.
+- **CP-35** (US, fase 2 y 4) — RQ: RNF-09 — Evaluación heurística sin hallazgos de severidad ≥ 3 pendientes (prototipos y app).
+- **CP-36** (PI, fase 3) — RQ: RNF-10 — Ejecución en la versión mínima de Android definida y en dispositivo reciente.
+- **CP-37** (Revisión, fase 3) — RQ: RNF-11 — Revisión de arquitectura por capas y muestreo de documentación.
+- **Tipos de prueba: PU = unitaria · PI = instrumentada (paralelas al desarrollo, Fase 3) · CN = caja negra · PS = seguridad · US = usabilidad (formales, Fase 4).** (None, fase None) — RQ: None — None
