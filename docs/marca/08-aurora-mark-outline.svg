@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 44 44" role="img" aria-labelledby="t d">
+  <title id="t">Aurora — marca outline</title>
+  <desc id="d">Versión a línea para usos técnicos, blueprint y bordados.</desc>
+  <rect x="2" y="2" width="40" height="40" rx="10" ry="10" fill="none" stroke="#1B2530" stroke-width="0.6"></rect>
+  <path d="M22 7.5 Q23.2 19.6 35 22 Q23.2 24.4 22 36.5 Q20.8 24.4 9 22 Q20.8 19.6 22 7.5 Z" fill="none" stroke="#1B2530" stroke-width="0.6" stroke-linejoin="round"></path>
+  <path d="M22 14 Q22.7 20.8 30 22 Q22.7 23.2 22 30 Q21.3 23.2 14 22 Q21.3 20.8 22 14 Z" fill="none" stroke="#1B2530" stroke-width="0.4"></path>
+  <circle cx="22" cy="22" r="0.6" fill="#1B2530"></circle>
+</svg>
