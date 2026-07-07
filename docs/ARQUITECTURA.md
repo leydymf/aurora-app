@@ -9,16 +9,16 @@ Reglas obligatorias. Toda implementación debe cumplirlas; los agentes de revisi
 ```
 app/src/main/java/com/auroraclima/app/
 ├── core/                    # transversal, sin lógica de negocio de features
-│   ├── seguridad/           # Keystore, cifrado, FLAG_SECURE, limpieza de estado
-│   ├── db/                  # Room + SQLCipher (configuración)
-│   ├── red/                 # cliente HTTP, manejo de errores de red
+│   ├── security/            # Keystore, cifrado, FLAG_SECURE, limpieza de estado
+│   ├── database/            # Room + SQLCipher (configuración)
+│   ├── network/             # cliente HTTP, manejo de errores de red
 │   └── ui/                  # tema, componentes Compose reutilizables
-├── clima/                   # fachada (RF-01 a RF-04)
-├── acceso/                  # doble fondo: código secreto, salida rápida (RF-05..16)
-├── cuentas/                 # auth, consentimiento (RF-07, RF-15, RF-17..20)
-├── contenido/               # tipos de violencia, rutas, líneas (RF-21..26)
-├── cuestionario/            # RF-27..31
-└── incidentes/              # RF-32..39
+├── weather/                 # fachada (RF-01 a RF-04)
+├── access/                  # doble fondo: código secreto, salida rápida (RF-05..16)
+├── accounts/                # auth, consentimiento (RF-07, RF-15, RF-17..20)
+├── content/                 # tipos de violencia, rutas, líneas (RF-21..26)
+├── questionnaire/           # RF-27..31
+└── records/                 # RF-32..39 (registro de incidentes; nombre neutro)
 ```
 
 Cada feature tiene internamente:
@@ -78,3 +78,5 @@ Reglas adicionales:
 ## Registro de decisiones
 
 - 2026-07-07 — v1 de esta guía, derivada de A2-1/A2-2 y los RNF de la especificación.
+- 2026-07-07 — Paquetes renombrados de español a inglés neutro (`clima→weather`, `acceso→access`, `cuentas→accounts`, `contenido→content`, `cuestionario→questionnaire`, `incidentes→records`, `core/{seguridad→security, db→database, red→network}`). Motivo: hallazgo de auditoría de seguridad — los nombres de paquete quedan legibles en el APK y en stack traces (`incidentes`/`cuestionario` podían sugerir el propósito real), y CLAUDE.md exige inglés para nombres de código. `records` se eligió sobre `incidents` por ser el más neutro.
+- 2026-07-07 — Firebase BOM fijado en 33.16.0 (no 34.x): la serie 34 se compila con Kotlin 2.3 y el proyecto usa Kotlin 2.0.0. Revaluar si se actualiza el toolchain de Kotlin.

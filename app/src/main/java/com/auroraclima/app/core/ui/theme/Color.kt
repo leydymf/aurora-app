@@ -1,4 +1,4 @@
-package com.auroraclima.app.ui.theme
+package com.auroraclima.app.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
