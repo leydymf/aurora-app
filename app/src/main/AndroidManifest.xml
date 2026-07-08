@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Consulta del clima (Open-Meteo). Único permiso; esperable en una app de clima (RNF-04, RNF-05). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".AuroraApplication"
         android:allowBackup="false"

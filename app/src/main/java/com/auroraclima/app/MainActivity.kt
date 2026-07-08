@@ -24,7 +24,9 @@ class MainActivity : ComponentActivity() {
                 val state by weatherViewModel.uiState.collectAsState()
                 WeatherScreen(
                     state = state,
-                    onSearchQueryChange = weatherViewModel::onSearchQueryChange
+                    onSearchQueryChange = weatherViewModel::onSearchQueryChange,
+                    onCitySelected = weatherViewModel::onCitySelected,
+                    onSearchCancel = weatherViewModel::onSearchCancel
                 )
             }
         }

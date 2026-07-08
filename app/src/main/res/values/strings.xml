@@ -1,5 +1,21 @@
 <resources>
     <string name="app_name">Aurora</string>
     <string name="weather_search_hint">Buscar ciudad…</string>
+    <string name="weather_search_cancel">Cancelar</string>
     <string name="weather_empty_message">Busca una ciudad para ver el clima</string>
+    <string name="weather_no_results_title">No se encontraron resultados</string>
+    <string name="weather_no_results_hint">Revisa la ortografía e inténtalo de nuevo.</string>
+    <string name="weather_updated_at">Actualizado %1$s</string>
+    <string name="weather_max_min">Máx. %1$s · Mín. %2$s</string>
+    <string name="weather_humidity_label">Humedad</string>
+    <string name="weather_wind_label">Viento</string>
+    <string name="weather_rain_label">Lluvia</string>
+    <string name="weather_condition_clear">Despejado</string>
+    <string name="weather_condition_partly_cloudy">Parcialmente nublado</string>
+    <string name="weather_condition_overcast">Nublado</string>
+    <string name="weather_condition_fog">Niebla</string>
+    <string name="weather_condition_drizzle">Llovizna</string>
+    <string name="weather_condition_rain">Lluvia</string>
+    <string name="weather_condition_snow">Nieve</string>
+    <string name="weather_condition_thunderstorm">Tormenta</string>
 </resources>
