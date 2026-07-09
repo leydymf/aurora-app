@@ -1,6 +1,8 @@
 package com.auroraclima.app.weather.ui
 
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.SearchGateResult
+import com.auroraclima.app.core.security.SearchQueryGate
 import com.auroraclima.app.weather.domain.model.City
 import com.auroraclima.app.weather.domain.model.WeatherCondition
 import com.auroraclima.app.weather.domain.model.WeatherSnapshot
@@ -11,6 +13,11 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -28,6 +35,7 @@ class WeatherViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeWeatherRepository()
+    private val gate = FakeSearchQueryGate()
 
     // lunes 2026-07-06, 09:28 hora de Bogotá, como en el mockup P01
     private val fixedClock = Clock.fixed(
@@ -35,7 +43,16 @@ class WeatherViewModelTest {
         ZoneId.of("America/Bogota")
     )
 
-    private fun createViewModel() = WeatherViewModel(repository, fixedClock)
+    private fun createViewModel() = WeatherViewModel(repository, gate, fixedClock)
+
+    /** Registra en una lista los eventos de apertura emitidos por el ViewModel. */
+    private fun TestScope.collectGateEvents(viewModel: WeatherViewModel): List<SearchGateResult> {
+        val events = mutableListOf<SearchGateResult>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.gateEvents.toList(events)
+        }
+        return events
+    }
 
     @Test
     fun `estado inicial tiene busqueda vacia y fecha formateada`() {
@@ -181,6 +198,91 @@ class WeatherViewModelTest {
         assertFalse(state.isSearchActive)
     }
 
+    @Test
+    fun `un codigo erroneo se comporta exactamente como una busqueda fallida`() = runTest {
+        // RF-13 criterio 2: misma UI, mismo estado, ningún evento
+        repository.searchResult = Result.success(emptyList())
+        gate.result = SearchGateResult.PassThrough
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+
+        viewModel.onSearchQueryChange("codigofalso")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.showNoResults)
+        assertTrue(state.searchResults.isEmpty())
+        assertEquals("codigofalso", state.searchQuery)
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun `el codigo secreto abre el doble fondo y deja la barra vacia`() = runTest {
+        // RF-12 criterio 1 y RF-14 criterio 1
+        repository.searchResult = Result.success(emptyList())
+        gate.result = SearchGateResult.OpenAccess
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+
+        viewModel.onSearchQueryChange("cielo2026")
+        advanceUntilIdle()
+
+        assertEquals(listOf<SearchGateResult>(SearchGateResult.OpenAccess), events)
+        val state = viewModel.uiState.value
+        assertEquals("", state.searchQuery)
+        assertFalse(state.isSearchActive)
+        assertTrue(state.searchResults.isEmpty())
+        assertFalse(state.showNoResults)
+    }
+
+    @Test
+    fun `el codigo de activacion abre el registro`() = runTest {
+        // RF-05 criterio 1
+        repository.searchResult = Result.success(emptyList())
+        gate.result = SearchGateResult.OpenActivation
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+
+        viewModel.onSearchQueryChange("luna2026")
+        advanceUntilIdle()
+
+        assertEquals(listOf<SearchGateResult>(SearchGateResult.OpenActivation), events)
+        assertEquals("", viewModel.uiState.value.searchQuery)
+    }
+
+    @Test
+    fun `la apertura nunca responde antes que la busqueda real`() = runTest {
+        // RF-13: la validación no es observablemente más rápida que una búsqueda;
+        // aunque la puerta ya haya resuelto, nada pasa hasta que searchCities termina
+        repository.searchResult = Result.success(emptyList())
+        repository.searchDelayMs = 500
+        gate.result = SearchGateResult.OpenAccess
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+
+        viewModel.onSearchQueryChange("cielo2026")
+        advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS + 100)
+
+        // La búsqueda sigue en curso: sin evento y con la barra intacta
+        assertTrue(events.isEmpty())
+        assertEquals("cielo2026", viewModel.uiState.value.searchQuery)
+
+        advanceUntilIdle()
+        assertEquals(listOf<SearchGateResult>(SearchGateResult.OpenAccess), events)
+        assertEquals("", viewModel.uiState.value.searchQuery)
+    }
+
+    @Test
+    fun `la puerta recibe el texto recortado de la barra`() = runTest {
+        repository.searchResult = Result.success(emptyList())
+        val viewModel = createViewModel()
+
+        viewModel.onSearchQueryChange(" cielo2026 ")
+        advanceUntilIdle()
+
+        assertEquals("cielo2026", gate.lastQuery)
+    }
+
     private fun bucaramanga() = City(
         id = 3688465,
         name = "Bucaramanga",
@@ -203,9 +305,20 @@ class WeatherViewModelTest {
     )
 }
 
+private class FakeSearchQueryGate : SearchQueryGate {
+    var result: SearchGateResult = SearchGateResult.PassThrough
+    var lastQuery: String? = null
+
+    override suspend fun inspect(query: String): SearchGateResult {
+        lastQuery = query
+        return result
+    }
+}
+
 private class FakeWeatherRepository : WeatherRepository {
     var searchResult: Result<List<City>> = Result.success(emptyList())
     var searchCallCount = 0
+    var searchDelayMs = 0L
     var lastQuery: String? = null
     var defaultCity: City? = null
     var cachedSnapshot: WeatherSnapshot? = null
@@ -214,6 +327,7 @@ private class FakeWeatherRepository : WeatherRepository {
     override suspend fun searchCities(query: String): Result<List<City>> {
         searchCallCount++
         lastQuery = query
+        if (searchDelayMs > 0) delay(searchDelayMs)
         return searchResult
     }
 

@@ -59,6 +59,10 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
+    // Navegación fachada ⇄ doble fondo (RF-05, RF-12)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+
     // Inyección de dependencias
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
