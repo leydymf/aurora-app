@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.auroraclima.app.R
-import com.auroraclima.app.core.security.SecureScreen
 import com.auroraclima.app.core.ui.theme.Mist
 import com.auroraclima.app.core.ui.theme.Night
 
@@ -43,32 +42,34 @@ fun AccessPlaceholderScreen(modifier: Modifier = Modifier) {
     AccessPlaceholder(titleRes = R.string.access_entry_title, modifier = modifier)
 }
 
+/**
+ * Las pantallas internas NO aplican la bandera de pantalla segura por su cuenta:
+ * la garantiza el grafo seguro de `core/security` donde se registran sus rutas (RNF-02).
+ */
 @Composable
 private fun AccessPlaceholder(@StringRes titleRes: Int, modifier: Modifier = Modifier) {
-    SecureScreen {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(Night)
-                .systemBarsPadding()
-                .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = stringResource(titleRes),
-                color = Mist,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.access_placeholder_body),
-                color = Mist.copy(alpha = 0.7f),
-                fontSize = 15.sp,
-                textAlign = TextAlign.Center
-            )
-        }
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Night)
+            .systemBarsPadding()
+            .padding(horizontal = 32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(titleRes),
+            color = Mist,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.access_placeholder_body),
+            color = Mist.copy(alpha = 0.7f),
+            fontSize = 15.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }

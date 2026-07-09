@@ -1,0 +1,202 @@
+package com.auroraclima.app
+
+import java.io.File
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Guardia de regresión de RF-06 (ausencia de indicios) y RNF-02.
+ *
+ * Mientras el espacio interno está inactivo no puede existir ningún rastro visible:
+ * ni notificaciones, ni accesos directos, ni widgets, ni tiles. Y la fachada de clima
+ * jamás bloquea capturas (una app de clima con FLAG_SECURE sería un distinguidor):
+ * la bandera solo puede vivir en core/security, aplicada por el grafo seguro.
+ */
+class NoTracesGuardTest {
+    /**
+     * APIs de Android que dejan rastro visible fuera de la app. Si algún día un RF
+     * exigiera una de estas, debe discutirse contra RNF-05 antes de levantar la veda.
+     */
+    private val visibleTraceApis = listOf(
+        "NotificationManager",
+        "NotificationCompat",
+        "NotificationChannel",
+        "POST_NOTIFICATIONS",
+        "ShortcutManager",
+        "ShortcutInfo",
+        "pushDynamicShortcut",
+        "AppWidgetProvider",
+        "GlanceAppWidget",
+        "TileService",
+        // Permitido solo con decisión registrada (ver P-14 en docs/PENDIENTES.md).
+        "setRecentsScreenshotEnabled"
+    )
+
+    private val mainDir = requireNotNull(
+        sequenceOf(File("src/main"), File("app/src/main")).firstOrNull { it.exists() }
+    ) { "No se encontró el directorio src/main" }
+
+    /** Los builds debug se instalan en dispositivos durante el piloto: se barren igual. */
+    private val debugDir = File(mainDir.parentFile, "debug")
+
+    private fun mainFiles(vararg extensions: String): Sequence<File> = sequenceOf(mainDir, debugDir)
+        .filter { it.exists() }
+        .flatMap { it.walkTopDown() }
+        .filter { it.isFile && it.extension in extensions }
+
+    @Test
+    fun `el codigo no usa notificaciones accesos directos widgets ni tiles`() {
+        val violations = mainFiles("kt", "xml").flatMap { file ->
+            val text = file.readText()
+            visibleTraceApis
+                .filter { it in text }
+                .map { api -> "${file.relativeTo(mainDir)}: usa \"$api\"" }
+        }.toList()
+
+        assertTrue(
+            "APIs que dejan rastro visible fuera del espacio interno (RF-06):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun `res no declara shortcuts ni widgets`() {
+        val violations = mainFiles("xml")
+            .filter { file ->
+                val text = file.readText()
+                file.name.startsWith("shortcuts") ||
+                    "<shortcut" in text ||
+                    "appwidget-provider" in text
+            }
+            .map { "${it.relativeTo(mainDir)}" }
+            .toList()
+
+        assertTrue(
+            "Recursos que crean accesos directos o widgets (RF-06):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun `FLAG_SECURE solo existe en core security`() {
+        val allowedDir = File(mainDir, "java/com/auroraclima/app/core/security")
+        val violations = mainFiles("kt", "xml")
+            .filter { "FLAG_SECURE" in it.readText() || "setSecure" in it.readText() }
+            .filterNot { it.startsWith(allowedDir) }
+            .map { "${it.relativeTo(mainDir)}" }
+            .toList()
+
+        assertTrue(
+            "FLAG_SECURE fuera del componente central de core/security (RNF-02):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    /**
+     * APIs que crean una ventana PROPIA, distinta de la ventana de la Activity: el
+     * grafo seguro no las cubre y saldrían en capturas/recientes (auditoría A1).
+     * Solo core/security puede usarlas, envueltas con securePolicy = SecureOn
+     * (ver SecureDialog).
+     */
+    private val ownWindowApis = listOf(
+        "androidx.compose.ui.window.Dialog",
+        "androidx.compose.ui.window.Popup",
+        "ModalBottomSheet",
+        "BasicAlertDialog",
+        "androidx.compose.material3.AlertDialog",
+        "android.app.Dialog",
+        "android.app.AlertDialog",
+        "DatePickerDialog",
+        "TimePickerDialog",
+        "android.widget.Toast",
+        // Crean un Popup internamente sin nombrarlo (auditoría N2).
+        "DropdownMenu",
+        "TooltipBox",
+        "PopupWindow"
+    )
+
+    @Test
+    fun `las ventanas propias solo se crean a traves de core security`() {
+        val allowedDir = File(mainDir, "java/com/auroraclima/app/core/security")
+        val violations = mainFiles("kt")
+            .filterNot { it.startsWith(allowedDir) }
+            .flatMap { file ->
+                val text = file.readText()
+                ownWindowApis
+                    .filter { it in text }
+                    .map { api -> "${file.relativeTo(mainDir)}: usa \"$api\"" }
+            }
+            .toList()
+
+        assertTrue(
+            "Ventanas propias fuera de los envoltorios de core/security (RNF-02, A1):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun `fuera del grafo seguro solo se registran rutas de la fachada`() {
+        val facadeRoutes = setOf("HOME_ROUTE")
+        val navRoot = File(mainDir, "java/com/auroraclima/app/AuroraApp.kt")
+        val registrations = Regex("""\bcomposable\(\s*([A-Za-z_]\w*|"[^"]*")""")
+            .findAll(navRoot.readText())
+            .map { it.groupValues[1] }
+            .toList()
+        val violations = registrations.filterNot { it in facadeRoutes }
+
+        assertTrue(
+            "Rutas registradas con composable() directo en el NavHost raíz; toda ruta " +
+                "interna debe declararse dentro de secureGraph { screen(...) } (M1):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun `la navegacion solo se declara en la raiz y en core security`() {
+        val allowedDir = File(mainDir, "java/com/auroraclima/app/core/security")
+        val navRoot = File(mainDir, "java/com/auroraclima/app/AuroraApp.kt")
+        val navApis = listOf("NavHost(", "composable(")
+        val violations = mainFiles("kt")
+            .filterNot { it.startsWith(allowedDir) || it == navRoot }
+            .flatMap { file ->
+                val text = file.readText()
+                navApis
+                    .filter { it in text }
+                    .map { api -> "${file.relativeTo(mainDir)}: usa \"$api\"" }
+            }
+            .toList()
+
+        assertTrue(
+            "Un NavHost o ruta declarado fuera de AuroraApp.kt evadiría la whitelist " +
+                "de la fachada y el grafo seguro (RF-06):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun `la fachada de clima nunca referencia el mecanismo seguro`() {
+        val weatherDir = File(mainDir, "java/com/auroraclima/app/weather")
+        val secureTokens = listOf("FLAG_SECURE", "SecureScreen", "secureGraph", "SecureBackStackGuard")
+        val violations = weatherDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .flatMap { file ->
+                val text = file.readText()
+                secureTokens
+                    .filter { it in text }
+                    .map { token -> "${file.relativeTo(mainDir)}: referencia \"$token\"" }
+            }
+            .toList()
+
+        assertTrue(
+            "La fachada no debe bloquear capturas ni conocer el mecanismo seguro (RNF-05):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+}
