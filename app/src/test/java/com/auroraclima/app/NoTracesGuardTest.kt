@@ -182,7 +182,15 @@ class NoTracesGuardTest {
     @Test
     fun `la fachada de clima nunca referencia el mecanismo seguro`() {
         val weatherDir = File(mainDir, "java/com/auroraclima/app/weather")
-        val secureTokens = listOf("FLAG_SECURE", "SecureScreen", "secureGraph", "SecureBackStackGuard")
+        val secureTokens = listOf(
+            "FLAG_SECURE",
+            "SecureScreen",
+            "secureGraph",
+            "SecureBackStackGuard",
+            // La fachada tampoco debe leer ni gobernar la sesión interna (auditoría D3 H-5).
+            "SessionManager",
+            "SessionGuard"
+        )
         val violations = weatherDir.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .flatMap { file ->

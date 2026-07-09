@@ -4,10 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import java.util.UUID
@@ -39,21 +35,13 @@ fun SecureBackStackGuard(navController: NavController, secureGraphRoute: String,
         }
         onDispose { }
     }
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(navController, lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            val rotating = context.findActivity()?.isChangingConfigurations == true
-            if (event == Lifecycle.Event.ON_STOP && !rotating) {
-                navController.exitSecureGraph(secureGraphRoute, facadeRoute)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
+    AppBackgroundObserver(
+        onStopWithoutRotation = { navController.exitSecureGraph(secureGraphRoute, facadeRoute) }
+    )
 }
 
-private fun NavController.exitSecureGraph(secureGraphRoute: String, facadeRoute: String) {
+/** Pop compartido de las guardias: si la ruta actual está dentro del grafo seguro, vuelve a la fachada. */
+internal fun NavController.exitSecureGraph(secureGraphRoute: String, facadeRoute: String) {
     val insideSecureGraph = currentDestination?.hierarchy?.any { it.route == secureGraphRoute } == true
     if (insideSecureGraph) {
         popBackStack(route = facadeRoute, inclusive = false)
@@ -62,8 +50,9 @@ private fun NavController.exitSecureGraph(secureGraphRoute: String, facadeRoute:
 
 /**
  * Marcador de vida del proceso: sobrevive recreaciones de la Activity (rotación)
- * pero no a la muerte del proceso. `object` manual amparado por la misma excepción
- * del ADR 2026-07-08: estado de plataforma, no lógica de negocio.
+ * pero no a la muerte del proceso. `object` manual: estado de plataforma sin lógica
+ * de negocio, registrado en la adenda N1 del ADR 2026-07-09 (mismo criterio que la
+ * excepción del 2026-07-08 para SecureFlagCounter).
  */
 private object ProcessToken {
     val current: String = UUID.randomUUID().toString()

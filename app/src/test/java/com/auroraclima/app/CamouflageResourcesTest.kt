@@ -62,7 +62,13 @@ class CamouflageResourcesTest {
         "questionnaire",
         "salida rápida",
         "salida rapida",
-        "modo seguro"
+        "modo seguro",
+        // Nombre canónico en inglés de los botones de escape en apps de violencia
+        // doméstica: legible en resources.arsc incluso con R8 (auditoría D3 H-1).
+        "quick_exit",
+        "quick exit",
+        "quickexit",
+        "escape"
     )
 
     @Test

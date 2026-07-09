@@ -2,22 +2,68 @@ package com.auroraclima.app.core.security
 
 import android.view.Window
 import android.view.WindowManager
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import com.auroraclima.app.R
+import com.auroraclima.app.core.ui.theme.CloudWhite
+
+/**
+ * Acceso al [SessionManager] desde las pantallas del grafo seguro. Lo provee la
+ * navegación raíz con la instancia inyectada por Hilt (no es un singleton manual).
+ */
+val LocalSessionManager = staticCompositionLocalOf<SessionManager> {
+    error("LocalSessionManager sin proveer: envolver la NavHost raíz")
+}
 
 /**
  * Grafo de navegación seguro: el ÚNICO punto donde se aplica FLAG_SECURE (RNF-02).
  * Toda pantalla interna se declara con [SecureGraphScope.screen] dentro de este grafo
  * y queda envuelta automáticamente: no hay forma de registrar una ruta interna sin la
  * bandera, ni de aplicarla pantalla por pantalla a mano ([SecureScreen] es privado).
+ *
+ * Por la misma construcción, toda pantalla interna recibe el botón nube de salida
+ * rápida (RF-16 criterio 1, decisión F2 de A2-6) y reporta la interacción táctil al
+ * temporizador de inactividad (RNF-03). Las transiciones son [EnterTransition.None]/
+ * [ExitTransition.None]: entrar y salir es instantáneo, «sin animaciones» (F2), lo
+ * que garantiza el retorno en mucho menos de 1 segundo (RF-16 criterio 2).
  */
 fun NavGraphBuilder.secureGraph(route: String, startDestination: String, builder: SecureGraphScope.() -> Unit) {
-    navigation(startDestination = startDestination, route = route) {
+    navigation(
+        startDestination = startDestination,
+        route = route,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
+    ) {
         SecureGraphScope(this).builder()
     }
 }
@@ -33,8 +79,10 @@ class SecureGraphScope internal constructor(private val graph: NavGraphBuilder) 
 
 /**
  * Mientras al menos una instancia esté en composición, la ventana bloquea capturas
- * de pantalla y oculta su contenido en la vista de recientes. Privado a propósito:
- * las pantallas nunca lo invocan directamente, solo [secureGraph].
+ * de pantalla y oculta su contenido en la vista de recientes. Superpone además la
+ * nube de salida rápida y observa los toques (en la pasada Initial, sin consumirlos)
+ * para reiniciar la inactividad. Privado a propósito: las pantallas nunca lo invocan
+ * directamente, solo [secureGraph].
  */
 @Composable
 private fun SecureScreen(content: @Composable () -> Unit) {
@@ -44,8 +92,58 @@ private fun SecureScreen(content: @Composable () -> Unit) {
         window?.let(SecureFlagCounter::acquire)
         onDispose { window?.let(SecureFlagCounter::release) }
     }
-    content()
+    val sessionManager = LocalSessionManager.current
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(sessionManager) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Press) {
+                            sessionManager.registerInteraction()
+                        }
+                    }
+                }
+            }
+    ) {
+        content()
+        QuickExitCloudButton(
+            onClick = sessionManager::quickExit,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .systemBarsPadding()
+                .padding(QUICK_EXIT_MARGIN)
+        )
+    }
 }
+
+/**
+ * Salida rápida (RF-16): botón flotante de 52 dp abajo a la derecha, con el mismo
+ * ícono de nube de la fachada — para un tercero es un botón «del clima» (F2 de A2-6).
+ */
+@Composable
+private fun QuickExitCloudButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(QUICK_EXIT_SIZE)
+            .shadow(elevation = 6.dp, shape = CircleShape)
+            .background(CloudWhite)
+            .clickable(onClick = onClick, role = Role.Button),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_weather_cloud),
+            contentDescription = stringResource(R.string.access_back_to_weather),
+            tint = Color.Unspecified,
+            modifier = Modifier.size(QUICK_EXIT_ICON_SIZE)
+        )
+    }
+}
+
+private val QUICK_EXIT_SIZE = 52.dp
+private val QUICK_EXIT_ICON_SIZE = 26.dp
+private val QUICK_EXIT_MARGIN = 20.dp
 
 /**
  * Aplica el conteo de [SecureFlagLedger] sobre el Window real. `object` manual por

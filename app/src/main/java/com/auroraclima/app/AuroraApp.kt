@@ -1,6 +1,8 @@
 package com.auroraclima.app
 
+import androidx.compose.animation.EnterTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -15,8 +17,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.AccessPlaceholderScreen
 import com.auroraclima.app.access.ui.ActivationPlaceholderScreen
+import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SecureBackStackGuard
+import com.auroraclima.app.core.security.SessionGuard
+import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.weather.ui.WeatherScreen
 import com.auroraclima.app.weather.ui.WeatherViewModel
@@ -27,17 +32,23 @@ import com.auroraclima.app.weather.ui.WeatherViewModel
  * Las rutas usan nombres neutros porque quedan legibles en el APK (RNF-05).
  */
 @Composable
-fun AuroraApp() {
+fun AuroraApp(sessionManager: SessionManager) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = HOME_ROUTE) {
-        composable(HOME_ROUTE) { HomeRoute(navController) }
-        // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y de
-        // recientes garantizado por construcción (RNF-02), sin envolver pantalla por
-        // pantalla. TODO(RF-16): la salida rápida del día 3 debe salir del grafo con
-        // popBackStack(HOME_ROUTE, false).
-        secureGraph(route = INNER_ROUTE, startDestination = INTRO_ROUTE) {
-            screen(INTRO_ROUTE) { ActivationPlaceholderScreen() }
-            screen(PANEL_ROUTE) { AccessPlaceholderScreen() }
+    CompositionLocalProvider(LocalSessionManager provides sessionManager) {
+        // popEnterTransition None: la fachada reaparece en el mismo frame del pop de
+        // la salida rápida — «sin animaciones» (RF-16 criterio 2, decisión F2).
+        NavHost(
+            navController = navController,
+            startDestination = HOME_ROUTE
+        ) {
+            composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) { HomeRoute(navController) }
+            // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y
+            // de recientes, botón nube de salida rápida y reporte de interacción
+            // garantizados por construcción (RNF-02, RF-16, RNF-03).
+            secureGraph(route = INNER_ROUTE, startDestination = INTRO_ROUTE) {
+                screen(INTRO_ROUTE) { ActivationPlaceholderScreen() }
+                screen(PANEL_ROUTE) { AccessPlaceholderScreen() }
+            }
         }
     }
     // Al pasar a background dentro del grafo seguro, la pila vuelve a la fachada:
@@ -45,6 +56,15 @@ fun AuroraApp() {
     // sin código (RF-06, auditoría M-02 / P-10).
     SecureBackStackGuard(
         navController = navController,
+        secureGraphRoute = INNER_ROUTE,
+        facadeRoute = HOME_ROUTE
+    )
+    // Sesión del espacio interno: entrar al grafo la inicia; salida rápida,
+    // inactividad de 5 min o background prolongado la cierran y hacen pop a la
+    // fachada (RF-16, RNF-03).
+    SessionGuard(
+        navController = navController,
+        sessionManager = sessionManager,
         secureGraphRoute = INNER_ROUTE,
         facadeRoute = HOME_ROUTE
     )
