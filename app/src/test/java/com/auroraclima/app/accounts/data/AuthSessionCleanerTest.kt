@@ -34,6 +34,10 @@ class AuthSessionCleanerTest {
 
         override suspend fun createUser(email: String, password: String) = Unit
 
+        override suspend fun signIn(email: String, password: String) = Unit
+
+        override fun hasActiveSession(): Boolean = false
+
         override fun signOut() {
             signOutCalls++
             if (failOnSignOut) error("provider failure")

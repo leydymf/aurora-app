@@ -28,6 +28,18 @@ class FirebaseAuthService @Inject constructor(
         }
     }
 
+    override suspend fun signIn(email: String, password: String) {
+        try {
+            awaitSignIn(email, password)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: FirebaseAuthException) {
+            throw AuthServiceException(error.errorCode, error)
+        }
+    }
+
+    override fun hasActiveSession(): Boolean = firebaseAuth.currentUser != null
+
     override fun signOut() {
         firebaseAuth.signOut()
     }
@@ -35,6 +47,14 @@ class FirebaseAuthService @Inject constructor(
     private suspend fun awaitCreateUser(email: String, password: String) {
         suspendCancellableCoroutine { continuation ->
             firebaseAuth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener { continuation.resume(Unit) }
+                .addOnFailureListener { error -> continuation.resumeWithException(error) }
+        }
+    }
+
+    private suspend fun awaitSignIn(email: String, password: String) {
+        suspendCancellableCoroutine { continuation ->
+            firebaseAuth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { error -> continuation.resumeWithException(error) }
         }

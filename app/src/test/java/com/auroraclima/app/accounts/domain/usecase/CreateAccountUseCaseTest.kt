@@ -1,7 +1,6 @@
 package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
-import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -46,7 +45,7 @@ class CreateAccountUseCaseTest {
     @Test
     fun `el resultado del repositorio se propaga tal cual`() = runTest {
         // RF-07 criterio 2: correo duplicado rechazado sin revelar datos de terceros
-        repository.nextResult = CreateAccountResult.EmailAlreadyInUse
+        repository.nextCreateResult = CreateAccountResult.EmailAlreadyInUse
 
         assertEquals(
             CreateAccountResult.EmailAlreadyInUse,
@@ -54,13 +53,4 @@ class CreateAccountUseCaseTest {
         )
     }
 }
-
-private class FakeAuthRepository : AuthRepository {
-    val requestedEmails = mutableListOf<String>()
-    var nextResult: CreateAccountResult = CreateAccountResult.Success
-
-    override suspend fun createAccount(email: String, password: String): CreateAccountResult {
-        requestedEmails += email
-        return nextResult
-    }
-}
+// El fake compartido vive en AuthFakes.kt.

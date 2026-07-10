@@ -20,6 +20,7 @@ import com.auroraclima.app.access.ui.GuidePlaceholderScreen
 import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
+import com.auroraclima.app.accounts.ui.LoginRoute
 import com.auroraclima.app.content.ui.AGENCY_ID_ARG
 import com.auroraclima.app.content.ui.AgencyDetailRoute
 import com.auroraclima.app.content.ui.LinesRoute
@@ -91,6 +92,18 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onContinue = {
                             navController.navigate(PANEL_ROUTE) {
                                 popUpTo(GUIDE_ROUTE) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                // Reingreso (RF-12, RF-15): con sesión vigente salta directo al
+                // panel; sin sesión, inicio de sesión con bloqueo temporal.
+                screen(ENTRY_ROUTE) {
+                    LoginRoute(
+                        onAccessGranted = {
+                            // El formulario no debe quedar en el back stack.
+                            navController.navigate(PANEL_ROUTE) {
+                                popUpTo(ENTRY_ROUTE) { inclusive = true }
                             }
                         }
                     )
@@ -173,7 +186,7 @@ private fun HomeRoute(navController: NavHostController) {
         viewModel.gateEvents.collect { destination ->
             when (destination) {
                 SearchGateResult.OpenActivation -> navController.navigate(INTRO_ROUTE)
-                SearchGateResult.OpenAccess -> navController.navigate(PANEL_ROUTE)
+                SearchGateResult.OpenAccess -> navController.navigate(ENTRY_ROUTE)
                 SearchGateResult.PassThrough -> Unit
             }
         }
@@ -192,6 +205,7 @@ private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
 private const val GUIDE_ROUTE = "guide"
+private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"

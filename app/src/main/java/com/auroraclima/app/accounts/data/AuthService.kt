@@ -8,6 +8,11 @@ package com.auroraclima.app.accounts.data
 interface AuthService {
     suspend fun createUser(email: String, password: String)
 
+    suspend fun signIn(email: String, password: String)
+
+    /** True si el proveedor conserva una sesión iniciada. */
+    fun hasActiveSession(): Boolean
+
     /** Cierra la sesión persistida del proveedor. Idempotente. */
     fun signOut()
 }

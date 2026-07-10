@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,6 +30,37 @@ class FirebaseAuthRepository @Inject constructor(
             }
         }
 
+    override suspend fun signIn(email: String, password: String): SignInResult = withContext(Dispatchers.IO) {
+        try {
+            service.signIn(email, password)
+            SignInResult.Success
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            mapSignInFailure(error)
+        }
+    }
+
+    override fun hasActiveSession(): Boolean = service.hasActiveSession()
+
+    /**
+     * Todos los rechazos de credenciales convergen en el mismo resultado: el
+     * error visible no dice cuál campo falló ni si el correo existe (RF-15
+     * criterio 2). Lo demás (red, cuota del proveedor) es fallo genérico y no
+     * cuenta como intento.
+     */
+    private fun mapSignInFailure(error: Exception): SignInResult {
+        val code = (error as? AuthServiceException)?.errorCode
+        return when (code) {
+            ERROR_INVALID_CREDENTIAL,
+            ERROR_WRONG_PASSWORD,
+            ERROR_USER_NOT_FOUND,
+            ERROR_USER_DISABLED,
+            ERROR_INVALID_EMAIL -> SignInResult.InvalidCredentials
+            else -> SignInResult.GenericFailure
+        }
+    }
+
     private fun mapFailure(error: Exception): CreateAccountResult {
         val code = (error as? AuthServiceException)?.errorCode
         return when (code) {
@@ -46,5 +78,12 @@ class FirebaseAuthRepository @Inject constructor(
         private const val ERROR_EMAIL_IN_USE = "ERROR_EMAIL_ALREADY_IN_USE"
         private const val ERROR_WEAK_PASSWORD = "ERROR_WEAK_PASSWORD"
         private const val ERROR_INVALID_EMAIL = "ERROR_INVALID_EMAIL"
+
+        // Códigos documentados para signInWithEmailAndPassword. El proveedor
+        // moderno agrupa correo/contraseña erróneos en ERROR_INVALID_CREDENTIAL.
+        private const val ERROR_INVALID_CREDENTIAL = "ERROR_INVALID_CREDENTIAL"
+        private const val ERROR_WRONG_PASSWORD = "ERROR_WRONG_PASSWORD"
+        private const val ERROR_USER_NOT_FOUND = "ERROR_USER_NOT_FOUND"
+        private const val ERROR_USER_DISABLED = "ERROR_USER_DISABLED"
     }
 }

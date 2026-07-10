@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.accounts.domain.model.SignInResult
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -74,14 +75,71 @@ class FirebaseAuthRepositoryTest {
             repository.createAccount("usuaria@correo.co", "clave-segura-1")
         )
     }
+
+    @Test
+    fun `sin fallo del proveedor la sesion inicia`() = runTest {
+        // RF-15 criterio 1
+        assertEquals(
+            SignInResult.Success,
+            repository.signIn("usuaria@correo.co", "clave-segura-1")
+        )
+    }
+
+    @Test
+    fun `todos los rechazos de credenciales convergen en el mismo resultado`() = runTest {
+        // RF-15 criterio 2: el resultado no distingue si falló el correo, la
+        // contraseña, el formato o si la cuenta existe
+        val credentialCodes = listOf(
+            "ERROR_INVALID_CREDENTIAL",
+            "ERROR_WRONG_PASSWORD",
+            "ERROR_USER_NOT_FOUND",
+            "ERROR_USER_DISABLED",
+            "ERROR_INVALID_EMAIL"
+        )
+
+        for (code in credentialCodes) {
+            service.nextError = AuthServiceException(code)
+            assertEquals(
+                "código $code",
+                SignInResult.InvalidCredentials,
+                repository.signIn("usuaria@correo.co", "clave-mala")
+            )
+        }
+    }
+
+    @Test
+    fun `un fallo de red al iniciar sesion es un fallo generico`() = runTest {
+        service.nextError = IOException("sin red")
+
+        assertEquals(
+            SignInResult.GenericFailure,
+            repository.signIn("usuaria@correo.co", "clave-segura-1")
+        )
+    }
+
+    @Test
+    fun `la sesion activa refleja el estado del proveedor`() {
+        service.activeSession = false
+        assertEquals(false, repository.hasActiveSession())
+
+        service.activeSession = true
+        assertEquals(true, repository.hasActiveSession())
+    }
 }
 
 private class FakeAuthService : AuthService {
     var nextError: Exception? = null
+    var activeSession = false
 
     override suspend fun createUser(email: String, password: String) {
         nextError?.let { throw it }
     }
+
+    override suspend fun signIn(email: String, password: String) {
+        nextError?.let { throw it }
+    }
+
+    override fun hasActiveSession(): Boolean = activeSession
 
     override fun signOut() = Unit
 }

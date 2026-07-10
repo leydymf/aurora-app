@@ -2,8 +2,8 @@ package com.auroraclima.app.accounts.ui
 
 import com.auroraclima.app.R
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
-import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.usecase.CreateAccountUseCase
+import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.core.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -68,7 +68,7 @@ class CreateAccountViewModelTest {
         advanceUntilIdle()
 
         assertEquals(R.string.account_error_password_mismatch, viewModel.uiState.value.confirmErrorRes)
-        assertEquals(0, repository.calls)
+        assertEquals(0, repository.createCalls)
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
@@ -89,7 +89,7 @@ class CreateAccountViewModelTest {
     fun `un correo duplicado muestra su mensaje sin emitir continuar`() = runTest {
         // RF-07 criterio 2
         val events = collectContinueEvents()
-        repository.nextResult = CreateAccountResult.EmailAlreadyInUse
+        repository.nextCreateResult = CreateAccountResult.EmailAlreadyInUse
 
         fillValidForm()
         viewModel.onSubmit()
@@ -110,7 +110,7 @@ class CreateAccountViewModelTest {
         advanceUntilIdle()
 
         assertEquals(R.string.account_error_password_short, viewModel.uiState.value.passwordErrorRes)
-        assertEquals(0, repository.calls)
+        assertEquals(0, repository.createCalls)
     }
 
     @Test
@@ -127,7 +127,7 @@ class CreateAccountViewModelTest {
     @Test
     fun `un fallo del proveedor muestra el error generico`() = runTest {
         // Mensaje genérico que no revela el propósito (ARQUITECTURA §3)
-        repository.nextResult = CreateAccountResult.GenericFailure
+        repository.nextCreateResult = CreateAccountResult.GenericFailure
 
         fillValidForm()
         viewModel.onSubmit()
@@ -151,13 +151,13 @@ class CreateAccountViewModelTest {
         repository.gate?.complete(Unit)
         advanceUntilIdle()
 
-        assertEquals(1, repository.calls)
+        assertEquals(1, repository.createCalls)
         assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test
     fun `escribir de nuevo limpia el error del campo`() = runTest {
-        repository.nextResult = CreateAccountResult.EmailAlreadyInUse
+        repository.nextCreateResult = CreateAccountResult.EmailAlreadyInUse
         fillValidForm()
         viewModel.onSubmit()
         advanceUntilIdle()
@@ -173,19 +173,8 @@ class CreateAccountViewModelTest {
         viewModel.onSubmit()
         advanceUntilIdle()
 
-        assertEquals(0, repository.calls)
+        assertEquals(0, repository.createCalls)
     }
 }
 
-private class FakeAuthRepository : AuthRepository {
-    var nextResult: CreateAccountResult = CreateAccountResult.Success
-    var gate: CompletableDeferred<Unit>? = null
-    var calls = 0
-        private set
-
-    override suspend fun createAccount(email: String, password: String): CreateAccountResult {
-        calls++
-        gate?.await()
-        return nextResult
-    }
-}
+// El fake compartido vive en accounts/domain/usecase/AuthFakes.kt.

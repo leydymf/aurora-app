@@ -18,7 +18,6 @@
     <string name="weather_condition_rain">Lluvia</string>
     <string name="weather_condition_snow">Nieve</string>
     <string name="weather_condition_thunderstorm">Tormenta</string>
-    <string name="access_entry_title">Hola de nuevo</string>
     <string name="access_setup_tag">PRIMER USO · PASO 2 DE 3</string>
     <string name="access_setup_title">Tu clave personal.</string>
     <string name="access_setup_body">Es tu llave. Elige algo fácil de recordar para ti, y sin significado para nadie más.</string>
@@ -60,6 +59,13 @@
     <string name="account_error_password_short">La contraseña necesita mínimo 8 caracteres.</string>
     <string name="common_error_generic">No se pudo completar ahora. Inténtalo de nuevo en un momento.</string>
     <string name="account_password_toggle">Cambiar visibilidad de la contraseña</string>
+    <string name="account_login_tag">INICIO DE SESIÓN</string>
+    <string name="account_login_title">Hola de nuevo.</string>
+    <string name="account_login_submit">Entrar</string>
+    <string name="account_login_error">Los datos no coinciden. Revísalos e inténtalo con calma.</string>
+    <string name="account_login_lock_title">Pausa temporal</string>
+    <string name="account_login_lock_body">Por tu seguridad, el acceso queda en pausa unos minutos. Respira; tu información sigue protegida.</string>
+    <string name="account_login_lock_countdown">PODRÁS INTENTAR DE NUEVO EN %1$s</string>
     <string name="access_panel_title">Estoy aquí.</string>
     <string name="access_panel_subtitle">Tómate el tiempo que necesites.</string>
     <string name="access_panel_settings">Configuración</string>
