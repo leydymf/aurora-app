@@ -15,6 +15,8 @@ internal class FakeContentRepository : ContentRepository {
         private set
     var routesCalls = 0
         private set
+    var linesCalls = 0
+        private set
 
     override suspend fun getTopics(): Result<List<Topic>> {
         topicsCalls++
@@ -26,7 +28,10 @@ internal class FakeContentRepository : ContentRepository {
         return routesResult
     }
 
-    override suspend fun getContactLines(): Result<List<ContactLine>> = linesResult
+    override suspend fun getContactLines(): Result<List<ContactLine>> {
+        linesCalls++
+        return linesResult
+    }
 }
 
 internal fun topic(
@@ -55,3 +60,12 @@ internal fun route(
     summary: String = "Resumen $id",
     agencies: List<Agency> = listOf(agency("a-$id"))
 ) = Route(id = id, order = order, title = title, summary = summary, agencies = agencies)
+
+internal fun line(
+    id: String,
+    order: Int = 1,
+    name: String = "Línea $id",
+    number: String = "155",
+    description: String = "Descripción $id",
+    hours: String? = null
+) = ContactLine(id = id, order = order, name = name, number = number, description = description, hours = hours)

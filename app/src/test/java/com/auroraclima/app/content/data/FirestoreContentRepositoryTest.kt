@@ -105,9 +105,30 @@ class FirestoreContentRepositoryTest {
         assertEquals(listOf("155", "123"), lines.map { it.number })
     }
 
+    // RF-26 — consulta sin conexión. El contrato de la fuente remota (contract de
+    // `ContentRemoteSource` + caché persistente de Firestore) es: sin red, `get()`
+    // sirve lo ya visto desde la caché, y lanza si la caché está vacía (primera
+    // apertura sin red). El fake reproduce ambos lados del contrato.
+
+    @Test
+    fun `sin red con cache el contenido completo sigue disponible`() = runTest {
+        // RF-26 criterio 1: tipos, rutas y líneas disponibles sin conexión —
+        // la fuente responde desde la caché persistente con lo ya visto.
+        remote.topics = listOf(topicDto(id = "t1", order = 1))
+        remote.agencies = listOf(agencyDto(id = "e1"))
+        remote.routes = listOf(routeDto(id = "r1", order = 1, agencyIds = listOf("e1")))
+        remote.lines = listOf(lineDto(id = "l1", order = 1))
+
+        assertEquals(listOf("t1"), repository.getTopics().getOrThrow().map { it.id })
+        assertEquals(listOf("r1"), repository.getRoutes().getOrThrow().map { it.id })
+        assertEquals(listOf("l1"), repository.getContactLines().getOrThrow().map { it.id })
+    }
+
     @Test
     fun `un fallo de la fuente remota es un Result de fallo`() = runTest {
         // §3: la excepción no cruza; RF-25: la UI decidirá mostrar lo último cargado.
+        // Es también la primera apertura sin red de RF-26 (caché vacía): cada
+        // consulta falla como Result y la UI muestra el genérico con reintento.
         remote.nextError = IOException("sin red")
 
         assertTrue(repository.getTopics().isFailure)

@@ -21,6 +21,7 @@ import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.content.ui.AGENCY_ID_ARG
 import com.auroraclima.app.content.ui.AgencyDetailRoute
+import com.auroraclima.app.content.ui.LinesRoute
 import com.auroraclima.app.content.ui.ROUTE_ID_ARG
 import com.auroraclima.app.content.ui.RoutesRoute
 import com.auroraclima.app.content.ui.TOPIC_ID_ARG
@@ -85,7 +86,8 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onTopicSelected = { topicId ->
                             navController.navigate("$TOPICS_ROUTE/$topicId")
                         },
-                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) }
+                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
+                        onOpenLines = { navController.navigate(LINES_ROUTE) }
                     )
                 }
                 screen(TOPIC_DETAIL_ROUTE) {
@@ -104,6 +106,9 @@ fun AuroraApp(sessionManager: SessionManager) {
                 }
                 screen(AGENCY_DETAIL_ROUTE) {
                     AgencyDetailRoute(onBack = { navController.popBackStack() })
+                }
+                screen(LINES_ROUTE) {
+                    LinesRoute(onBack = { navController.popBackStack() })
                 }
             }
         }
@@ -171,3 +176,4 @@ private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"
 private const val AGENCY_DETAIL_ROUTE = "$ROUTES_ROUTE/{$ROUTE_ID_ARG}/{$AGENCY_ID_ARG}"
+private const val LINES_ROUTE = "lines"

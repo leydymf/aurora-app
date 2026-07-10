@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,13 +41,19 @@ import com.auroraclima.app.core.ui.theme.CloudWhite
 import com.auroraclima.app.core.ui.theme.Mist
 import com.auroraclima.app.core.ui.theme.Night
 import com.auroraclima.app.core.ui.theme.PlexSans
+import com.auroraclima.app.core.ui.theme.Plum
 import com.auroraclima.app.core.ui.theme.Sky
 import com.auroraclima.app.core.ui.theme.Steel
 import com.auroraclima.app.core.ui.theme.SteelDeep
 
 /** Portada del módulo de información (RF-21, mockup P10 / alta-fidelidad-18). */
 @Composable
-fun TopicsRoute(onBack: () -> Unit, onTopicSelected: (String) -> Unit, onOpenRoutes: () -> Unit) {
+fun TopicsRoute(
+    onBack: () -> Unit,
+    onTopicSelected: (String) -> Unit,
+    onOpenRoutes: () -> Unit,
+    onOpenLines: () -> Unit
+) {
     val viewModel: TopicsViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     TopicsScreen(
@@ -53,6 +61,7 @@ fun TopicsRoute(onBack: () -> Unit, onTopicSelected: (String) -> Unit, onOpenRou
         onBack = onBack,
         onTopicSelected = onTopicSelected,
         onOpenRoutes = onOpenRoutes,
+        onOpenLines = onOpenLines,
         onRetry = viewModel::onRetry
     )
 }
@@ -63,6 +72,7 @@ internal fun TopicsScreen(
     onBack: () -> Unit,
     onTopicSelected: (String) -> Unit,
     onOpenRoutes: () -> Unit,
+    onOpenLines: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -83,14 +93,20 @@ internal fun TopicsScreen(
             else -> TopicsContent(
                 state = state,
                 onTopicSelected = onTopicSelected,
-                onOpenRoutes = onOpenRoutes
+                onOpenRoutes = onOpenRoutes,
+                onOpenLines = onOpenLines
             )
         }
     }
 }
 
 @Composable
-private fun TopicsContent(state: TopicsUiState, onTopicSelected: (String) -> Unit, onOpenRoutes: () -> Unit) {
+private fun TopicsContent(
+    state: TopicsUiState,
+    onTopicSelected: (String) -> Unit,
+    onOpenRoutes: () -> Unit,
+    onOpenLines: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -119,15 +135,41 @@ private fun TopicsContent(state: TopicsUiState, onTopicSelected: (String) -> Uni
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        // Acceso directo del mockup P10 a la triada de sectores (RF-22). El acceso
-        // a las líneas de contacto directo llegará con RF-23 (Día 4, Sesión 3).
-        RoutesShortcutCard(onClick = onOpenRoutes)
+        // Accesos directos del mockup P10: triada de sectores (RF-22) y líneas
+        // de contacto directo (RF-23).
+        ShortcutCard(
+            text = stringResource(R.string.content_topics_routes_button),
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_map),
+                    contentDescription = null,
+                    tint = SteelDeep,
+                    modifier = Modifier.size(22.dp)
+                )
+            },
+            chipColor = Sky,
+            onClick = onOpenRoutes
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        ShortcutCard(
+            text = stringResource(R.string.content_topics_lines_button),
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Call,
+                    contentDescription = null,
+                    tint = Plum,
+                    modifier = Modifier.size(20.dp)
+                )
+            },
+            chipColor = Plum.copy(alpha = 0.14f),
+            onClick = onOpenLines
+        )
         Spacer(modifier = Modifier.height(CONTENT_BOTTOM_CLEARANCE))
     }
 }
 
 @Composable
-private fun RoutesShortcutCard(onClick: () -> Unit) {
+private fun ShortcutCard(text: String, icon: @Composable () -> Unit, chipColor: Color, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -142,19 +184,14 @@ private fun RoutesShortcutCard(onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(color = Sky, shape = CircleShape),
+                    .background(color = chipColor, shape = CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_map),
-                    contentDescription = null,
-                    tint = SteelDeep,
-                    modifier = Modifier.size(22.dp)
-                )
+                icon()
             }
             Spacer(modifier = Modifier.width(14.dp))
             Text(
-                text = stringResource(R.string.content_topics_routes_button),
+                text = text,
                 fontFamily = PlexSans,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 16.sp,

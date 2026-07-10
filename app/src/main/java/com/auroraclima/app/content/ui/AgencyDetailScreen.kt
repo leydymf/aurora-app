@@ -1,7 +1,5 @@
 package com.auroraclima.app.content.ui
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,14 +57,7 @@ fun AgencyDetailRoute(onBack: () -> Unit) {
     AgencyDetailScreen(
         state = state,
         onBack = onBack,
-        onCall = { phone ->
-            // Sin marcador instalado (p. ej. tablet WiFi) la acción se descarta en
-            // silencio: un crash sería una anomalía visible y quedaría en logcat
-            // (auditoría D4 S2 B-1). Nada se registra.
-            runCatching {
-                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone, null)))
-            }
-        },
+        onCall = { phone -> dialNumber(context, phone) },
         onRetry = viewModel::onRetry
     )
 }
