@@ -10,3 +10,7 @@ val SteelDeep = Color(0xFF4F7189) // Acero profundo — botones y énfasis (cont
 val Night = Color(0xFF1B2530) // Noche — texto
 val CloudWhite = Color(0xFFFFFFFF) // superficies (tarjetas, barra de búsqueda)
 val SunGlow = Color(0xFFE8A23D) // iconografía meteorológica cálida
+
+// Solo espacio interno (decisión F2 de A2-6): errores sin rojo de alarma —
+// ciruela serena con contraste 8.6:1 sobre Niebla.
+val Plum = Color(0xFF9C4F63)

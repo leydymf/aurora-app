@@ -16,7 +16,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.AccessPlaceholderScreen
-import com.auroraclima.app.access.ui.ActivationPlaceholderScreen
+import com.auroraclima.app.access.ui.CodeSetupPlaceholderScreen
+import com.auroraclima.app.accounts.ui.ConsentRoute
+import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SecureBackStackGuard
@@ -46,7 +48,25 @@ fun AuroraApp(sessionManager: SessionManager) {
             // de recientes, botón nube de salida rápida y reporte de interacción
             // garantizados por construcción (RNF-02, RF-16, RNF-03).
             secureGraph(route = INNER_ROUTE, startDestination = INTRO_ROUTE) {
-                screen(INTRO_ROUTE) { ActivationPlaceholderScreen() }
+                // Primer uso (RF-05 → RF-17 → RF-07 → RF-08): consentimiento,
+                // cuenta y código. Rechazar el consentimiento converge en la
+                // salida rápida (RF-18); las pantallas no navegan por sí mismas —
+                // los destinos se deciden solo aquí (guardia RF-06).
+                screen(INTRO_ROUTE) {
+                    ConsentRoute(onAccepted = { navController.navigate(REGISTER_ROUTE) })
+                }
+                screen(REGISTER_ROUTE) {
+                    CreateAccountRoute(
+                        onAccountCreated = {
+                            // Atrás no debe regresar al formulario ni al
+                            // consentimiento ya otorgado.
+                            navController.navigate(SETUP_ROUTE) {
+                                popUpTo(INTRO_ROUTE) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                screen(SETUP_ROUTE) { CodeSetupPlaceholderScreen() }
                 screen(PANEL_ROUTE) { AccessPlaceholderScreen() }
             }
         }
@@ -107,4 +127,6 @@ private fun HomeRoute(navController: NavHostController) {
 private const val HOME_ROUTE = "home"
 private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"
+private const val REGISTER_ROUTE = "register"
+private const val SETUP_ROUTE = "setup"
 private const val PANEL_ROUTE = "panel"

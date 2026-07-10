@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    Insignia de destello (arte de docs/marca/01-aurora-mark-color.svg).
+    Nombre neutro: un destello es plausible en la iconografía de una app de clima.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+
+    <!-- Squircle lavanda de fondo -->
+    <path android:pathData="M12,2 L32,2 C37.52,2 42,6.48 42,12 L42,32 C42,37.52 37.52,42 32,42 L12,42 C6.48,42 2,37.52 2,32 L2,12 C2,6.48 6.48,2 12,2 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="2"
+                android:startY="2"
+                android:endX="42"
+                android:endY="42"
+                android:type="linear">
+                <item
+                    android:color="#A89BC4"
+                    android:offset="0" />
+                <item
+                    android:color="#9486B5"
+                    android:offset="0.6" />
+                <item
+                    android:color="#7A6FA0"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Halo cálido -->
+    <path android:pathData="M22,2 C33.05,2 42,10.95 42,22 C42,33.05 33.05,42 22,42 C10.95,42 2,33.05 2,22 C2,10.95 10.95,2 22,2 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="22"
+                android:centerY="22"
+                android:gradientRadius="22"
+                android:type="radial">
+                <item
+                    android:color="#F2FFE4C4"
+                    android:offset="0" />
+                <item
+                    android:color="#A6FFC89A"
+                    android:offset="0.35" />
+                <item
+                    android:color="#2EF2A06D"
+                    android:offset="0.7" />
+                <item
+                    android:color="#00F2A06D"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Destello: punta exterior durazno -->
+    <path
+        android:fillColor="#8CF2A06D"
+        android:pathData="M22,5 Q23.4,19.4 36.5,22 Q23.4,24.6 22,39 Q20.6,24.6 7.5,22 Q20.6,19.4 22,5 Z" />
+
+    <!-- Destello: cuerpo -->
+    <path android:pathData="M22,6.5 Q23.1,19.7 35.5,22 Q23.1,24.3 22,37.5 Q20.9,24.3 8.5,22 Q20.9,19.7 22,6.5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="22"
+                android:centerY="22"
+                android:gradientRadius="15.5"
+                android:type="radial">
+                <item
+                    android:color="#FFFFFFFF"
+                    android:offset="0" />
+                <item
+                    android:color="#FFFFF1DC"
+                    android:offset="0.4" />
+                <item
+                    android:color="#FFFFD9A8"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Destello: núcleo blanco -->
+    <path
+        android:fillColor="#D9FFFFFF"
+        android:pathData="M22,13 Q22.7,21 30.5,22 Q22.7,23 22,31 Q21.3,23 13.5,22 Q21.3,21 22,13 Z" />
+
+    <!-- Satélite NE -->
+    <path
+        android:fillColor="#FFE9C9"
+        android:pathData="M33.5,9.5 Q33.9,12 36.2,12.4 Q33.9,12.8 33.5,15.3 Q33.1,12.8 30.8,12.4 Q33.1,12 33.5,9.5 Z" />
+
+    <!-- Satélite SO -->
+    <path
+        android:fillColor="#FFD0B0"
+        android:pathData="M10.5,31 Q10.85,32.85 12.7,33.2 Q10.85,33.55 10.5,35.4 Q10.15,33.55 8.3,33.2 Q10.15,32.85 10.5,31 Z" />
+</vector>

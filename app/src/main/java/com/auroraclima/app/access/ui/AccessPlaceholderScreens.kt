@@ -23,13 +23,12 @@ import com.auroraclima.app.core.ui.theme.Mist
 import com.auroraclima.app.core.ui.theme.Night
 
 /**
- * Destino del código de activación (RF-05): aquí empezará el consentimiento y la
- * creación de cuenta. TODO(RF-17, RF-07): pantalla real en el día 3 (mockup
- * alta-fidelidad-08).
+ * Destino tras crear la cuenta (paso 2 de 3): aquí la usuaria definirá su código
+ * personal. TODO(RF-08): pantalla real (mockup alta-fidelidad-10, P06).
  */
 @Composable
-fun ActivationPlaceholderScreen(modifier: Modifier = Modifier) {
-    AccessPlaceholder(titleRes = R.string.access_intro_title, modifier = modifier)
+fun CodeSetupPlaceholderScreen(modifier: Modifier = Modifier) {
+    AccessPlaceholder(titleRes = R.string.access_setup_title, modifier = modifier)
 }
 
 /**

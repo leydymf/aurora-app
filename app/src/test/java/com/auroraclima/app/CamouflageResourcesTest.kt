@@ -13,6 +13,10 @@ import org.junit.Test
  *   se auditan solo términos que jamás serían identificadores legítimos. Nombres en
  *   inglés previstos por la arquitectura (p. ej. ValidateSecretCodeUseCase) se
  *   protegen con R8/minify (pendiente P-05), no con este guardián.
+ * - Literales de cadena en Kotlin: R8 NO ofusca literales — llegan al DEX tan
+ *   legibles como los recursos al arsc (auditoría D3 accounts H-1). Se barren con
+ *   la misma lista amplia que los recursos; mover un texto de strings.xml a una
+ *   constante Kotlin no lo protege ni lo saca del alcance de este guardián.
  */
 class CamouflageResourcesTest {
     /** Términos prohibidos en cualquier archivo de src/main, incluido código Kotlin. */
@@ -63,6 +67,9 @@ class CamouflageResourcesTest {
         "salida rápida",
         "salida rapida",
         "modo seguro",
+        // Léxico propio de Aurora (manual de marca §05): distinguidor si se lee
+        // en el APK (auditoría D3 accounts H-2).
+        "espacio seguro",
         // Nombre canónico en inglés de los botones de escape en apps de violencia
         // doméstica: legible en resources.arsc incluso con R8 (auditoría D3 H-1).
         "quick_exit",
@@ -93,6 +100,33 @@ class CamouflageResourcesTest {
 
         assertTrue(
             "Archivos con términos que rompen el camuflaje (RNF-05):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun `los literales de cadena en codigo no revelan el proposito real`() {
+        val mainDir = requireNotNull(
+            sequenceOf(File("src/main"), File("app/src/main")).firstOrNull { it.exists() }
+        ) { "No se encontró el directorio src/main" }
+        val stringLiteral = Regex("\"(?:[^\"\\\\]|\\\\.)*\"")
+
+        val violations = mainDir
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .flatMap { file ->
+                val literals = stringLiteral.findAll(file.readText())
+                    .joinToString("\n") { it.value.lowercase() }
+                (forbiddenEverywhere + forbiddenInResources)
+                    .filter { it in literals }
+                    .map { term -> "${file.relativeTo(mainDir)}: literal contiene \"$term\"" }
+            }
+            .toList()
+
+        assertTrue(
+            "Literales de cadena que rompen el camuflaje — quedan legibles en el " +
+                "DEX aun con R8 (RNF-05, auditoría D3 H-1):\n" +
                 violations.joinToString("\n"),
             violations.isEmpty()
         )
