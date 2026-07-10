@@ -1,0 +1,624 @@
+Aguada
+Albania
+Aratoca
+Barbosa
+Barichara
+Barrancabermeja
+Betulia
+Bolívar
+Bucaramanga
+Cabrera
+California
+Capitanejo
+Carcasí
+Cepitá
+Cerrito
+Charalá
+Charta
+Chima
+Chipatá
+Cimitarra
+Concepción
+Confines
+Contratación
+Coromoro
+Curití
+El Carmen de Chucurí
+El Guacamayo
+El Peñón
+El Playón
+Encino
+Enciso
+Florián
+Floridablanca
+Galán
+Gámbita
+Girón
+Guaca
+Guadalupe
+Guapotá
+Guavatá
+Güepsa
+Hato
+Jesús María
+Jordán
+La Belleza
+La Paz
+Landázuri
+Lebrija
+Los Santos
+Macaravita
+Málaga
+Matanza
+Mogotes
+Molagavita
+Ocamonte
+Oiba
+Onzaga
+Palmar
+Palmas del Socorro
+Páramo
+Piedecuesta
+Pinchote
+Puente Nacional
+Puerto Parra
+Puerto Wilches
+Rionegro
+Sabana de Torres
+San Andrés
+San Benito
+San Gil
+San Joaquín
+San José de Miranda
+San Miguel
+San Vicente de Chucurí
+Santa Bárbara
+Santa Helena del Opón
+Simacota
+Socorro
+Suaita
+Sucre
+Suratá
+Tona
+Valle de San José
+Vélez
+Vetas
+Villanueva
+Zapatoca
+Bogotá
+Medellín
+Cali
+Barranquilla
+Cartagena
+Cartagena de Indias
+Cúcuta
+Soledad
+Ibagué
+Soacha
+Santa Marta
+Villavicencio
+Bello
+Valledupar
+Pereira
+Montería
+Pasto
+Manizales
+Neiva
+Palmira
+Armenia
+Popayán
+Sincelejo
+Itagüí
+Envigado
+Tunja
+Riohacha
+Quibdó
+Florencia
+Yopal
+Mocoa
+Leticia
+Inírida
+San José del Guaviare
+Mitú
+Puerto Carreño
+Arauca
+Buenaventura
+Tuluá
+Cartago
+Buga
+Guadalajara de Buga
+Jamundí
+Yumbo
+Dosquebradas
+Santa Rosa de Cabal
+Chinchiná
+Villamaría
+Fusagasugá
+Facatativá
+Zipaquirá
+Chía
+Mosquera
+Madrid
+Funza
+Cajicá
+Girardot
+Ubaté
+Sogamoso
+Duitama
+Chiquinquirá
+Paipa
+Villa de Leyva
+Ocaña
+Pamplona
+Villa del Rosario
+Los Patios
+Aguachica
+Agustín Codazzi
+Ciénaga
+Fundación
+El Banco
+Maicao
+Uribia
+Fonseca
+San Juan del Cesar
+Magangué
+Turbaco
+Arjona
+El Carmen de Bolívar
+Sabanalarga
+Baranoa
+Puerto Colombia
+Galapa
+Malambo
+Corozal
+Lorica
+Cereté
+Sahagún
+Planeta Rica
+Montelíbano
+Tierralta
+Apartadó
+Turbo
+Necoclí
+Chigorodó
+Carepa
+Caucasia
+La Ceja
+Marinilla
+Copacabana
+Girardota
+Caldas
+Sabaneta
+La Estrella
+Santa Fe de Antioquia
+Puerto Berrío
+La Dorada
+Honda
+Mariquita
+Líbano
+Espinal
+Melgar
+Chaparral
+Purificación
+Pitalito
+Garzón
+La Plata
+Campoalegre
+Tumaco
+Ipiales
+Túquerres
+La Unión
+Sandoná
+Buesaco
+Puerto Asís
+Orito
+Villagarzón
+Granada
+Acacías
+Puerto López
+Cumaral
+Restrepo
+San Martín
+Tame
+Saravena
+Arauquita
+Paz de Ariporo
+Aguazul
+Tauramena
+Monterrey
+San Vicente del Caguán
+El Doncello
+Guapi
+Santander de Quilichao
+Puerto Tejada
+Miranda
+Corinto
+Ciudad de México
+Guadalajara
+Cancún
+Tijuana
+Puebla
+Mérida
+Monterrey
+La Habana
+Santo Domingo
+San Juan
+Kingston
+Puerto Príncipe
+Ciudad de Panamá
+Panamá
+San José
+Managua
+Tegucigalpa
+San Salvador
+Ciudad de Guatemala
+Belmopán
+Caracas
+Maracaibo
+Barquisimeto
+San Cristóbal
+Maracay
+Ciudad Bolívar
+Puerto Ordaz
+Quito
+Guayaquil
+Cuenca
+Loja
+Ambato
+Esmeraldas
+Machala
+Manta
+Lima
+Arequipa
+Trujillo
+Cusco
+Iquitos
+Piura
+Chiclayo
+Tacna
+La Paz
+Santa Cruz
+Santa Cruz de la Sierra
+Cochabamba
+El Alto
+Oruro
+Potosí
+Santiago
+Santiago de Chile
+Valparaíso
+Antofagasta
+Viña del Mar
+Temuco
+Iquique
+Buenos Aires
+Córdoba
+Rosario
+Mendoza
+Mar del Plata
+Salta
+Tucumán
+San Miguel de Tucumán
+Bariloche
+Ushuaia
+Montevideo
+Punta del Este
+Salto
+Asunción
+Ciudad del Este
+Encarnación
+Brasilia
+São Paulo
+Sao Paulo
+Río de Janeiro
+Rio de Janeiro
+Salvador
+Fortaleza
+Belo Horizonte
+Manaos
+Manaus
+Curitiba
+Recife
+Porto Alegre
+Belén
+Belem
+Georgetown
+Paramaribo
+Cayena
+Nueva York
+New York
+Los Ángeles
+Los Angeles
+Chicago
+Houston
+Miami
+Orlando
+Tampa
+Atlanta
+Boston
+Filadelfia
+Philadelphia
+Washington
+Seattle
+San Francisco
+Las Vegas
+Dallas
+Austin
+Phoenix
+Denver
+Detroit
+Minneapolis
+San Diego
+Nueva Orleans
+New Orleans
+Honolulú
+Honolulu
+Anchorage
+Toronto
+Montreal
+Vancouver
+Ottawa
+Quebec
+Calgary
+Madrid
+Barcelona
+Valencia
+Sevilla
+Zaragoza
+Bilbao
+Granada
+Salamanca
+Toledo
+Santander
+Palma de Mallorca
+Las Palmas
+Tenerife
+Lisboa
+Lisbon
+Oporto
+Porto
+París
+Paris
+Marsella
+Lyon
+Toulouse
+Niza
+Burdeos
+Londres
+London
+Mánchester
+Manchester
+Liverpool
+Birmingham
+Edimburgo
+Edinburgh
+Glasgow
+Dublín
+Dublin
+Berlín
+Berlin
+Múnich
+Munich
+Hamburgo
+Hamburg
+Fráncfort
+Frankfurt
+Colonia
+Stuttgart
+Roma
+Rome
+Milán
+Milan
+Nápoles
+Napoli
+Turín
+Torino
+Florencia
+Firenze
+Venecia
+Venezia
+Bolonia
+Ámsterdam
+Amsterdam
+Róterdam
+Rotterdam
+La Haya
+Bruselas
+Brussels
+Amberes
+Luxemburgo
+Viena
+Vienna
+Zúrich
+Zurich
+Ginebra
+Geneva
+Berna
+Bern
+Basilea
+Estocolmo
+Stockholm
+Gotemburgo
+Oslo
+Copenhague
+Copenhagen
+Helsinki
+Reikiavik
+Reykjavik
+Varsovia
+Warsaw
+Cracovia
+Krakow
+Praga
+Prague
+Bratislava
+Budapest
+Bucarest
+Bucharest
+Belgrado
+Zagreb
+Sarajevo
+Liubliana
+Sofía
+Sofia
+Atenas
+Athens
+Salónica
+Estambul
+Istanbul
+Ankara
+Esmirna
+Moscú
+Moscow
+San Petersburgo
+Kiev
+Minsk
+Riga
+Vilna
+Tallin
+Tokio
+Tokyo
+Osaka
+Kioto
+Kyoto
+Yokohama
+Nagoya
+Sapporo
+Seúl
+Seoul
+Busan
+Pekín
+Beijing
+Shanghái
+Shanghai
+Cantón
+Guangzhou
+Shenzhen
+Hong Kong
+Macao
+Taipéi
+Taipei
+Manila
+Cebú
+Bangkok
+Chiang Mai
+Hanói
+Hanoi
+Ho Chi Minh
+Saigón
+Singapur
+Singapore
+Kuala Lumpur
+Yakarta
+Jakarta
+Bali
+Denpasar
+Nueva Delhi
+New Delhi
+Delhi
+Bombay
+Mumbai
+Calcuta
+Kolkata
+Madrás
+Chennai
+Bangalore
+Katmandú
+Daca
+Dhaka
+Colombo
+Islamabad
+Karachi
+Lahore
+Kabul
+Teherán
+Tehran
+Bagdad
+Baghdad
+Damasco
+Beirut
+Ammán
+Amman
+Jerusalén
+Jerusalem
+Tel Aviv
+El Cairo
+Cairo
+Alejandría
+Trípoli
+Túnez
+Tunis
+Argel
+Algiers
+Casablanca
+Rabat
+Marrakech
+Fez
+Dakar
+Bamako
+Abiyán
+Acra
+Accra
+Lagos
+Abuya
+Abuja
+Duala
+Kinsasa
+Kinshasa
+Nairobi
+Mombasa
+Adís Abeba
+Addis Abeba
+Kampala
+Kigali
+Dar es Salaam
+Johannesburgo
+Johannesburg
+Ciudad del Cabo
+Cape Town
+Pretoria
+Durban
+Luanda
+Maputo
+Harare
+Lusaka
+Gaborone
+Windhoek
+Antananarivo
+Dubái
+Dubai
+Abu Dabi
+Abu Dhabi
+Doha
+Riad
+Riyadh
+Yeda
+Jeddah
+La Meca
+Medina
+Kuwait
+Mascate
+Muscat
+Manama
+Bakú
+Baku
+Tiflis
+Tbilisi
+Ereván
+Yerevan
+Astaná
+Astana
+Almaty
+Taskent
+Tashkent
+Sídney
+Sydney
+Melbourne
+Brisbane
+Perth
+Adelaida
+Adelaide
+Canberra
+Auckland
+Wellington
+Christchurch
+Suva

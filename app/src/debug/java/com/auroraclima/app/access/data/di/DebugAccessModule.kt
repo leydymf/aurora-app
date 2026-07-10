@@ -8,7 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 
-/** Solo builds debug: registra la siembra provisional de códigos. TODO(RF-08): eliminar. */
+/** Solo builds debug: registra la siembra del código de activación (RF-05, P-20). */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DebugAccessModule {

@@ -2,6 +2,8 @@ package com.auroraclima.app.access.data.di
 
 import com.auroraclima.app.access.data.KeystoreSecretCodeHasher
 import com.auroraclima.app.access.data.LocalSecretCodeRepository
+import com.auroraclima.app.access.data.RawCityNameDirectory
+import com.auroraclima.app.access.domain.repository.CityNameDirectory
 import com.auroraclima.app.access.domain.repository.SecretCodeRepository
 import com.auroraclima.app.access.domain.security.SecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
@@ -19,6 +21,9 @@ abstract class AccessDataModule {
 
     @Binds
     abstract fun bindSecretCodeRepository(impl: LocalSecretCodeRepository): SecretCodeRepository
+
+    @Binds
+    abstract fun bindCityNameDirectory(impl: RawCityNameDirectory): CityNameDirectory
 
     /** La puerta de la barra de búsqueda (core) se resuelve con el caso de uso de access. */
     @Binds

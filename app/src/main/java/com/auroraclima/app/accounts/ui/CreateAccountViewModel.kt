@@ -81,7 +81,7 @@ class CreateAccountViewModel @Inject constructor(
                     it.copy(passwordErrorRes = R.string.account_error_password_short)
                 }
                 CreateAccountResult.GenericFailure -> showError {
-                    it.copy(generalErrorRes = R.string.account_error_generic)
+                    it.copy(generalErrorRes = R.string.common_error_generic)
                 }
             }
         }

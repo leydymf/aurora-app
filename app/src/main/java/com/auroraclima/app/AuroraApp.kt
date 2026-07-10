@@ -15,7 +15,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.auroraclima.app.access.ui.CodeSetupPlaceholderScreen
+import com.auroraclima.app.access.ui.CodeSetupRoute
+import com.auroraclima.app.access.ui.GuidePlaceholderScreen
 import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
@@ -74,7 +75,26 @@ fun AuroraApp(sessionManager: SessionManager) {
                         }
                     )
                 }
-                screen(SETUP_ROUTE) { CodeSetupPlaceholderScreen() }
+                screen(SETUP_ROUTE) {
+                    CodeSetupRoute(
+                        onCodeCreated = {
+                            // Atrás no debe regresar al formulario de la clave ya creada.
+                            navController.navigate(GUIDE_ROUTE) {
+                                popUpTo(SETUP_ROUTE) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+                // Paso 3 de 3: tutorial (RF-10, pendiente); hoy solo deja continuar.
+                screen(GUIDE_ROUTE) {
+                    GuidePlaceholderScreen(
+                        onContinue = {
+                            navController.navigate(PANEL_ROUTE) {
+                                popUpTo(GUIDE_ROUTE) { inclusive = true }
+                            }
+                        }
+                    )
+                }
                 // Hogar del espacio interno (P09) y módulo de información
                 // (RF-21, RF-22): tipos → detalle → sectores → entidad.
                 screen(PANEL_ROUTE) {
@@ -171,6 +191,7 @@ private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
+private const val GUIDE_ROUTE = "guide"
 private const val PANEL_ROUTE = "panel"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"

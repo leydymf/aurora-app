@@ -133,7 +133,7 @@ class CreateAccountViewModelTest {
         viewModel.onSubmit()
         advanceUntilIdle()
 
-        assertEquals(R.string.account_error_generic, viewModel.uiState.value.generalErrorRes)
+        assertEquals(R.string.common_error_generic, viewModel.uiState.value.generalErrorRes)
     }
 
     @Test

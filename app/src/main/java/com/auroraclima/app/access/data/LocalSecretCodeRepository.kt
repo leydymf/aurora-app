@@ -6,6 +6,7 @@ import com.auroraclima.app.access.domain.model.CodeSlot
 import com.auroraclima.app.access.domain.model.StoredCodeHash
 import com.auroraclima.app.access.domain.repository.SecretCodeRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.IOException
 import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,10 +36,13 @@ class LocalSecretCodeRepository @Inject constructor(
 
     override suspend fun saveCode(slot: CodeSlot, value: StoredCodeHash) {
         withContext(Dispatchers.IO) {
-            preferences.edit()
+            val written = preferences.edit()
                 .putString(saltKey(slot), encode(value.salt))
                 .putString(hashKey(slot), encode(value.hash))
                 .commit()
+            // Un fallo silencioso haría creer a la usuaria que su clave existe
+            // (auditoría D5 H-2); quien llama lo traduce a error genérico (§3).
+            if (!written) throw IOException()
         }
     }
 

@@ -67,6 +67,10 @@ class CamouflageResourcesTest {
         "salida rápida",
         "salida rapida",
         "modo seguro",
+        // Describir el mecanismo de entrada en un recurso delataría el doble
+        // fondo ante una inspección del APK (auditoría D5 H-1).
+        "barra de búsqueda",
+        "barra de busqueda",
         // Léxico propio de Aurora (manual de marca §05): distinguidor si se lee
         // en el APK (auditoría D3 accounts H-2).
         "espacio seguro",

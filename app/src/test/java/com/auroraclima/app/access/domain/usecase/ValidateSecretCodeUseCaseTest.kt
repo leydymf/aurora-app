@@ -1,11 +1,7 @@
 package com.auroraclima.app.access.domain.usecase
 
 import com.auroraclima.app.access.domain.model.CodeSlot
-import com.auroraclima.app.access.domain.model.StoredCodeHash
-import com.auroraclima.app.access.domain.repository.SecretCodeRepository
-import com.auroraclima.app.access.domain.security.SecretCodeHasher
 import com.auroraclima.app.core.security.SearchGateResult
-import java.security.MessageDigest
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -110,36 +106,4 @@ class ValidateSecretCodeUseCaseTest {
     }
 }
 
-private suspend fun FakeSecretCodeRepository.seed(slot: CodeSlot, code: String, hasher: SecretCodeHasher) {
-    val salt = hasher.newSalt()
-    saveCode(slot, StoredCodeHash(salt = salt, hash = hasher.hash(salt, code)))
-}
-
-/** Hash determinista de prueba: SHA-256(salt ‖ código), sin Keystore. */
-private class FakeSecretCodeHasher : SecretCodeHasher {
-    var hashCallCount = 0
-    var failOnHash = false
-
-    override fun newSalt(): ByteArray = ByteArray(16) { 7 }
-
-    override fun hash(salt: ByteArray, code: String): ByteArray {
-        if (failOnHash) throw IllegalStateException("llave invalidada")
-        hashCallCount++
-        return MessageDigest.getInstance("SHA-256").digest(salt + code.toByteArray(Charsets.UTF_8))
-    }
-}
-
-private class FakeSecretCodeRepository : SecretCodeRepository {
-    var failOnRead = false
-
-    private val stored = mutableMapOf<CodeSlot, StoredCodeHash>()
-
-    override suspend fun storedCode(slot: CodeSlot): StoredCodeHash? {
-        if (failOnRead) throw IllegalStateException("almacenamiento corrupto")
-        return stored[slot]
-    }
-
-    override suspend fun saveCode(slot: CodeSlot, value: StoredCodeHash) {
-        stored[slot] = value
-    }
-}
+// Los fakes compartidos (hasher, repositorio y siembra) viven en SecretCodeFakes.kt.
