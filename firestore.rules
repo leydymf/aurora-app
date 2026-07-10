@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Reglas de acceso de Firestore (RNF-06; adelanto parcial de P-04).
+// El contenido informativo es de solo lectura para usuarias autenticadas y
+// solo se escribe con credenciales administrativas (script de siembra o
+// futuro panel, que no pasan por estas reglas). Todo lo demás queda negado
+// por defecto hasta definir las reglas de datos de usuarias (Día 6, RF-37).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /topics/{document} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /routes/{document} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /agencies/{document} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /lines/{document} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

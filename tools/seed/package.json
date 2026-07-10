@@ -1,0 +1,12 @@
+{
+  "name": "aurora-seed",
+  "private": true,
+  "type": "module",
+  "description": "Siembra local del contenido administrable en Firestore. Uso exclusivamente local: nunca en CI ni con la llave dentro del repo.",
+  "scripts": {
+    "seed": "node seed.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}

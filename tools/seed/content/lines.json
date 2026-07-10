@@ -1,0 +1,51 @@
+{
+  "_comment": "BORRADOR A VALIDAR por la directora del trabajo de grado. Líneas de atención vigentes (RF-23; la nota del RF pide 123, 155, 141, 122 y línea departamental). La línea departamental queda [POR CONFIRMAR]: no publicar hasta confirmar número y vigencia. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
+  "collection": "lines",
+  "documents": [
+    {
+      "id": "l01",
+      "schemaVersion": 1,
+      "order": 1,
+      "name": "Línea 155 — Orientación a mujeres",
+      "number": "155",
+      "description": "Línea nacional y gratuita de orientación a mujeres. Te informan sobre tus derechos, las rutas y las entidades a las que puedes acudir. No necesitas dar tu nombre.",
+      "hours": "24 horas, todos los días"
+    },
+    {
+      "id": "l02",
+      "schemaVersion": 1,
+      "order": 2,
+      "name": "Línea 123 — Emergencias",
+      "number": "123",
+      "description": "Policía, ambulancia y bomberos. Llama si tú o tus hijos e hijas están en peligro en este momento.",
+      "hours": "24 horas, todos los días"
+    },
+    {
+      "id": "l03",
+      "schemaVersion": 1,
+      "order": 3,
+      "name": "Línea 141 — ICBF",
+      "number": "141",
+      "description": "Línea de protección de niñas, niños y adolescentes del ICBF. Para reportar cualquier situación que los afecte o ponga en riesgo.",
+      "hours": "24 horas, todos los días"
+    },
+    {
+      "id": "l04",
+      "schemaVersion": 1,
+      "order": 4,
+      "name": "Línea 122 — Fiscalía",
+      "number": "122",
+      "description": "Línea de la Fiscalía General de la Nación para denunciar delitos por teléfono y recibir orientación sobre cómo y dónde denunciar.",
+      "hours": "24 horas [POR CONFIRMAR]"
+    },
+    {
+      "id": "l05",
+      "schemaVersion": 1,
+      "order": 5,
+      "name": "Línea departamental de Santander [POR CONFIRMAR]",
+      "number": "[POR CONFIRMAR]",
+      "description": "Línea de orientación del departamento de Santander mencionada en la ruta local (A1.5). Confirmar con la directora el número, el nombre oficial y la vigencia antes de sembrarla.",
+      "hours": null
+    }
+  ]
+}

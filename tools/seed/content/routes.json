@@ -1,0 +1,41 @@
+{
+  "_comment": "BORRADOR A VALIDAR por la directora del trabajo de grado. Ruta de atención de Santander en la triada Salud–Protección–Justicia (RF-22, mapa A1.5). Los agencyIds referencian documentos de agencies.json; una referencia sin resolver simplemente no se muestra (RF-42). IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
+  "collection": "routes",
+  "documents": [
+    {
+      "id": "r01",
+      "schemaVersion": 1,
+      "order": 1,
+      "title": "Salud",
+      "summary": "Si sufriste una agresión, el sector salud te atiende de forma gratuita e inmediata, sin necesidad de denuncia previa y aunque no tengas heridas visibles. En caso de violencia sexual acude lo antes posible, idealmente dentro de las primeras 72 horas: la atención es una urgencia médica e incluye anticoncepción de emergencia y prevención de infecciones. Pide siempre copia de la historia clínica: sirve como prueba si más adelante decides denunciar.",
+      "agencyIds": [
+        "a01"
+      ]
+    },
+    {
+      "id": "r02",
+      "schemaVersion": 1,
+      "order": 2,
+      "title": "Protección",
+      "summary": "Este sector protege tu vida y tu integridad, y las de tus hijos e hijas. La Comisaría de Familia puede dictar medidas de protección (por ejemplo, ordenar que el agresor salga de la casa o que no se te acerque) sin que tengas que iniciar un proceso penal. Si el peligro es ahora mismo, llama a la Policía (123).",
+      "agencyIds": [
+        "a02",
+        "a03",
+        "a04",
+        "a05"
+      ]
+    },
+    {
+      "id": "r03",
+      "schemaVersion": 1,
+      "order": 3,
+      "title": "Justicia",
+      "summary": "Este sector investiga y sanciona la agresión. La denuncia ante la Fiscalía es gratuita, no necesitas abogado y puedes pedir que te atienda una funcionaria mujer. Denunciar es tu derecho y tu decisión: hacerlo no depende de nadie más, y puedes pedir orientación antes de decidir.",
+      "agencyIds": [
+        "a06",
+        "a07",
+        "a08"
+      ]
+    }
+  ]
+}

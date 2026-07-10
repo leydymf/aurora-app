@@ -1,0 +1,82 @@
+{
+  "_comment": "BORRADOR A VALIDAR por la directora del trabajo de grado. Tipos de violencia según la Ley 1257 de 2008 (art. 2 y 3), en lenguaje claro y no revictimizante (RF-21). Editar aquí y re-ejecutar seed.mjs. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
+  "collection": "topics",
+  "documents": [
+    {
+      "id": "t01",
+      "schemaVersion": 1,
+      "order": 1,
+      "title": "Violencia física",
+      "summary": "Es cualquier acción que ponga en riesgo o cause daño a tu cuerpo o a tu salud. No necesita dejar marcas visibles para ser violencia: los empujones, los zarandeos o los golpes que otros llaman 'leves' también lo son. La Ley 1257 de 2008 la reconoce y la sanciona. No es tu culpa y no estás sola.",
+      "signals": [
+        "Golpes, cachetadas, empujones, pellizcos o jalones de cabello, aunque después diga que 'estaba jugando' o que tú lo provocaste.",
+        "Lanza objetos hacia ti o golpea paredes y muebles para intimidarte durante una discusión.",
+        "Te impide salir, te encierra o te retiene contra tu voluntad.",
+        "Has tenido que inventar explicaciones ante otras personas por moretones o lesiones.",
+        "Sientes miedo constante de que una discusión termine en agresión."
+      ],
+      "examples": [
+        "Tu pareja te empuja durante una pelea y luego dice que exageras o que fue un accidente.",
+        "Te aprieta el brazo o te zarandea 'para que entiendas'.",
+        "Te quita las llaves o te bloquea la puerta para que no puedas salir de la casa."
+      ]
+    },
+    {
+      "id": "t02",
+      "schemaVersion": 1,
+      "order": 2,
+      "title": "Violencia psicológica",
+      "summary": "Busca degradarte o controlar tus acciones, decisiones y creencias mediante humillación, intimidación, aislamiento o cualquier conducta que dañe tu salud emocional o tu autoestima. Es la más frecuente y la más difícil de reconocer, porque suele empezar poco a poco y hacerse pasar por 'celos' o 'cuidado'.",
+      "signals": [
+        "Te humilla, te ridiculiza o te descalifica, en privado o delante de otras personas.",
+        "Controla tu ropa, tus redes sociales, tus amistades o tus horarios, y lo presenta como amor o protección.",
+        "Te amenaza con hacerte daño, quitarte a tus hijos o hijas, o hacerse daño él si lo dejas.",
+        "Te aísla poco a poco de tu familia y tus amistades hasta que sientes que solo lo tienes a él.",
+        "Te hace dudar de tu memoria o de tu percepción ('eso no pasó', 'estás loca', 'tú siempre exageras')."
+      ],
+      "examples": [
+        "Tu pareja revisa tu celular y te exige las contraseñas como 'prueba de confianza'.",
+        "Te dice que sin él no vales nada, que nadie más te aguantaría o que nadie te va a creer.",
+        "Cada vez que sales con tus amigas hay un conflicto, hasta que dejas de salir para evitar problemas."
+      ]
+    },
+    {
+      "id": "t03",
+      "schemaVersion": 1,
+      "order": 3,
+      "title": "Violencia sexual",
+      "summary": "Es obligarte o presionarte a tener contacto o actos sexuales sin tu consentimiento. También existe dentro del matrimonio o de una relación de pareja: estar en una relación no obliga a nada. Tu cuerpo es tuyo y solo tú decides sobre él.",
+      "signals": [
+        "Te presiona, chantajea o insiste hasta que cedes a tener relaciones que no querías.",
+        "Ignora tu 'no' o continúa cuando le pides que pare.",
+        "Te obliga a prácticas sexuales que no deseas o que te hacen sentir mal.",
+        "Te toca sin tu consentimiento o te exige 'cumplir como pareja'.",
+        "Condiciona el dinero, el afecto o la tranquilidad de la casa a lo sexual."
+      ],
+      "examples": [
+        "Tu pareja te obliga a tener relaciones cuando no quieres: también es violencia sexual aunque sea tu esposo o tu novio.",
+        "Te amenaza con compartir fotos o videos íntimos si no haces lo que pide.",
+        "Después de una pelea te exige sexo 'para reconciliarse' aunque tú no quieras."
+      ]
+    },
+    {
+      "id": "t04",
+      "schemaVersion": 1,
+      "order": 4,
+      "title": "Violencia económica y patrimonial",
+      "summary": "Es controlar o quitarte el dinero, los bienes o los documentos para limitarte, someterte o volverte dependiente. La Ley 1257 de 2008 incluye la pérdida, transformación o retención de tus objetos, documentos, bienes y recursos económicos. Que él 'maneje la plata' no le da derecho a controlarte la vida.",
+      "signals": [
+        "Controla todo lo que gastas y te exige explicar o justificar cada peso.",
+        "Te impide trabajar o estudiar, o te sabotea para que renuncies ('¿y los niños qué?').",
+        "Se apropia de tu sueldo, tus ahorros o tus bienes.",
+        "Esconde, retiene o destruye tus documentos (cédula, pasaporte, escrituras).",
+        "No aporta para los gastos de los hijos e hijas como forma de castigo o presión."
+      ],
+      "examples": [
+        "Tu pareja te quita la tarjeta o te da 'mesada' de tu propio sueldo.",
+        "Te prohíbe trabajar 'porque no hace falta' y luego usa el dinero para controlarte.",
+        "Cuando discuten, daña o vende tus cosas sin tu permiso."
+      ]
+    }
+  ]
+}

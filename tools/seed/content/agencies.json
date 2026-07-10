@@ -1,0 +1,100 @@
+{
+  "_comment": "BORRADOR A VALIDAR por la directora del trabajo de grado. Entidades de la ruta de atención de Bucaramanga y Santander (RF-22). Todo dato marcado [POR CONFIRMAR] debe verificarse con fuentes oficiales antes de publicar a usuarias reales. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
+  "collection": "agencies",
+  "documents": [
+    {
+      "id": "a01",
+      "schemaVersion": 1,
+      "name": "Urgencias de hospitales y clínicas (EPS o red pública)",
+      "role": "Te brinda atención médica y psicológica de urgencia, gratuita, y activa la ruta de protección desde el sector salud. En violencia sexual aplica el protocolo de atención integral (anticoncepción de emergencia, prevención de VIH e infecciones, recolección de evidencias si lo autorizas).",
+      "whenToUse": "Después de cualquier agresión física o sexual, aunque no tengas heridas visibles. En violencia sexual, lo antes posible: idealmente dentro de las primeras 72 horas.",
+      "phones": [],
+      "address": "El servicio de urgencias más cercano. En Bucaramanga: Hospital Universitario de Santander (HUS), carrera 33 n.º 28-126 [POR CONFIRMAR]",
+      "hours": "24 horas, todos los días"
+    },
+    {
+      "id": "a02",
+      "schemaVersion": 1,
+      "name": "Comisarías de Familia de Bucaramanga",
+      "role": "Reciben tu caso cuando el agresor es tu pareja, expareja o un familiar. Pueden dictar medidas de protección de la Ley 1257 (ordenar que el agresor salga de la casa, que no se te acerque ni te contacte) y remitirte a atención psicosocial. No necesitas abogado.",
+      "whenToUse": "Cuando la agresión ocurre dentro de la familia o la pareja y necesitas protección, incluso si no quieres (o no has decidido) iniciar un proceso penal.",
+      "phones": [
+        "(607) 633 7000 ext. [POR CONFIRMAR]"
+      ],
+      "address": "Sedes en Bucaramanga: Centro, Norte y Provenza [POR CONFIRMAR direcciones exactas]",
+      "hours": "Lunes a viernes en horario de oficina; fuera de ese horario la urgencia la atiende la Policía (123) [POR CONFIRMAR]"
+    },
+    {
+      "id": "a03",
+      "schemaVersion": 1,
+      "name": "Policía Nacional — cuadrante",
+      "role": "Atiende la emergencia en el momento: puede intervenir para detener la agresión, acompañarte a un lugar seguro y dejar registro de lo ocurrido, que sirve dentro de la ruta.",
+      "whenToUse": "Cuando estás en peligro ahora mismo o la agresión acaba de ocurrir.",
+      "phones": [
+        "123"
+      ],
+      "address": null,
+      "hours": "24 horas, todos los días"
+    },
+    {
+      "id": "a04",
+      "schemaVersion": 1,
+      "name": "Secretaría de la Mujer y Equidad de Género — Gobernación de Santander [POR CONFIRMAR nombre oficial vigente]",
+      "role": "Ofrece orientación psicosocial y jurídica gratuita, y coordina los programas de apoyo del departamento para mujeres.",
+      "whenToUse": "Cuando necesites orientación y acompañamiento para entender tus opciones, sin que sea una urgencia inmediata.",
+      "phones": [
+        "[POR CONFIRMAR]"
+      ],
+      "address": "Gobernación de Santander, Bucaramanga [POR CONFIRMAR dependencia y dirección]",
+      "hours": "Lunes a viernes en horario de oficina [POR CONFIRMAR]"
+    },
+    {
+      "id": "a05",
+      "schemaVersion": 1,
+      "name": "ICBF — Instituto Colombiano de Bienestar Familiar",
+      "role": "Protege los derechos de niñas, niños y adolescentes. Puede tomar medidas de restablecimiento de derechos cuando hay menores de edad afectados.",
+      "whenToUse": "Cuando tus hijos o hijas (u otros menores de edad) están siendo afectados o en riesgo por la situación de violencia.",
+      "phones": [
+        "141"
+      ],
+      "address": "Regional Santander, Bucaramanga [POR CONFIRMAR dirección]",
+      "hours": "Línea 141: 24 horas, todos los días"
+    },
+    {
+      "id": "a06",
+      "schemaVersion": 1,
+      "name": "Fiscalía General de la Nación (URI / CAIVAS Bucaramanga)",
+      "role": "Recibe la denuncia penal e investiga. El CAIVAS atiende de manera especializada los casos de violencia sexual; la URI recibe denuncias de urgencia. La denuncia es gratuita y no necesitas abogado.",
+      "whenToUse": "Cuando decidas denunciar penalmente la agresión. Puedes pedir que te atienda una funcionaria mujer y estar acompañada por alguien de confianza.",
+      "phones": [
+        "122"
+      ],
+      "address": "URI Bucaramanga [POR CONFIRMAR dirección]; CAIVAS [POR CONFIRMAR dirección]",
+      "hours": "URI: 24 horas [POR CONFIRMAR]"
+    },
+    {
+      "id": "a07",
+      "schemaVersion": 1,
+      "name": "Instituto Nacional de Medicina Legal — Bucaramanga",
+      "role": "Realiza la valoración médico-legal de las lesiones o de la agresión sexual por remisión de la Fiscalía o de la Comisaría. Su dictamen es prueba dentro del proceso.",
+      "whenToUse": "Cuando la Fiscalía o la Comisaría te remitan. En casos de violencia sexual, si te es posible, procura no bañarte ni cambiarte de ropa antes del examen para conservar las evidencias — y si ya lo hiciste, acude de todas formas: el examen sigue siendo válido.",
+      "phones": [
+        "[POR CONFIRMAR]"
+      ],
+      "address": "Bucaramanga [POR CONFIRMAR dirección]",
+      "hours": "[POR CONFIRMAR]"
+    },
+    {
+      "id": "a08",
+      "schemaVersion": 1,
+      "name": "Casa de Justicia de Bucaramanga",
+      "role": "Reúne en un solo lugar varios servicios: comisaría de familia, fiscalía local, conciliación y orientación jurídica gratuita.",
+      "whenToUse": "Cuando quieras recibir orientación sobre tu caso y conocer tus opciones antes de decidir qué camino tomar.",
+      "phones": [
+        "[POR CONFIRMAR]"
+      ],
+      "address": "[POR CONFIRMAR — Bucaramanga tiene Casa de Justicia en el barrio La Libertad y otra en el Norte]",
+      "hours": "Lunes a viernes en horario de oficina [POR CONFIRMAR]"
+    }
+  ]
+}

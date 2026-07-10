@@ -21,6 +21,12 @@ google-services.json
 *.keystore
 *.jks
 
+# Llave de servicio de Firebase (siembra local) — nunca versionar; la ruta
+# canónica es ~/.config/aurora-seed/ FUERA del repo, esto es doble barrera
+service-account*.json
+*-adminsdk-*.json
+tools/seed/node_modules/
+
 # Artefactos de sesión de Claude Code (los agentes en .claude/agents/ sí se versionan)
 /.claude/projects/
 /.claude/scheduled_tasks.lock
