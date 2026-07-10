@@ -32,16 +32,6 @@ fun CodeSetupPlaceholderScreen(modifier: Modifier = Modifier) {
 }
 
 /**
- * Destino del código secreto de la usuaria (RF-12): inicio de sesión o pantalla
- * principal según haya sesión. TODO(RF-15): pantalla real en el día 3 (mockups
- * alta-fidelidad-14 y 16).
- */
-@Composable
-fun AccessPlaceholderScreen(modifier: Modifier = Modifier) {
-    AccessPlaceholder(titleRes = R.string.access_entry_title, modifier = modifier)
-}
-
-/**
  * Las pantallas internas NO aplican la bandera de pantalla segura por su cuenta:
  * la garantiza el grafo seguro de `core/security` donde se registran sus rutas (RNF-02).
  */

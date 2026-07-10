@@ -1,4 +1,4 @@
-package com.auroraclima.app.accounts.ui
+package com.auroraclima.app.core.ui.components
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,7 +12,7 @@ import com.auroraclima.app.core.ui.theme.SteelDeep
 
 /** Etiqueta mono en mayúsculas (manual de marca §04: 11–13 px, tracking 0.16em). */
 @Composable
-internal fun SectionTag(text: String, modifier: Modifier = Modifier) {
+fun SectionTag(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         modifier = modifier,
@@ -23,9 +23,9 @@ internal fun SectionTag(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Titular serif del espacio interno (Marcellus, mockups P04–P07). */
+/** Titular serif del espacio interno (Marcellus, mockups P04–P21). */
 @Composable
-internal fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         modifier = modifier,

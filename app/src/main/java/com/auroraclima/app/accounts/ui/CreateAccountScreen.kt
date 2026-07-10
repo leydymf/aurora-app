@@ -44,6 +44,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.ui.components.BrandHeader
+import com.auroraclima.app.core.ui.components.SectionTag
+import com.auroraclima.app.core.ui.components.SectionTitle
 import com.auroraclima.app.core.ui.theme.CloudWhite
 import com.auroraclima.app.core.ui.theme.Mist
 import com.auroraclima.app.core.ui.theme.Night

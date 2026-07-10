@@ -15,10 +15,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.auroraclima.app.access.ui.AccessPlaceholderScreen
 import com.auroraclima.app.access.ui.CodeSetupPlaceholderScreen
+import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
+import com.auroraclima.app.content.ui.AGENCY_ID_ARG
+import com.auroraclima.app.content.ui.AgencyDetailRoute
+import com.auroraclima.app.content.ui.ROUTE_ID_ARG
+import com.auroraclima.app.content.ui.RoutesRoute
+import com.auroraclima.app.content.ui.TOPIC_ID_ARG
+import com.auroraclima.app.content.ui.TopicDetailRoute
+import com.auroraclima.app.content.ui.TopicsRoute
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SecureBackStackGuard
@@ -67,7 +74,37 @@ fun AuroraApp(sessionManager: SessionManager) {
                     )
                 }
                 screen(SETUP_ROUTE) { CodeSetupPlaceholderScreen() }
-                screen(PANEL_ROUTE) { AccessPlaceholderScreen() }
+                // Hogar del espacio interno (P09) y módulo de información
+                // (RF-21, RF-22): tipos → detalle → sectores → entidad.
+                screen(PANEL_ROUTE) {
+                    PanelScreen(onOpenInfo = { navController.navigate(TOPICS_ROUTE) })
+                }
+                screen(TOPICS_ROUTE) {
+                    TopicsRoute(
+                        onBack = { navController.popBackStack() },
+                        onTopicSelected = { topicId ->
+                            navController.navigate("$TOPICS_ROUTE/$topicId")
+                        },
+                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) }
+                    )
+                }
+                screen(TOPIC_DETAIL_ROUTE) {
+                    TopicDetailRoute(
+                        onBack = { navController.popBackStack() },
+                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) }
+                    )
+                }
+                screen(ROUTES_ROUTE) {
+                    RoutesRoute(
+                        onBack = { navController.popBackStack() },
+                        onAgencySelected = { routeId, agencyId ->
+                            navController.navigate("$ROUTES_ROUTE/$routeId/$agencyId")
+                        }
+                    )
+                }
+                screen(AGENCY_DETAIL_ROUTE) {
+                    AgencyDetailRoute(onBack = { navController.popBackStack() })
+                }
             }
         }
     }
@@ -130,3 +167,7 @@ private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
 private const val PANEL_ROUTE = "panel"
+private const val TOPICS_ROUTE = "topics"
+private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
+private const val ROUTES_ROUTE = "routes"
+private const val AGENCY_DETAIL_ROUTE = "$ROUTES_ROUTE/{$ROUTE_ID_ARG}/{$AGENCY_ID_ARG}"

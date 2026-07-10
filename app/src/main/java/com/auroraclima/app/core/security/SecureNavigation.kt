@@ -1,5 +1,6 @@
 package com.auroraclima.app.core.security
 
+import android.os.SystemClock
 import android.view.Window
 import android.view.WindowManager
 import androidx.compose.animation.EnterTransition
@@ -15,11 +16,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -93,9 +99,27 @@ private fun SecureScreen(content: @Composable () -> Unit) {
         onDispose { window?.let(SecureFlagCounter::release) }
     }
     val sessionManager = LocalSessionManager.current
+    // El desplazamiento también cuenta como interacción (RNF-03, P-21): una lectura
+    // larga con scroll no debe cerrar la sesión a los 5 minutos. El toque que inicia
+    // cada gesto ya lo captura pointerInput, pero el scroll por accesibilidad
+    // (TalkBack) no genera eventos de puntero; esta conexión de nested scroll cubre
+    // ambos casos, acotada por InteractionThrottle para no reiniciar el temporizador
+    // en cada frame de un desplazamiento continuo.
+    val scrollInteractionConnection = remember(sessionManager) {
+        val throttle = InteractionThrottle(MonotonicClock(SystemClock::elapsedRealtime))
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (consumed != Offset.Zero && throttle.shouldRegister()) {
+                    sessionManager.registerInteraction()
+                }
+                return Offset.Zero
+            }
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .nestedScroll(scrollInteractionConnection)
             .pointerInput(sessionManager) {
                 awaitPointerEventScope {
                     while (true) {
