@@ -55,19 +55,25 @@ class LocalSecretCodeRepositoryTest {
 
     @Test
     fun `un dato parcial devuelve null`() = runTest {
-        // Solo el salt presente (escritura interrumpida): código inexistente
-        preferences().edit().putString("i1_s", "AAAA").commit()
+        // Escritura interrumpida: falta una de las dos claves. Se siembra vía
+        // saveCode y se borra lo que la implementación escribió de verdad, para
+        // que un renombre de archivo o claves rompa el test en vez de dejarlo
+        // pasar vacuamente (auditoría D6 M-2).
+        repository.saveCode(CodeSlot.USER, StoredCodeHash(salt = ByteArray(16) { 1 }, hash = ByteArray(32) { 2 }))
+        val removed = preferences().edit().remove(preferences().all.keys.first()).commit()
+        require(removed)
 
         assertNull(repository.storedCode(CodeSlot.USER))
     }
 
     @Test
     fun `base64 corrupto devuelve null en vez de lanzar`() = runTest {
-        // El fallo jamás cruza hacia la fachada (§3 de ARQUITECTURA.md)
-        preferences().edit()
-            .putString("i1_s", "%%%esto-no-es-base64%%%")
-            .putString("i1_h", "tampoco esto")
-            .commit()
+        // El fallo jamás cruza hacia la fachada (§3 de ARQUITECTURA.md). La
+        // corrupción sobrescribe las claves realmente escritas (D6 M-2).
+        repository.saveCode(CodeSlot.USER, StoredCodeHash(salt = ByteArray(16) { 1 }, hash = ByteArray(32) { 2 }))
+        val editor = preferences().edit()
+        preferences().all.keys.forEach { editor.putString(it, "%%%esto-no-es-base64%%%") }
+        require(editor.commit())
 
         assertNull(repository.storedCode(CodeSlot.USER))
     }
