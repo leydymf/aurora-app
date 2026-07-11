@@ -23,6 +23,10 @@ coroutinesTest = "1.8.1"
 # Navegación multi-pantalla (fachada ⇄ doble fondo); Jetpack oficial y liviana (A2-1)
 navigationCompose = "2.8.9"
 hiltNavigationCompose = "1.2.0"
+# Cifrado en reposo de la BD central (RNF-01, P-03). sqlcipher-android es el
+# sucesor mantenido de android-database-sqlcipher (EOL en 4.5.4, sin parches
+# desde 2023) — ver ADR en docs/ARQUITECTURA.md
+sqlcipherAndroid = "4.9.0"
 
 [libraries]
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
@@ -53,6 +57,7 @@ retrofit-converter-kotlinx-serialization = { group = "com.squareup.retrofit2", n
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipherAndroid" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 [plugins]

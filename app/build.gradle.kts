@@ -72,6 +72,9 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // Cifrado en reposo de la BD central del espacio interno (RNF-01, P-03)
+    implementation(libs.sqlcipher.android)
+
     // Red (Open-Meteo)
     implementation(libs.retrofit)
     implementation(libs.okhttp)
@@ -82,6 +85,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    // La BD de prueba del test de cifrado (core/database) declara sus propios DAOs
+    kspAndroidTest(libs.room.compiler)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
