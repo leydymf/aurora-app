@@ -27,6 +27,10 @@ hiltNavigationCompose = "1.2.0"
 # sucesor mantenido de android-database-sqlcipher (EOL en 4.5.4, sin parches
 # desde 2023) — ver ADR en docs/ARQUITECTURA.md
 sqlcipherAndroid = "4.9.0"
+# Solo tests unitarios (no entra al APK): P-13 exige probar la capa data real
+# de access (SharedPreferences) en la JVM
+robolectric = "4.15.1"
+androidxTestCore = "1.6.1"
 
 [libraries]
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
@@ -58,6 +62,8 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipherAndroid" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 [plugins]

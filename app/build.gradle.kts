@@ -83,6 +83,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // P-13: pruebas de la capa data real de access en la JVM (no entran al APK)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     // La BD de prueba del test de cifrado (core/database) declara sus propios DAOs
