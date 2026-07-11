@@ -16,8 +16,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.CodeSetupRoute
-import com.auroraclima.app.access.ui.GuidePlaceholderScreen
 import com.auroraclima.app.access.ui.PanelScreen
+import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.accounts.ui.LoginRoute
@@ -86,15 +86,21 @@ fun AuroraApp(sessionManager: SessionManager) {
                         }
                     )
                 }
-                // Paso 3 de 3: tutorial (RF-10, pendiente); hoy solo deja continuar.
+                // Paso 3 de 3: tutorial con práctica real (RF-10). No navega a
+                // ningún lado por sí mismo: terminar ES salir con la nube (la
+                // práctica de salida usa la salida real del grafo seguro) y el
+                // reingreso con la clave ejercita RF-12 de verdad.
                 screen(GUIDE_ROUTE) {
-                    GuidePlaceholderScreen(
-                        onContinue = {
-                            navController.navigate(PANEL_ROUTE) {
-                                popUpTo(GUIDE_ROUTE) { inclusive = true }
-                            }
-                        }
-                    )
+                    // onClose inalcanzable en primer uso: la primera página no
+                    // muestra «Atrás» (showBack en TutorialScreen) y detrás ya
+                    // no hay nada — el setup se sacó de la pila al navegar aquí.
+                    TutorialRoute(isReview = false, onClose = {})
+                }
+                // Reapertura del tutorial (RF-11): mismo contenido en modo
+                // repaso; «Atrás» en la primera página regresa a donde estaba.
+                // La futura pantalla de configuración navegará a esta ruta.
+                screen(GUIDE_REVIEW_ROUTE) {
+                    TutorialRoute(isReview = true, onClose = { navController.popBackStack() })
                 }
                 // Reingreso (RF-12, RF-15): con sesión vigente salta directo al
                 // panel; sin sesión, inicio de sesión con bloqueo temporal.
@@ -205,6 +211,7 @@ private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
 private const val GUIDE_ROUTE = "guide"
+private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val TOPICS_ROUTE = "topics"
