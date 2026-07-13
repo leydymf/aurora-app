@@ -8,8 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +64,7 @@ import com.auroraclima.app.core.ui.theme.Plum
 import com.auroraclima.app.core.ui.theme.Sky
 import com.auroraclima.app.core.ui.theme.Steel
 import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
 import com.auroraclima.app.questionnaire.domain.model.Question
 
 /**
@@ -344,23 +348,7 @@ private fun ResultContent(state: GuidanceUiState, onOpenRoutes: () -> Unit, onFi
         Spacer(modifier = Modifier.height(20.dp))
         SectionTag(stringResource(R.string.guidance_result_tag))
         Spacer(modifier = Modifier.height(12.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = Sky
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SectionTag(stringResource(R.string.guidance_result_level, result.level.title.uppercase()))
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = result.level.summary,
-                    fontFamily = Marcellus,
-                    fontSize = 22.sp,
-                    lineHeight = 30.sp,
-                    color = Night
-                )
-            }
-        }
+        LevelCard(level = result.level)
         Spacer(modifier = Modifier.height(10.dp))
         NoticeCard(questionnaire.notice)
         Column(
@@ -402,6 +390,62 @@ private fun ResultContent(state: GuidanceUiState, onOpenRoutes: () -> Unit, onFi
         )
         Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
     }
+}
+
+/**
+ * Tarjeta del nivel: el nombre del nivel es el protagonista tipográfico y una
+ * franja lateral lo acompaña con un acento POR NIVEL tomado solo de la paleta
+ * serena de la marca — sin semáforos ni rojos de alarma (ajuste de la usuaria
+ * 2026-07-13 sobre la decisión F6 de A2-6, anotado en P-41: F6 mantiene «el
+ * nivel se dice con palabras» y el acento gradúa dentro del mismo cielo).
+ */
+@Composable
+private fun LevelCard(level: GuidanceLevel) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = CloudWhite
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(levelAccent(level.order))
+            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                SectionTag(stringResource(R.string.guidance_result_level))
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = level.title,
+                    fontFamily = Marcellus,
+                    fontSize = 34.sp,
+                    lineHeight = 42.sp,
+                    color = Night
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = level.summary,
+                    fontFamily = PlexSans,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    color = Night
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Acento tonal por severidad, acotado a la paleta existente: el `order` del
+ * nivel llega del documento administrable y puede crecer (RF-43), así que la
+ * escala se satura en Ciruela para cualquier severidad por encima de la cuarta.
+ */
+private fun levelAccent(order: Int): Color = when {
+    order <= 1 -> Sky
+    order == 2 -> Steel
+    order == 3 -> SteelDeep
+    else -> Plum
 }
 
 /** Acceso a las rutas de atención (RF-29 criterio 2): navegación, nunca import de content (§2). */

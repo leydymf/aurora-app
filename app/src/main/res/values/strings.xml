@@ -127,7 +127,7 @@
     <string name="guidance_see_result">Ver resultado</string>
     <string name="guidance_retry">Reintentar</string>
     <string name="guidance_result_tag">RESULTADO ORIENTATIVO</string>
-    <string name="guidance_result_level">NIVEL %1$s</string>
+    <string name="guidance_result_level">NIVEL ORIENTATIVO</string>
     <string name="guidance_result_partial">Respondiste %1$d de %2$d preguntas. Con pocas respuestas la orientación puede quedarse corta: tómala como un punto de partida.</string>
     <string name="guidance_result_actions">QUÉ PUEDES HACER</string>
     <string name="guidance_result_routes">Ver rutas de atención</string>
