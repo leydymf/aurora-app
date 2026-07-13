@@ -1,13 +1,17 @@
 package com.auroraclima.app.questionnaire.ui
 
+import androidx.lifecycle.ViewModelStore
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.MonotonicClock
+import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
 import com.auroraclima.app.questionnaire.domain.model.Question
 import com.auroraclima.app.questionnaire.domain.model.Questionnaire
 import com.auroraclima.app.questionnaire.domain.model.ScaleOption
 import com.auroraclima.app.questionnaire.domain.repository.QuestionnaireRepository
 import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUseCase
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -218,9 +222,77 @@ class GuidanceViewModelTest {
         assertNull(state.result)
     }
 
-    private fun viewModel() = GuidanceViewModel(
+    @Test
+    fun `la limpieza de sesion de RF-16 descarta las respuestas en memoria`() = runTest {
+        // Regresión RF-28: la salida rápida usa la MISMA rutina closeSession()
+        // que la inactividad y el background prolongado — el cleaner dinámico
+        // del ViewModel debe borrar las respuestas en ese mismo instante.
+        val sessionManager = sessionManager()
+        val viewModel = viewModel(sessionManager)
+        advanceUntilIdle()
+        sessionManager.startSession()
+        viewModel.onStart()
+        viewModel.onOptionSelected("s2")
+        viewModel.onNext()
+        viewModel.onOptionSelected("s1")
+
+        sessionManager.quickExit()
+
+        val state = viewModel.uiState.value
+        assertEquals(emptyMap<String, String>(), state.answers)
+        assertEquals(GuidancePhase.INTRO, state.phase)
+        assertNull(state.result)
+    }
+
+    @Test
+    fun `la limpieza de sesion tambien descarta el resultado ya calculado`() = runTest {
+        val sessionManager = sessionManager()
+        val viewModel = viewModel(sessionManager)
+        advanceUntilIdle()
+        sessionManager.startSession()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+
+        sessionManager.closeSession()
+
+        val state = viewModel.uiState.value
+        assertNull(state.result)
+        assertEquals(emptyMap<String, String>(), state.answers)
+    }
+
+    @Test
+    fun `al morir el viewmodel su cleaner queda dado de baja`() = runTest {
+        // El pop del grafo destruye el ViewModel; su registro no debe quedar
+        // colgando en SessionManager para cierres posteriores.
+        val sessionManager = sessionManager()
+        val viewModel = viewModel(sessionManager)
+        advanceUntilIdle()
+        val store = ViewModelStore()
+        store.put("guidance", viewModel)
+        store.clear()
+
+        viewModel.onStart()
+        viewModel.onOptionSelected("s1")
+        sessionManager.startSession()
+        sessionManager.closeSession()
+
+        // Con el cleaner dado de baja, el cierre ya no toca este estado.
+        assertEquals(mapOf("q01" to "s1"), viewModel.uiState.value.answers)
+    }
+
+    private fun viewModel(sessionManager: SessionManager = sessionManager()) = GuidanceViewModel(
         repository = repository,
-        calculateGuidanceLevel = CalculateGuidanceLevelUseCase()
+        calculateGuidanceLevel = CalculateGuidanceLevelUseCase(),
+        sessionManager = sessionManager
+    )
+
+    private fun sessionManager() = SessionManager(
+        scope = CoroutineScope(mainDispatcherRule.dispatcher),
+        monotonicClock = MonotonicClock { 0L },
+        boundCleaners = emptySet()
     )
 }
 

@@ -3,6 +3,7 @@ package com.auroraclima.app.questionnaire.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.questionnaire.domain.repository.QuestionnaireRepository
 import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,12 +29,19 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class GuidanceViewModel @Inject constructor(
     private val repository: QuestionnaireRepository,
-    private val calculateGuidanceLevel: CalculateGuidanceLevelUseCase
+    private val calculateGuidanceLevel: CalculateGuidanceLevelUseCase,
+    sessionManager: SessionManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(GuidanceUiState())
     val uiState: StateFlow<GuidanceUiState> = _uiState.asStateFlow()
 
     init {
+        // RF-28: el descarte corre en la MISMA rutina de limpieza de RF-16/
+        // RNF-03 — cualquier cierre de sesión (nube, inactividad, background
+        // prolongado) borra respuestas y resultado en memoria, además del pop
+        // del grafo que destruye este ViewModel. addCloseable da de baja el
+        // registro cuando el ViewModel muere.
+        addCloseable(sessionManager.registerCleaner { discardAnswers() })
         load()
     }
 
