@@ -1,0 +1,116 @@
+{
+  "_comment": "BORRADOR A VALIDAR por la directora del trabajo de grado (P-38, hermano de P-23). Cuestionario orientador (RF-27, RF-29): seis preguntas de elaboración propia — sin escala Danger Assessment (nota de RF-27) — inspiradas en las dimensiones de los instrumentos de valoración de riesgo usados en Colombia (protocolo INMLCF): escalada física, amenazas, violencia sexual, control, aislamiento/humillación y percepción propia de peligro. Escala fija de 3 opciones y niveles en palabras (decisión F6 de A2-6). El campo reviewNote hace que seed.mjs OMITA este documento por defecto: solo se siembra con --borrador en un entorno de prueba, jamás a usuarias reales sin validación. Semántica: puntaje = suma de weight×value; nivel = mayor minScore <= puntaje (a igual minScore gana el de mayor order); alertLevelId = pregunta crítica cuya opción de mayor value garantiza al menos ese nivel. IDs opacos y nombres neutros (RNF-05, auditoría D4 H-1).",
+  "collection": "forms",
+  "documents": [
+    {
+      "id": "f01",
+      "schemaVersion": 1,
+      "version": 1,
+      "reviewNote": "[POR CONFIRMAR: BORRADOR — preguntas, pesos, umbrales, pisos críticos (alertLevelId) y rutas por nivel pendientes de validación por la directora (P-38). Retirar este campo y re-ejecutar la siembra tras el visto bueno.]",
+      "title": "Reconocer tu situación.",
+      "intro": "Seis preguntas cortas para ayudarte a poner en palabras lo que vives. No hay respuestas correctas. Al responder, piensa en tu pareja o expareja y en los últimos meses.",
+      "notice": "Es una orientación, no un diagnóstico: el resultado no sustituye una evaluación profesional.",
+      "scale": [
+        { "id": "s0", "order": 1, "label": "Nunca", "value": 0 },
+        { "id": "s1", "order": 2, "label": "Alguna vez", "value": 1 },
+        { "id": "s2", "order": 3, "label": "Con frecuencia", "value": 2 }
+      ],
+      "questions": [
+        {
+          "id": "q01",
+          "order": 1,
+          "text": "¿Controla lo que haces: a dónde vas, con quién hablas, cómo vistes o cómo usas tu dinero?",
+          "weight": 1
+        },
+        {
+          "id": "q02",
+          "order": 2,
+          "text": "¿Te humilla, te descalifica o te ha ido alejando de tu familia o de tus amistades?",
+          "weight": 1
+        },
+        {
+          "id": "q03",
+          "order": 3,
+          "text": "¿Te ha causado daño físico, como golpes, empujones o zarandeos, aunque no dejen marcas?",
+          "weight": 3,
+          "alertLevelId": "n03"
+        },
+        {
+          "id": "q04",
+          "order": 4,
+          "text": "¿Te ha amenazado con hacerte daño a ti, a tus hijos e hijas o a alguien que quieres?",
+          "weight": 3,
+          "alertLevelId": "n04"
+        },
+        {
+          "id": "q05",
+          "order": 5,
+          "text": "¿Te ha presionado u obligado a tener intimidad o contacto sexual cuando tú no querías?",
+          "weight": 3,
+          "alertLevelId": "n03"
+        },
+        {
+          "id": "q06",
+          "order": 6,
+          "text": "¿Sientes miedo de lo que pueda hacerte?",
+          "weight": 2,
+          "alertLevelId": "n03"
+        }
+      ],
+      "levels": [
+        {
+          "id": "n01",
+          "order": 1,
+          "minScore": 0,
+          "title": "Variable",
+          "summary": "Por ahora, tus respuestas no muestran un patrón de riesgo alto. Aun así, lo que sientes importa: ninguna forma de control o de daño es normal, y estar atenta a cómo evoluciona tu situación también es cuidarte.",
+          "advice": [
+            "Explora la sección de información: reconocer las señales a tiempo hace la diferencia.",
+            "Si algo de lo que viviste te inquieta, las líneas de orientación te escuchan de forma gratuita y confidencial, sin exigirte nada.",
+            "Confía en tu percepción: si sientes que algo no está bien, busca acompañamiento."
+          ],
+          "routeIds": ["r01"]
+        },
+        {
+          "id": "n02",
+          "order": 2,
+          "minScore": 4,
+          "title": "Moderado",
+          "summary": "Tus respuestas muestran señales que merecen atención. No tienes que esperar a que la situación empeore para buscar apoyo: pedir orientación es tu derecho y no te compromete a nada.",
+          "advice": [
+            "Habla con alguien de tu confianza sobre lo que está pasando: nombrarlo es el primer paso.",
+            "La Comisaría de Familia puede orientarte sobre medidas de protección, sin que tengas que iniciar un proceso penal.",
+            "Las líneas de atención te orientan de forma gratuita y confidencial, a cualquier hora."
+          ],
+          "routeIds": ["r01", "r02"]
+        },
+        {
+          "id": "n03",
+          "order": 3,
+          "minScore": 10,
+          "title": "Grave",
+          "summary": "Lo que describes indica un riesgo serio para tu bienestar y tu integridad. No es tu culpa y no estás sola: mereces protección y hay entidades preparadas para dártela.",
+          "advice": [
+            "Acude a la Comisaría de Familia: puede dictar medidas de protección para ti y para tus hijos e hijas, como ordenar que se aleje.",
+            "Si sufriste una agresión, el sector salud te atiende de forma inmediata y gratuita, sin necesidad de denuncia previa.",
+            "Prepara apoyos por si los necesitas: alguien de confianza, tus documentos a la mano y un lugar al que puedas ir."
+          ],
+          "routeIds": ["r02", "r03", "r01"]
+        },
+        {
+          "id": "n04",
+          "order": 4,
+          "minScore": 17,
+          "title": "Extremo",
+          "summary": "Tus respuestas indican que tu seguridad puede estar en peligro. Tu vida y tu integridad son lo primero: busca protección cuanto antes. Si sientes que el peligro es inmediato, llama al 123.",
+          "advice": [
+            "Si el peligro es ahora mismo, llama al 123 (Policía): funciona las 24 horas en todo el país.",
+            "La Comisaría de Familia puede ordenar de inmediato medidas para que se aleje de ti; es gratuito y no necesitas abogado.",
+            "Prepara tu salida con el apoyo de una entidad o de alguien de total confianza, sin anunciar tus decisiones a quien te hace daño."
+          ],
+          "routeIds": ["r02", "r03"]
+        }
+      ]
+    }
+  ]
+}
