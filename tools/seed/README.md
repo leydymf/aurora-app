@@ -1,7 +1,8 @@
 # Siembra del contenido en Firestore
 
 Contenido administrable del módulo informativo (RF-21, RF-22, RF-23): tipos de
-violencia, rutas de atención con sus entidades y líneas de atención. Los textos
+violencia, rutas de atención con sus entidades y líneas de atención; y el
+cuestionario orientador (RF-27, RF-29; base del futuro panel RF-43). Los textos
 de `content/*.json` son **BORRADOR A VALIDAR por la directora**; todo dato
 marcado `[POR CONFIRMAR]` debe verificarse con fuentes oficiales antes de que
 llegue a usuarias reales.
@@ -67,9 +68,42 @@ npm run seed    # agrega -- --borrador SOLO en un entorno de prueba
 | `routes` | sector de la ruta (Salud/Protección/Justicia) | `schemaVersion, order, title, summary, agencyIds[]` |
 | `agencies` | entidad de atención | `schemaVersion, name, role, whenToUse, phones[], address?, hours?` |
 | `lines` | línea de atención | `schemaVersion, order, name, number, description, hours?` |
+| `forms` | configuración completa del cuestionario | `schemaVersion, version, title, intro, notice, scale[], questions[], levels[]` |
 
 Los nombres de colección **y los IDs de documento** son deliberadamente
-neutros/opacos (`topics/t01`, `agencies/a06`): ambos viajan en las rutas de la
-API de Firestore y quedan en la caché local del dispositivo, así que no deben
-sugerir el propósito real (RNF-05, auditoría D4 H-1). `routes` referencia
+neutros/opacos (`topics/t01`, `agencies/a06`, `forms/f01`): ambos viajan en las
+rutas de la API de Firestore y quedan en la caché local del dispositivo, así que
+no deben sugerir el propósito real (RNF-05, auditoría D4 H-1). `routes` referencia
 `agencies` por id; un id sin resolver simplemente no se muestra (RF-42).
+
+### El cuestionario (`forms`)
+
+A diferencia del resto del contenido, **todo el cuestionario vive en un solo
+documento**: publicar es escribir un documento completo, de forma atómica, y el
+futuro panel (RF-43) no puede dejar preguntas nuevas conviviendo con niveles
+viejos. La app descarta cualquier documento incompleto (sin preguntas, sin
+niveles, sin escala o sin aviso) — el espejo del criterio 2 de RF-43. Si hay
+varios documentos válidos, rige el de mayor `version` (número de publicación).
+
+Estructura del documento (`schemaVersion` hoy `1`):
+
+- `scale[]` — la escala de respuesta compartida por todas las preguntas
+  (decisión F6 de A2-6: «Nunca / Alguna vez / Con frecuencia»):
+  `{ id, order, label, value }`.
+- `questions[]` — `{ id, order, text, weight, alertLevelId? }`. El puntaje de
+  una respuesta es `weight × value`. `alertLevelId` marca una **pregunta
+  crítica**: elegir la opción de mayor `value` garantiza al menos ese nivel,
+  sin importar el total (así tratan los instrumentos de valoración las
+  amenazas y la escalada).
+- `levels[]` — `{ id, order, minScore, title, summary, advice[], routeIds[] }`.
+  El nivel resultante es el de mayor `minScore ≤ puntaje total`; a igual
+  `minScore` gana el de mayor `order` (ante configuración ambigua se
+  sobre-orienta, nunca al revés). `routeIds` referencia `routes` (r01–r03)
+  igual que `routes` referencia `agencies`.
+- `notice` — el aviso de alcance orientador (RF-30), editable sin tocar la app.
+
+El cuestionario semilla lleva un campo `reviewNote` con `[POR CONFIRMAR …]`:
+la compuerta M-2 del script lo **omite por defecto** hasta que la directora
+valide preguntas, pesos, umbrales y pisos críticos (ver P-38 en
+`docs/PENDIENTES.md`). Para desarrollar, sembrarlo con `--borrador` SOLO en el
+entorno de prueba; tras la validación, retirar `reviewNote` y re-ejecutar.
