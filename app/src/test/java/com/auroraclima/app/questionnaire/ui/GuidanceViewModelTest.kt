@@ -165,6 +165,41 @@ class GuidanceViewModelTest {
     }
 
     @Test
+    fun `el resultado se calcula con el motor al terminar`() = runTest {
+        // RF-29: todo «Con frecuencia» → (1+1+3)×2 = 10 → nivel n03, con sus
+        // rutas recomendadas listas para el acceso directo (criterio 2).
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+
+        val result = viewModel.uiState.value.result
+        assertEquals("n03", result?.level?.id)
+        assertEquals(10, result?.score)
+        assertEquals(3, result?.answeredCount)
+        assertEquals(3, result?.questionCount)
+        assertEquals(listOf("r03"), result?.level?.routeIds)
+    }
+
+    @Test
+    fun `el resultado registra cuantas preguntas quedaron sin responder`() = runTest {
+        // Con pocas respuestas la UI matiza el nivel (nota de GuidanceResult):
+        // un nivel bajo por silencio no debe leerse como ausencia de señales.
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        viewModel.onOptionSelected("s1")
+        repeat(3) { viewModel.onNext() }
+
+        val result = viewModel.uiState.value.result
+        assertEquals(1, result?.answeredCount)
+        assertEquals(3, result?.questionCount)
+    }
+
+    @Test
     fun `abandonar descarta todas las respuestas y vuelve a la portada`() = runTest {
         // RF-27 criterio 2: al abandonar no se guarda ninguna respuesta.
         val viewModel = viewModel()

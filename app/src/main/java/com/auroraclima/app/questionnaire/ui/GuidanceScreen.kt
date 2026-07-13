@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -73,24 +75,32 @@ import com.auroraclima.app.questionnaire.domain.model.Question
  * `guidance_*` vigiladas por CamouflageResourcesTest.
  */
 @Composable
-fun GuidanceRoute(onClose: () -> Unit) {
+fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
     val viewModel: GuidanceViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
+    val dismiss = {
+        viewModel.onAbandon()
+        onClose()
+    }
     // El botón atrás del sistema también retrocede pregunta a pregunta
-    // (RF-27 criterio 1); en la portada sigue el pop normal hacia el panel.
-    BackHandler(enabled = state.phase == GuidancePhase.QUESTION) {
-        viewModel.onPrevious()
+    // (RF-27 criterio 1); en la portada sigue el pop normal hacia el panel y
+    // en el resultado equivale a «Terminar»: descartar y volver (RF-31 es
+    // trabajo futuro — no hay nada que conservar).
+    BackHandler(enabled = state.phase != GuidancePhase.INTRO) {
+        when (state.phase) {
+            GuidancePhase.QUESTION -> viewModel.onPrevious()
+            GuidancePhase.RESULT -> dismiss()
+            GuidancePhase.INTRO -> Unit
+        }
     }
     GuidanceScreen(
         state = state,
         onStart = viewModel::onStart,
-        onDismiss = {
-            viewModel.onAbandon()
-            onClose()
-        },
+        onDismiss = dismiss,
         onOptionSelected = viewModel::onOptionSelected,
         onNext = viewModel::onNext,
         onPrevious = viewModel::onPrevious,
+        onOpenRoutes = onOpenRoutes,
         onRetry = viewModel::onRetry
     )
 }
@@ -103,6 +113,7 @@ internal fun GuidanceScreen(
     onOptionSelected: (String) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onOpenRoutes: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -124,7 +135,11 @@ internal fun GuidanceScreen(
                     onPrevious = onPrevious,
                     onAbandon = onDismiss
                 )
-                GuidancePhase.RESULT -> Unit
+                GuidancePhase.RESULT -> ResultContent(
+                    state = state,
+                    onOpenRoutes = onOpenRoutes,
+                    onFinish = onDismiss
+                )
             }
         }
     }
@@ -304,6 +319,119 @@ private fun QuestionContent(
             )
         }
         Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
+    }
+}
+
+/**
+ * Resultado orientativo (RF-29, mockup P17). La etiqueta, el nivel y el aviso
+ * de alcance van en la zona FIJA de la columna — fuera del área desplazable —
+ * para que el aviso sea visible en todo resultado sin necesidad de scroll
+ * (RF-30 criterio 1, «visible en 360×800 sin desplazarse» de F6); solo las
+ * recomendaciones y el acceso a rutas se desplazan.
+ *
+ * «Guardar resultado» del mockup no se pinta: RF-31 queda como trabajo futuro
+ * y el resultado se descarta siempre al terminar.
+ */
+@Composable
+private fun ResultContent(state: GuidanceUiState, onOpenRoutes: () -> Unit, onFinish: () -> Unit) {
+    val questionnaire = state.questionnaire ?: return
+    val result = state.result ?: return
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+    ) {
+        Spacer(modifier = Modifier.height(20.dp))
+        SectionTag(stringResource(R.string.guidance_result_tag))
+        Spacer(modifier = Modifier.height(12.dp))
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = Sky
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                SectionTag(stringResource(R.string.guidance_result_level, result.level.title.uppercase()))
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = result.level.summary,
+                    fontFamily = Marcellus,
+                    fontSize = 22.sp,
+                    lineHeight = 30.sp,
+                    color = Night
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        NoticeCard(questionnaire.notice)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            if (result.answeredCount < result.questionCount) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = stringResource(
+                        R.string.guidance_result_partial,
+                        result.answeredCount,
+                        result.questionCount
+                    ),
+                    fontFamily = PlexSans,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = SteelDeep
+                )
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            SectionTag(stringResource(R.string.guidance_result_actions))
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                result.level.advice.forEach { advice -> GuidanceBullet(advice) }
+            }
+            if (result.level.routeIds.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(18.dp))
+                RoutesLinkRow(onClick = onOpenRoutes)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        PrimaryButton(
+            text = stringResource(R.string.guidance_result_finish),
+            onClick = onFinish,
+            enabled = true,
+            isLoading = false
+        )
+        Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
+    }
+}
+
+/** Acceso a las rutas de atención (RF-29 criterio 2): navegación, nunca import de content (§2). */
+@Composable
+private fun RoutesLinkRow(onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = CloudWhite
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.guidance_result_routes),
+                fontFamily = PlexSans,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                color = Night,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Steel
+            )
+        }
     }
 }
 

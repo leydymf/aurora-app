@@ -127,7 +127,12 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // pregunta a pregunta es estado del ViewModel, que muere con el
                 // pop de esta entrada (las respuestas jamás tocan disco, RF-28).
                 screen(GUIDANCE_ROUTE) {
-                    GuidanceRoute(onClose = { navController.popBackStack() })
+                    GuidanceRoute(
+                        onClose = { navController.popBackStack() },
+                        // Acceso a las rutas recomendadas (RF-29 criterio 2):
+                        // hacia content por navegación, nunca por import (§2).
+                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) }
+                    )
                 }
                 screen(TOPICS_ROUTE) {
                     TopicsRoute(
