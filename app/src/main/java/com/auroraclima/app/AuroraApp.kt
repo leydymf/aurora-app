@@ -35,6 +35,7 @@ import com.auroraclima.app.core.security.SecureBackStackGuard
 import com.auroraclima.app.core.security.SessionGuard
 import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.security.secureGraph
+import com.auroraclima.app.questionnaire.ui.GuidanceRoute
 import com.auroraclima.app.weather.ui.WeatherScreen
 import com.auroraclima.app.weather.ui.WeatherViewModel
 
@@ -117,7 +118,16 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // Hogar del espacio interno (P09) y módulo de información
                 // (RF-21, RF-22): tipos → detalle → sectores → entidad.
                 screen(PANEL_ROUTE) {
-                    PanelScreen(onOpenInfo = { navController.navigate(TOPICS_ROUTE) })
+                    PanelScreen(
+                        onOpenInfo = { navController.navigate(TOPICS_ROUTE) },
+                        onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) }
+                    )
+                }
+                // Cuestionario orientador (RF-27): una sola ruta — el flujo
+                // pregunta a pregunta es estado del ViewModel, que muere con el
+                // pop de esta entrada (las respuestas jamás tocan disco, RF-28).
+                screen(GUIDANCE_ROUTE) {
+                    GuidanceRoute(onClose = { navController.popBackStack() })
                 }
                 screen(TOPICS_ROUTE) {
                     TopicsRoute(
@@ -214,6 +224,7 @@ private const val GUIDE_ROUTE = "guide"
 private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
+private const val GUIDANCE_ROUTE = "guidance"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"

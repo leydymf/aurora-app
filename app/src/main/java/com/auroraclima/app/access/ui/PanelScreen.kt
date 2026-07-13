@@ -52,11 +52,11 @@ import com.auroraclima.app.core.ui.theme.SteelDeep
  * Hogar del espacio interno (mockup P09 / alta-fidelidad-16): tres módulos.
  * Menú estático sin datos propios: no lleva ViewModel — el patrón UiState (guía §3)
  * aplica a pantallas con estado (decisión registrada en la guía, 2026-07-10).
- * Los destinos los decide la navegación raíz (guardia RF-06); las tarjetas de
- * orientación (Día 5) y de notas (Día 6) aún no navegan y se muestran atenuadas.
+ * Los destinos los decide la navegación raíz (guardia RF-06); la tarjeta de
+ * notas (Día 6) aún no navega y se muestra atenuada.
  */
 @Composable
-fun PanelScreen(onOpenInfo: () -> Unit, modifier: Modifier = Modifier) {
+fun PanelScreen(onOpenInfo: () -> Unit, onOpenGuidance: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -105,8 +105,7 @@ fun PanelScreen(onOpenInfo: () -> Unit, modifier: Modifier = Modifier) {
                 chipColor = Sky,
                 title = stringResource(R.string.access_panel_guide_title),
                 body = stringResource(R.string.access_panel_guide_body),
-                // TODO(Día 5): módulo de orientación (RF-27..31).
-                onClick = null
+                onClick = onOpenGuidance
             )
             PanelCard(
                 iconRes = R.drawable.ic_folder,
