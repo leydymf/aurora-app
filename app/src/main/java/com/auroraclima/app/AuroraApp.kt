@@ -36,6 +36,7 @@ import com.auroraclima.app.core.security.SessionGuard
 import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
+import com.auroraclima.app.records.ui.JournalEditorRoute
 import com.auroraclima.app.weather.ui.WeatherScreen
 import com.auroraclima.app.weather.ui.WeatherViewModel
 
@@ -134,6 +135,15 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onOpenRoutes = { navController.navigate(ROUTES_ROUTE) }
                     )
                 }
+                // Creación de un registro del historial (RF-32, P19). El pop
+                // tras guardar regresa al listado (RF-34), que se refresca al
+                // volver a componerse.
+                screen(JOURNAL_NEW_ROUTE) {
+                    JournalEditorRoute(
+                        onSaved = { navController.popBackStack() },
+                        onBack = { navController.popBackStack() }
+                    )
+                }
                 screen(TOPICS_ROUTE) {
                     TopicsRoute(
                         onBack = { navController.popBackStack() },
@@ -230,6 +240,7 @@ private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val GUIDANCE_ROUTE = "guidance"
+private const val JOURNAL_NEW_ROUTE = "journal_new"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"

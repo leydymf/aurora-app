@@ -3,6 +3,7 @@ package com.auroraclima.app.core.ui.components
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -123,6 +124,36 @@ fun SecretField(
             imeAction = imeAction
         ),
         keyboardActions = keyboardActions
+    )
+}
+
+/** Campo de párrafo multilínea (relatos y notas largas, P19). */
+@Composable
+fun ParagraphField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 120.dp),
+        textStyle = fieldTextStyle(),
+        isError = isError,
+        shape = RoundedCornerShape(12.dp),
+        colors = fieldColors(),
+        placeholder = {
+            Text(
+                text = placeholder,
+                fontFamily = PlexSans,
+                fontSize = 16.sp,
+                color = Steel
+            )
+        }
     )
 }
 
