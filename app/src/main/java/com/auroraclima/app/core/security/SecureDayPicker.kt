@@ -31,9 +31,7 @@ fun SecureDayPicker(
     onConfirm: (LocalDate) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initialDay.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    )
+    val state = rememberDatePickerState(initialSelectedDateMillis = initialDay.toUtcEpochMilli())
     DatePickerDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -44,11 +42,7 @@ fun SecureDayPicker(
             TextButton(
                 onClick = {
                     val millis = state.selectedDateMillis
-                    if (millis != null) {
-                        onConfirm(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
-                    } else {
-                        onDismiss()
-                    }
+                    if (millis != null) onConfirm(millis.toUtcLocalDate()) else onDismiss()
                 }
             ) { Text(confirmText) }
         },
@@ -59,3 +53,13 @@ fun SecureDayPicker(
         DatePicker(state = state, showModeToggle = false)
     }
 }
+
+/**
+ * Conversiones LocalDate ⇄ millis SIEMPRE en UTC: el selector de Material 3
+ * expone el día como millis a medianoche UTC, así que usar la zona local aquí
+ * correría un día en husos al oeste de Greenwich (Colombia, UTC-5). Puras y
+ * probadas por unidad (SecureDayPickerConversionTest).
+ */
+internal fun LocalDate.toUtcEpochMilli(): Long = atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+internal fun Long.toUtcLocalDate(): LocalDate = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
