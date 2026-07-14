@@ -2,6 +2,8 @@ package com.auroraclima.app.core.security
 
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -36,6 +38,25 @@ class SecureDayPickerConversionTest {
         // Cualquier instante del día (aquí +23h59m) sigue siendo el mismo día UTC.
         val nearEndOfDay = LocalDate.of(2026, 6, 28).toEpochDay() * MILLIS_PER_DAY + (MILLIS_PER_DAY - 1)
         assertEquals(LocalDate.of(2026, 6, 28), nearEndOfDay.toUtcLocalDate())
+    }
+
+    // Veda de fechas futuras del historial (P-47a): un hecho ya ocurrió.
+    @Test
+    fun `hoy es seleccionable`() {
+        val today = LocalDate.of(2026, 7, 14)
+        assertTrue(isDayNotAfter(today.toUtcEpochMilli(), maxDay = today))
+    }
+
+    @Test
+    fun `un dia anterior es seleccionable`() {
+        val today = LocalDate.of(2026, 7, 14)
+        assertTrue(isDayNotAfter(LocalDate.of(2026, 6, 28).toUtcEpochMilli(), maxDay = today))
+    }
+
+    @Test
+    fun `un dia futuro no es seleccionable`() {
+        val today = LocalDate.of(2026, 7, 14)
+        assertFalse(isDayNotAfter(LocalDate.of(2026, 7, 15).toUtcEpochMilli(), maxDay = today))
     }
 
     private companion object {

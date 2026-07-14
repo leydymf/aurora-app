@@ -166,7 +166,8 @@ internal fun JournalEditorScreen(
             confirmText = stringResource(R.string.journal_date_confirm),
             dismissText = stringResource(R.string.journal_date_cancel),
             onConfirm = onDaySelected,
-            onDismiss = onDismissDatePicker
+            onDismiss = onDismissDatePicker,
+            maxDay = state.today
         )
     }
 }

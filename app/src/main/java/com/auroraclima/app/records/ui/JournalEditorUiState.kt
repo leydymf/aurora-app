@@ -12,6 +12,9 @@ import java.time.LocalDate
  */
 data class JournalEditorUiState(
     val occurredOn: LocalDate = LocalDate.now(),
+    // Un registro es un hecho ya ocurrido: el selector no permite fechas
+    // futuras (P-47a). `today` fija el tope al abrir el editor.
+    val today: LocalDate = LocalDate.now(),
     val kind: EntryKind? = null,
     val detail: String = "",
     val isPickingDate: Boolean = false,
