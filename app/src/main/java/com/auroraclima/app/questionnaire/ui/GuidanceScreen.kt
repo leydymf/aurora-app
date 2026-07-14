@@ -27,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -47,11 +46,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
+import com.auroraclima.app.core.ui.components.ErrorState
+import com.auroraclima.app.core.ui.components.LoadingState
 import com.auroraclima.app.core.ui.components.PrimaryButton
 import com.auroraclima.app.core.ui.components.SectionTag
 import com.auroraclima.app.core.ui.components.SectionTitle
@@ -128,8 +128,8 @@ internal fun GuidanceScreen(
             .systemBarsPadding()
     ) {
         when {
-            state.isLoading -> GuidanceLoading()
-            state.errorRes != null -> GuidanceError(onRetry = onRetry)
+            state.isLoading -> LoadingState()
+            state.errorRes != null -> ErrorState(messageRes = R.string.common_error_generic, onRetry = onRetry)
             else -> when (state.phase) {
                 GuidancePhase.INTRO -> IntroContent(state = state, onStart = onStart, onDismiss = onDismiss)
                 GuidancePhase.QUESTION -> QuestionContent(
@@ -571,43 +571,8 @@ private fun NoticeCard(text: String, modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun GuidanceLoading() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = SteelDeep)
-    }
-}
-
-/** Error genérico con reintento: sin detalles técnicos visibles (P-24, guía §3). */
-@Composable
-private fun GuidanceError(onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.common_error_generic),
-            fontFamily = PlexSans,
-            fontSize = 15.sp,
-            lineHeight = 22.sp,
-            color = Night,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        TextButton(onClick = onRetry) {
-            Text(
-                text = stringResource(R.string.guidance_retry),
-                fontFamily = PlexSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp,
-                color = SteelDeep
-            )
-        }
-    }
-}
+// Carga y error genérico con reintento: LoadingState/ErrorState de
+// core/ui/components desde P-42a (P-24, guía §3).
 
 /** Espacio final para que los botones no queden bajo la nube de la esquina (RF-16). */
 private val GUIDANCE_BOTTOM_CLEARANCE = 88.dp

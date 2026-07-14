@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.content.domain.model.Route
+import com.auroraclima.app.core.ui.components.BackHeader
+import com.auroraclima.app.core.ui.components.ErrorState
+import com.auroraclima.app.core.ui.components.LoadingState
 import com.auroraclima.app.core.ui.components.SectionTag
 import com.auroraclima.app.core.ui.components.SectionTitle
 import com.auroraclima.app.core.ui.theme.Mist
@@ -53,14 +56,14 @@ internal fun RoutesScreen(
             .background(Mist)
             .systemBarsPadding()
     ) {
-        ContentBackHeader(
+        BackHeader(
             tag = stringResource(R.string.content_info_tag),
             onBack = onBack,
             modifier = Modifier.padding(horizontal = 12.dp)
         )
         when {
-            state.isLoading -> ContentLoadingState()
-            state.errorRes != null -> ContentErrorState(onRetry = onRetry)
+            state.isLoading -> LoadingState()
+            state.errorRes != null -> ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
             else -> RoutesContent(routes = state.routes, onAgencySelected = onAgencySelected)
         }
     }

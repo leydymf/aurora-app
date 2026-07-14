@@ -71,6 +71,8 @@
     <string name="account_error_email_format">Revisa el formato del correo.</string>
     <string name="account_error_password_short">La contraseña necesita mínimo 8 caracteres.</string>
     <string name="common_error_generic">No se pudo completar ahora. Inténtalo de nuevo en un momento.</string>
+    <string name="common_back">Volver</string>
+    <string name="common_retry">Reintentar</string>
     <string name="account_password_toggle">Cambiar visibilidad de la contraseña</string>
     <string name="account_login_tag">INICIO DE SESIÓN</string>
     <string name="account_login_title">Hola de nuevo.</string>
@@ -88,7 +90,6 @@
     <string name="access_panel_guide_body">Unas preguntas para orientarte, a tu ritmo.</string>
     <string name="access_panel_journal_title">Mi registro</string>
     <string name="access_panel_journal_body">Tus notas y archivos, protegidos y solo tuyos.</string>
-    <string name="content_back">Volver</string>
     <string name="content_info_tag">INFORMACIÓN</string>
     <string name="content_topics_title">Entender lo que pasa.</string>
     <string name="content_topics_subtitle">Lo que te pasa tiene nombre. Conocerlo es el primer paso.</string>
@@ -112,7 +113,6 @@
     <string name="content_lines_subtitle">Un toque abre el marcador de tu teléfono. Aurora no guarda ninguna llamada.</string>
     <string name="content_lines_meta">%1$s · %2$s</string>
     <string name="content_error_generic">El contenido no está disponible en este momento. Inténtalo de nuevo.</string>
-    <string name="content_retry">Reintentar</string>
     <string name="guidance_tag">RECONOCER</string>
     <string name="guidance_back">Volver</string>
     <string name="guidance_intro_point_pace">Avanzas a tu ritmo: puedes devolverte, dejar preguntas sin responder o salir cuando quieras.</string>
@@ -125,7 +125,6 @@
     <string name="guidance_previous">Atrás</string>
     <string name="guidance_next">Siguiente</string>
     <string name="guidance_see_result">Ver resultado</string>
-    <string name="guidance_retry">Reintentar</string>
     <string name="guidance_result_tag">RESULTADO ORIENTATIVO</string>
     <string name="guidance_result_level">NIVEL ORIENTATIVO</string>
     <string name="guidance_result_partial">Respondiste %1$d de %2$d preguntas. Con pocas respuestas la orientación puede quedarse corta: tómala como un punto de partida.</string>
