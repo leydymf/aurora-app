@@ -36,7 +36,10 @@ import com.auroraclima.app.core.security.SessionGuard
 import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
+import com.auroraclima.app.records.ui.ENTRY_ID_ARG
+import com.auroraclima.app.records.ui.JournalDetailRoute
 import com.auroraclima.app.records.ui.JournalEditorRoute
+import com.auroraclima.app.records.ui.JournalListRoute
 import com.auroraclima.app.weather.ui.WeatherScreen
 import com.auroraclima.app.weather.ui.WeatherViewModel
 
@@ -121,8 +124,22 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(PANEL_ROUTE) {
                     PanelScreen(
                         onOpenInfo = { navController.navigate(TOPICS_ROUTE) },
-                        onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) }
+                        onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
+                        onOpenJournal = { navController.navigate(JOURNAL_ROUTE) }
                     )
+                }
+                // Historial personal (RF-34, P18): listado → detalle / creación.
+                screen(JOURNAL_ROUTE) {
+                    JournalListRoute(
+                        onBack = { navController.popBackStack() },
+                        onAddEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
+                        onEntrySelected = { entryId ->
+                            navController.navigate("$JOURNAL_ROUTE/$entryId")
+                        }
+                    )
+                }
+                screen(JOURNAL_DETAIL_ROUTE) {
+                    JournalDetailRoute(onBack = { navController.popBackStack() })
                 }
                 // Cuestionario orientador (RF-27): una sola ruta — el flujo
                 // pregunta a pregunta es estado del ViewModel, que muere con el
@@ -240,7 +257,9 @@ private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val GUIDANCE_ROUTE = "guidance"
+private const val JOURNAL_ROUTE = "journal"
 private const val JOURNAL_NEW_ROUTE = "journal_new"
+private const val JOURNAL_DETAIL_ROUTE = "$JOURNAL_ROUTE/{$ENTRY_ID_ARG}"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"
