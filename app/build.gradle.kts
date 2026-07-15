@@ -25,7 +25,14 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // P-05: ofuscación y reducción obligatorias — ningún APK sale del
+            // entorno con los nombres del doble fondo legibles en el DEX (RNF-05).
+            isMinifyEnabled = true
+            isShrinkResources = true
+            // TRL 4: se firma con la clave de depuración para poder instalar y
+            // probar el release ofuscado en el emulador. La firma de producción
+            // con keystore propio queda como trabajo futuro (ver PENDIENTES.md).
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
