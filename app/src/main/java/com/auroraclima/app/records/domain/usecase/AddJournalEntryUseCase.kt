@@ -1,0 +1,30 @@
+package com.auroraclima.app.records.domain.usecase
+
+import com.auroraclima.app.records.domain.model.JournalEntry
+import com.auroraclima.app.records.domain.model.NewJournalEntry
+import com.auroraclima.app.records.domain.repository.JournalRepository
+import com.auroraclima.app.records.domain.repository.JournalSyncRepository
+import javax.inject.Inject
+
+/**
+ * Guarda un registro (RF-32) y lo sincroniza cifrado con la nube (RF-37).
+ *
+ * Caso de uso obligatorio por combinar dos repositorios (§3). La fuente de verdad
+ * es SIEMPRE el guardado local: solo su [Result] llega a la UI. La subida es de
+ * mejor esfuerzo y su resultado se descarta a propósito — un fallo de red no
+ * revierte lo guardado ni produce un error visible (§3, camuflaje). La escritura
+ * queda en la cola durable de Firestore y sube sola al reconectar (RF-38).
+ */
+class AddJournalEntryUseCase @Inject constructor(
+    private val journalRepository: JournalRepository,
+    private val syncRepository: JournalSyncRepository
+) {
+    suspend operator fun invoke(entry: NewJournalEntry): Result<Unit> {
+        val id = journalRepository.add(entry).getOrElse { return Result.failure(it) }
+        // Mejor esfuerzo: el registro ya está a salvo localmente. Su fallo se ignora.
+        syncRepository.push(
+            JournalEntry(id = id, occurredOn = entry.occurredOn, kind = entry.kind, detail = entry.detail)
+        )
+        return Result.success(Unit)
+    }
+}

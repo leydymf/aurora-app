@@ -1,10 +1,16 @@
 rules_version = '2';
 
-// Reglas de acceso de Firestore (RNF-06; adelanto parcial de P-04).
-// El contenido informativo es de solo lectura para usuarias autenticadas y
-// solo se escribe con credenciales administrativas (script de siembra o
-// futuro panel, que no pasan por estas reglas). Todo lo demás queda negado
-// por defecto hasta definir las reglas de datos de usuarias (Día 6, RF-37).
+// Reglas de acceso de Firestore (RNF-06, RF-37; P-04).
+//
+// Dos mundos separados y sin puentes:
+//   1. Contenido administrable (topics/routes/agencies/lines/forms): solo lectura
+//      para cualquier usuaria autenticada; se escribe únicamente con credenciales
+//      administrativas (siembra / futuro panel) que no pasan por estas reglas.
+//   2. Datos de la usuaria (/users/{uid}/**): lectura y escritura EXCLUSIVAS de su
+//      propia cuenta. Ni un rol administrativo (otro uid) puede leerlos (RNF-06);
+//      y aunque pudiera, el contenido viaja cifrado desde el cliente (RF-37/RNF-01),
+//      así que el proyecto de Firebase nunca ve texto en claro.
+// Todo lo demás queda negado por defecto.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /topics/{document} {
@@ -26,6 +32,10 @@ service cloud.firestore {
     match /forms/{document} {
       allow read: if request.auth != null;
       allow write: if false;
+    }
+    // Registros cifrados de la usuaria (RF-37): solo su dueña, autenticada.
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
     match /{document=**} {
       allow read, write: if false;

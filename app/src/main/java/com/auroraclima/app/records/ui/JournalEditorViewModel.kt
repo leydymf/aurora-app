@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
 import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.NewJournalEntry
-import com.auroraclima.app.records.domain.repository.JournalRepository
+import com.auroraclima.app.records.domain.usecase.AddJournalEntryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -19,14 +19,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Creación de un registro (RF-32). Validar en línea sin perder lo diligenciado
- * (criterio 2, decisión F7) y guardar protegido (criterio 1). Un fallo del
- * repositorio (incluida la apertura de la BD cifrada, P-36) se muestra solo
- * como mensaje genérico y el formulario queda intacto para reintentar.
+ * Creación de un registro (RF-32) con sincronización cifrada a la nube (RF-37).
+ * Validar en línea sin perder lo diligenciado (criterio 2, decisión F7) y guardar
+ * protegido (criterio 1). Un fallo del guardado local (incluida la apertura de la
+ * BD cifrada, P-36) se muestra solo como mensaje genérico y el formulario queda
+ * intacto para reintentar; un fallo de la sync es silencioso (§3), lo absorbe el
+ * caso de uso y jamás llega aquí.
  */
 @HiltViewModel
 class JournalEditorViewModel @Inject constructor(
-    private val repository: JournalRepository
+    private val addJournalEntry: AddJournalEntryUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(JournalEditorUiState())
     val uiState: StateFlow<JournalEditorUiState> = _uiState.asStateFlow()
@@ -71,7 +73,7 @@ class JournalEditorViewModel @Inject constructor(
         }
         _uiState.update { it.copy(isSaving = true, saveErrorRes = null) }
         viewModelScope.launch {
-            repository.add(
+            addJournalEntry(
                 NewJournalEntry(
                     occurredOn = state.occurredOn,
                     kind = state.kind,

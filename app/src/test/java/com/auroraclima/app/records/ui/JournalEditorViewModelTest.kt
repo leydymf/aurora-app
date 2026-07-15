@@ -3,6 +3,7 @@ package com.auroraclima.app.records.ui
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.records.domain.model.EntryKind
+import com.auroraclima.app.records.domain.usecase.AddJournalEntryUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -25,8 +26,9 @@ class JournalEditorViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeJournalRepository()
+    private val sync = FakeJournalSyncRepository()
 
-    private fun viewModel() = JournalEditorViewModel(repository)
+    private fun viewModel() = JournalEditorViewModel(AddJournalEntryUseCase(repository, sync))
 
     @Test
     fun `guardar sin campos obligatorios señala ambos sin perder la fecha`() = runTest {
@@ -86,7 +88,27 @@ class JournalEditorViewModelTest {
         assertEquals(LocalDate.of(2026, 6, 28), saved.occurredOn)
         assertEquals(EntryKind.ECONOMIC, saved.kind)
         assertEquals("tomó el dinero del mercado", saved.detail)
+        // RF-37: el registro guardado también se sincroniza (recortado, mismo contenido).
+        assertEquals(1, sync.pushed.size)
+        assertEquals("tomó el dinero del mercado", sync.pushed[0].detail)
         // replay = 1: el evento queda en la caché para la suscripción de la UI.
+        assertEquals(listOf(Unit), viewModel.savedEvents.replayCache)
+    }
+
+    @Test
+    fun `un fallo de la sync no rompe el guardado ni asoma error`() = runTest {
+        // RF-37/§3: la nube es mejor esfuerzo; su fallo es silencioso para la UI.
+        sync.pushResult = Result.failure(IllegalStateException("sin sesión"))
+        val viewModel = viewModel()
+        viewModel.onKindSelected(EntryKind.PHYSICAL)
+        viewModel.onDetailChange("lo que pasó")
+
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.saveErrorRes)
+        assertEquals(1, repository.added.size)
         assertEquals(listOf(Unit), viewModel.savedEvents.replayCache)
     }
 

@@ -1,10 +1,14 @@
 package com.auroraclima.app.records.data.di
 
 import com.auroraclima.app.core.database.EncryptedDatabaseFactory
+import com.auroraclima.app.records.data.FirestoreJournalSyncRepository
 import com.auroraclima.app.records.data.JournalDatabaseSource
 import com.auroraclima.app.records.data.LocalJournalRepository
 import com.auroraclima.app.records.data.local.JournalDatabase
+import com.auroraclima.app.records.data.remote.FirestoreJournalSyncRemoteSource
+import com.auroraclima.app.records.data.remote.JournalSyncRemoteSource
 import com.auroraclima.app.records.domain.repository.JournalRepository
+import com.auroraclima.app.records.domain.repository.JournalSyncRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -16,6 +20,12 @@ import dagger.hilt.components.SingletonComponent
 abstract class RecordsDataModule {
     @Binds
     abstract fun bindJournalRepository(impl: LocalJournalRepository): JournalRepository
+
+    @Binds
+    abstract fun bindJournalSyncRepository(impl: FirestoreJournalSyncRepository): JournalSyncRepository
+
+    @Binds
+    abstract fun bindJournalSyncRemoteSource(impl: FirestoreJournalSyncRemoteSource): JournalSyncRemoteSource
 
     companion object {
         /**

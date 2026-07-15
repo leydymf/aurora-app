@@ -35,7 +35,7 @@ class LocalJournalRepository @Inject constructor(
     private val databaseLock = Mutex()
     private var database: JournalDatabase? = null
 
-    override suspend fun add(entry: NewJournalEntry): Result<Unit> = withDatabase { dao ->
+    override suspend fun add(entry: NewJournalEntry): Result<Long> = withDatabase { dao ->
         dao.insert(
             JournalEntryRow(
                 day = entry.occurredOn.toEpochDay(),
@@ -44,7 +44,6 @@ class LocalJournalRepository @Inject constructor(
                 createdAt = System.currentTimeMillis()
             )
         )
-        Unit
     }
 
     override suspend fun entries(): Result<List<JournalEntry>> = withDatabase { dao ->
