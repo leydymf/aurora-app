@@ -9,14 +9,12 @@ import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.core.security.SensitiveStateCleaner
-import com.google.firebase.auth.FirebaseAuth
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -36,9 +34,8 @@ abstract class AccountsDataModule {
     abstract fun bindSignInAttemptStore(impl: PrefsSignInAttemptStore): SignInAttemptStore
 
     companion object {
-        @Provides
-        @Singleton
-        fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+        // FirebaseAuth se provee en core/network/FirestoreModule: lo comparten
+        // accounts y records (§2, RNF-06), como ya ocurre con Firestore.
 
         /** Reloj de pared del bloqueo de RF-15 (ver KDoc de [WallClock]). */
         @Provides
