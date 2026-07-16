@@ -1,0 +1,13 @@
+# Dependencias y artefactos de build del panel — nunca versionar
+node_modules
+dist
+dist-ssr
+
+# Configuración local de Firebase (no secreta, pero no se versiona el .env real)
+.env
+.env.local
+.env.*.local
+
+# Logs y editores
+*.log
+.DS_Store
