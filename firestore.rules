@@ -1,39 +1,49 @@
 rules_version = '2';
 
-// Reglas de acceso de Firestore (RNF-06, RF-37; P-04).
+// Reglas de acceso de Firestore (RNF-06, RF-37, RF-40; P-04).
 //
 // Dos mundos separados y sin puentes:
 //   1. Contenido administrable (topics/routes/agencies/lines/forms): solo lectura
-//      para cualquier usuaria autenticada; se escribe únicamente con credenciales
-//      administrativas (siembra / futuro panel) que no pasan por estas reglas.
+//      para cualquier usuaria autenticada; se escribe únicamente desde el panel
+//      con una cuenta que porte el custom claim admin (RF-40/RF-41–44). La
+//      siembra por firebase-admin (tools/seed) omite las reglas por diseño.
 //   2. Datos de la usuaria (/users/{uid}/**): lectura y escritura EXCLUSIVAS de su
-//      propia cuenta. Ni un rol administrativo (otro uid) puede leerlos (RNF-06);
-//      y aunque pudiera, el contenido viaja cifrado desde el cliente (RF-37/RNF-01),
-//      así que el proyecto de Firebase nunca ve texto en claro.
+//      propia cuenta. Ni un rol administrativo (admin==true, otro uid) puede
+//      leerlos (RNF-06); y aunque pudiera, el contenido viaja cifrado desde el
+//      cliente (RF-37/RNF-01), así que el proyecto de Firebase nunca ve texto en
+//      claro. El claim admin NO otorga ningún acceso extra sobre /users.
 // Todo lo demás queda negado por defecto.
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Administradora del panel: token con el custom claim admin==true, asignado
+    // solo por tools/admin/create-admin.mjs. Autoriza escribir contenido; nunca
+    // se usa en /users (RNF-06).
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
     match /topics/{document} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /routes/{document} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /agencies/{document} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /lines/{document} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow write: if isAdmin();
     }
     match /forms/{document} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow write: if isAdmin();
     }
-    // Registros cifrados de la usuaria (RF-37): solo su dueña, autenticada.
+    // Registros cifrados de la usuaria (RF-37): solo su dueña, autenticada. El
+    // claim admin es irrelevante aquí — la condición es uid == uid del recurso.
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
