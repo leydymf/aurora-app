@@ -100,7 +100,7 @@ ejecutadas por la usuaria se marcan ✅.
 | CP-12 | RF-20 | NO APLICA | **RF-20 (eliminación de cuenta): NO implementado — futuro.** |
 | CP-13 | RF-21, RF-22 | PASA + MANUAL | Auto: `TopicsViewModelTest` (3), `TopicDetailViewModelTest` (4), `RoutesViewModelTest` (3), `FirestoreContentRepositoryTest` (10). Manual: con contenido sembrado, navegar tipos de violencia y rutas de atención completos. Esperado: contenido completo y navegable. |
 | CP-14 | RF-23 | PASA + MANUAL (P-26) | Auto: `AgencyDetailViewModelTest` (4), `LinesViewModelTest` (3). Manual P-26: tocar llamar abre el marcador con el número precargado, sin registro en la app; verificar si el número persiste en recientes. |
-| CP-15 | RF-24, RF-25 | PASA + MANUAL (B3) | Auto (Fase B3, 2026-07-17): `ContentDocumentParsingTest` (7), `QuestionnaireDocumentParsingTest` (8) y casos nuevos de repositorio — malformado omitido sin romper el resto, esquema desconocido que no sustituye a la versión vigente, colección vacía sin error, actualización reflejada en la siguiente consulta. Manual: checklist de §7 (panel→app, corrupto simulado en consola, modo avión). |
+| CP-15 | RF-24, RF-25 | PASA + MANUAL ✅ (2026-07-17, B3) | Auto (Fase B3): `ContentDocumentParsingTest` (7), `QuestionnaireDocumentParsingTest` (8) y casos nuevos de repositorio — malformado omitido sin romper el resto, esquema desconocido que no sustituye a la versión vigente, colección vacía sin error, actualización reflejada en la siguiente consulta. Manual ✅ (usuaria, 2026-07-17): checklist completo de §7 en verde — reflejo sin reinstalar, corrupto simulado en consola sin error visible, caché en modo avión. |
 | CP-16 | RF-26, RNF-08 | MANUAL | Firestore con persistencia offline. Manual: activar modo avión y abrir el contenido informativo. Esperado: contenido completo disponible, carga ≤ 2 s. |
 | CP-17 | RF-27, RF-28 | PASA + MANUAL (P-43) | Auto: `GuidanceViewModelTest` (16). Manual P-43: responder 2 preguntas→retroceder (sigue marcado)→«Abandonar»→reingresar: portada vacía; nube a mitad→fachada→reingreso: portada vacía; `am kill`→sin rastro. |
 | CP-18 | RF-29, RF-30 | PASA + MANUAL (P-43) | Auto: `CalculateGuidanceLevelUseCaseTest` (14) (nivel correcto por respuestas y umbrales), `GuidanceViewModelTest`. Manual P-43: en 360×800 el aviso de RF-30 visible SIN scroll bajo la tarjeta del nivel, también en el nivel más alto; «Ver rutas» abre rutas y vuelve. |
@@ -110,7 +110,7 @@ ejecutadas por la usuaria se marcan ✅.
 | CP-22 | RF-34, RF-35, RF-36 | PASA (RF-34) + MANUAL (P-46) · RF-35/36 NO APLICA | Auto RF-34: `JournalListViewModelTest` (3), `JournalDetailViewModelTest` (4) (orden cronológico inverso, detalle). Manual P-46: listado con fecha+tipo, fila abre detalle completo. **RF-35/36 (editar/eliminar): NO implementado — futuro.** |
 | CP-23 | RF-37, RF-38 | PASA + MANUAL ✅ (P-49) · RF-38 parcial | Auto RF-37: `FirestoreJournalSyncRepositoryTest` (3), `KeystorePayloadCipherTest` (instrum. 5/5). Manual P-49 ✅ (2026-07-15): offline→reconectar sube solo; en Firestore `payload`/`iv` ilegibles (Base64), sin `day`/`kind`/`detail` en claro. **RF-38 (cola offline): el mecanismo existe vía la cola durable de Firestore y quedó probado en P-49; su formalización como RF propio es futuro.** |
 | CP-24 | RF-39 | NO APLICA | **RF-39 (multi-dispositivo): NO implementado — la llave del payload está ligada al dispositivo (P-48); recuperación en 2.º dispositivo es futuro.** |
-| CP-25 | RF-40 | MANUAL parcial ✅ (B2) | Panel implementado (B1/B2). Acceso con rol admin verificado en uso real del panel (2026-07-17). Denegación a cuentas sin claim implementada (`signOut` inmediato + mensaje genérico, `admin/src/auth/AuthContext.tsx`); el caso negativo formal queda para la corrida de B3. |
+| CP-25 | RF-40 | MANUAL parcial ✅ (B2) | Panel implementado (B1/B2). Acceso con rol admin verificado en uso real del panel (2026-07-17). Denegación a cuentas sin claim implementada (`signOut` inmediato + mensaje genérico, `admin/src/auth/AuthContext.tsx`); **caso negativo verificado en vivo el 2026-07-17 (corrida B3, §7): cuenta sin rol → acceso denegado con mensaje genérico.** |
 | CP-26 | RF-41, RF-42, RF-44 | MANUAL ✅ (2026-07-17) + PASA (panel) | E2E panel→app en el proyecto real: tipo editado y publicado reflejado en la app (el borrador NO es visible antes de publicar); teléfono de entidad actualizado y reflejado; eliminar una entidad referenciada queda bloqueado listando las rutas; una ruta con entidad sin publicar no se publica hasta publicar la entidad. Auto (panel): vitest 66/66 (teléfonos, referencias cruzadas, órdenes, normalización). Corrida formal + RF-24/25 en B3. |
 | CP-27 | RF-43 | MANUAL ✅ (2026-07-17) + PASA (panel) | E2E: la edición publicada rige el cuestionario de la app (versión automática max+1; la app toma el vivo de mayor versión). Bloqueos verificados en vivo: sin preguntas/niveles, umbral inalcanzable, marcador [POR CONFIRMAR] (compuerta M-2) y empate de versión entre varios formularios (pide re-guardar). Eliminación solo de cuestionarios no vigentes. Auto: `coherence.test.ts` (reglas derivadas del motor, fixture = f01 real). |
 | CP-28 | RNF-01 | PASA + MANUAL (P-28/P-46) | Auto: cabecera SQLCipher ≠ «SQLite format 3» (instrum. P-03), `KeystorePayloadCipherTest` (5/5). Manual: Device Explorer sobre `databases/journal_store.db`(+`-wal`) y `shared_prefs/` → ilegibles / solo Base64. |
@@ -131,9 +131,9 @@ ejecutadas por la usuaria se marcan ✅.
 - **CP solo manual (emulador/dispositivo):** CP-16, CP-34, CP-36.
 - **CP NO APLICA (RF Media / Fase 4):** CP-11, CP-12, CP-19, CP-21,
   CP-24, CP-35, y las partes RF-04/RF-09/RF-35/RF-36/RF-39 de CP mixtos.
-- **CP del panel verificados en la Fase B2 (2026-07-17, ver §6):** CP-25 (parcial),
-  CP-26 y CP-27. **CP-15 automatizado en la Fase B3 (ver §7);** su corrida manual,
-  la formal de CP-25/26/27 y la regresión en emulador quedan en P-50.
+- **CP del panel verificados en las Fases B2/B3 (2026-07-17, ver §6 y §7):**
+  CP-25 (incluido el caso negativo, corrida B3), CP-26, CP-27 y CP-15
+  (automatizado + corrida manual E2E de la usuaria, P-50 ✅).
 
 ## 5. Pasadas manuales en emulador ya ejecutadas por la usuaria
 
@@ -146,6 +146,7 @@ ejecutadas por la usuaria se marcan ✅.
 | CP-26 (RF-41/42/44, Fase B2) | 2026-07-17 | ✅ E2E panel→app completa (ver §6) |
 | CP-27 (RF-43, Fase B2) | 2026-07-17 | ✅ Editor del cuestionario, bloqueos y reflejo en la app (ver §6) |
 | Reglas + `/drafts` (RNF-06) | 2026-07-17 | ✅ Playground tras desplegar: `/drafts` solo admin; `/users` intacto |
+| P-50 (CP-15 + regresión, Fase B3) | 2026-07-17 | ✅ Ciclo panel→app completo: reflejo sin reinstalar, corrupto simulado tolerado, caché en modo avión, regresión RF-21/22/23/27 y caso negativo de CP-25 (ver §7) |
 
 Los CP manuales restantes (P-11, P-14, P-26, P-27, P-29, P-43, P-46 y las inspecciones de
 Device Explorer de CP-28/31) quedan para la pasada final en emulador con la instalación del
@@ -229,8 +230,9 @@ colecciones neutras intactas, sin cambios de manifest/reglas/dependencias, y
 la tolerancia nueva ELIMINA un comportamiento anómalo observable (el fetch que
 caía entero) en lugar de introducir uno.
 
-**Corrida manual E2E pendiente (P-50, checklist CP-15 + regresión):** con
-emulador + panel + proyecto `aurora-31c37`:
+**Corrida manual E2E ✅ (usuaria, 2026-07-17, P-50 cerrado):** ejecutada
+completa con emulador `Medium_Phone_API_35` + panel (`npm run dev`) + proyecto
+real `aurora-31c37`; **todos los pasos en verde**. Checklist ejecutado:
 1. Con red, abrir el módulo de información y anotar el texto de un tema y una
    línea.
 2. Editar y publicar ese tema/línea en el panel; salir del módulo en la app y
@@ -245,3 +247,10 @@ emulador + panel + proyecto `aurora-31c37`:
    terminar.
 6. Regresión rápida RF-21/22/23/27 con el contenido editado + caso negativo de
    CP-25 (cuenta sin claim → acceso denegado con mensaje genérico).
+
+Con esta corrida quedan verificados de punta a punta CP-15 (RF-24/RF-25),
+la parte app de CP-26 (RF-44) y el caso negativo de CP-25 (RF-40); los
+documentos corruptos de prueba fueron restaurados en la consola al terminar.
+La Fase B (panel + ciclo de contenido) queda funcionalmente cerrada; siguen
+abiertas solo la validación editorial con la directora (P-23/P-38) y los
+pendientes post-MVP registrados (P-51 y anteriores).
