@@ -100,7 +100,7 @@ ejecutadas por la usuaria se marcan ✅.
 | CP-12 | RF-20 | NO APLICA | **RF-20 (eliminación de cuenta): NO implementado — futuro.** |
 | CP-13 | RF-21, RF-22 | PASA + MANUAL | Auto: `TopicsViewModelTest` (3), `TopicDetailViewModelTest` (4), `RoutesViewModelTest` (3), `FirestoreContentRepositoryTest` (10). Manual: con contenido sembrado, navegar tipos de violencia y rutas de atención completos. Esperado: contenido completo y navegable. |
 | CP-14 | RF-23 | PASA + MANUAL (P-26) | Auto: `AgencyDetailViewModelTest` (4), `LinesViewModelTest` (3). Manual P-26: tocar llamar abre el marcador con el número precargado, sin registro en la app; verificar si el número persiste en recientes. |
-| CP-15 | RF-24, RF-25 | NO APLICA | **Dependen del panel web (siembra manual en Firestore los sustituye en Fase 3). NO implementado — futuro.** |
+| CP-15 | RF-24, RF-25 | PASA + MANUAL (B3) | Auto (Fase B3, 2026-07-17): `ContentDocumentParsingTest` (7), `QuestionnaireDocumentParsingTest` (8) y casos nuevos de repositorio — malformado omitido sin romper el resto, esquema desconocido que no sustituye a la versión vigente, colección vacía sin error, actualización reflejada en la siguiente consulta. Manual: checklist de §7 (panel→app, corrupto simulado en consola, modo avión). |
 | CP-16 | RF-26, RNF-08 | MANUAL | Firestore con persistencia offline. Manual: activar modo avión y abrir el contenido informativo. Esperado: contenido completo disponible, carga ≤ 2 s. |
 | CP-17 | RF-27, RF-28 | PASA + MANUAL (P-43) | Auto: `GuidanceViewModelTest` (16). Manual P-43: responder 2 preguntas→retroceder (sigue marcado)→«Abandonar»→reingresar: portada vacía; nube a mitad→fachada→reingreso: portada vacía; `am kill`→sin rastro. |
 | CP-18 | RF-29, RF-30 | PASA + MANUAL (P-43) | Auto: `CalculateGuidanceLevelUseCaseTest` (14) (nivel correcto por respuestas y umbrales), `GuidanceViewModelTest`. Manual P-43: en 360×800 el aviso de RF-30 visible SIN scroll bajo la tarjeta del nivel, también en el nivel más alto; «Ver rutas» abre rutas y vuelve. |
@@ -126,13 +126,14 @@ ejecutadas por la usuaria se marcan ✅.
 
 ### Cobertura resumida
 
-- **CP con cobertura automatizada (total o parcial):** CP-01..CP-10, CP-13, CP-14, CP-17,
-  CP-18, CP-20, CP-22, CP-23, CP-28..CP-33, CP-37.
+- **CP con cobertura automatizada (total o parcial):** CP-01..CP-10, CP-13, CP-14, CP-15,
+  CP-17, CP-18, CP-20, CP-22, CP-23, CP-28..CP-33, CP-37.
 - **CP solo manual (emulador/dispositivo):** CP-16, CP-34, CP-36.
-- **CP NO APLICA (RF Media / Fase 4):** CP-11, CP-12, CP-15, CP-19, CP-21,
+- **CP NO APLICA (RF Media / Fase 4):** CP-11, CP-12, CP-19, CP-21,
   CP-24, CP-35, y las partes RF-04/RF-09/RF-35/RF-36/RF-39 de CP mixtos.
 - **CP del panel verificados en la Fase B2 (2026-07-17, ver §6):** CP-25 (parcial),
-  CP-26 y CP-27; su corrida formal y CP-15 (RF-24/25) quedan para B3.
+  CP-26 y CP-27. **CP-15 automatizado en la Fase B3 (ver §7);** su corrida manual,
+  la formal de CP-25/26/27 y la regresión en emulador quedan en P-50.
 
 ## 5. Pasadas manuales en emulador ya ejecutadas por la usuaria
 
@@ -184,3 +185,63 @@ permitida únicamente para no vigentes.
 - Validación de CONTENIDO con la directora (P-38 y datos `[POR CONFIRMAR]`
   de entidades/líneas): el `reviewNote` del cuestionario se vació solo para
   estas pruebas; la decisión editorial sigue abierta.
+
+## 7. Fase B3 — Cierre del ciclo de contenido en la app (2026-07-17)
+
+Alcance: RF-24, RF-25 y RF-44 (lado app), commits `ef1f925`, `ec9355d`,
+`14b62d0` y `054b1ce`. La exploración confirmó que el mecanismo del ciclo ya
+operaba desde antes (la app lee solo las colecciones vivas publicadas, con
+`get()` servidor-primero y caché persistente de respaldo, y filtra
+`schemaVersion` desconocido); la brecha real de RF-25 estaba en la capa
+snapshot→DTO: los getters tipados del SDK (`getString`/`getLong`) **lanzan**
+ante un campo con tipo incorrecto, así que UN documento corrupto publicado por
+error tumbaba el fetch completo del módulo (error genérico visible) en vez de
+omitirse — y esa capa no tenía ningún test.
+
+**Cambio aplicado (único de producción):** el parsing de ambos remote sources
+pasó a casts seguros sobre el mapa crudo del documento
+(`internal fun Map<String, Any?>.toXxxDto(id)`): un tipo inesperado equivale a
+campo ausente, el mapper omite solo ese documento (content) o descarta el
+formulario y sigue rigiendo el válido de mayor versión presente en `forms`
+(questionnaire) — esa es la conservación de la última versión válida de RF-25.
+Un decimal no entero en campos numéricos (`weight`, `minScore`, `order`…) se
+trata como corrupto en vez de truncarse (mejora M-2 de la revisora: truncar
+2,5 → 2 sesgaría umbrales calibrados sin descartar el documento).
+
+**Corrida automatizada (2026-07-17):** `./gradlew test ktlintCheck
+assembleDebug` en verde; la verificadora forzó re-ejecución con
+`cleanTestDebugUnitTest`: **278 tests debug / 556 totales, 0 fallos**. Suites
+nuevas: `ContentDocumentParsingTest` (7) y `QuestionnaireDocumentParsingTest`
+(8) — tipos corruptos por campo, listas/entradas embebidas corruptas, mapa
+vacío, decimales rechazados y la cadena completa hasta el descarte del mapper —
+más casos nuevos en los tests de repositorio: malformado omitido sin romper el
+resto, esquema desconocido que no sustituye a la versión vigente (RF-25),
+colección vacía = éxito con lista vacía, y actualización reflejada en la
+siguiente consulta (RF-24/RF-44). La regresión automatizada de
+RF-21/22/23/26/27/42/43 sigue en verde (los DTOs, mappers, repositorios y UI
+no cambiaron).
+
+**Veredictos de agentes (2026-07-17):** verificadora-rf APROBADO en RF-24,
+RF-25 y RF-44 (parte automatizable); revisora-arquitectura APROBADO (M-1
+registrada en P-51; M-2/M-3 aplicadas en `054b1ce`); auditora-seguridad
+APROBADO sin hallazgos — cero logs/telemetría, fallos silenciosos (§3/P-24),
+colecciones neutras intactas, sin cambios de manifest/reglas/dependencias, y
+la tolerancia nueva ELIMINA un comportamiento anómalo observable (el fetch que
+caía entero) en lugar de introducir uno.
+
+**Corrida manual E2E pendiente (P-50, checklist CP-15 + regresión):** con
+emulador + panel + proyecto `aurora-31c37`:
+1. Con red, abrir el módulo de información y anotar el texto de un tema y una
+   línea.
+2. Editar y publicar ese tema/línea en el panel; salir del módulo en la app y
+   reabrirlo: debe verse el texto editado sin reinstalar (RF-24/RF-44).
+3. Publicar una nueva versión del cuestionario; abrirlo en la app: debe regir
+   la nueva versión (RF-44).
+4. Modo avión: reabrir módulo y cuestionario — última versión ya vista, sin
+   error (RF-25/RF-26).
+5. Adversarial (consola Firestore): `title` numérico en un doc de `topics` →
+   el módulo carga sin ese documento y sin error visible; corromper el `forms`
+   de mayor versión dejando uno válido menor → rige el válido. Restaurar al
+   terminar.
+6. Regresión rápida RF-21/22/23/27 con el contenido editado + caso negativo de
+   CP-25 (cuenta sin claim → acceso denegado con mensaje genérico).
