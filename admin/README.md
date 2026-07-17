@@ -36,12 +36,12 @@ npm run dev      # http://localhost:5173
 
 Scripts:
 
-| Comando          | Qué hace                                    |
-| ---------------- | ------------------------------------------- |
-| `npm run dev`    | Servidor de desarrollo (Vite)               |
-| `npm run build`  | Build de producción (`tsc -b && vite build`)|
-| `npm run lint`   | ESLint + `prettier --check`                 |
-| `npm run format` | `prettier --write`                          |
+| Comando          | Qué hace                                     |
+| ---------------- | -------------------------------------------- |
+| `npm run dev`    | Servidor de desarrollo (Vite)                |
+| `npm run build`  | Build de producción (`tsc -b && vite build`) |
+| `npm run lint`   | ESLint + `prettier --check`                  |
+| `npm run format` | `prettier --write`                           |
 
 ## 3. Crear la cuenta de administradora (RF-40)
 

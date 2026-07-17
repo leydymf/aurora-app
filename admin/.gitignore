@@ -2,6 +2,8 @@
 node_modules
 dist
 dist-ssr
+.vite
+*.tsbuildinfo
 
 # Configuración local de Firebase (no secreta, pero no se versiona el .env real)
 .env

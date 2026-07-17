@@ -1,12 +1,244 @@
-// Contenido informativo sobre tipos de violencia (RF-41). CRUD en Fase B2.
-import { ResourcePlaceholder } from '../../components/ResourcePlaceholder'
+// Gestión del contenido informativo: tipos de violencia (RF-41).
+//
+// Listado + editor con vista previa fiel a las secciones que la app pinta en
+// TopicDetailScreen (título, resumen, SEÑALES, EJEMPLOS). Guardar escribe el
+// BORRADOR (colección drafts); la app solo cambia al publicar (RF-44).
+import { useMemo } from 'react'
+import { EditorActions } from '../../components/EditorActions'
+import { EditorStatus } from '../../components/EditorStatus'
+import { StatusBadge } from '../../components/StatusBadge'
+import { StringListField } from '../../components/StringListField'
+import { buildOrderIndex } from '../../lib/drafts'
+import { nextOpaqueId } from '../../lib/ids'
+import { useEntries } from '../../lib/useEntries'
+import { useResourceEditor } from '../../lib/useResourceEditor'
+import { emptyTopic, normalizeTopic, topicFromRaw, validateTopic } from './topicSchema'
 
 export function ContentPage() {
+    const topics = useEntries('topics', topicFromRaw)
+    const editor = useResourceEditor({
+        resource: 'topics',
+        entries: topics.entries,
+        reload: topics.reload,
+        setError: topics.setError,
+        normalize: normalizeTopic,
+    })
+    const { editing, selected, selectedId } = editor
+
+    const sorted = useMemo(
+        () =>
+            topics.entries ? [...topics.entries].sort((a, b) => a.data.order - b.data.order) : [],
+        [topics.entries],
+    )
+
+    const orderTakenBy = useMemo(
+        () => buildOrderIndex(topics.entries, selectedId, (data) => data.title),
+        [topics.entries, selectedId],
+    )
+
+    const publishIssues = useMemo(
+        () =>
+            selected !== null && selected.status === 'borrador'
+                ? validateTopic(selected.data, orderTakenBy)
+                : [],
+        [selected, orderTakenBy],
+    )
+    const canPublish =
+        selected !== null &&
+        selected.status === 'borrador' &&
+        !editor.isDirty &&
+        publishIssues.length === 0
+
+    function startNew() {
+        if (!topics.entries) return
+        const docId = nextOpaqueId(
+            't',
+            topics.entries.map((entry) => entry.docId),
+        )
+        const maxOrder = topics.entries.reduce((max, entry) => Math.max(max, entry.data.order), 0)
+        editor.startNew(docId, emptyTopic(maxOrder + 1))
+    }
+
     return (
-        <ResourcePlaceholder
-            title="Contenido informativo"
-            rf="RF-41"
-            description="Tipos de violencia: descripción, señales y ejemplos que consulta la app."
-        />
+        <section className="resource">
+            <header className="resource__header">
+                <h1>Contenido informativo</h1>
+                <span className="resource__rf">RF-41</span>
+            </header>
+            <p className="resource__desc">
+                Tipos de violencia que la app muestra en «Información». Los cambios se guardan como
+                borrador y solo llegan a la app al publicar (RF-44).
+            </p>
+
+            {topics.error !== null && (
+                <p className="alert" role="alert">
+                    {topics.error}
+                </p>
+            )}
+
+            <div className="manager manager--preview">
+                <aside className="panel list">
+                    <button
+                        type="button"
+                        disabled={!topics.entries || editor.busy}
+                        onClick={() => {
+                            startNew()
+                        }}
+                    >
+                        + Nuevo tipo
+                    </button>
+                    {!topics.entries && <p className="muted">Cargando…</p>}
+                    {topics.entries && sorted.length === 0 && !editor.isNew && (
+                        <p className="muted">Sin contenido todavía.</p>
+                    )}
+                    {sorted.map((entry) => (
+                        <button
+                            key={entry.docId}
+                            type="button"
+                            className={
+                                'list__item' +
+                                (entry.docId === selectedId && !editor.isNew
+                                    ? ' list__item--active'
+                                    : '')
+                            }
+                            onClick={() => {
+                                editor.select(entry)
+                            }}
+                        >
+                            <span className="list__title">{entry.data.title || entry.docId}</span>
+                            <StatusBadge status={entry.status} />
+                        </button>
+                    ))}
+                    {editor.isNew && editing && (
+                        <div className="list__item list__item--active">
+                            <span className="list__title">{editing.title || '(nuevo)'}</span>
+                            <StatusBadge status="borrador" />
+                        </div>
+                    )}
+                </aside>
+
+                {editing ? (
+                    <>
+                        <div className="panel editor">
+                            <div className="editor__grid">
+                                <label className="field">
+                                    <span>Id (fijo)</span>
+                                    <input value={selectedId ?? ''} readOnly disabled />
+                                </label>
+                                <label className="field">
+                                    <span>Orden</span>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={editing.order}
+                                        onChange={(e) => {
+                                            editor.setEditing({
+                                                ...editing,
+                                                order: Number.parseInt(e.target.value, 10) || 0,
+                                            })
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                            <label className="field">
+                                <span>Título</span>
+                                <input
+                                    value={editing.title}
+                                    onChange={(e) => {
+                                        editor.setEditing({ ...editing, title: e.target.value })
+                                    }}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>Resumen</span>
+                                <textarea
+                                    rows={5}
+                                    value={editing.summary}
+                                    onChange={(e) => {
+                                        editor.setEditing({ ...editing, summary: e.target.value })
+                                    }}
+                                />
+                            </label>
+                            <StringListField
+                                label="Señales"
+                                values={editing.signals}
+                                addLabel="Agregar señal"
+                                multiline
+                                onChange={(signals) => {
+                                    editor.setEditing({ ...editing, signals })
+                                }}
+                            />
+                            <StringListField
+                                label="Ejemplos"
+                                values={editing.examples}
+                                addLabel="Agregar ejemplo"
+                                multiline
+                                onChange={(examples) => {
+                                    editor.setEditing({ ...editing, examples })
+                                }}
+                            />
+
+                            <EditorActions
+                                busy={editor.busy}
+                                isDirty={editor.isDirty}
+                                canPublish={canPublish}
+                                isNew={editor.isNew}
+                                confirmingDelete={editor.confirmingDelete}
+                                onSave={() => {
+                                    void editor.save()
+                                }}
+                                onPublish={() => {
+                                    void editor.publish(publishIssues)
+                                }}
+                                onDelete={() => {
+                                    void editor.remove()
+                                }}
+                                onCancelNew={() => {
+                                    editor.cancelNew()
+                                }}
+                            />
+                            <EditorStatus
+                                selected={selected}
+                                isDirty={editor.isDirty}
+                                issues={publishIssues}
+                            />
+                        </div>
+
+                        <aside className="panel preview">
+                            <p className="preview__tag">INFORMACIÓN · TIPOS</p>
+                            <h2 className="preview__title">{editing.title || 'Sin título'}</h2>
+                            <p className="preview__body">{editing.summary}</p>
+                            {editing.signals.length > 0 && (
+                                <>
+                                    <p className="preview__section">SEÑALES</p>
+                                    <ul className="preview__list">
+                                        {editing.signals.map((signal, index) => (
+                                            <li key={index}>{signal}</li>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
+                            {editing.examples.length > 0 && (
+                                <>
+                                    <p className="preview__section">EJEMPLOS</p>
+                                    <ul className="preview__list">
+                                        {editing.examples.map((example, index) => (
+                                            <li key={index}>«{example}»</li>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
+                            <p className="preview__note">
+                                Vista previa aproximada del detalle en la app.
+                            </p>
+                        </aside>
+                    </>
+                ) : (
+                    <div className="panel">
+                        <p className="muted">Selecciona un tipo de la lista o crea uno nuevo.</p>
+                    </div>
+                )}
+            </div>
+        </section>
     )
 }

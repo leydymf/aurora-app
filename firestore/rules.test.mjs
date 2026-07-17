@@ -63,6 +63,16 @@ test('la administradora (claim admin) sí escribe el contenido (RF-40/41-44)', a
   await assertSucceeds(setDoc(doc(admin(), 'forms/f01'), { version: 1, schemaVersion: 1 }))
 })
 
+test('los borradores del panel son exclusivos de la administradora (RF-44)', async () => {
+  const draft = { collection: 'topics', docId: 't01', status: 'borrador' }
+  await assertSucceeds(setDoc(doc(admin(), 'drafts/topics__t01'), draft))
+  await assertSucceeds(getDoc(doc(admin(), 'drafts/topics__t01')))
+  // Ni la usuaria autenticada ni la anónima ven o tocan los borradores.
+  await assertFails(getDoc(doc(ana(), 'drafts/topics__t01')))
+  await assertFails(setDoc(doc(ana(), 'drafts/topics__t01'), { status: 'publicado' }))
+  await assertFails(getDoc(doc(anon(), 'drafts/topics__t01')))
+})
+
 test('la administradora NO puede leer ni escribir datos de usuarias (RNF-06)', async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     await setDoc(doc(ctx.firestore(), 'users/ana/entries/7'), { payload: 'blob' })
