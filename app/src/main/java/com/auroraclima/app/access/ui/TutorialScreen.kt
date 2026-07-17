@@ -114,7 +114,7 @@ internal fun TutorialScreen(
             InfoPageContent(
                 step = state.step,
                 isReview = isReview,
-                showBack = !state.isFirstStep || isReview,
+                showBack = state.showsBack(isReview),
                 onNext = onNext,
                 onBack = onBack
             )

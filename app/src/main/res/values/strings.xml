@@ -81,6 +81,11 @@
     <string name="account_login_lock_title">Pausa temporal</string>
     <string name="account_login_lock_body">Por tu seguridad, el acceso queda en pausa unos minutos. Respira; tu información sigue protegida.</string>
     <string name="account_login_lock_countdown">PODRÁS INTENTAR DE NUEVO EN %1$s</string>
+    <string name="access_settings_tag">CONFIGURACIÓN</string>
+    <string name="access_settings_title">Configuración.</string>
+    <string name="access_settings_group_security">SEGURIDAD</string>
+    <string name="access_settings_guide">Ver el tutorial de nuevo</string>
+    <string name="access_settings_footer">Aurora · Prototipo académico TRL 4 · UNAB 2026</string>
     <string name="access_panel_title">Estoy aquí.</string>
     <string name="access_panel_subtitle">Tómate el tiempo que necesites.</string>
     <string name="access_panel_settings">Configuración</string>

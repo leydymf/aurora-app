@@ -59,6 +59,7 @@ fun PanelScreen(
     onOpenInfo: () -> Unit,
     onOpenGuidance: () -> Unit,
     onOpenJournal: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -74,9 +75,7 @@ fun PanelScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             BrandHeader(modifier = Modifier.weight(1f))
-            // TODO(Día 5): pantalla de configuración (mockup P21); mientras tanto
-            // el engranaje del mockup se muestra deshabilitado.
-            IconButton(onClick = {}, enabled = false) {
+            IconButton(onClick = onOpenSettings) {
                 Icon(
                     imageVector = Icons.Outlined.Settings,
                     contentDescription = stringResource(R.string.access_panel_settings),

@@ -12,6 +12,13 @@ data class TutorialUiState(
     val practiceStatus: PracticeStatus = PracticeStatus.TYPING
 ) {
     val isFirstStep: Boolean get() = step == TutorialStep.ENTER
+
+    /**
+     * En primer uso la primera página no ofrece «Atrás» (detrás no hay nada: el
+     * setup salió de la pila); en modo repaso (RF-11) sí, y regresa a donde
+     * estaba la usuaria.
+     */
+    fun showsBack(isReview: Boolean): Boolean = !isFirstStep || isReview
 }
 
 /** Páginas del tutorial, en el orden del pager (criterio 1 de RF-10). */

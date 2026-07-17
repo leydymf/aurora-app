@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.CodeSetupRoute
 import com.auroraclima.app.access.ui.PanelScreen
+import com.auroraclima.app.access.ui.SettingsScreen
 import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
@@ -125,7 +126,16 @@ fun AuroraApp(sessionManager: SessionManager) {
                     PanelScreen(
                         onOpenInfo = { navController.navigate(TOPICS_ROUTE) },
                         onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
-                        onOpenJournal = { navController.navigate(JOURNAL_ROUTE) }
+                        onOpenJournal = { navController.navigate(JOURNAL_ROUTE) },
+                        onOpenSettings = { navController.navigate(SETTINGS_ROUTE) }
+                    )
+                }
+                // Configuración del espacio interno (P21): reabrir el tutorial
+                // (RF-11) reutiliza la ruta de repaso ya prevista.
+                screen(SETTINGS_ROUTE) {
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() },
+                        onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) }
                     )
                 }
                 // Historial personal (RF-34, P18): listado → detalle / creación.
@@ -256,6 +266,7 @@ private const val GUIDE_ROUTE = "guide"
 private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
+private const val SETTINGS_ROUTE = "settings"
 private const val GUIDANCE_ROUTE = "guidance"
 private const val JOURNAL_ROUTE = "journal"
 private const val JOURNAL_NEW_ROUTE = "journal_new"
