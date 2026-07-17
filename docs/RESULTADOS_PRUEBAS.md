@@ -4,6 +4,10 @@
 > Fecha de la corrida: 2026-07-15. Alcance: todos los RF de prioridad **Alta**
 > alcanzables sin el panel web (ver `PLAN_FASE3.md`). Los RF **Media** y el panel
 > quedan como trabajo futuro (ver `docs/PENDIENTES.md`).
+>
+> **Actualización 2026-07-17:** la Fase B2 (panel administrativo, RF-40–44) fue
+> implementada y verificada end-to-end contra el proyecto real — ver **§6**. La
+> corrida formal de sus CP y la regresión de contenido quedan para la Fase B3.
 
 ## 1. Resumen de la corrida automatizada
 
@@ -106,9 +110,9 @@ ejecutadas por la usuaria se marcan ✅.
 | CP-22 | RF-34, RF-35, RF-36 | PASA (RF-34) + MANUAL (P-46) · RF-35/36 NO APLICA | Auto RF-34: `JournalListViewModelTest` (3), `JournalDetailViewModelTest` (4) (orden cronológico inverso, detalle). Manual P-46: listado con fecha+tipo, fila abre detalle completo. **RF-35/36 (editar/eliminar): NO implementado — futuro.** |
 | CP-23 | RF-37, RF-38 | PASA + MANUAL ✅ (P-49) · RF-38 parcial | Auto RF-37: `FirestoreJournalSyncRepositoryTest` (3), `KeystorePayloadCipherTest` (instrum. 5/5). Manual P-49 ✅ (2026-07-15): offline→reconectar sube solo; en Firestore `payload`/`iv` ilegibles (Base64), sin `day`/`kind`/`detail` en claro. **RF-38 (cola offline): el mecanismo existe vía la cola durable de Firestore y quedó probado en P-49; su formalización como RF propio es futuro.** |
 | CP-24 | RF-39 | NO APLICA | **RF-39 (multi-dispositivo): NO implementado — la llave del payload está ligada al dispositivo (P-48); recuperación en 2.º dispositivo es futuro.** |
-| CP-25 | RF-40 | NO APLICA | **Panel web fuera de alcance.** |
-| CP-26 | RF-41, RF-42, RF-44 | NO APLICA | **Panel web fuera de alcance.** |
-| CP-27 | RF-43 | NO APLICA | **Panel web fuera de alcance.** |
+| CP-25 | RF-40 | MANUAL parcial ✅ (B2) | Panel implementado (B1/B2). Acceso con rol admin verificado en uso real del panel (2026-07-17). Denegación a cuentas sin claim implementada (`signOut` inmediato + mensaje genérico, `admin/src/auth/AuthContext.tsx`); el caso negativo formal queda para la corrida de B3. |
+| CP-26 | RF-41, RF-42, RF-44 | MANUAL ✅ (2026-07-17) + PASA (panel) | E2E panel→app en el proyecto real: tipo editado y publicado reflejado en la app (el borrador NO es visible antes de publicar); teléfono de entidad actualizado y reflejado; eliminar una entidad referenciada queda bloqueado listando las rutas; una ruta con entidad sin publicar no se publica hasta publicar la entidad. Auto (panel): vitest 66/66 (teléfonos, referencias cruzadas, órdenes, normalización). Corrida formal + RF-24/25 en B3. |
+| CP-27 | RF-43 | MANUAL ✅ (2026-07-17) + PASA (panel) | E2E: la edición publicada rige el cuestionario de la app (versión automática max+1; la app toma el vivo de mayor versión). Bloqueos verificados en vivo: sin preguntas/niveles, umbral inalcanzable, marcador [POR CONFIRMAR] (compuerta M-2) y empate de versión entre varios formularios (pide re-guardar). Eliminación solo de cuestionarios no vigentes. Auto: `coherence.test.ts` (reglas derivadas del motor, fixture = f01 real). |
 | CP-28 | RNF-01 | PASA + MANUAL (P-28/P-46) | Auto: cabecera SQLCipher ≠ «SQLite format 3» (instrum. P-03), `KeystorePayloadCipherTest` (5/5). Manual: Device Explorer sobre `databases/journal_store.db`(+`-wal`) y `shared_prefs/` → ilegibles / solo Base64. |
 | CP-29 | RNF-02 | PASA + MANUAL (P-43/P-14) | Auto: `SecureFlagLedgerTest` (5) (contabilidad de FLAG_SECURE por pantalla interna). Manual: intentar captura en portada/pregunta/resultado y registros → bloqueada; recientes → sin contenido interno. |
 | CP-30 | RNF-03 | PASA + MANUAL | Auto: `SessionManagerTest` (12), `InteractionThrottleTest` (4). Manual: dejar el doble fondo inactivo 5 min → cierre automático a la fachada. Cubierto por construcción para scroll (P-21) y campos de texto (P-15). |
@@ -125,8 +129,10 @@ ejecutadas por la usuaria se marcan ✅.
 - **CP con cobertura automatizada (total o parcial):** CP-01..CP-10, CP-13, CP-14, CP-17,
   CP-18, CP-20, CP-22, CP-23, CP-28..CP-33, CP-37.
 - **CP solo manual (emulador/dispositivo):** CP-16, CP-34, CP-36.
-- **CP NO APLICA (RF Media / panel web / Fase 4):** CP-11, CP-12, CP-15, CP-19, CP-21,
-  CP-24, CP-25, CP-26, CP-27, CP-35, y las partes RF-04/RF-09/RF-35/RF-36/RF-39 de CP mixtos.
+- **CP NO APLICA (RF Media / Fase 4):** CP-11, CP-12, CP-15, CP-19, CP-21,
+  CP-24, CP-35, y las partes RF-04/RF-09/RF-35/RF-36/RF-39 de CP mixtos.
+- **CP del panel verificados en la Fase B2 (2026-07-17, ver §6):** CP-25 (parcial),
+  CP-26 y CP-27; su corrida formal y CP-15 (RF-24/25) quedan para B3.
 
 ## 5. Pasadas manuales en emulador ya ejecutadas por la usuaria
 
@@ -136,7 +142,45 @@ ejecutadas por la usuaria se marcan ✅.
 | P-28 parcial (CP-05, RF-08) | 2026-07-11 | ✅ Rechazos de la clave en vivo; resta Device Explorer |
 | P-49 (CP-23, RF-37) | 2026-07-15 | ✅ Sync cifrada offline→online; blobs ilegibles en Firestore |
 | P-04/CP-37 (CP-33, RNF-06) | 2026-07-15 | ✅ Rules playground 10/10 |
+| CP-26 (RF-41/42/44, Fase B2) | 2026-07-17 | ✅ E2E panel→app completa (ver §6) |
+| CP-27 (RF-43, Fase B2) | 2026-07-17 | ✅ Editor del cuestionario, bloqueos y reflejo en la app (ver §6) |
+| Reglas + `/drafts` (RNF-06) | 2026-07-17 | ✅ Playground tras desplegar: `/drafts` solo admin; `/users` intacto |
 
 Los CP manuales restantes (P-11, P-14, P-26, P-27, P-29, P-43, P-46 y las inspecciones de
 Device Explorer de CP-28/31) quedan para la pasada final en emulador con la instalación del
 `app-release.apk` (criterio de salida del Día 7).
+
+## 6. Fase B2 — Panel administrativo (post `v0.1.0-trl4`, 2026-07-17)
+
+Alcance: RF-40 a RF-44, commits `3827b83`, `c413523`, `555a602`, `98f1f88`,
+`3e6f863` y `73a29da`. El panel produce EXACTAMENTE el esquema que la app
+consume (espejo de los DTO de `content/data` y `questionnaire/data`;
+`schemaVersion` = 1, sin campos nuevos) y la app solo ve lo publicado: los
+borradores viven en la colección `/drafts`, exclusiva del claim admin. La
+regla nueva fue **desplegada en la consola y verificada en el Playground el
+2026-07-17** (`/drafts` denegada sin claim; `/users/**` intacto, RNF-06).
+
+**Corrida automatizada del panel** (`admin/`): `npm run test` → **66/66**
+(vitest: teléfonos colombianos, referencias cruzadas rutas↔entidades↔cuestionario,
+coherencia del cuestionario con el f01 real como fixture, normalización y
+guardarraíl de versiones), `npm run lint` y `npm run build` en verde —
+verificados además commit por commit. Android sin cambios:
+`./gradlew test ktlintCheck assembleDebug` en verde (corrido por la agente
+verificadora; ningún archivo de `app/` tocado en la fase).
+
+**Corrida manual E2E de la usuaria** (2026-07-17, proyecto real
+`aurora-31c37` + emulador `Medium_Phone_API_35`): todos los pasos de
+`admin/README.md` §6 en verde — publicación reflejada y borradores invisibles
+para la app (RF-41/RF-44), teléfono actualizado y bloqueos de integridad
+referencial (RF-42), cuestionario con versión automática, bloqueos de
+coherencia y compuerta `[POR CONFIRMAR]` (RF-43), y el flujo con varios
+cuestionarios: solo rige el vigente, empate de versión bloqueado y eliminación
+permitida únicamente para no vigentes.
+
+**Pendientes que esta corrida NO cierra:**
+- Corrida formal de CP-25 (caso negativo de RF-40), CP-26, CP-27 + CP-15
+  (RF-24/RF-25 contra contenido editado desde el panel, incluido esquema
+  corrupto simulado) y regresión de RF-21/22/23/26/27 → **Fase B3**.
+- Validación de CONTENIDO con la directora (P-38 y datos `[POR CONFIRMAR]`
+  de entidades/líneas): el `reviewNote` del cuestionario se vació solo para
+  estas pruebas; la decisión editorial sigue abierta.
