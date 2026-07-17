@@ -111,11 +111,13 @@ export function QuestionnairePage() {
         return id
     }, [forms.entries])
 
-    // Solo se elimina un cuestionario que NUNCA se ha publicado: borrar uno
-    // publicado dejaría a la app con una versión vieja o sin ninguna.
+    // Solo se protege el cuestionario VIGENTE (el vivo de mayor versión: el
+    // único que la app usa): borrarlo dejaría a la app sin el que rige o con
+    // una versión vieja. Los publicados ya superados y los nunca publicados
+    // se eliminan sin efecto alguno sobre lo que ven las usuarias.
     const deleteBlockedReason =
-        selected !== null && selected.liveData !== null
-            ? 'No se elimina un cuestionario ya publicado: la app quedaría con una versión vieja o sin ninguna.'
+        selected !== null && selected.docId === vigenteId
+            ? 'No se elimina el cuestionario vigente: la app quedaría sin el que rige. Publica otro (pasará a ser el vigente) y luego elimina este.'
             : null
 
     function startNew() {
