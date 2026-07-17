@@ -104,7 +104,7 @@ internal fun ConsentScreen(
             color = SteelDeep
         )
         Spacer(modifier = Modifier.height(20.dp))
-        InfoCard()
+        ConsentInfoCard()
         Spacer(modifier = Modifier.height(20.dp))
         Row(verticalAlignment = Alignment.Top) {
             Checkbox(
@@ -164,8 +164,13 @@ internal fun ConsentScreen(
     }
 }
 
+/**
+ * Tarjeta con el texto del acuerdo de datos (claves account_intro_*). Interna al
+ * feature: la pinta el primer uso (RF-17 criterio 1) y la relectura desde la
+ * sección de privacidad (RF-17 criterio 2, P-16).
+ */
 @Composable
-private fun InfoCard(modifier: Modifier = Modifier) {
+internal fun ConsentInfoCard(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),

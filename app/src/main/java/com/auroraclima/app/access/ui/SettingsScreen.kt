@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +57,12 @@ import com.auroraclima.app.core.ui.theme.SteelDeep
  * llegará con RF-20.
  */
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onReopenGuide: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onReopenGuide: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -76,6 +83,17 @@ fun SettingsScreen(onBack: () -> Unit, onReopenGuide: () -> Unit, modifier: Modi
                 icon = painterResource(R.drawable.ic_book),
                 title = stringResource(R.string.access_settings_guide),
                 onClick = onReopenGuide
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionTag(stringResource(R.string.access_settings_group_privacy))
+        Spacer(modifier = Modifier.height(10.dp))
+        SettingsGroup {
+            SettingsRow(
+                icon = rememberVectorPainter(Icons.Outlined.Info),
+                title = stringResource(R.string.access_settings_privacy),
+                onClick = onOpenPrivacy
             )
         }
         Spacer(modifier = Modifier.height(24.dp))

@@ -22,6 +22,7 @@ import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.accounts.ui.LoginRoute
+import com.auroraclima.app.accounts.ui.PrivacyScreen
 import com.auroraclima.app.content.ui.AGENCY_ID_ARG
 import com.auroraclima.app.content.ui.AgencyDetailRoute
 import com.auroraclima.app.content.ui.LinesRoute
@@ -135,8 +136,14 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(SETTINGS_ROUTE) {
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
-                        onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) }
+                        onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) },
+                        onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) }
                     )
+                }
+                // Relectura del acuerdo de datos (RF-17 criterio 2, P-16): el
+                // mismo texto del primer uso, en solo lectura.
+                screen(PRIVACY_ROUTE) {
+                    PrivacyScreen(onBack = { navController.popBackStack() })
                 }
                 // Historial personal (RF-34, P18): listado → detalle / creación.
                 screen(JOURNAL_ROUTE) {
@@ -267,6 +274,7 @@ private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val SETTINGS_ROUTE = "settings"
+private const val PRIVACY_ROUTE = "privacy"
 private const val GUIDANCE_ROUTE = "guidance"
 private const val JOURNAL_ROUTE = "journal"
 private const val JOURNAL_NEW_ROUTE = "journal_new"
