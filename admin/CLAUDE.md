@@ -58,10 +58,27 @@ src/
   firebase/config.ts          # init de Firebase (Auth + Firestore)
   auth/AuthContext.tsx        # ÚNICO estado global; verifica claim admin
   auth/LoginPage.tsx          # RF-40
-  components/Layout.tsx        # navegación entre los 4 recursos + salir
-  components/ResourcePlaceholder.tsx
-  resources/<recurso>/<Recurso>Page.tsx   # un componente por recurso
+  lib/                        # infraestructura genérica (NUNCA lógica de un recurso):
+    drafts.ts                 #   flujo borrador→publicado sobre la colección /drafts
+    useEntries.ts             #   hook local de carga vivo+borrador (no es estado global)
+    useResourceEditor.ts      #   máquina de estados del editor (guardar/publicar/eliminar)
+    ids.ts / phone.ts / validation.ts / parse.ts / errors.ts
+  components/                 # presentacionales compartidos (Layout, StatusBadge,
+                              #   StringListField, EditorActions, EditorStatus)
+  resources/<recurso>/        # un recurso por carpeta: página + esquema espejo + tests
 ```
+
+## Flujo borrador → publicado (RF-44) — regla de oro
+
+La app lee las colecciones vivas completas y SIN filtros: un borrador jamás
+puede escribirse en ellas. Los borradores viven en `/drafts` (solo admin) y
+«Publicar» copia `data` LITERAL al documento vivo: ningún campo nuevo
+(`status`, fechas, etc.) cae en las colecciones que la app consume, y
+`schemaVersion` se mantiene en 1. Todo esquema del panel es espejo exacto de
+los DTO de la app (`ContentDtos.kt`, `FormDtos.kt`); cambiar un campo es un
+cambio de esquema y exige decisión explícita del proyecto. Publicar pasa
+SIEMPRE por la validación dura del recurso (incluida la compuerta
+`[POR CONFIRMAR]`, M-2); guardar borrador es libre.
 
 ## La cuenta admin se crea por script, no por el panel
 
@@ -78,10 +95,11 @@ npm run dev        # desarrollo local
 npm run build      # build de producción (tsc -b && vite build)
 npm run lint       # eslint + prettier --check
 npm run format     # prettier --write
+npm run test       # vitest (validaciones críticas: teléfonos, coherencia del cuestionario)
 ```
 
 ## Definición de terminado
 
-Un feature del panel no está listo hasta que `npm run build` y `npm run lint`
-pasen en verde, y —si toca autorización o reglas— se verifique que `/users/**`
-sigue inaccesible para el rol admin (RNF-06).
+Un feature del panel no está listo hasta que `npm run build`, `npm run lint` y
+`npm run test` pasen en verde, y —si toca autorización o reglas— se verifique
+que `/users/**` sigue inaccesible para el rol admin (RNF-06).
