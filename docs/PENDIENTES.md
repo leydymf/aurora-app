@@ -82,9 +82,9 @@ prioridad Alta alcanzables sin panel; ver `PLAN_FASE3.md`).
 | RF | Descripción | Nota |
 |---|---|---|
 | RF-04 | Pronóstico extendido de 5 días en la fachada de clima | Refuerza el camuflaje. La API (`ForecastApi`, Open-Meteo) ya trae el clima actual; falta la UI del pronóstico multi-día |
-| RF-09 | Cambio del código secreto | RF-08 (crear código) sí está; el cambio posterior queda pendiente. Relacionado con P-18 (código olvidado) y P-31 (UX de reingreso) |
-| RF-11 | Reabrir el tutorial desde configuración | Depende de una pantalla de configuración/privacidad del doble fondo, aún no construida (también la relectura del consentimiento, P-16) |
-| RF-19 | Cierre de sesión de la usuaria (logout explícito) | La limpieza interna de sesión en salida rápida (`AuthSessionCleaner`) existe; falta la acción de logout iniciada por la usuaria |
+| RF-09 | Cambio del código secreto | **Implementado en la sesión C1 (2026-07-17):** `ChangeSecretCodeUseCase` desde Configuración; exige la clave vigente (nota provisional en RF-09, P-52) y aplica las reglas de RF-08 sin recifrar la BD. Sigue relacionado con P-18 (código olvidado) |
+| RF-11 | Reabrir el tutorial desde configuración | **Implementado en la sesión C1 (2026-07-17):** pantalla de Configuración (P21) con «Ver el tutorial de nuevo» → `guide_review`; incluye la relectura del acuerdo de datos (P-16 resuelto) |
+| RF-19 | Cierre de sesión de la usuaria (logout explícito) | **Implementado en la sesión C1 (2026-07-17):** «Cerrar sesión» en Configuración con confirmación en `SecureDialog`; converge en `SessionManager.quickExit()` (la rutina única de cierre: `AuthSessionCleaner` + pop a la fachada) |
 | RF-20 | Eliminación de cuenta con doble confirmación y supresión total | Requiere borrado local + en Firestore/Auth |
 | RF-24 / RF-25 | Actualización de contenido publicado y tolerancia mostrando la última versión | **Implementados y verificados en la Fase B3 (2026-07-17, ver `RESULTADOS_PRUEBAS.md` §7):** la app refleja lo publicado en la siguiente apertura y tolera documentos malformados o de esquema desconocido sin romperse. Corrida manual E2E completada (P-50 ✅, 2026-07-17) |
 | RF-31 | Persistir el resultado del cuestionario solo con confirmación expresa | Hoy «Terminar» siempre descarta (P-41); guardar opcional es futuro |

@@ -2,6 +2,7 @@ package com.auroraclima.app.access.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,13 +18,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.SecureDialog
 import com.auroraclima.app.core.ui.components.BackHeader
 import com.auroraclima.app.core.ui.components.SectionTag
 import com.auroraclima.app.core.ui.components.SectionTitle
@@ -63,8 +73,12 @@ fun SettingsScreen(
     onChangeCode: () -> Unit,
     onReopenGuide: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Solo visibilidad del diálogo: la acción real converge en SessionManager
+    // (guía §3: el patrón UiState aplica a pantallas con estado de negocio).
+    var showSignOutDialog by rememberSaveable { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -106,6 +120,19 @@ fun SettingsScreen(
         }
         Spacer(modifier = Modifier.height(24.dp))
 
+        SectionTag(stringResource(R.string.access_settings_group_account))
+        Spacer(modifier = Modifier.height(10.dp))
+        SettingsGroup {
+            // RF-19: la fila abre la confirmación; «Eliminar cuenta» llegará con RF-20.
+            SettingsRow(
+                icon = rememberVectorPainter(Icons.AutoMirrored.Outlined.ExitToApp),
+                title = stringResource(R.string.access_settings_sign_out),
+                onClick = { showSignOutDialog = true },
+                showChevron = false
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = stringResource(R.string.access_settings_footer),
             fontFamily = PlexSans,
@@ -116,6 +143,77 @@ fun SettingsScreen(
         )
         // Aire final para no chocar con el botón nube de la esquina.
         Spacer(modifier = Modifier.height(64.dp))
+    }
+    if (showSignOutDialog) {
+        SignOutConfirmDialog(
+            onConfirm = {
+                showSignOutDialog = false
+                onSignOut()
+            },
+            onDismiss = { showSignOutDialog = false }
+        )
+    }
+}
+
+/**
+ * Confirmación del cierre de sesión (RF-19 criterio 1 de uso consciente): en
+ * SecureDialog porque un diálogo es ventana propia y el grafo seguro no lo
+ * cubre (RNF-02, regla A1). Sin mensajes al confirmar: el regreso al clima es
+ * la única señal, como toda salida (camuflaje F8).
+ */
+@Composable
+private fun SignOutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    SecureDialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(20.dp), color = CloudWhite) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
+                Text(
+                    text = stringResource(R.string.access_settings_sign_out_title),
+                    fontFamily = PlexSans,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 17.sp,
+                    color = Night
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.access_settings_sign_out_body),
+                    fontFamily = PlexSans,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = SteelDeep
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(
+                            text = stringResource(R.string.access_settings_sign_out_cancel),
+                            fontFamily = PlexSans,
+                            fontSize = 15.sp,
+                            color = SteelDeep
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onConfirm,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Night,
+                            contentColor = CloudWhite
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.access_settings_sign_out_confirm),
+                            fontFamily = PlexSans,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

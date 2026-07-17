@@ -139,7 +139,12 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onBack = { navController.popBackStack() },
                         onChangeCode = { navController.navigate(SETTINGS_CODE_ROUTE) },
                         onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) },
-                        onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) }
+                        onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) },
+                        // RF-19: el cierre explícito converge en la rutina única de
+                        // cierre (closeSession vía quickExit): AuthSessionCleaner
+                        // cierra la sesión del proveedor —el siguiente acceso exige
+                        // credenciales— y SessionGuard hace el pop a la fachada.
+                        onSignOut = sessionManager::quickExit
                     )
                 }
                 // Cambio de la clave personal (RF-09, P21·b): guardar regresa a
