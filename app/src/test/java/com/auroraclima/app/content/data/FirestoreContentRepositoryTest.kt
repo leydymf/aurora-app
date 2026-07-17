@@ -59,6 +59,18 @@ class FirestoreContentRepositoryTest {
     }
 
     @Test
+    fun `un documento malformado se omite sin romper el resto`() = runTest {
+        // RF-25: la fuente entrega nulos cuando los tipos vienen corruptos
+        // (casts seguros del parsing); solo ese documento cae, no el módulo.
+        remote.topics = listOf(
+            topicDto(id = "valido", order = 1),
+            topicDto(id = "corrupto", order = null, title = null, summary = null)
+        )
+
+        assertEquals(listOf("valido"), repository.getTopics().getOrThrow().map { it.id })
+    }
+
+    @Test
     fun `las rutas resuelven sus entidades por id y en su orden`() = runTest {
         // RF-22: cada sector muestra sus entidades con contacto.
         remote.agencies = listOf(agencyDto(id = "e1"), agencyDto(id = "e2"))

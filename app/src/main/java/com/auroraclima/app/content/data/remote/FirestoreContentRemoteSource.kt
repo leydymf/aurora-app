@@ -1,6 +1,5 @@
 package com.auroraclima.app.content.data.remote
 
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import javax.inject.Inject
@@ -19,13 +18,17 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 class FirestoreContentRemoteSource @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ContentRemoteSource {
-    override suspend fun fetchTopics(): List<TopicDto> = awaitCollection(TOPICS).documents.map { it.toTopicDto() }
+    override suspend fun fetchTopics(): List<TopicDto> =
+        awaitCollection(TOPICS).documents.map { it.data.orEmpty().toTopicDto(it.id) }
 
-    override suspend fun fetchRoutes(): List<RouteDto> = awaitCollection(ROUTES).documents.map { it.toRouteDto() }
+    override suspend fun fetchRoutes(): List<RouteDto> =
+        awaitCollection(ROUTES).documents.map { it.data.orEmpty().toRouteDto(it.id) }
 
-    override suspend fun fetchAgencies(): List<AgencyDto> = awaitCollection(AGENCIES).documents.map { it.toAgencyDto() }
+    override suspend fun fetchAgencies(): List<AgencyDto> =
+        awaitCollection(AGENCIES).documents.map { it.data.orEmpty().toAgencyDto(it.id) }
 
-    override suspend fun fetchLines(): List<LineDto> = awaitCollection(LINES).documents.map { it.toLineDto() }
+    override suspend fun fetchLines(): List<LineDto> =
+        awaitCollection(LINES).documents.map { it.data.orEmpty().toLineDto(it.id) }
 
     private suspend fun awaitCollection(name: String): QuerySnapshot = suspendCancellableCoroutine { continuation ->
         firestore.collection(name).get()
@@ -42,48 +45,56 @@ class FirestoreContentRemoteSource @Inject constructor(
     }
 }
 
-private fun DocumentSnapshot.toTopicDto() = TopicDto(
+// Parsing con casts seguros: un campo con tipo inesperado queda nulo, igual
+// que un campo ausente, y el mapper omite solo ese documento (RF-25) — los
+// getters tipados del SDK lanzarían y tumbarían el módulo completo.
+
+internal fun Map<String, Any?>.toTopicDto(id: String) = TopicDto(
     id = id,
-    schemaVersion = getLong(FIELD_SCHEMA_VERSION),
-    order = getLong(FIELD_ORDER),
-    title = getString(FIELD_TITLE),
-    summary = getString(FIELD_SUMMARY),
-    signals = stringList("signals"),
-    examples = stringList("examples")
+    schemaVersion = num(FIELD_SCHEMA_VERSION),
+    order = num(FIELD_ORDER),
+    title = str(FIELD_TITLE),
+    summary = str(FIELD_SUMMARY),
+    signals = strList("signals"),
+    examples = strList("examples")
 )
 
-private fun DocumentSnapshot.toRouteDto() = RouteDto(
+internal fun Map<String, Any?>.toRouteDto(id: String) = RouteDto(
     id = id,
-    schemaVersion = getLong(FIELD_SCHEMA_VERSION),
-    order = getLong(FIELD_ORDER),
-    title = getString(FIELD_TITLE),
-    summary = getString(FIELD_SUMMARY),
-    agencyIds = stringList("agencyIds")
+    schemaVersion = num(FIELD_SCHEMA_VERSION),
+    order = num(FIELD_ORDER),
+    title = str(FIELD_TITLE),
+    summary = str(FIELD_SUMMARY),
+    agencyIds = strList("agencyIds")
 )
 
-private fun DocumentSnapshot.toAgencyDto() = AgencyDto(
+internal fun Map<String, Any?>.toAgencyDto(id: String) = AgencyDto(
     id = id,
-    schemaVersion = getLong(FIELD_SCHEMA_VERSION),
-    name = getString(FIELD_NAME),
-    role = getString("role"),
-    whenToUse = getString("whenToUse"),
-    phones = stringList("phones"),
-    address = getString("address"),
-    hours = getString(FIELD_HOURS)
+    schemaVersion = num(FIELD_SCHEMA_VERSION),
+    name = str(FIELD_NAME),
+    role = str("role"),
+    whenToUse = str("whenToUse"),
+    phones = strList("phones"),
+    address = str("address"),
+    hours = str(FIELD_HOURS)
 )
 
-private fun DocumentSnapshot.toLineDto() = LineDto(
+internal fun Map<String, Any?>.toLineDto(id: String) = LineDto(
     id = id,
-    schemaVersion = getLong(FIELD_SCHEMA_VERSION),
-    order = getLong(FIELD_ORDER),
-    name = getString(FIELD_NAME),
-    number = getString("number"),
-    description = getString("description"),
-    hours = getString(FIELD_HOURS)
+    schemaVersion = num(FIELD_SCHEMA_VERSION),
+    order = num(FIELD_ORDER),
+    name = str(FIELD_NAME),
+    number = str("number"),
+    description = str("description"),
+    hours = str(FIELD_HOURS)
 )
 
-private fun DocumentSnapshot.stringList(field: String): List<String> =
-    (get(field) as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+private fun Map<String, Any?>.str(field: String): String? = this[field] as? String
+
+private fun Map<String, Any?>.num(field: String): Long? = (this[field] as? Number)?.toLong()
+
+private fun Map<String, Any?>.strList(field: String): List<String> =
+    (this[field] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
 
 private const val FIELD_SCHEMA_VERSION = "schemaVersion"
 private const val FIELD_ORDER = "order"
