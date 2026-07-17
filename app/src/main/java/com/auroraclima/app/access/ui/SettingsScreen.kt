@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -59,6 +60,7 @@ import com.auroraclima.app.core.ui.theme.SteelDeep
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onChangeCode: () -> Unit,
     onReopenGuide: () -> Unit,
     onOpenPrivacy: () -> Unit,
     modifier: Modifier = Modifier
@@ -79,6 +81,12 @@ fun SettingsScreen(
         SectionTag(stringResource(R.string.access_settings_group_security))
         Spacer(modifier = Modifier.height(10.dp))
         SettingsGroup {
+            SettingsRow(
+                icon = rememberVectorPainter(Icons.Outlined.Lock),
+                title = stringResource(R.string.access_settings_change_code),
+                onClick = onChangeCode
+            )
+            SettingsRowDivider()
             SettingsRow(
                 icon = painterResource(R.drawable.ic_book),
                 title = stringResource(R.string.access_settings_guide),

@@ -15,6 +15,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.auroraclima.app.access.ui.ChangeCodeRoute
 import com.auroraclima.app.access.ui.CodeSetupRoute
 import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.access.ui.SettingsScreen
@@ -136,8 +137,17 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(SETTINGS_ROUTE) {
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
+                        onChangeCode = { navController.navigate(SETTINGS_CODE_ROUTE) },
                         onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) },
                         onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) }
+                    )
+                }
+                // Cambio de la clave personal (RF-09, P21·b): guardar regresa a
+                // configuración; el formulario no queda en la pila.
+                screen(SETTINGS_CODE_ROUTE) {
+                    ChangeCodeRoute(
+                        onCodeChanged = { navController.popBackStack() },
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 // Relectura del acuerdo de datos (RF-17 criterio 2, P-16): el
@@ -275,6 +285,7 @@ private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val SETTINGS_ROUTE = "settings"
 private const val PRIVACY_ROUTE = "privacy"
+private const val SETTINGS_CODE_ROUTE = "settings_code"
 private const val GUIDANCE_ROUTE = "guidance"
 private const val JOURNAL_ROUTE = "journal"
 private const val JOURNAL_NEW_ROUTE = "journal_new"

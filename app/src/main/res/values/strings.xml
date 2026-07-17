@@ -84,7 +84,15 @@
     <string name="access_settings_tag">CONFIGURACIÓN</string>
     <string name="access_settings_title">Configuración.</string>
     <string name="access_settings_group_security">SEGURIDAD</string>
+    <string name="access_settings_change_code">Cambiar tu clave personal</string>
     <string name="access_settings_guide">Ver el tutorial de nuevo</string>
+    <string name="access_change_tag">CONFIGURACIÓN · CLAVE</string>
+    <string name="access_change_title">Cambiar tu clave.</string>
+    <string name="access_change_current_label">Tu clave actual</string>
+    <string name="access_change_new_label">Nueva clave</string>
+    <string name="access_change_error_current">Tu clave actual no coincide. Escríbela completa, tal como la creaste.</string>
+    <string name="access_change_note">Tu clave anterior dejará de funcionar en cuanto guardes esta.</string>
+    <string name="access_change_submit">Guardar la nueva clave</string>
     <string name="access_settings_group_privacy">PRIVACIDAD</string>
     <string name="access_settings_privacy">Privacidad y tus datos</string>
     <string name="access_settings_footer">Aurora · Prototipo académico TRL 4 · UNAB 2026</string>

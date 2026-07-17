@@ -106,7 +106,7 @@ El sistema debe permitir cambiar el código secreto previa confirmación de la c
 1. El cambio de código exige confirmar la contraseña.
 2. El nuevo código cumple las mismas reglas del RF-08.
 
-*Notas:* Disponible desde la configuración dentro del doble fondo.
+*Notas:* Disponible desde la configuración dentro del doble fondo. **Nota provisional (2026-07-17, sesión C1, decisión de la usuaria):** la credencial exigida en la implementación es el **código secreto vigente**, no la contraseña de la cuenta: cada ingreso al doble fondo ya pasa por inicio de sesión con contraseña (P-31, `AuthSessionCleaner`), exigirla de nuevo duplicaría la fricción bajo estrés, y verificar el código vigente mantiene la comprobación 100 % local (misma puerta de RF-12, tiempo constante) y prueba la posesión de la credencial que se reemplaza. El criterio 1 se lee como «confirmar la credencial vigente». Reflejar en el xlsx fuente y en A2-6/P21·b — ver P-52 en `PENDIENTES.md` (mismo mecanismo que P-08).
 
 ## RF-10 — Tutorial del doble fondo
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-08

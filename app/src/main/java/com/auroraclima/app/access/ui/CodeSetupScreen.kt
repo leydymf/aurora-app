@@ -193,8 +193,9 @@ internal fun CodeSetupScreen(
     }
 }
 
+/** Renglón de regla en vivo del mockup P06; lo reutiliza el cambio de clave (RF-09, P21·b). */
 @Composable
-private fun RuleRow(text: String, satisfied: Boolean) {
+internal fun RuleRow(text: String, satisfied: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(
