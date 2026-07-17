@@ -227,6 +227,8 @@ export function AgenciesTab() {
                                 void editor.publish(publishIssues)
                             }}
                             onDelete={() => {
+                                // Compuerta también en lógica, no solo en el botón.
+                                if (deleteBlockedReason !== null) return
                                 void editor.remove()
                             }}
                             onCancelNew={() => {

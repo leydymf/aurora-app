@@ -17,7 +17,11 @@ import { describeError } from '../../lib/errors'
 import { useEntries } from '../../lib/useEntries'
 import type { ValidationIssue } from '../../lib/validation'
 import { topicFromRaw, validateTopic, type TopicDoc } from '../content/topicSchema'
-import { maxAchievableScore, validateQuestionnaire } from '../questionnaire/coherence'
+import {
+    maxAchievableScore,
+    validatePublishVersion,
+    validateQuestionnaire,
+} from '../questionnaire/coherence'
 import { formFromRaw, type FormDoc } from '../questionnaire/formSchema'
 import {
     agencyFromRaw,
@@ -167,8 +171,18 @@ export function PublishPage() {
             entry.data,
             buildOrderIndex(topics.entries, entry.docId, (data) => data.title),
         )
-    const formIssues = (entry: ResourceEntry<FormDoc>) =>
-        validateQuestionnaire(entry.data, publishedRouteIds, routeNames)
+    const maxLiveFormVersion = useMemo(
+        () =>
+            (forms.entries ?? []).reduce(
+                (max, entry) => Math.max(max, entry.liveData?.version ?? 0),
+                0,
+            ),
+        [forms.entries],
+    )
+    const formIssues = (entry: ResourceEntry<FormDoc>) => [
+        ...validateQuestionnaire(entry.data, publishedRouteIds, routeNames),
+        ...validatePublishVersion(entry.data, maxLiveFormVersion),
+    ]
 
     // La compuerta se reafirma EN LÓGICA, no solo en el render del botón:
     // `issues` se calcula en el momento del clic y aquí se aborta si algo

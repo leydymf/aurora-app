@@ -17,7 +17,7 @@ import { nextOpaqueId } from '../../lib/ids'
 import { useEntries } from '../../lib/useEntries'
 import { useResourceEditor } from '../../lib/useResourceEditor'
 import { routeFromRaw } from '../routes/schemas'
-import { maxAchievableScore, validateQuestionnaire } from './coherence'
+import { maxAchievableScore, validatePublishVersion, validateQuestionnaire } from './coherence'
 import { emptyForm, formFromRaw, normalizeForm, type FormDoc, type QuestionDoc } from './formSchema'
 
 function moveItem<T>(items: readonly T[], index: number, delta: number): T[] {
@@ -83,9 +83,12 @@ export function QuestionnairePage() {
     const publishIssues = useMemo(
         () =>
             selected !== null && selected.status === 'borrador'
-                ? validateQuestionnaire(selected.data, publishedRouteIds, routeNames)
+                ? [
+                      ...validateQuestionnaire(selected.data, publishedRouteIds, routeNames),
+                      ...validatePublishVersion(selected.data, nextVersion - 1),
+                  ]
                 : [],
-        [selected, publishedRouteIds, routeNames],
+        [selected, publishedRouteIds, routeNames, nextVersion],
     )
     const canPublish =
         selected !== null &&
@@ -95,8 +98,28 @@ export function QuestionnairePage() {
 
     const maxScore = editing ? maxAchievableScore(editing) : 0
 
+    // El cuestionario que rige HOY en la app: el vivo de mayor versión.
+    const vigenteId = useMemo(() => {
+        let id: string | null = null
+        let maxVersion = 0
+        for (const entry of forms.entries ?? []) {
+            if (entry.liveData !== null && entry.liveData.version > maxVersion) {
+                maxVersion = entry.liveData.version
+                id = entry.docId
+            }
+        }
+        return id
+    }, [forms.entries])
+
+    // Solo se elimina un cuestionario que NUNCA se ha publicado: borrar uno
+    // publicado dejaría a la app con una versión vieja o sin ninguna.
+    const deleteBlockedReason =
+        selected !== null && selected.liveData !== null
+            ? 'No se elimina un cuestionario ya publicado: la app quedaría con una versión vieja o sin ninguna.'
+            : null
+
     function startNew() {
-        if (!forms.entries || forms.entries.length > 0) return
+        if (!forms.entries) return
         const docId = nextOpaqueId(
             'f',
             forms.entries.map((entry) => entry.docId),
@@ -231,7 +254,8 @@ export function QuestionnairePage() {
             <p className="resource__desc">
                 Preguntas, pesos, escala y niveles con sus umbrales. No se puede publicar una
                 configuración incompleta o incoherente: la app descartaría el cuestionario completo.
-                Al publicar, la nueva versión rige de inmediato (RF-44).
+                Puedes tener varios cuestionarios, pero la app siempre muestra UNO solo: el
+                publicado de mayor versión — al publicar, el publicado rige de inmediato (RF-44).
             </p>
 
             {error !== null && (
@@ -242,20 +266,18 @@ export function QuestionnairePage() {
 
             <div className="manager">
                 <aside className="panel list">
+                    <button
+                        type="button"
+                        disabled={!forms.entries || editor.busy}
+                        onClick={() => {
+                            startNew()
+                        }}
+                    >
+                        + Nuevo cuestionario
+                    </button>
                     {!forms.entries && <p className="muted">Cargando…</p>}
                     {forms.entries && forms.entries.length === 0 && !editor.isNew && (
-                        <>
-                            <p className="muted">No hay cuestionario todavía.</p>
-                            <button
-                                type="button"
-                                disabled={editor.busy}
-                                onClick={() => {
-                                    startNew()
-                                }}
-                            >
-                                + Crear cuestionario
-                            </button>
-                        </>
+                        <p className="muted">No hay cuestionario todavía.</p>
                     )}
                     {(forms.entries ?? []).map((entry) => (
                         <button
@@ -273,6 +295,7 @@ export function QuestionnairePage() {
                         >
                             <span className="list__title">
                                 {entry.data.title || entry.docId} · v{String(entry.data.version)}
+                                {entry.docId === vigenteId && ' · vigente en la app'}
                             </span>
                             <StatusBadge status={entry.status} />
                         </button>
@@ -623,7 +646,7 @@ export function QuestionnairePage() {
                             canPublish={canPublish}
                             isNew={editor.isNew}
                             confirmingDelete={editor.confirmingDelete}
-                            deleteBlockedReason="El cuestionario no se elimina: la app siempre necesita uno vigente."
+                            deleteBlockedReason={deleteBlockedReason}
                             onSave={() => {
                                 void editor.save()
                             }}
@@ -631,6 +654,8 @@ export function QuestionnairePage() {
                                 void editor.publish(publishIssues)
                             }}
                             onDelete={() => {
+                                // Compuerta también en lógica, no solo en el botón.
+                                if (deleteBlockedReason !== null) return
                                 void editor.remove()
                             }}
                             onCancelNew={() => {
@@ -647,7 +672,7 @@ export function QuestionnairePage() {
                     <div className="panel">
                         <p className="muted">
                             {forms.entries && forms.entries.length > 0
-                                ? 'Selecciona el cuestionario de la lista.'
+                                ? 'Selecciona un cuestionario de la lista o crea uno nuevo.'
                                 : 'Crea el cuestionario para empezar.'}
                         </p>
                     </div>

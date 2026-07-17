@@ -5,7 +5,7 @@
 // tools/seed/content/forms.json (pesos 1,1,3,3,3,2 · escala 0,1,2 · umbrales
 // 0,4,10,17 · máximo alcanzable 13×2 = 26).
 import { describe, expect, it } from 'vitest'
-import { maxAchievableScore, validateQuestionnaire } from './coherence'
+import { maxAchievableScore, validatePublishVersion, validateQuestionnaire } from './coherence'
 import type { FormDoc } from './formSchema'
 
 function realForm(): FormDoc {
@@ -232,5 +232,20 @@ describe('validateQuestionnaire — compuerta [POR CONFIRMAR] (M-2)', () => {
 describe('validateQuestionnaire — schemaVersion', () => {
     it('bloquea un schemaVersion distinto del soportado (la app lo ignoraría)', () => {
         expect(issuesOf({ ...realForm(), schemaVersion: 2 }).join(' ')).toContain('schemaVersion')
+    })
+})
+
+describe('validatePublishVersion (la app rige por el vivo de mayor versión)', () => {
+    it('acepta un borrador cuya versión supera la publicada más alta', () => {
+        expect(validatePublishVersion({ ...realForm(), version: 3 }, 2)).toEqual([])
+    })
+
+    it('bloquea empates y versiones menores (otro cuestionario se publicó en medio)', () => {
+        expect(
+            validatePublishVersion({ ...realForm(), version: 2 }, 2)
+                .map((issue) => issue.message)
+                .join(' '),
+        ).toContain('no supera')
+        expect(validatePublishVersion({ ...realForm(), version: 1 }, 2)).toHaveLength(1)
     })
 })

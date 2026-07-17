@@ -260,6 +260,26 @@ function validateRouteReferences(
     })
 }
 
+/**
+ * La app elige el formulario VIVO de mayor `version`
+ * (FirestoreQuestionnaireRepository.kt): un borrador cuya versión no supere
+ * la publicada más alta no regiría al publicarse — o empataría, que es
+ * ambiguo. La versión se re-estampa en cada guardado; este chequeo cierra la
+ * ventana entre guardar y publicar cuando OTRO cuestionario se publicó en
+ * medio (posible desde que existen varios).
+ */
+export function validatePublishVersion(form: FormDoc, maxLiveVersion: number): ValidationIssue[] {
+    if (form.version > maxLiveVersion) return []
+    return [
+        {
+            field: 'version',
+            message:
+                `La versión del borrador (${String(form.version)}) no supera la publicada más ` +
+                `alta (${String(maxLiveVersion)}): guarda el borrador de nuevo para actualizarla.`,
+        },
+    ]
+}
+
 function checkUniqueIds(
     ids: readonly string[],
     field: string,
