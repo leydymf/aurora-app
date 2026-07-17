@@ -117,6 +117,27 @@ class FirestoreContentRepositoryTest {
         assertEquals(listOf("155", "123"), lines.map { it.number })
     }
 
+    @Test
+    fun `el contenido editado y publicado rige en la siguiente consulta`() = runTest {
+        // RF-24/RF-44: no hay caché propia interpuesta — lo que la fuente
+        // entrega (servidor primero, caché persistente sin red) es lo que se
+        // muestra en la siguiente apertura del módulo, sin reinstalar.
+        remote.topics = listOf(topicDto(id = "t1", order = 1, summary = "versión original"))
+        assertEquals("versión original", repository.getTopics().getOrThrow().single().summary)
+
+        remote.topics = listOf(topicDto(id = "t1", order = 1, summary = "versión editada en el panel"))
+        assertEquals("versión editada en el panel", repository.getTopics().getOrThrow().single().summary)
+    }
+
+    @Test
+    fun `una coleccion vacia es exito con lista vacia`() = runTest {
+        // RF-25: una colección sin documentos publicados no es un error — la
+        // pantalla queda vacía y estable, sin excepción ni mensaje visible.
+        assertTrue(repository.getTopics().getOrThrow().isEmpty())
+        assertTrue(repository.getRoutes().getOrThrow().isEmpty())
+        assertTrue(repository.getContactLines().getOrThrow().isEmpty())
+    }
+
     // RF-26 — consulta sin conexión. El contrato de la fuente remota (contract de
     // `ContentRemoteSource` + caché persistente de Firestore) es: sin red, `get()`
     // sirve lo ya visto desde la caché, y lanza si la caché está vacía (primera
