@@ -85,6 +85,17 @@ class QuestionnaireDocumentParsingTest {
     }
 
     @Test
+    fun `un peso decimal se rechaza en vez de truncarse`() {
+        // Truncar 2,5 → 2 sesgaría el puntaje frente a umbrales calibrados;
+        // el campo queda nulo y el mapper descarta el formulario completo.
+        val dto = mapOf(
+            "questions" to listOf(mapOf("id" to "q01", "order" to 1L, "text" to "Pregunta", "weight" to 2.5))
+        ).toFormDto("f01")
+
+        assertNull(dto.questions.single().weight)
+    }
+
+    @Test
     fun `un mapa vacio produce un DTO sin datos`() {
         val dto = emptyMap<String, Any?>().toFormDto("f01")
 

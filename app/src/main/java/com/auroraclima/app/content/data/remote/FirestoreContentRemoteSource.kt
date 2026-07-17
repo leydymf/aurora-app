@@ -91,7 +91,10 @@ internal fun Map<String, Any?>.toLineDto(id: String) = LineDto(
 
 private fun Map<String, Any?>.str(field: String): String? = this[field] as? String
 
-private fun Map<String, Any?>.num(field: String): Long? = (this[field] as? Number)?.toLong()
+// Solo valores enteros: truncar un decimal alteraría órdenes o versiones
+// sin descartar el documento — un decimal se trata como campo corrupto.
+private fun Map<String, Any?>.num(field: String): Long? =
+    (this[field] as? Number)?.takeIf { it.toDouble() == it.toLong().toDouble() }?.toLong()
 
 private fun Map<String, Any?>.strList(field: String): List<String> =
     (this[field] as? List<*>)?.filterIsInstance<String>() ?: emptyList()

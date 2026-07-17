@@ -30,11 +30,13 @@ class ContentDocumentParsingTest {
     }
 
     @Test
-    fun `los numeros enteros del panel llegan como Long o Int y ambos se aceptan`() {
+    fun `cualquier representacion entera se acepta y un decimal se rechaza`() {
         // Firestore entrega Long, pero el cast pasa por Number para tolerar
-        // cualquier representación entera sin descartar el documento.
+        // cualquier representación entera; un decimal no entero se trata como
+        // corrupto — truncarlo alteraría el orden sin descartar el documento.
         assertEquals(1L, mapOf("schemaVersion" to 1).toTopicDto("t01").schemaVersion)
         assertEquals(3L, mapOf("order" to 3.0).toTopicDto("t01").order)
+        assertNull(mapOf("order" to 3.7).toTopicDto("t01").order)
     }
 
     @Test

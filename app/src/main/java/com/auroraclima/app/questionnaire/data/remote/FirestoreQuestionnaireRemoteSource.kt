@@ -81,7 +81,10 @@ private fun Map<*, *>.toLevelDto() = LevelDto(
 
 private fun Map<*, *>.str(key: String): String? = this[key] as? String
 
-private fun Map<*, *>.num(key: String): Long? = (this[key] as? Number)?.toLong()
+// Solo valores enteros: truncar un decimal alteraría pesos o umbrales
+// calibrados sin descartar el documento — un decimal se trata como corrupto.
+private fun Map<*, *>.num(key: String): Long? =
+    (this[key] as? Number)?.takeIf { it.toDouble() == it.toLong().toDouble() }?.toLong()
 
 private fun Map<*, *>.strList(key: String): List<String> =
     (this[key] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
