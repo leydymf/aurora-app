@@ -74,6 +74,18 @@ class FirestoreQuestionnaireRepositoryTest {
     }
 
     @Test
+    fun `un esquema desconocido no sustituye a la version vigente`() = runTest {
+        // RF-25: si el panel publicara un esquema que esta app no interpreta,
+        // sigue rigiendo el último formulario válido presente en la colección.
+        remote.forms = listOf(
+            formDto(id = "vigente", version = 2),
+            formDto(id = "nuevo", version = 3, schemaVersion = 2)
+        )
+
+        assertEquals("vigente", repository.getQuestionnaire().getOrThrow().id)
+    }
+
+    @Test
     fun `sin preguntas o sin niveles el documento se descarta`() = runTest {
         // Espejo del criterio 2 de RF-43.
         remote.forms = listOf(formDto(questions = emptyList()))

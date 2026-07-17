@@ -1,6 +1,5 @@
 package com.auroraclima.app.questionnaire.data.remote
 
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import javax.inject.Inject
@@ -19,7 +18,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 class FirestoreQuestionnaireRemoteSource @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : QuestionnaireRemoteSource {
-    override suspend fun fetchForms(): List<FormDto> = awaitCollection(FORMS).documents.map { it.toFormDto() }
+    override suspend fun fetchForms(): List<FormDto> =
+        awaitCollection(FORMS).documents.map { it.data.orEmpty().toFormDto(it.id) }
 
     private suspend fun awaitCollection(name: String): QuerySnapshot = suspendCancellableCoroutine { continuation ->
         firestore.collection(name).get()
@@ -33,13 +33,17 @@ class FirestoreQuestionnaireRemoteSource @Inject constructor(
     }
 }
 
-private fun DocumentSnapshot.toFormDto() = FormDto(
+// Parsing con casts seguros: un campo con tipo inesperado queda nulo, igual
+// que un campo ausente, y el mapper todo-o-nada descarta solo ese documento —
+// entre los restantes rige el válido de mayor versión (RF-25). Los getters
+// tipados del SDK lanzarían y tumbarían el módulo completo.
+internal fun Map<String, Any?>.toFormDto(id: String) = FormDto(
     id = id,
-    schemaVersion = getLong("schemaVersion"),
-    version = getLong("version"),
-    title = getString("title"),
-    intro = getString("intro"),
-    notice = getString("notice"),
+    schemaVersion = num("schemaVersion"),
+    version = num("version"),
+    title = str("title"),
+    intro = str("intro"),
+    notice = str("notice"),
     scale = entryList("scale").map { it.toScaleOptionDto() },
     questions = entryList("questions").map { it.toQuestionDto() },
     levels = entryList("levels").map { it.toLevelDto() }
@@ -47,8 +51,8 @@ private fun DocumentSnapshot.toFormDto() = FormDto(
 
 // Una entrada que no sea mapa se convierte en DTO vacío: el mapper la
 // rechazará y descartará el documento entero (estrictez deliberada).
-private fun DocumentSnapshot.entryList(field: String): List<Map<*, *>> =
-    (get(field) as? List<*>)?.map { it as? Map<*, *> ?: emptyMap<Any, Any>() } ?: emptyList()
+private fun Map<String, Any?>.entryList(field: String): List<Map<*, *>> =
+    (this[field] as? List<*>)?.map { it as? Map<*, *> ?: emptyMap<Any, Any>() } ?: emptyList()
 
 private fun Map<*, *>.toScaleOptionDto() = ScaleOptionDto(
     id = str("id"),
