@@ -27,6 +27,14 @@ class KeystoreSecretCodeHasher @Inject constructor() : SecretCodeHasher {
         return mac.doFinal(code.toByteArray(Charsets.UTF_8))
     }
 
+    /**
+     * Eliminación total (RF-20): sin esta llave, cualquier hash que sobreviviera
+     * es incomprobable — ningún código volverá a coincidir con él.
+     */
+    fun destroyKey() {
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.deleteEntry(KEY_ALIAS)
+    }
+
     @Synchronized
     private fun obtainKey(): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }

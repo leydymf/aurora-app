@@ -1,0 +1,71 @@
+package com.auroraclima.app.core.security
+
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Red de seguridad de RF-20 (auditoría H-1/H-3): si el proceso murió entre
+ * borrar la cuenta y terminar lo local, el arranque completa los erasers; y si
+ * uno vuelve a fallar, la marca queda izada para el siguiente arranque.
+ */
+class PendingErasureRecoveryTest {
+    private class FakeFlag(var raised: Boolean) : PendingErasureFlag {
+        override suspend fun raise(): Boolean {
+            raised = true
+            return true
+        }
+
+        override suspend fun isRaised(): Boolean = raised
+
+        override suspend fun clear() {
+            raised = false
+        }
+    }
+
+    private class CountingEraser(private val failure: Exception? = null) : LocalAccountDataEraser {
+        var calls = 0
+            private set
+
+        override suspend fun erase() {
+            calls++
+            failure?.let { throw it }
+        }
+    }
+
+    @Test
+    fun `sin marca izada el arranque no borra nada`() = runTest {
+        val eraser = CountingEraser()
+        PendingErasureRecovery(FakeFlag(raised = false), setOf(eraser)).initialize()
+
+        assertEquals(0, eraser.calls)
+    }
+
+    @Test
+    fun `con marca izada completa los erasers y la retira`() = runTest {
+        val flag = FakeFlag(raised = true)
+        val first = CountingEraser()
+        val second = CountingEraser()
+
+        PendingErasureRecovery(flag, linkedSetOf(first, second)).initialize()
+
+        assertEquals(1, first.calls)
+        assertEquals(1, second.calls)
+        assertFalse(flag.raised)
+    }
+
+    @Test
+    fun `un eraser que vuelve a fallar deja la marca izada y no detiene al resto`() = runTest {
+        val flag = FakeFlag(raised = true)
+        val failing = CountingEraser(failure = IllegalStateException())
+        val healthy = CountingEraser()
+
+        PendingErasureRecovery(flag, linkedSetOf(failing, healthy)).initialize()
+
+        assertEquals(1, failing.calls)
+        assertEquals(1, healthy.calls)
+        assertTrue(flag.raised)
+    }
+}

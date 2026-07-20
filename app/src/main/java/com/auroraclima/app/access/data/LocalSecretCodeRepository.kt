@@ -46,6 +46,22 @@ class LocalSecretCodeRepository @Inject constructor(
         }
     }
 
+    /**
+     * Eliminación total (RF-20): borra AMBAS ranuras — estado de instalación
+     * limpia. La de la usuaria no debe abrir nada nunca más; la de ACTIVATION la
+     * repone la siembra de builds debug en el siguiente arranque, exactamente
+     * como tras instalar de cero (decisión de sesión, P-20).
+     *
+     * A diferencia de [saveCode], el retorno de commit() se ignora: el contrato
+     * del borrado es mejor esfuerzo y hay defensa en profundidad — con la llave
+     * HMAC destruida, un hash superviviente jamás vuelve a coincidir.
+     */
+    suspend fun clearAll() {
+        withContext(Dispatchers.IO) {
+            preferences.edit().clear().commit()
+        }
+    }
+
     private fun saltKey(slot: CodeSlot) = "${prefix(slot)}_s"
 
     private fun hashKey(slot: CodeSlot) = "${prefix(slot)}_h"

@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
@@ -53,6 +54,7 @@ import com.auroraclima.app.core.ui.theme.CloudWhite
 import com.auroraclima.app.core.ui.theme.Mist
 import com.auroraclima.app.core.ui.theme.Night
 import com.auroraclima.app.core.ui.theme.PlexSans
+import com.auroraclima.app.core.ui.theme.Plum
 import com.auroraclima.app.core.ui.theme.Steel
 import com.auroraclima.app.core.ui.theme.SteelDeep
 
@@ -74,6 +76,7 @@ fun SettingsScreen(
     onReopenGuide: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Solo visibilidad del diálogo: la acción real converge en SessionManager
@@ -123,12 +126,21 @@ fun SettingsScreen(
         SectionTag(stringResource(R.string.access_settings_group_account))
         Spacer(modifier = Modifier.height(10.dp))
         SettingsGroup {
-            // RF-19: la fila abre la confirmación; «Eliminar cuenta» llegará con RF-20.
+            // RF-19: la fila abre la confirmación aquí mismo.
             SettingsRow(
                 icon = rememberVectorPainter(Icons.AutoMirrored.Outlined.ExitToApp),
                 title = stringResource(R.string.access_settings_sign_out),
                 onClick = { showSignOutDialog = true },
                 showChevron = false
+            )
+            SettingsRowDivider()
+            // RF-20: la eliminación tiene pantalla propia (accounts) con su doble
+            // confirmación; en ciruela por irreversible, como su botón final.
+            SettingsRow(
+                icon = rememberVectorPainter(Icons.Outlined.Delete),
+                title = stringResource(R.string.access_settings_delete_account),
+                onClick = onDeleteAccount,
+                titleColor = Plum
             )
         }
         Spacer(modifier = Modifier.height(24.dp))

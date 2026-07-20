@@ -68,6 +68,16 @@ class LocalJournalRepository @Inject constructor(
         database ?: databaseSource.open().also { database = it }
     }
 
+    /**
+     * Cierra la conexión perezosa (RF-20): borrar el archivo de la BD exige que
+     * no esté abierto. No se memoriza nada: un uso posterior reabriría desde
+     * cero, como tras una instalación limpia.
+     */
+    suspend fun close(): Unit = databaseLock.withLock {
+        database?.close()
+        database = null
+    }
+
     /** Un código de tipo desconocido (esquema futuro) se omite en vez de romper la lista. */
     private fun JournalEntryRow.toDomain(): JournalEntry? {
         val kind = EntryKind.fromStorageCode(kind) ?: return null

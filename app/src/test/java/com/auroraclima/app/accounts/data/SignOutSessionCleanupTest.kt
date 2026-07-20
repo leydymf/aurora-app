@@ -37,6 +37,10 @@ class SignOutSessionCleanupTest {
             signOutCalls++
             hasSession = false
         }
+
+        override suspend fun reauthenticate(password: String) = Unit
+
+        override suspend fun deleteCurrentUser() = Unit
     }
 
     @Test

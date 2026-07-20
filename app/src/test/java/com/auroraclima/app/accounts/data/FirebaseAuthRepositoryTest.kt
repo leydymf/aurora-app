@@ -1,6 +1,8 @@
 package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.accounts.domain.model.DeleteUserResult
+import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
@@ -118,6 +120,73 @@ class FirebaseAuthRepositoryTest {
     }
 
     @Test
+    fun `la reautenticacion exitosa se traduce a su resultado`() = runTest {
+        // RF-20 paso 1
+        assertEquals(
+            ReauthenticateResult.Success,
+            repository.reauthenticate("contrasena-1")
+        )
+    }
+
+    @Test
+    fun `los rechazos de credenciales al reautenticar convergen en el mismo resultado`() = runTest {
+        // Misma indistinguibilidad que RF-15 criterio 2.
+        val credentialCodes = listOf(
+            "ERROR_INVALID_CREDENTIAL",
+            "ERROR_WRONG_PASSWORD",
+            "ERROR_USER_NOT_FOUND",
+            "ERROR_USER_DISABLED",
+            "ERROR_INVALID_EMAIL"
+        )
+
+        for (code in credentialCodes) {
+            service.nextError = AuthServiceException(code)
+            assertEquals(
+                "código $code",
+                ReauthenticateResult.InvalidCredentials,
+                repository.reauthenticate("contrasena-mala")
+            )
+        }
+    }
+
+    @Test
+    fun `la red caida al reautenticar se distingue del fallo generico`() = runTest {
+        // RF-20: la UI promete que sin conexión nada se ha borrado.
+        service.nextError = AuthServiceException(AuthServiceException.ERROR_NETWORK)
+
+        assertEquals(
+            ReauthenticateResult.NoConnection,
+            repository.reauthenticate("contrasena-1")
+        )
+    }
+
+    @Test
+    fun `una excepcion cruda al reautenticar es fallo generico`() = runTest {
+        service.nextError = IOException("proveedor caído")
+
+        assertEquals(
+            ReauthenticateResult.GenericFailure,
+            repository.reauthenticate("contrasena-1")
+        )
+    }
+
+    @Test
+    fun `el borrado de cuenta traduce exito, red caida y fallo generico`() = runTest {
+        // RF-20 criterio 3
+        assertEquals(DeleteUserResult.Success, repository.deleteCurrentUser())
+
+        service.nextError = AuthServiceException(AuthServiceException.ERROR_NETWORK)
+        assertEquals(DeleteUserResult.NoConnection, repository.deleteCurrentUser())
+
+        // Incluye el requires-recent-login residual: reintentable como genérico.
+        service.nextError = AuthServiceException("ERROR_REQUIRES_RECENT_LOGIN")
+        assertEquals(DeleteUserResult.GenericFailure, repository.deleteCurrentUser())
+
+        service.nextError = IOException("proveedor caído")
+        assertEquals(DeleteUserResult.GenericFailure, repository.deleteCurrentUser())
+    }
+
+    @Test
     fun `la sesion activa refleja el estado del proveedor`() {
         service.activeSession = false
         assertEquals(false, repository.hasActiveSession())
@@ -142,4 +211,12 @@ private class FakeAuthService : AuthService {
     override fun hasActiveSession(): Boolean = activeSession
 
     override fun signOut() = Unit
+
+    override suspend fun reauthenticate(password: String) {
+        nextError?.let { throw it }
+    }
+
+    override suspend fun deleteCurrentUser() {
+        nextError?.let { throw it }
+    }
 }

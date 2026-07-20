@@ -1,6 +1,8 @@
 package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.accounts.domain.model.DeleteUserResult
+import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
@@ -36,6 +38,28 @@ internal class FakeAuthRepository : AuthRepository {
     }
 
     override fun hasActiveSession(): Boolean = activeSession
+
+    var nextReauthenticateResult: ReauthenticateResult = ReauthenticateResult.Success
+    var nextDeleteResult: DeleteUserResult = DeleteUserResult.Success
+    var reauthenticateCalls = 0
+        private set
+    var deleteCalls = 0
+        private set
+
+    /** Bitácora compartida opcional: los tests de RF-20 verifican el ORDEN con ella. */
+    var callLog: MutableList<String>? = null
+
+    override suspend fun reauthenticate(password: String): ReauthenticateResult {
+        reauthenticateCalls++
+        callLog?.add("reauth")
+        return nextReauthenticateResult
+    }
+
+    override suspend fun deleteCurrentUser(): DeleteUserResult {
+        deleteCalls++
+        callLog?.add("deleteUser")
+        return nextDeleteResult
+    }
 }
 
 internal class FakeSignInAttemptStore : SignInAttemptStore {

@@ -1,6 +1,8 @@
 package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.accounts.domain.model.DeleteUserResult
+import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -42,6 +44,50 @@ class FirebaseAuthRepository @Inject constructor(
     }
 
     override fun hasActiveSession(): Boolean = service.hasActiveSession()
+
+    override suspend fun reauthenticate(password: String): ReauthenticateResult = withContext(Dispatchers.IO) {
+        try {
+            service.reauthenticate(password)
+            ReauthenticateResult.Success
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            mapReauthenticateFailure(error)
+        }
+    }
+
+    override suspend fun deleteCurrentUser(): DeleteUserResult = withContext(Dispatchers.IO) {
+        try {
+            service.deleteCurrentUser()
+            DeleteUserResult.Success
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            if (errorCode(error) == AuthServiceException.ERROR_NETWORK) {
+                DeleteUserResult.NoConnection
+            } else {
+                DeleteUserResult.GenericFailure
+            }
+        }
+    }
+
+    /**
+     * Mismo criterio que [mapSignInFailure]: los rechazos de credenciales
+     * convergen en un solo caso indistinguible. La red caída se distingue a
+     * propósito — la eliminación (RF-20) debe poder afirmar que sin conexión
+     * nada se ha borrado.
+     */
+    private fun mapReauthenticateFailure(error: Exception): ReauthenticateResult = when (errorCode(error)) {
+        ERROR_INVALID_CREDENTIAL,
+        ERROR_WRONG_PASSWORD,
+        ERROR_USER_NOT_FOUND,
+        ERROR_USER_DISABLED,
+        ERROR_INVALID_EMAIL -> ReauthenticateResult.InvalidCredentials
+        AuthServiceException.ERROR_NETWORK -> ReauthenticateResult.NoConnection
+        else -> ReauthenticateResult.GenericFailure
+    }
+
+    private fun errorCode(error: Exception): String? = (error as? AuthServiceException)?.errorCode
 
     /**
      * Todos los rechazos de credenciales convergen en el mismo resultado: el

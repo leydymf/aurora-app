@@ -42,5 +42,9 @@ class AuthSessionCleanerTest {
             signOutCalls++
             if (failOnSignOut) error("provider failure")
         }
+
+        override suspend fun reauthenticate(password: String) = Unit
+
+        override suspend fun deleteCurrentUser() = Unit
     }
 }

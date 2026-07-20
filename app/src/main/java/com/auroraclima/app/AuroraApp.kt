@@ -22,6 +22,7 @@ import com.auroraclima.app.access.ui.SettingsScreen
 import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
+import com.auroraclima.app.accounts.ui.DeleteAccountRoute
 import com.auroraclima.app.accounts.ui.LoginRoute
 import com.auroraclima.app.accounts.ui.PrivacyScreen
 import com.auroraclima.app.content.ui.AGENCY_ID_ARG
@@ -144,7 +145,18 @@ fun AuroraApp(sessionManager: SessionManager) {
                         // cierre (closeSession vía quickExit): AuthSessionCleaner
                         // cierra la sesión del proveedor —el siguiente acceso exige
                         // credenciales— y SessionGuard hace el pop a la fachada.
-                        onSignOut = sessionManager::quickExit
+                        onSignOut = sessionManager::quickExit,
+                        onDeleteAccount = { navController.navigate(SETTINGS_ACCOUNT_ROUTE) }
+                    )
+                }
+                // Eliminación total de la cuenta (RF-20): pantalla propia de
+                // accounts con doble confirmación. Al terminar converge en la
+                // misma rutina única de cierre — el regreso al clima es la única
+                // señal y la limpieza de memoria corre con los cleaners.
+                screen(SETTINGS_ACCOUNT_ROUTE) {
+                    DeleteAccountRoute(
+                        onBack = { navController.popBackStack() },
+                        onDeleted = sessionManager::quickExit
                     )
                 }
                 // Cambio de la clave personal (RF-09, P21·b): guardar regresa a
@@ -291,6 +303,7 @@ private const val PANEL_ROUTE = "panel"
 private const val SETTINGS_ROUTE = "settings"
 private const val PRIVACY_ROUTE = "privacy"
 private const val SETTINGS_CODE_ROUTE = "settings_code"
+private const val SETTINGS_ACCOUNT_ROUTE = "settings_account"
 private const val GUIDANCE_ROUTE = "guidance"
 private const val JOURNAL_ROUTE = "journal"
 private const val JOURNAL_NEW_ROUTE = "journal_new"

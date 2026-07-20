@@ -1,5 +1,6 @@
 package com.auroraclima.app.core.network
 
+import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
@@ -8,6 +9,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
 import javax.inject.Singleton
 
 /**
@@ -33,4 +35,9 @@ object FirestoreModule {
     @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    /** La caché persistente del SDK muere con la cuenta (RF-20, riesgo P-22). */
+    @Provides
+    @IntoSet
+    fun provideFirestoreCacheEraser(impl: FirestoreCacheEraser): LocalAccountDataEraser = impl
 }

@@ -15,6 +15,15 @@ interface AuthService {
 
     /** Cierra la sesión persistida del proveedor. Idempotente. */
     fun signOut()
+
+    /**
+     * Revalida las credenciales de la sesión vigente con la contraseña (RF-20):
+     * refresca el login reciente que el proveedor exige para borrar la cuenta.
+     */
+    suspend fun reauthenticate(password: String)
+
+    /** Elimina la cuenta de la sesión vigente en el proveedor (RF-20 criterio 3). */
+    suspend fun deleteCurrentUser()
 }
 
 /**
@@ -25,4 +34,13 @@ interface AuthService {
 class AuthServiceException(
     val errorCode: String?,
     cause: Throwable? = null
-) : Exception(errorCode, cause)
+) : Exception(errorCode, cause) {
+    companion object {
+        /**
+         * Código propio para la caída de red: el SDK la reporta con una excepción
+         * aparte, no con [errorCode]. RF-20 lo distingue para poder decir con
+         * honestidad que sin conexión nada se ha borrado.
+         */
+        const val ERROR_NETWORK = "ERROR_NETWORK_REQUEST_FAILED"
+    }
+}

@@ -5,9 +5,11 @@ import com.auroraclima.app.accounts.data.AuthSessionCleaner
 import com.auroraclima.app.accounts.data.FirebaseAuthRepository
 import com.auroraclima.app.accounts.data.FirebaseAuthService
 import com.auroraclima.app.accounts.data.PrefsSignInAttemptStore
+import com.auroraclima.app.accounts.data.SignInAttemptsEraser
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.security.WallClock
+import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.SensitiveStateCleaner
 import dagger.Binds
 import dagger.Module
@@ -32,6 +34,11 @@ abstract class AccountsDataModule {
 
     @Binds
     abstract fun bindSignInAttemptStore(impl: PrefsSignInAttemptStore): SignInAttemptStore
+
+    /** El contador de intentos muere con la cuenta (RF-20). */
+    @Binds
+    @IntoSet
+    abstract fun bindSignInAttemptsEraser(impl: SignInAttemptsEraser): LocalAccountDataEraser
 
     companion object {
         // FirebaseAuth se provee en core/network/FirestoreModule: lo comparten

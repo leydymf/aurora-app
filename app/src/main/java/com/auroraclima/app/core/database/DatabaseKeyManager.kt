@@ -49,6 +49,20 @@ class DatabaseKeyManager @Inject constructor(
         return passphrase
     }
 
+    /**
+     * Eliminación total (RF-20): destruye primero la llave envolvente — desde ese
+     * instante el blob y la BD son ilegibles aunque el resto del borrado se
+     * interrumpa — y después el blob mismo. El siguiente primer uso genera una
+     * passphrase nueva, como en una instalación limpia.
+     */
+    @Synchronized
+    fun erase() {
+        runCatching {
+            KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.deleteEntry(KEY_ALIAS)
+        }
+        preferences.edit().clear().commit()
+    }
+
     private fun readStoredPassphrase(): ByteArray? {
         val iv = preferences.getString(IV_KEY, null) ?: return null
         val blob = preferences.getString(BLOB_KEY, null) ?: return null

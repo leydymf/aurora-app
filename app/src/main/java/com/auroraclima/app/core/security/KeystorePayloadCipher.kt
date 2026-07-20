@@ -41,6 +41,14 @@ class KeystorePayloadCipher @Inject constructor() : PayloadCipher {
         return cipher.doFinal(sealed.ciphertext)
     }
 
+    /**
+     * Destruye la llave del payload (RF-20): todo blob restante — incluida la
+     * caché local del SDK de nube — queda como texto cifrado sin llave.
+     */
+    fun destroyKey() {
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.deleteEntry(KEY_ALIAS)
+    }
+
     private fun obtainKey(): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
