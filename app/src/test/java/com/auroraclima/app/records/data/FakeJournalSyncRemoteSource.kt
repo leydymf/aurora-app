@@ -13,6 +13,7 @@ class FakeJournalSyncRemoteSource : JournalSyncRemoteSource {
     val uploaded = mutableListOf<Pair<String, EncryptedEntryDto>>()
     val queued = mutableListOf<Pair<String, EncryptedEntryDto>>()
     val deleted = mutableListOf<String>()
+    val queuedDeletes = mutableListOf<String>()
 
     override suspend fun upload(documentId: String, document: EncryptedEntryDto) {
         val write = documentId to document
@@ -20,13 +21,15 @@ class FakeJournalSyncRemoteSource : JournalSyncRemoteSource {
     }
 
     override suspend fun delete(documentId: String) {
-        deleted += documentId
+        if (online) deleted += documentId else queuedDeletes += documentId
     }
 
-    /** Reconexión: la cola durable se sube automáticamente (RF-38). */
+    /** Reconexión: la cola durable se aplica automáticamente (RF-38). */
     fun reconnect() {
         online = true
         uploaded += queued
         queued.clear()
+        deleted += queuedDeletes
+        queuedDeletes.clear()
     }
 }

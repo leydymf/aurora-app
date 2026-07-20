@@ -193,4 +193,10 @@
     <string name="journal_save">Guardar</string>
     <string name="journal_edit_tag">MI REGISTRO · EDITAR</string>
     <string name="journal_edit_title">Editar el registro.</string>
+    <string name="journal_detail_edit">Editar</string>
+    <string name="journal_detail_delete">Eliminar</string>
+    <string name="journal_delete_title">¿Eliminar este registro?</string>
+    <string name="journal_delete_body">Se borrará de aquí y de la nube. Esta acción no se puede deshacer.</string>
+    <string name="journal_delete_keep">Conservar</string>
+    <string name="journal_delete_confirm">Sí, eliminar</string>
 </resources>

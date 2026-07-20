@@ -183,7 +183,16 @@ fun AuroraApp(sessionManager: SessionManager) {
                     )
                 }
                 screen(JOURNAL_DETAIL_ROUTE) {
-                    JournalDetailRoute(onBack = { navController.popBackStack() })
+                    JournalDetailRoute(
+                        onBack = { navController.popBackStack() },
+                        // Edición (RF-35): el mismo editor de creación, con id.
+                        onEdit = { entryId ->
+                            navController.navigate("$JOURNAL_EDIT_BASE/$entryId")
+                        },
+                        // Eliminación (RF-36): el pop regresa al listado, que se
+                        // refresca al volver a componerse — sin mensaje de éxito.
+                        onDeleted = { navController.popBackStack() }
+                    )
                 }
                 // Edición de un registro (RF-35, P19). El pop tras guardar
                 // regresa al detalle, que se refresca al volver a componerse.

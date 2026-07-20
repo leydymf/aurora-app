@@ -63,6 +63,10 @@ class LocalJournalRepository @Inject constructor(
         )
     }
 
+    override suspend fun delete(id: Long): Result<Unit> = withDatabase { dao ->
+        dao.deleteById(id)
+    }
+
     private suspend fun <T> withDatabase(block: suspend (JournalDao) -> T): Result<T> = withContext(Dispatchers.IO) {
         try {
             Result.success(block(openDatabase().journalDao()))

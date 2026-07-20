@@ -78,6 +78,17 @@ class JournalDaoTest {
         assertEquals(5L, edited.createdAt)
     }
 
+    @Test
+    fun `borrar elimina solo el registro indicado`() = runTest {
+        val target = dao.insert(row(day = 100, createdAt = 1, detail = "se va"))
+        dao.insert(row(day = 200, createdAt = 2, detail = "se queda"))
+
+        dao.deleteById(target)
+
+        assertNull(dao.entryById(target))
+        assertEquals(listOf("se queda"), dao.entries().map { it.detail })
+    }
+
     private fun row(day: Long, createdAt: Long, detail: String) = JournalEntryRow(
         day = day,
         kind = "physical",

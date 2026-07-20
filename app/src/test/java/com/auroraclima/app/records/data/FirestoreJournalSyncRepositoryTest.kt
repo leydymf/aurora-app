@@ -109,4 +109,21 @@ class FirestoreJournalSyncRepositoryTest {
         )
         assertEquals("el relato corregido", JSONObject(opened.toString(Charsets.UTF_8)).getString("detail"))
     }
+
+    @Test
+    fun `sin conexion el borrado se encola y al reconectar se propaga`() = runTest {
+        // RF-36 criterio 2 sin red: la eliminación local ya ocurrió; el delete
+        // queda en la cola durable del SDK y se aplica solo al volver la red.
+        remote.online = false
+
+        val result = repository.remove(7)
+
+        assertTrue(result.isSuccess)
+        assertTrue(remote.deleted.isEmpty())
+        assertEquals(listOf("7"), remote.queuedDeletes)
+
+        remote.reconnect()
+        assertEquals(listOf("7"), remote.deleted)
+        assertTrue(remote.queuedDeletes.isEmpty())
+    }
 }

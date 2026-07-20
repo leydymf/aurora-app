@@ -215,6 +215,47 @@ fun PrimaryButton(
     }
 }
 
+/**
+ * Botón de acción irreversible: ciruela en vez de Noche, mismo esqueleto que
+ * [PrimaryButton]. En core porque lo usan accounts (RF-20) y records (RF-36) — §2.
+ */
+@Composable
+fun DestructiveButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isLoading,
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Plum,
+            contentColor = CloudWhite,
+            disabledContainerColor = Plum.copy(alpha = 0.55f),
+            disabledContentColor = CloudWhite
+        )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = CloudWhite,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(
+                text = text,
+                fontFamily = PlexSans,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+        }
+    }
+}
+
 @Composable
 private fun fieldTextStyle() = TextStyle(
     fontFamily = PlexSans,

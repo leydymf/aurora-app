@@ -87,11 +87,13 @@ class LocalJournalRepositoryTest {
         assertTrue(
             repository.update(JournalEntry(1, LocalDate.now(), EntryKind.SEXUAL, "x")).isFailure
         )
+        assertTrue(repository.delete(1).isFailure)
     }
 
     @Test
-    fun `edita un registro existente`() = runTest {
-        // RF-35 sobre el esquema real: el contenido editado se relee completo.
+    fun `edita y borra un registro existente`() = runTest {
+        // RF-35/RF-36 sobre el esquema real: el contenido editado se relee y el
+        // borrado deja de exponer el registro.
         val repository = LocalJournalRepository { database }
         val id = repository.add(
             NewJournalEntry(LocalDate.of(2026, 6, 28), EntryKind.ECONOMIC, "original")
@@ -105,6 +107,10 @@ class LocalJournalRepositoryTest {
         )
         assertTrue(repository.update(edited).isSuccess)
         assertEquals(edited, repository.entry(id).getOrThrow())
+
+        assertTrue(repository.delete(id).isSuccess)
+        assertNull(repository.entry(id).getOrThrow())
+        assertTrue(repository.entries().getOrThrow().isEmpty())
     }
 
     @Test

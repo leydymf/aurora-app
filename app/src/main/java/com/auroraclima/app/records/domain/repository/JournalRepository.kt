@@ -21,4 +21,7 @@ interface JournalRepository {
 
     /** Reemplaza el contenido de un registro existente (RF-35). */
     suspend fun update(entry: JournalEntry): Result<Unit>
+
+    /** Borra un registro del dispositivo (RF-36). */
+    suspend fun delete(id: Long): Result<Unit>
 }

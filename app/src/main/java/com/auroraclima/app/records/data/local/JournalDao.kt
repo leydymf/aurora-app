@@ -19,4 +19,7 @@ interface JournalDao {
     /** Edita el contenido (RF-35) sin tocar `created_at`: el orden del listado no cambia. */
     @Query("UPDATE entries SET day = :day, kind = :kind, detail = :detail WHERE id = :id")
     suspend fun update(id: Long, day: Long, kind: String, detail: String)
+
+    @Query("DELETE FROM entries WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

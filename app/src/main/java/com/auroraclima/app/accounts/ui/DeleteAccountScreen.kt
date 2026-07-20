@@ -9,16 +9,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,6 +34,7 @@ import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureDialog
 import com.auroraclima.app.core.ui.components.BackHeader
+import com.auroraclima.app.core.ui.components.DestructiveButton
 import com.auroraclima.app.core.ui.components.FieldLabel
 import com.auroraclima.app.core.ui.components.FieldMessage
 import com.auroraclima.app.core.ui.components.SecretField
@@ -244,43 +241,5 @@ private fun DialogCancelButton(onClick: () -> Unit) {
             fontSize = 15.sp,
             color = SteelDeep
         )
-    }
-}
-
-/** Botón de acción irreversible: ciruela en vez de Noche, mismo esqueleto que PrimaryButton. */
-@Composable
-private fun DestructiveButton(
-    text: String,
-    onClick: () -> Unit,
-    enabled: Boolean,
-    isLoading: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled && !isLoading,
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Plum,
-            contentColor = CloudWhite,
-            disabledContainerColor = Plum.copy(alpha = 0.55f),
-            disabledContentColor = CloudWhite
-        )
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(22.dp),
-                color = CloudWhite,
-                strokeWidth = 2.dp
-            )
-        } else {
-            Text(
-                text = text,
-                fontFamily = PlexSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
-            )
-        }
     }
 }
