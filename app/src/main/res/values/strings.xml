@@ -191,4 +191,6 @@
     <string name="journal_detail_placeholder">Escribe con tus palabras. Solo tú lo leerás.</string>
     <string name="journal_detail_missing">Escribe al menos unas palabras para poder guardar.</string>
     <string name="journal_save">Guardar</string>
+    <string name="journal_edit_tag">MI REGISTRO · EDITAR</string>
+    <string name="journal_edit_title">Editar el registro.</string>
 </resources>

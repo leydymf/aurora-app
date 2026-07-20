@@ -85,4 +85,28 @@ class FirestoreJournalSyncRepositoryTest {
         assertTrue(result.isSuccess)
         assertEquals(listOf("7"), remote.deleted)
     }
+
+    @Test
+    fun `la edicion re-cifra y sobreescribe el mismo documento`() = runTest {
+        // RF-35 criterio 1: el cambio se refleja en la sync — mismo docId, payload nuevo.
+        repository.push(entry)
+        val edited = entry.copy(detail = "el relato corregido")
+
+        val result = repository.push(edited)
+
+        assertTrue(result.isSuccess)
+        assertEquals(2, remote.uploaded.size)
+        assertEquals(remote.uploaded[0].first, remote.uploaded[1].first)
+        val dto = remote.uploaded[1].second
+        // El contenido editado tampoco viaja en claro…
+        assertFalse(Base64.getDecoder().decode(dto.ciphertext).toString(Charsets.UTF_8).contains("corregido"))
+        // …pero descifrando el payload nuevo se recupera el texto editado.
+        val opened = cipher.open(
+            SealedPayload(
+                ciphertext = Base64.getDecoder().decode(dto.ciphertext),
+                iv = Base64.getDecoder().decode(dto.iv)
+            )
+        )
+        assertEquals("el relato corregido", JSONObject(opened.toString(Charsets.UTF_8)).getString("detail"))
+    }
 }

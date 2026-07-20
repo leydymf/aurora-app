@@ -40,8 +40,10 @@ import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureDayPicker
 import com.auroraclima.app.core.ui.components.BackHeader
+import com.auroraclima.app.core.ui.components.ErrorState
 import com.auroraclima.app.core.ui.components.FieldLabel
 import com.auroraclima.app.core.ui.components.FieldMessage
+import com.auroraclima.app.core.ui.components.LoadingState
 import com.auroraclima.app.core.ui.components.ParagraphField
 import com.auroraclima.app.core.ui.components.PrimaryButton
 import com.auroraclima.app.core.ui.components.SectionTitle
@@ -56,9 +58,11 @@ import com.auroraclima.app.records.domain.model.EntryKind
 import java.time.LocalDate
 
 /**
- * Creación de un registro (RF-32; mockup P19 / alta-fidelidad-29, sin la fila
- * de evidencias — RF-33 queda fuera del MVP). Tipo con selección de radio en
- * un solo gesto (decisión F7) y validación en línea sin pérdida (criterio 2).
+ * Creación (RF-32) y edición (RF-35) de un registro; mockup P19 /
+ * alta-fidelidad-29, sin la fila de evidencias — RF-33 queda fuera del MVP.
+ * Tipo con selección de radio en un solo gesto (decisión F7) y validación en
+ * línea sin pérdida (criterio 2). En modo edición la pantalla es la misma con
+ * el formulario prellenado; solo cambian rótulo y título.
  *
  * P-15: el campo de texto reporta cada tecla como interacción — el teclado es
  * una ventana propia que el observador de toques del grafo seguro no ve — y
@@ -75,6 +79,7 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
     JournalEditorScreen(
         state = state,
         onBack = onBack,
+        onRetryLoad = viewModel::onRetryLoad,
         onOpenDatePicker = viewModel::onOpenDatePicker,
         onDismissDatePicker = {
             sessionManager.registerInteraction()
@@ -97,6 +102,7 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
 internal fun JournalEditorScreen(
     state: JournalEditorUiState,
     onBack: () -> Unit,
+    onRetryLoad: () -> Unit,
     onOpenDatePicker: () -> Unit,
     onDismissDatePicker: () -> Unit,
     onDaySelected: (LocalDate) -> Unit,
@@ -112,52 +118,20 @@ internal fun JournalEditorScreen(
             .systemBarsPadding()
     ) {
         BackHeader(
-            tag = stringResource(R.string.journal_new_tag),
+            tag = stringResource(if (state.isEditing) R.string.journal_edit_tag else R.string.journal_new_tag),
             onBack = onBack,
             modifier = Modifier.padding(horizontal = 12.dp)
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-        ) {
-            Spacer(modifier = Modifier.height(8.dp))
-            SectionTitle(stringResource(R.string.journal_new_title))
-            Spacer(modifier = Modifier.height(20.dp))
-
-            FieldLabel(stringResource(R.string.journal_date_label))
-            DayField(text = state.occurredOn.toLongDayText(), onClick = onOpenDatePicker)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FieldLabel(stringResource(R.string.journal_kind_label))
-            KindSelector(
-                selected = state.kind,
-                isError = state.kindErrorRes != null,
-                onKindSelected = onKindSelected
+        when {
+            state.isLoading -> LoadingState()
+            state.loadErrorRes != null -> ErrorState(messageRes = state.loadErrorRes, onRetry = onRetryLoad)
+            else -> JournalEditorForm(
+                state = state,
+                onOpenDatePicker = onOpenDatePicker,
+                onKindSelected = onKindSelected,
+                onDetailChange = onDetailChange,
+                onSubmit = onSubmit
             )
-            FieldMessage(messageRes = state.kindErrorRes, fallbackRes = null)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FieldLabel(stringResource(R.string.journal_detail_label))
-            ParagraphField(
-                value = state.detail,
-                onValueChange = onDetailChange,
-                placeholder = stringResource(R.string.journal_detail_placeholder),
-                isError = state.detailErrorRes != null
-            )
-            FieldMessage(messageRes = state.detailErrorRes, fallbackRes = null)
-            FieldMessage(messageRes = state.saveErrorRes, fallbackRes = null)
-            Spacer(modifier = Modifier.height(24.dp))
-
-            PrimaryButton(
-                text = stringResource(R.string.journal_save),
-                onClick = onSubmit,
-                enabled = !state.isSaving,
-                isLoading = state.isSaving
-            )
-            // Aire final para no chocar con el botón nube de salida rápida.
-            Spacer(modifier = Modifier.height(48.dp))
         }
     }
     if (state.isPickingDate) {
@@ -169,6 +143,61 @@ internal fun JournalEditorScreen(
             onDismiss = onDismissDatePicker,
             maxDay = state.today
         )
+    }
+}
+
+@Composable
+private fun JournalEditorForm(
+    state: JournalEditorUiState,
+    onOpenDatePicker: () -> Unit,
+    onKindSelected: (EntryKind) -> Unit,
+    onDetailChange: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+        SectionTitle(
+            stringResource(if (state.isEditing) R.string.journal_edit_title else R.string.journal_new_title)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        FieldLabel(stringResource(R.string.journal_date_label))
+        DayField(text = state.occurredOn.toLongDayText(), onClick = onOpenDatePicker)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        FieldLabel(stringResource(R.string.journal_kind_label))
+        KindSelector(
+            selected = state.kind,
+            isError = state.kindErrorRes != null,
+            onKindSelected = onKindSelected
+        )
+        FieldMessage(messageRes = state.kindErrorRes, fallbackRes = null)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        FieldLabel(stringResource(R.string.journal_detail_label))
+        ParagraphField(
+            value = state.detail,
+            onValueChange = onDetailChange,
+            placeholder = stringResource(R.string.journal_detail_placeholder),
+            isError = state.detailErrorRes != null
+        )
+        FieldMessage(messageRes = state.detailErrorRes, fallbackRes = null)
+        FieldMessage(messageRes = state.saveErrorRes, fallbackRes = null)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        PrimaryButton(
+            text = stringResource(R.string.journal_save),
+            onClick = onSubmit,
+            enabled = !state.isSaving,
+            isLoading = state.isSaving
+        )
+        // Aire final para no chocar con el botón nube de salida rápida.
+        Spacer(modifier = Modifier.height(48.dp))
     }
 }
 

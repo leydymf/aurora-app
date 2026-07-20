@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.local.JournalEntryRow
 import com.auroraclima.app.records.domain.model.EntryKind
+import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.model.NewJournalEntry
 import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
@@ -83,6 +84,27 @@ class LocalJournalRepositoryTest {
         assertTrue(repository.add(NewJournalEntry(LocalDate.now(), EntryKind.SEXUAL, "x")).isFailure)
         assertTrue(repository.entries().isFailure)
         assertTrue(repository.entry(1).isFailure)
+        assertTrue(
+            repository.update(JournalEntry(1, LocalDate.now(), EntryKind.SEXUAL, "x")).isFailure
+        )
+    }
+
+    @Test
+    fun `edita un registro existente`() = runTest {
+        // RF-35 sobre el esquema real: el contenido editado se relee completo.
+        val repository = LocalJournalRepository { database }
+        val id = repository.add(
+            NewJournalEntry(LocalDate.of(2026, 6, 28), EntryKind.ECONOMIC, "original")
+        ).getOrThrow()
+
+        val edited = JournalEntry(
+            id = id,
+            occurredOn = LocalDate.of(2026, 6, 29),
+            kind = EntryKind.PSYCHOLOGICAL,
+            detail = "corregido"
+        )
+        assertTrue(repository.update(edited).isSuccess)
+        assertEquals(edited, repository.entry(id).getOrThrow())
     }
 
     @Test

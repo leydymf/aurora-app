@@ -54,6 +54,15 @@ class LocalJournalRepository @Inject constructor(
         dao.entryById(id)?.toDomain()
     }
 
+    override suspend fun update(entry: JournalEntry): Result<Unit> = withDatabase { dao ->
+        dao.update(
+            id = entry.id,
+            day = entry.occurredOn.toEpochDay(),
+            kind = entry.kind.storageCode,
+            detail = entry.detail
+        )
+    }
+
     private suspend fun <T> withDatabase(block: suspend (JournalDao) -> T): Result<T> = withContext(Dispatchers.IO) {
         try {
             Result.success(block(openDatabase().journalDao()))

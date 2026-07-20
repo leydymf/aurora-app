@@ -1,11 +1,15 @@
 package com.auroraclima.app.records.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
 import com.auroraclima.app.records.domain.model.EntryKind
+import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.model.NewJournalEntry
+import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.usecase.AddJournalEntryUseCase
+import com.auroraclima.app.records.domain.usecase.UpdateJournalEntryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
@@ -19,24 +23,42 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Creación de un registro (RF-32) con sincronización cifrada a la nube (RF-37).
- * Validar en línea sin perder lo diligenciado (criterio 2, decisión F7) y guardar
- * protegido (criterio 1). Un fallo del guardado local (incluida la apertura de la
- * BD cifrada, P-36) se muestra solo como mensaje genérico y el formulario queda
- * intacto para reintentar; un fallo de la sync es silencioso (§3), lo absorbe el
- * caso de uso y jamás llega aquí.
+ * Creación (RF-32) y edición (RF-35) de un registro con sincronización cifrada
+ * a la nube (RF-37). El modo lo decide el argumento de navegación: con id se
+ * carga el registro y el guardado re-cifra y sobreescribe; sin id se crea.
+ * Validar en línea sin perder lo diligenciado (criterio 2, decisión F7) y
+ * guardar protegido (criterio 1). Un fallo del guardado local (incluida la
+ * apertura de la BD cifrada, P-36) se muestra solo como mensaje genérico y el
+ * formulario queda intacto para reintentar; un fallo de la sync es silencioso
+ * (§3), lo absorbe el caso de uso y jamás llega aquí.
  */
 @HiltViewModel
 class JournalEditorViewModel @Inject constructor(
-    private val addJournalEntry: AddJournalEntryUseCase
+    savedStateHandle: SavedStateHandle,
+    private val addJournalEntry: AddJournalEntryUseCase,
+    private val updateJournalEntry: UpdateJournalEntryUseCase,
+    private val repository: JournalRepository
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(JournalEditorUiState())
+    // El argumento llega como String de la ruta; uno malformado no debe lanzar
+    // (§3, auditoría C3 H-1): se trata igual que un registro que ya no existe.
+    private val isEditing: Boolean = savedStateHandle.contains(ENTRY_ID_ARG)
+    private val entryId: Long? = savedStateHandle.get<String>(ENTRY_ID_ARG)?.toLongOrNull()
+
+    private val _uiState = MutableStateFlow(JournalEditorUiState(isEditing = isEditing))
     val uiState: StateFlow<JournalEditorUiState> = _uiState.asStateFlow()
 
     // replay = 1 por el mismo motivo que LoginViewModel: el evento no debe
     // perderse si se emite antes de que la UI se suscriba.
     private val _savedEvents = MutableSharedFlow<Unit>(replay = 1)
     val savedEvents: SharedFlow<Unit> = _savedEvents.asSharedFlow()
+
+    init {
+        if (isEditing) loadForEdit()
+    }
+
+    fun onRetryLoad() {
+        if (isEditing) loadForEdit()
+    }
 
     fun onOpenDatePicker() {
         _uiState.update { it.copy(isPickingDate = true) }
@@ -73,17 +95,46 @@ class JournalEditorViewModel @Inject constructor(
         }
         _uiState.update { it.copy(isSaving = true, saveErrorRes = null) }
         viewModelScope.launch {
-            addJournalEntry(
-                NewJournalEntry(
-                    occurredOn = state.occurredOn,
-                    kind = state.kind,
-                    detail = state.detail.trim()
-                )
-            )
+            save(occurredOn = state.occurredOn, kind = state.kind, detail = state.detail.trim())
                 .onSuccess { _savedEvents.emit(Unit) }
                 .onFailure {
                     _uiState.update { it.copy(isSaving = false, saveErrorRes = R.string.common_error_generic) }
                 }
         }
+    }
+
+    private suspend fun save(occurredOn: LocalDate, kind: EntryKind, detail: String): Result<Unit> =
+        if (entryId != null) {
+            updateJournalEntry(JournalEntry(id = entryId, occurredOn = occurredOn, kind = kind, detail = detail))
+        } else {
+            addJournalEntry(NewJournalEntry(occurredOn = occurredOn, kind = kind, detail = detail))
+        }
+
+    /** Carga el registro a editar (RF-35); id malformado, ausente o BD fallida → error genérico (P-24/P-36). */
+    private fun loadForEdit() {
+        val id = entryId ?: return showLoadError()
+        _uiState.update { it.copy(isLoading = true, loadErrorRes = null) }
+        viewModelScope.launch {
+            repository.entry(id)
+                .onSuccess { entry ->
+                    if (entry == null) {
+                        showLoadError()
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                occurredOn = entry.occurredOn,
+                                kind = entry.kind,
+                                detail = entry.detail
+                            )
+                        }
+                    }
+                }
+                .onFailure { showLoadError() }
+        }
+    }
+
+    private fun showLoadError() {
+        _uiState.update { it.copy(isLoading = false, loadErrorRes = R.string.common_error_generic) }
     }
 }

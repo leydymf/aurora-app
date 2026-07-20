@@ -1,9 +1,12 @@
 package com.auroraclima.app.records.ui
 
+import androidx.lifecycle.SavedStateHandle
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.records.domain.model.EntryKind
+import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.usecase.AddJournalEntryUseCase
+import com.auroraclima.app.records.domain.usecase.UpdateJournalEntryUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -16,9 +19,10 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * Creación de un registro (RF-32): validación en línea sin pérdida de lo
- * diligenciado (criterio 2) y guardado protegido con error solo genérico
- * ante fallo del repositorio (P-36, P-24).
+ * Creación (RF-32) y edición (RF-35) de un registro: validación en línea sin
+ * pérdida de lo diligenciado (criterio 2), guardado protegido con error solo
+ * genérico ante fallo del repositorio (P-36, P-24) y, en modo edición,
+ * prellenado y re-sincronización del mismo id.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class JournalEditorViewModelTest {
@@ -28,7 +32,19 @@ class JournalEditorViewModelTest {
     private val repository = FakeJournalRepository()
     private val sync = FakeJournalSyncRepository()
 
-    private fun viewModel() = JournalEditorViewModel(AddJournalEntryUseCase(repository, sync))
+    private fun viewModel(entryId: Long? = null) = JournalEditorViewModel(
+        SavedStateHandle(entryId?.let { mapOf(ENTRY_ID_ARG to it.toString()) }.orEmpty()),
+        AddJournalEntryUseCase(repository, sync),
+        UpdateJournalEntryUseCase(repository, sync),
+        repository
+    )
+
+    private val stored = JournalEntry(
+        id = 7,
+        occurredOn = LocalDate.of(2026, 6, 28),
+        kind = EntryKind.ECONOMIC,
+        detail = "tomó el dinero del mercado"
+    )
 
     @Test
     fun `guardar sin campos obligatorios señala ambos sin perder la fecha`() = runTest {
@@ -120,6 +136,90 @@ class JournalEditorViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.savedEvents.replayCache.isEmpty())
+    }
+
+    @Test
+    fun `en modo edicion prellena el formulario con el registro guardado`() = runTest {
+        repository.entryResult = Result.success(stored)
+
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isEditing)
+        assertFalse(state.isLoading)
+        assertEquals(stored.occurredOn, state.occurredOn)
+        assertEquals(stored.kind, state.kind)
+        assertEquals(stored.detail, state.detail)
+    }
+
+    @Test
+    fun `en modo edicion guardar actualiza el registro y re-sincroniza el mismo id`() = runTest {
+        repository.entryResult = Result.success(stored)
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        viewModel.onKindSelected(EntryKind.PSYCHOLOGICAL)
+        viewModel.onDetailChange("  el relato corregido  ")
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        // Actualiza — no crea un registro nuevo (RF-35 criterio 1).
+        assertTrue(repository.added.isEmpty())
+        assertEquals(1, repository.updated.size)
+        val saved = repository.updated[0]
+        assertEquals(7L, saved.id)
+        assertEquals(EntryKind.PSYCHOLOGICAL, saved.kind)
+        assertEquals("el relato corregido", saved.detail)
+        // El cambio se refleja en la sincronización, al MISMO documento.
+        assertEquals(1, sync.pushed.size)
+        assertEquals(7L, sync.pushed[0].id)
+        assertEquals("el relato corregido", sync.pushed[0].detail)
+        assertEquals(listOf(Unit), viewModel.savedEvents.replayCache)
+    }
+
+    @Test
+    fun `en modo edicion un fallo de carga muestra el error generico y reintenta`() = runTest {
+        repository.entryResult = Result.failure(IllegalStateException("blob corrupto: detalle interno"))
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        assertEquals(R.string.common_error_generic, viewModel.uiState.value.loadErrorRes)
+
+        repository.entryResult = Result.success(stored)
+        viewModel.onRetryLoad()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.loadErrorRes)
+        assertEquals(stored.detail, state.detail)
+    }
+
+    @Test
+    fun `un argumento de navegacion malformado no lanza y muestra el error generico`() = runTest {
+        // Auditoría C3 H-1: `toLongOrNull` — un arg corrupto jamás debe crashear
+        // ni dejar el string crudo en un stacktrace de logcat.
+        val viewModel = JournalEditorViewModel(
+            SavedStateHandle(mapOf(ENTRY_ID_ARG to "no-numerico")),
+            AddJournalEntryUseCase(repository, sync),
+            UpdateJournalEntryUseCase(repository, sync),
+            repository
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isEditing)
+        assertEquals(R.string.common_error_generic, state.loadErrorRes)
+    }
+
+    @Test
+    fun `en modo edicion un id que ya no existe muestra el error generico`() = runTest {
+        repository.entryResult = Result.success(null)
+
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        assertEquals(R.string.common_error_generic, viewModel.uiState.value.loadErrorRes)
     }
 
     @Test

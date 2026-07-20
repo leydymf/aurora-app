@@ -18,4 +18,7 @@ interface JournalRepository {
 
     /** Un registro por id para el detalle (RF-34); null si ya no existe. */
     suspend fun entry(id: Long): Result<JournalEntry?>
+
+    /** Reemplaza el contenido de un registro existente (RF-35). */
+    suspend fun update(entry: JournalEntry): Result<Unit>
 }

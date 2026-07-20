@@ -185,6 +185,14 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(JOURNAL_DETAIL_ROUTE) {
                     JournalDetailRoute(onBack = { navController.popBackStack() })
                 }
+                // Edición de un registro (RF-35, P19). El pop tras guardar
+                // regresa al detalle, que se refresca al volver a componerse.
+                screen(JOURNAL_EDIT_ROUTE) {
+                    JournalEditorRoute(
+                        onSaved = { navController.popBackStack() },
+                        onBack = { navController.popBackStack() }
+                    )
+                }
                 // Cuestionario orientador (RF-27): una sola ruta — el flujo
                 // pregunta a pregunta es estado del ViewModel, que muere con el
                 // pop de esta entrada (las respuestas jamás tocan disco, RF-28).
@@ -308,6 +316,8 @@ private const val GUIDANCE_ROUTE = "guidance"
 private const val JOURNAL_ROUTE = "journal"
 private const val JOURNAL_NEW_ROUTE = "journal_new"
 private const val JOURNAL_DETAIL_ROUTE = "$JOURNAL_ROUTE/{$ENTRY_ID_ARG}"
+private const val JOURNAL_EDIT_BASE = "journal_edit"
+private const val JOURNAL_EDIT_ROUTE = "$JOURNAL_EDIT_BASE/{$ENTRY_ID_ARG}"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"

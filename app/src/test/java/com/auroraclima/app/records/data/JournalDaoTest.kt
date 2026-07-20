@@ -64,6 +64,20 @@ class JournalDaoTest {
         assertNull(dao.entryById(99))
     }
 
+    @Test
+    fun `editar cambia el contenido sin tocar la fecha de creacion`() = runTest {
+        // RF-35: `created_at` se preserva para que el orden del listado no cambie.
+        val id = dao.insert(row(day = 100, createdAt = 5, detail = "original"))
+
+        dao.update(id = id, day = 120, kind = "economic", detail = "corregido")
+
+        val edited = requireNotNull(dao.entryById(id))
+        assertEquals(120L, edited.day)
+        assertEquals("economic", edited.kind)
+        assertEquals("corregido", edited.detail)
+        assertEquals(5L, edited.createdAt)
+    }
+
     private fun row(day: Long, createdAt: Long, detail: String) = JournalEntryRow(
         day = day,
         kind = "physical",
