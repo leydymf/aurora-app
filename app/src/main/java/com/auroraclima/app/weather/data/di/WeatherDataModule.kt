@@ -38,6 +38,7 @@ abstract class WeatherDataModule {
         @Singleton
         fun provideWeatherDatabase(@ApplicationContext context: Context): WeatherDatabase = Room
             .databaseBuilder(context, WeatherDatabase::class.java, WeatherDatabase.NAME)
+            .addMigrations(WeatherDatabase.MIGRATION_1_2)
             .build()
 
         @Provides

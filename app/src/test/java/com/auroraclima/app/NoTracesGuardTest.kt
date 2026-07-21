@@ -140,7 +140,8 @@ class NoTracesGuardTest {
 
     @Test
     fun `fuera del grafo seguro solo se registran rutas de la fachada`() {
-        val facadeRoutes = setOf("HOME_ROUTE")
+        // Rutas de la fachada de clima: la principal y el pronóstico extendido (RF-04).
+        val facadeRoutes = setOf("HOME_ROUTE", "FORECAST_ROUTE")
         val navRoot = File(mainDir, "java/com/auroraclima/app/AuroraApp.kt")
         val registrations = Regex("""\bcomposable\(\s*([A-Za-z_]\w*|"[^"]*")""")
             .findAll(navRoot.readText())

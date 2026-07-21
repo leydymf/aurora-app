@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Iconografía meteorológica genérica: gota (probabilidad de lluvia) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,3.2C12,3.2 6.2,10.1 6.2,14.3A5.8,5.8 0 0 0 17.8,14.3C17.8,10.1 12,3.2 12,3.2Z"
+        android:fillColor="#7B9AAE" />
+</vector>

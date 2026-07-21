@@ -32,3 +32,14 @@ data class WeatherSnapshotEntity(
     val rainProbabilityPercent: Int,
     val updatedAtEpochMillis: Long
 )
+
+/** Un día del último pronóstico extendido consultado (RF-04). Se reemplaza completo en cada refresco. */
+@Entity(tableName = "daily_forecast")
+data class DailyForecastEntity(
+    @PrimaryKey val dayIndex: Int,
+    val epochDay: Long,
+    val weatherCode: Int,
+    val maxTemperatureC: Double,
+    val minTemperatureC: Double,
+    val rainProbabilityPercent: Int
+)

@@ -7,20 +7,22 @@ import retrofit2.http.Query
 
 /** Servicio de pronóstico de Open-Meteo (sin API key). Base: https://api.open-meteo.com/ */
 interface ForecastApi {
+    /** Clima actual y pronóstico diario de [FORECAST_DAYS] días en una sola llamada (RF-03, RF-04). */
     @GET("v1/forecast")
-    suspend fun getCurrentWeather(
+    suspend fun getForecast(
         @Query("latitude") latitude: Double,
         @Query("longitude") longitude: Double,
         @Query("current") current: String = CURRENT_FIELDS,
         @Query("daily") daily: String = DAILY_FIELDS,
-        @Query("forecast_days") forecastDays: Int = 1,
+        @Query("forecast_days") forecastDays: Int = FORECAST_DAYS,
         @Query("timezone") timezone: String = "auto"
     ): ForecastResponseDto
 
     companion object {
         const val BASE_URL = "https://api.open-meteo.com/"
         const val CURRENT_FIELDS = "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
-        const val DAILY_FIELDS = "temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+        const val DAILY_FIELDS = "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+        const val FORECAST_DAYS = 5
     }
 }
 
@@ -40,6 +42,8 @@ data class CurrentWeatherDto(
 
 @Serializable
 data class DailyWeatherDto(
+    @SerialName("time") val dates: List<String> = emptyList(),
+    @SerialName("weather_code") val weatherCodes: List<Int> = emptyList(),
     @SerialName("temperature_2m_max") val maxTemperaturesC: List<Double>,
     @SerialName("temperature_2m_min") val minTemperaturesC: List<Double>,
     @SerialName("precipitation_probability_max") val rainProbabilitiesPercent: List<Int?> = emptyList()

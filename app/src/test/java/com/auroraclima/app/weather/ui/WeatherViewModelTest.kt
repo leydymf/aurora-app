@@ -4,6 +4,7 @@ import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SearchQueryGate
 import com.auroraclima.app.weather.domain.model.City
+import com.auroraclima.app.weather.domain.model.DailyForecast
 import com.auroraclima.app.weather.domain.model.WeatherCondition
 import com.auroraclima.app.weather.domain.model.WeatherSnapshot
 import com.auroraclima.app.weather.domain.repository.WeatherRepository
@@ -338,6 +339,8 @@ private class FakeWeatherRepository : WeatherRepository {
     }
 
     override suspend fun getCachedSnapshot(): WeatherSnapshot? = cachedSnapshot
+
+    override suspend fun getCachedForecast(): List<DailyForecast> = emptyList()
 
     override suspend fun refreshSnapshot(city: City): Result<WeatherSnapshot> = refreshResult
 }

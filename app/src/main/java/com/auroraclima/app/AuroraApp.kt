@@ -44,6 +44,7 @@ import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
 import com.auroraclima.app.records.ui.JournalEditorRoute
 import com.auroraclima.app.records.ui.JournalListRoute
+import com.auroraclima.app.weather.ui.ForecastRoute
 import com.auroraclima.app.weather.ui.WeatherScreen
 import com.auroraclima.app.weather.ui.WeatherViewModel
 
@@ -63,6 +64,11 @@ fun AuroraApp(sessionManager: SessionManager) {
             startDestination = HOME_ROUTE
         ) {
             composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) { HomeRoute(navController) }
+            // Pronóstico extendido (RF-04): pantalla de la fachada, fuera del
+            // grafo seguro — refuerza la credibilidad de la app de clima (RNF-05).
+            composable(FORECAST_ROUTE) {
+                ForecastRoute(onBack = { navController.popBackStack() })
+            }
             // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y
             // de recientes, botón nube de salida rápida y reporte de interacción
             // garantizados por construcción (RNF-02, RF-16, RNF-03).
@@ -304,11 +310,13 @@ private fun HomeRoute(navController: NavHostController) {
         state = state,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onCitySelected = viewModel::onCitySelected,
-        onSearchCancel = viewModel::onSearchCancel
+        onSearchCancel = viewModel::onSearchCancel,
+        onOpenForecast = { navController.navigate(FORECAST_ROUTE) }
     )
 }
 
 private const val HOME_ROUTE = "home"
+private const val FORECAST_ROUTE = "forecast"
 private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"

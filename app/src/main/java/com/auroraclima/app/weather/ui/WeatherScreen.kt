@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -53,7 +54,7 @@ import com.auroraclima.app.weather.domain.model.City
 import com.auroraclima.app.weather.domain.model.WeatherCondition
 
 /**
- * Pantalla principal de clima (mockups P01 y P02) — RF-01, RF-02, RF-03.
+ * Pantalla principal de clima (mockups P01 y P02) — RF-01, RF-02, RF-03, RF-04.
  * Solo pinta estado y emite eventos; sin lógica.
  */
 @Composable
@@ -62,6 +63,7 @@ fun WeatherScreen(
     onSearchQueryChange: (String) -> Unit,
     onCitySelected: (City) -> Unit,
     onSearchCancel: () -> Unit,
+    onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -108,7 +110,11 @@ fun WeatherScreen(
             state.isSearchActive ->
                 Spacer(modifier = Modifier.weight(1f))
             state.weather != null ->
-                WeatherCard(weather = state.weather, modifier = Modifier.weight(1f))
+                WeatherCard(
+                    weather = state.weather,
+                    onOpenForecast = onOpenForecast,
+                    modifier = Modifier.weight(1f)
+                )
             else ->
                 WeatherEmptyContent(modifier = Modifier.weight(1f))
         }
@@ -256,7 +262,7 @@ private fun NoResultsContent(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun WeatherCard(weather: WeatherCardUiState, modifier: Modifier = Modifier) {
+private fun WeatherCard(weather: WeatherCardUiState, onOpenForecast: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -316,6 +322,27 @@ private fun WeatherCard(weather: WeatherCardUiState, modifier: Modifier = Modifi
                 modifier = Modifier.weight(1f)
             )
         }
+        Spacer(modifier = Modifier.weight(1f))
+        ForecastButton(onClick = onOpenForecast)
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/** Acceso al pronóstico extendido desde la vista de la ciudad (RF-04, mockup P01). */
+@Composable
+private fun ForecastButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.weather_forecast_title),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -385,7 +412,8 @@ private fun WeatherScreenPreview() {
             ),
             onSearchQueryChange = {},
             onCitySelected = {},
-            onSearchCancel = {}
+            onSearchCancel = {},
+            onOpenForecast = {}
         )
     }
 }

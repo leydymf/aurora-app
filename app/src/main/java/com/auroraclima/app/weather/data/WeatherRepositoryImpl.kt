@@ -1,5 +1,6 @@
 package com.auroraclima.app.weather.data
 
+import com.auroraclima.app.weather.data.local.DailyForecastEntity
 import com.auroraclima.app.weather.data.local.SelectedCityEntity
 import com.auroraclima.app.weather.data.local.WeatherDao
 import com.auroraclima.app.weather.data.local.WeatherSnapshotEntity
@@ -8,10 +9,12 @@ import com.auroraclima.app.weather.data.remote.ForecastResponseDto
 import com.auroraclima.app.weather.data.remote.GeocodingApi
 import com.auroraclima.app.weather.data.remote.GeocodingResultDto
 import com.auroraclima.app.weather.domain.model.City
+import com.auroraclima.app.weather.domain.model.DailyForecast
 import com.auroraclima.app.weather.domain.model.WeatherCondition
 import com.auroraclima.app.weather.domain.model.WeatherSnapshot
 import com.auroraclima.app.weather.domain.repository.WeatherRepository
 import java.time.Clock
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
@@ -35,11 +38,15 @@ class WeatherRepositoryImpl @Inject constructor(
 
     override suspend fun getCachedSnapshot(): WeatherSnapshot? = weatherDao.getSnapshot()?.toDomain()
 
+    // Una caché ilegible degrada a lista vacía: la fachada nunca muestra errores técnicos.
+    override suspend fun getCachedForecast(): List<DailyForecast> =
+        suspendRunCatching { weatherDao.getForecast().map { it.toDomain() } }.getOrDefault(emptyList())
+
     override suspend fun refreshSnapshot(city: City): Result<WeatherSnapshot> = suspendRunCatching {
-        val snapshot = forecastApi
-            .getCurrentWeather(latitude = city.latitude, longitude = city.longitude)
-            .toDomain(cityName = city.name, updatedAtEpochMillis = clock.millis())
+        val response = forecastApi.getForecast(latitude = city.latitude, longitude = city.longitude)
+        val snapshot = response.toDomain(cityName = city.name, updatedAtEpochMillis = clock.millis())
         weatherDao.saveSnapshot(snapshot.toEntity())
+        weatherDao.replaceForecast(response.toForecastEntities())
         snapshot
     }
 }
@@ -97,6 +104,31 @@ private fun WeatherSnapshot.toEntity() = WeatherSnapshotEntity(
     windSpeedKmh = windSpeedKmh,
     rainProbabilityPercent = rainProbabilityPercent,
     updatedAtEpochMillis = updatedAtEpochMillis
+)
+
+/**
+ * Los arreglos diarios de Open-Meteo van en paralelo por índice; un día con
+ * fecha ilegible o sin alguno de sus valores se omite sin invalidar el resto.
+ */
+private fun ForecastResponseDto.toForecastEntities(): List<DailyForecastEntity> =
+    daily.dates.mapIndexedNotNull { index, date ->
+        DailyForecastEntity(
+            dayIndex = index,
+            epochDay = runCatching { LocalDate.parse(date).toEpochDay() }.getOrNull()
+                ?: return@mapIndexedNotNull null,
+            weatherCode = daily.weatherCodes.getOrNull(index) ?: return@mapIndexedNotNull null,
+            maxTemperatureC = daily.maxTemperaturesC.getOrNull(index) ?: return@mapIndexedNotNull null,
+            minTemperatureC = daily.minTemperaturesC.getOrNull(index) ?: return@mapIndexedNotNull null,
+            rainProbabilityPercent = daily.rainProbabilitiesPercent.getOrNull(index) ?: 0
+        )
+    }
+
+private fun DailyForecastEntity.toDomain() = DailyForecast(
+    date = LocalDate.ofEpochDay(epochDay),
+    condition = WeatherCondition.fromWmoCode(weatherCode),
+    maxTemperatureC = maxTemperatureC,
+    minTemperatureC = minTemperatureC,
+    rainProbabilityPercent = rainProbabilityPercent
 )
 
 private fun WeatherSnapshotEntity.toDomain() = WeatherSnapshot(
