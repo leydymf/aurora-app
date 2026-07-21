@@ -74,13 +74,20 @@ fun WeatherScreen(
             .padding(horizontal = 20.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
-        if (state.isSearchActive) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                WeatherSearchBar(
-                    query = state.searchQuery,
-                    onQueryChange = onSearchQueryChange,
-                    modifier = Modifier.weight(1f)
-                )
+        // La barra vive en UNA sola posición de la composición: si cambiara de rama
+        // al activarse la búsqueda, Compose recrearía el TextField y el foco (y el
+        // teclado) se perderían tras la primera letra tecleada.
+        if (!state.isSearchActive) {
+            WeatherHeader(headerDate = state.headerDate)
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            WeatherSearchBar(
+                query = state.searchQuery,
+                onQueryChange = onSearchQueryChange,
+                modifier = Modifier.weight(1f)
+            )
+            if (state.isSearchActive) {
                 TextButton(onClick = onSearchCancel) {
                     Text(
                         text = stringResource(R.string.weather_search_cancel),
@@ -89,14 +96,6 @@ fun WeatherScreen(
                     )
                 }
             }
-        } else {
-            WeatherHeader(headerDate = state.headerDate)
-            Spacer(modifier = Modifier.height(20.dp))
-            WeatherSearchBar(
-                query = state.searchQuery,
-                onQueryChange = onSearchQueryChange,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
         when {
             state.isSearchActive && state.searchResults.isNotEmpty() ->
