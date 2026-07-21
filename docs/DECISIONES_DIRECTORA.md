@@ -14,7 +14,8 @@
 > como «aceptado», significa que queda por fuera de lo que este prototipo (nivel de
 > madurez TRL 4, trabajo de grado) puede resolver, y se documenta para el informe.
 >
-> **Estado:** borrador para reunión. Última actualización: 2026-07-16.
+> **Estado:** ACTA — decisiones tomadas en la reunión con la directora del **2026-07-21**.
+> Cada bloque registra la decisión adoptada. Última actualización: 2026-07-21.
 
 ---
 
@@ -50,7 +51,11 @@ código, no como una función visible dentro de la app. Es la única que no intr
 rastro nuevo. Conviene explicarla a la usuaria durante el acompañamiento, no dejarla
 escrita dentro de la aplicación.
 
-> **Decisión:** ______________________________________  **Fecha:** ____________
+> **Decisión:** APROBADA la **opción A** (reinstalar → código de activación → iniciar
+> sesión con la cuenta existente → crear código nuevo; los registros regresan desde la
+> copia en la nube al reinstalar en el mismo dispositivo). La ruta se explicará a la
+> usuaria durante el acompañamiento, no se documenta dentro de la app. **P-18 cerrado**
+> como decisión documentada.  **Fecha:** 2026-07-21
 
 ### 1.2 El código de activación es único y compartido *(P-20)*
 
@@ -72,7 +77,9 @@ código circulara públicamente, cualquier persona podría llegar a la pantalla 
 registrarlo como limitación conocida, con **B como trabajo futuro**. La mitigación
 práctica en el piloto es entregar el código en persona y no por escrito.
 
-> **Decisión:** ______________________________________  **Fecha:** ____________
+> **Decisión:** APROBADA la **opción A**: código único para el piloto, entregado en
+> persona. Los códigos por fundación o rotativos (opción B) quedan como **trabajo
+> futuro**. **P-20 cerrado** como limitación documentada.  **Fecha:** 2026-07-21
 
 ### 1.3 El texto que se escribe en la barra viaja a internet *(P-12)*
 
@@ -94,7 +101,9 @@ del piloto. No hay una alternativa que conserve el camuflaje y evite que el text
 
 **Recomendación técnica:** aceptar el riesgo, documentado, con la mitigación descrita.
 
-> **Decisión:** ______________________________________  **Fecha:** ____________
+> **Decisión:** riesgo **ACEPTADO** y ratificado, con la mitigación descrita
+> (verificación offline del código, mínimo 6 caracteres, prohibición de nombres de
+> ciudad). **P-12 cerrado** como riesgo ratificado.  **Fecha:** 2026-07-21
 
 ---
 
@@ -123,7 +132,9 @@ a poner contraseñas débiles o a abandonar.
 **Recomendación técnica:** **A para el piloto TRL 4**, midiendo el costo real de uso, y
 dejar **C como la evolución natural** para después del prototipo.
 
-> **Decisión (a / b / c):** ______________________  **Fecha:** ____________
+> **Decisión (a / b / c):** **A** para el piloto (ingreso completo en cada entrada,
+> midiendo el costo real de uso). El **reingreso silencioso (C)** queda como **trabajo
+> futuro priorizado**. **P-31 cerrado** con esta decisión.  **Fecha:** 2026-07-21
 
 ---
 
@@ -151,7 +162,10 @@ cargados como borrador, y varios campos están marcados como **«por confirmar»
 **Recomendación técnica:** revisar y confirmar cada dato antes del piloto; el sistema ya
 impide que cualquier dato «por confirmar» llegue a una usuaria.
 
-> **Decisión / observaciones:** _______________________________  **Fecha:** _________
+> **Decisión / observaciones:** contenido, textos, rutas y teléfonos **VALIDADOS** por
+> la directora. La usuaria entregará los datos verificados para cargarlos; la validación
+> **ya no bloquea**: queda pendiente **solo la carga** del contenido validado.
+> **Fecha:** 2026-07-21
 
 ### 3.2 El cuestionario de orientación y sus umbrales de riesgo *(P-38, y P-41 sobre la presentación del nivel)*
 
@@ -191,7 +205,11 @@ expreso queda como trabajo futuro).
 **Recomendación técnica:** revisar el instrumento como un todo (preguntas + pesos +
 umbrales + rutas). Tras el visto bueno, se retira la marca de borrador y se publica.
 
-> **Decisión / ajustes a umbrales o preguntas:** ____________________  **Fecha:** ______
+> **Decisión / ajustes a umbrales o preguntas:** cuestionario **VALIDADO** en su
+> conjunto (seis preguntas, pesos, umbrales, pisos de preguntas críticas y rutas), y la
+> gradación por palabras/acento sobrio de P-41 **RATIFICADA**. La usuaria entregará los
+> datos verificados para cargarlos; la validación **ya no bloquea**: queda pendiente
+> **solo la carga**.  **Fecha:** 2026-07-21
 
 ---
 
@@ -213,7 +231,9 @@ fundaciones u organizaciones de atención, porque una coincidencia podría asoci
 suficientemente genérico y no coincide con logotipos de entidades del sector antes de
 difundir la app.
 
-> **Decisión:** ______________________________________  **Fecha:** ____________
+> **Decisión:** ícono **CONFIRMADO** por la directora (arte suficientemente genérico, sin
+> coincidencia con material institucional del sector). **P-09 cerrado.**
+> **Fecha:** 2026-07-21
 
 ### 4.2 El correo de recuperación de contraseña *(P-19)*
 
@@ -233,7 +253,38 @@ queda **fuera del camuflaje**: aparece en el correo personal de la usuaria.
 **Recomendación técnica:** **A**, personalizar el correo con identidad de clima, que
 conserva la función sin romper el camuflaje.
 
-> **Decisión (a / b):** ______________________  **Fecha:** ____________
+> **Decisión (a / b):** APROBADA la **opción A** (plantilla del correo con identidad
+> 100 % de clima). **P-19 queda abierto solo con la tarea operativa**: personalizar la
+> plantilla en la consola de Firebase (Authentication → Templates → *Password reset*).
+> **Fecha:** 2026-07-21
+
+**Texto sugerido de la plantilla (100 % clima, en español).** Para pegar en la consola
+de Firebase (Authentication → Templates → *Password reset*). Firebase inserta el enlace
+en el marcador `%LINK%` y el nombre de la app en `%APP_NAME%`.
+
+- **Nombre del remitente:** `Aurora Clima`
+- **Asunto:** `Aurora Clima: restablece el acceso a tu cuenta`
+- **Cuerpo:**
+
+  > Hola:
+  >
+  > Recibimos una solicitud para restablecer el acceso a tu cuenta de **Aurora Clima**,
+  > tu app del tiempo.
+  >
+  > Para elegir una nueva contraseña y seguir consultando el pronóstico, abre este
+  > enlace:
+  >
+  > %LINK%
+  >
+  > Si no pediste este cambio, puedes ignorar este mensaje: tu cuenta seguirá igual y no
+  > se hará ninguna modificación.
+  >
+  > Buen tiempo,
+  > El equipo de Aurora Clima
+
+*Nota de camuflaje:* el mensaje no menciona ubicaciones, códigos, claves personales ni
+nada del espacio seguro; solo la identidad meteorológica. No añadir logotipos ni enlaces
+adicionales que puedan asociarse a entidades del sector.
 
 ### 4.3 Redacciones internas legibles solo al descompilar la app *(P-32, P-40, P-44)*
 
@@ -257,7 +308,9 @@ que queda como mejora posterior.
 **Recomendación técnica:** **ratificar como riesgo residual aceptado** para TRL 4, con la
 mitigación documentada como trabajo futuro.
 
-> **Ratificado (sí / con reservas):** ______________________  **Fecha:** ____________
+> **Ratificado (sí / con reservas):** **RATIFICADO** (sí). P-32, P-40 y P-44 quedan como
+> riesgos residuales aceptados para TRL 4, con la mitigación (servir esos textos desde la
+> nube) documentada como trabajo futuro. **Cerrados.**  **Fecha:** 2026-07-21
 
 ### 4.4 Riesgos técnicos residuales a ratificar *(P-35, P-47, P-48)*
 
@@ -281,7 +334,12 @@ explicados en lenguaje sencillo:
 **Recomendación técnica:** **ratificar los tres como riesgos residuales aceptados** para
 TRL 4; todos tienen una vía de mejora documentada para después del prototipo.
 
-> **Ratificado (sí / con reservas):** ______________________  **Fecha:** ____________
+> **Ratificado (sí / con reservas):** **P-35 y P-47(b) RATIFICADOS** como riesgos
+> residuales aceptados. **P-48 CAMBIA:** por decisión de la directora y la usuaria, la
+> **recuperación multi-dispositivo (RF-39) ENTRA al alcance de la entrega final** —se
+> reabre como trabajo planificado para la **Fase D2** (exigirá una llave recuperable, lo
+> que reabre P-37b). El respaldo ligado al dispositivo se mantiene solo hasta esa fase.
+> **Fecha:** 2026-07-21
 
 ---
 
@@ -295,11 +353,25 @@ fondo antes de escribir una sola línea.
 
 **Puntos a decidir.**
 
-1. **¿Qué debe poder adjuntarse en el prototipo?** La propuesta es **solo imágenes
+1. **¿Qué debe poder adjuntarse en el prototipo?** La propuesta era **solo imágenes
    elegidas desde la galería del teléfono**, usando el selector del propio sistema
    Android. *Por qué:* así la app **no necesita permiso de cámara ni de galería**, y un
    permiso de cámara en una app de clima sería justo la clase de detalle que delata. No
    se incluiría una cámara propia dentro de Aurora en esta etapa.
+
+   > **Ampliación aprobada (2026-07-21).** La política se amplía a tres vías de captura,
+   > todas **sin permisos delatores**:
+   > - **(i) Imágenes de la galería** vía el selector del sistema (propuesta original).
+   > - **(ii) Foto con la cámara DEL SISTEMA** (app de cámara de Android, no una cámara
+   >   propia), con **salida directa al almacén cifrado privado** de Aurora — sin pedir
+   >   permiso de cámara y **sin pasar por la galería**. Así la evidencia no deja copia
+   >   fuera del espacio seguro.
+   > - **(iii) Adjuntar archivos existentes** (PDF, documentos, audio) vía el **selector
+   >   del sistema**.
+   >
+   > **Excluida:** la **grabación de audio propia** dentro de Aurora, porque requeriría
+   > el permiso de micrófono, que sería un detalle delator. (Sí se puede adjuntar un
+   > audio ya existente por la vía (iii).)
 
 2. **¿Es suficiente advertir sobre los rastros en la galería?** La imagen original
    **sigue existiendo en la galería** de la usuaria: no es un archivo de Aurora y la app
@@ -320,7 +392,15 @@ fondo antes de escribir una sola línea.
 de cámara; solo en el dispositivo y cifradas; con advertencia explícita sobre el rastro
 en la galería y borrado de la ubicación GPS**— como base para construir la función.
 
-> **Política aprobada / ajustes:** _________________________________  **Fecha:** _______
+> **Política aprobada / ajustes:** **APROBADA Y AMPLIADA.** Se conserva la base
+> (evidencias **solo en el dispositivo y cifradas**, **sin permiso de cámara ni de
+> galería**, con **advertencia explícita** sobre el rastro en la galería y **borrado de
+> la ubicación GPS**) y se amplían las vías de captura a tres: (i) imágenes de la
+> galería, (ii) **foto con la cámara del sistema con salida directa al almacén cifrado
+> privado** (sin permiso de cámara, sin pasar por la galería) y (iii) **adjuntar
+> archivos existentes** (PDF, documentos, audio) vía el selector del sistema. Se
+> **excluye** la grabación de audio propia (requeriría permiso de micrófono, delator).
+> Base aprobada para construir RF-33.  **Fecha:** 2026-07-21
 
 ---
 
