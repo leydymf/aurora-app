@@ -1,34 +1,194 @@
 {
-  "_comment": "BORRADOR A VALIDAR por la directora del trabajo de grado. Entidades de la ruta de atención de Bucaramanga y Santander (RF-22). Todo dato marcado [POR CONFIRMAR] debe verificarse con fuentes oficiales antes de publicar a usuarias reales. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
+  "_comment": "Entidades de la ruta de atención de los cuatro municipios (Bucaramanga, Floridablanca, Girón, Piedecuesta) VERIFICADAS por la directora contra fuentes oficiales (julio 2026), fuente de verdad: tools/seed/source/contenido-verificado-2026-07.md §3. Una entidad por fila del documento. 'role' = ¿qué hace?; 'whenToUse' = ¿cuándo acudir? (frase propia 'Acude…' del documento o, si la entidad no la trae, la frase de entrada literal de su puerta de ruta). Los correos y notas no marcables (opción/ext./WhatsApp) van en 'address' o 'hours'; el número base marcable va en 'phones'. RETENIDAS por la compuerta [POR CONFIRMAR] (§4): a06 (teléfonos del ESE Piedecuesta) y a26 (direcciones de las Personerías). IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
   "collection": "agencies",
   "documents": [
     {
       "id": "a01",
       "schemaVersion": 1,
-      "name": "Urgencias de hospitales y clínicas (EPS o red pública)",
-      "role": "Te brinda atención médica y psicológica de urgencia, gratuita, y activa la ruta de protección desde el sector salud. En violencia sexual aplica el protocolo de atención integral (anticoncepción de emergencia, prevención de VIH e infecciones, recolección de evidencias si lo autorizas).",
-      "whenToUse": "Después de cualquier agresión física o sexual, aunque no tengas heridas visibles. En violencia sexual, lo antes posible: idealmente dentro de las primeras 72 horas.",
+      "name": "Urgencias de cualquier hospital, clínica o centro de salud",
+      "role": "Atención médica inmediata y gratuita, activación de la ruta de protección y registro en historia clínica.",
+      "whenToUse": "Acude al servicio de urgencias más cercano, sin importar tu afiliación.",
       "phones": [],
-      "address": "El servicio de urgencias más cercano. En Bucaramanga: Hospital Universitario de Santander (HUS), carrera 33 n.º 28-126 [POR CONFIRMAR]",
-      "hours": "24 horas, todos los días"
+      "address": "El más cercano a tu ubicación",
+      "hours": null
     },
     {
       "id": "a02",
       "schemaVersion": 1,
-      "name": "Comisarías de Familia de Bucaramanga",
-      "role": "Reciben tu caso cuando el agresor es tu pareja, expareja o un familiar. Pueden dictar medidas de protección de la Ley 1257 (ordenar que el agresor salga de la casa, que no se te acerque ni te contacte) y remitirte a atención psicosocial. No necesitas abogado.",
-      "whenToUse": "Cuando la agresión ocurre dentro de la familia o la pareja y necesitas protección, incluso si no quieres (o no has decidido) iniciar un proceso penal.",
+      "name": "Hospital Universitario de Santander (HUS), Bucaramanga",
+      "role": "Urgencias de mayor complejidad y atención integral a víctimas de violencia sexual.",
+      "whenToUse": "Acude a esta ruta si tienes lesiones, si sufriste violencia sexual o si tu salud emocional está afectada.",
       "phones": [
-        "(607) 633 7000 ext. [POR CONFIRMAR]"
+        "607 691 2010"
       ],
-      "address": "Sedes en Bucaramanga: Centro, Norte y Provenza [POR CONFIRMAR direcciones exactas]",
-      "hours": "Lunes a viernes en horario de oficina; fuera de ese horario la urgencia la atiende la Policía (123) [POR CONFIRMAR]"
+      "address": "Carrera 33 # 28-126, Bucaramanga.",
+      "hours": "Urgencias 24 horas"
     },
     {
       "id": "a03",
       "schemaVersion": 1,
-      "name": "Policía Nacional — cuadrante",
-      "role": "Atiende la emergencia en el momento: puede intervenir para detener la agresión, acompañarte a un lugar seguro y dejar registro de lo ocurrido, que sirve dentro de la ruta.",
+      "name": "Hospital San Juan de Dios, Floridablanca",
+      "role": "Red pública de urgencias del municipio de Floridablanca.",
+      "whenToUse": "Acude a esta ruta si tienes lesiones, si sufriste violencia sexual o si tu salud emocional está afectada.",
+      "phones": [
+        "607 700 0080"
+      ],
+      "address": "Carrera 8 # 3-30, Floridablanca.",
+      "hours": null
+    },
+    {
+      "id": "a04",
+      "schemaVersion": 1,
+      "name": "ESE Clínica Guane, Floridablanca",
+      "role": "Red pública de salud de Floridablanca, con centros de salud en varios barrios.",
+      "whenToUse": "Acude a esta ruta si tienes lesiones, si sufriste violencia sexual o si tu salud emocional está afectada.",
+      "phones": [
+        "607 700 8020"
+      ],
+      "address": "Calle 4 # 7-01, Floridablanca.",
+      "hours": null
+    },
+    {
+      "id": "a05",
+      "schemaVersion": 1,
+      "name": "ESE Clínica Girón",
+      "role": "Red pública de urgencias del municipio de Girón.",
+      "whenToUse": "Acude a esta ruta si tienes lesiones, si sufriste violencia sexual o si tu salud emocional está afectada.",
+      "phones": [
+        "607 653 1332"
+      ],
+      "address": "Calle 33 # 25-35, Girón.",
+      "hours": null
+    },
+    {
+      "id": "a06",
+      "schemaVersion": 1,
+      "name": "ESE Hospital Local de Piedecuesta",
+      "role": "Red pública de urgencias del municipio de Piedecuesta.",
+      "whenToUse": "Acude a esta ruta si tienes lesiones, si sufriste violencia sexual o si tu salud emocional está afectada.",
+      "phones": [
+        "607 655 0209 [POR CONFIRMAR]",
+        "607 665 0446 [POR CONFIRMAR]"
+      ],
+      "address": "Carrera 5 # 5-59, Piedecuesta.",
+      "hours": null
+    },
+    {
+      "id": "a07",
+      "schemaVersion": 1,
+      "name": "Comisaría de Familia La Joya, Bucaramanga",
+      "role": "Medidas de protección, atención psicosocial y jurídica en violencia intrafamiliar. Atiende las comunas 3, 4, 5, 6, 7, 8, 15 y 17.",
+      "whenToUse": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte.",
+      "phones": [
+        "318 350 6345",
+        "607 633 7000"
+      ],
+      "address": "Calle 39 # 4-36, barrio La Joya. Tel. 607 633 7000, opción 5. comisarias@bucaramanga.gov.co",
+      "hours": "Línea 24 horas: 318 350 6345"
+    },
+    {
+      "id": "a08",
+      "schemaVersion": 1,
+      "name": "Comisaría de Familia Norte, Bucaramanga",
+      "role": "Medidas de protección, atención psicosocial y jurídica. Atiende las comunas 1 y 2.",
+      "whenToUse": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte.",
+      "phones": [
+        "318 350 6345"
+      ],
+      "address": "Calle 7N # 19-19, barrio La Juventud (Casa de Justicia del Norte).",
+      "hours": "Línea 24 horas: 318 350 6345"
+    },
+    {
+      "id": "a09",
+      "schemaVersion": 1,
+      "name": "Comisaría de Familia Oriente, Bucaramanga",
+      "role": "Medidas de protección, atención psicosocial y jurídica. Atiende las comunas 9 a 14, 16 y el corregimiento 3.",
+      "whenToUse": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte.",
+      "phones": [
+        "318 350 6345"
+      ],
+      "address": "Kilómetro 2 vía Pamplona.",
+      "hours": "Línea 24 horas: 318 350 6345"
+    },
+    {
+      "id": "a10",
+      "schemaVersion": 1,
+      "name": "Comisaría de Familia, Floridablanca",
+      "role": "Medidas de protección y atención en violencia intrafamiliar para Floridablanca.",
+      "whenToUse": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte.",
+      "phones": [
+        "607 658 5937"
+      ],
+      "address": "Casa de Justicia: Avenida 60 # 42-63, barrio El Carmen Etapa 3. comisaria3@floridablanca.gov.co",
+      "hours": null
+    },
+    {
+      "id": "a11",
+      "schemaVersion": 1,
+      "name": "Comisaría de Familia, Girón",
+      "role": "Medidas de protección y atención en violencia intrafamiliar para Girón.",
+      "whenToUse": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte.",
+      "phones": [
+        "607 646 3030"
+      ],
+      "address": "Carrera 25 # 30-32, Parque Principal (sede Alcaldía). comisaria@giron-santander.gov.co",
+      "hours": null
+    },
+    {
+      "id": "a12",
+      "schemaVersion": 1,
+      "name": "Comisaría de Familia, Piedecuesta",
+      "role": "Medidas de protección y atención en violencia intrafamiliar para Piedecuesta.",
+      "whenToUse": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte.",
+      "phones": [
+        "607 665 0444"
+      ],
+      "address": "Carrera 6 # 10-78, barrio Centro. Tel. 607 665 0444, ext. 1731 a 1735. comisaria1@alcaldiadepiedecuesta.gov.co",
+      "hours": null
+    },
+    {
+      "id": "a13",
+      "schemaVersion": 1,
+      "name": "Centro Integral de la Mujer, Bucaramanga",
+      "role": "Acompañamiento gratuito en psicología, asesoría jurídica y trabajo social para mujeres.",
+      "whenToUse": "Acude si necesitas orientación y apoyo profesional continuo.",
+      "phones": [
+        "607 635 1897",
+        "312 674 0066"
+      ],
+      "address": "Calle 34 # 35-39, barrio Álvarez. WhatsApp: 312 674 0066.",
+      "hours": "Lunes a viernes, 8 a.m. a 12 m. y 2 a 5 p.m."
+    },
+    {
+      "id": "a14",
+      "schemaVersion": 1,
+      "name": "ICBF, Regional Santander",
+      "role": "Protección de niñas, niños y adolescentes.",
+      "whenToUse": "Acude si hay menores de edad como víctimas o testigos.",
+      "phones": [
+        "607 697 2100",
+        "141"
+      ],
+      "address": "Calle 16N # 16D-86, barrio La Juventud, Bucaramanga.",
+      "hours": null
+    },
+    {
+      "id": "a15",
+      "schemaVersion": 1,
+      "name": "ICBF, Centro Zonal Floridablanca",
+      "role": "Protección de niñas, niños y adolescentes en Floridablanca y su zona.",
+      "whenToUse": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte.",
+      "phones": [
+        "607 697 2100"
+      ],
+      "address": "Carrera 6 # 3-04, barrio Caracolí, Floridablanca.",
+      "hours": null
+    },
+    {
+      "id": "a16",
+      "schemaVersion": 1,
+      "name": "Policía Nacional, estación o CAI más cercano",
+      "role": "Auxilio inmediato y acompañamiento en situaciones de riesgo. Hay estaciones en los cuatro municipios.",
       "whenToUse": "Cuando estás en peligro ahora mismo o la agresión acaba de ocurrir.",
       "phones": [
         "123"
@@ -37,64 +197,122 @@
       "hours": "24 horas, todos los días"
     },
     {
-      "id": "a04",
+      "id": "a17",
       "schemaVersion": 1,
-      "name": "Secretaría de la Mujer y Equidad de Género — Gobernación de Santander [POR CONFIRMAR nombre oficial vigente]",
-      "role": "Ofrece orientación psicosocial y jurídica gratuita, y coordina los programas de apoyo del departamento para mujeres.",
-      "whenToUse": "Cuando necesites orientación y acompañamiento para entender tus opciones, sin que sea una urgencia inmediata.",
+      "name": "URI, Unidad de Reacción Inmediata de la Fiscalía",
+      "role": "Recibe denuncias de delitos que requieren acción inmediata.",
+      "whenToUse": "Acude aquí si el hecho acaba de ocurrir o si necesitas denunciar fuera del horario de oficina.",
       "phones": [
-        "[POR CONFIRMAR]"
+        "607 652 2222"
       ],
-      "address": "Gobernación de Santander, Bucaramanga [POR CONFIRMAR dependencia y dirección]",
-      "hours": "Lunes a viernes en horario de oficina [POR CONFIRMAR]"
+      "address": "Carrera 19 # 24-61, piso 1, Bucaramanga.",
+      "hours": "Atiende 24 horas"
     },
     {
-      "id": "a05",
+      "id": "a18",
       "schemaVersion": 1,
-      "name": "ICBF — Instituto Colombiano de Bienestar Familiar",
-      "role": "Protege los derechos de niñas, niños y adolescentes. Puede tomar medidas de restablecimiento de derechos cuando hay menores de edad afectados.",
-      "whenToUse": "Cuando tus hijos o hijas (u otros menores de edad) están siendo afectados o en riesgo por la situación de violencia.",
+      "name": "CAIVAS, Centro de Atención Integral a Víctimas de Violencia Sexual (Fiscalía)",
+      "role": "Atención especializada y denuncia en casos de violencia sexual, con equipo interdisciplinario.",
+      "whenToUse": "Acude a esta ruta cuando decidas denunciar penalmente los hechos.",
       "phones": [
-        "141"
+        "607 652 2222",
+        "607 697 0083"
       ],
-      "address": "Regional Santander, Bucaramanga [POR CONFIRMAR dirección]",
-      "hours": "Línea 141: 24 horas, todos los días"
+      "address": "Carrera 19 # 24-61, piso 4, Bucaramanga.",
+      "hours": "Lunes a viernes en horario de oficina"
     },
     {
-      "id": "a06",
+      "id": "a19",
       "schemaVersion": 1,
-      "name": "Fiscalía General de la Nación (URI / CAIVAS Bucaramanga)",
-      "role": "Recibe la denuncia penal e investiga. El CAIVAS atiende de manera especializada los casos de violencia sexual; la URI recibe denuncias de urgencia. La denuncia es gratuita y no necesitas abogado.",
-      "whenToUse": "Cuando decidas denunciar penalmente la agresión. Puedes pedir que te atienda una funcionaria mujer y estar acompañada por alguien de confianza.",
+      "name": "CAVIF, Centro de Atención a Víctimas de Violencia Intrafamiliar (Fiscalía)",
+      "role": "Atención especializada y denuncia en casos de violencia intrafamiliar.",
+      "whenToUse": "Acude a esta ruta cuando decidas denunciar penalmente los hechos.",
+      "phones": [
+        "607 652 2222"
+      ],
+      "address": "Carrera 19 # 24-61, piso 5, Bucaramanga.",
+      "hours": null
+    },
+    {
+      "id": "a20",
+      "schemaVersion": 1,
+      "name": "Fiscalía, Floridablanca",
+      "role": "Recepción de denuncias en el municipio de Floridablanca.",
+      "whenToUse": "Acude a esta ruta cuando decidas denunciar penalmente los hechos.",
+      "phones": [
+        "607 685 4566"
+      ],
+      "address": "Calle 5 # 2-160, Floridablanca.",
+      "hours": null
+    },
+    {
+      "id": "a21",
+      "schemaVersion": 1,
+      "name": "Fiscalía, canales virtuales",
+      "role": "Denuncia en línea desde cualquier lugar, sin desplazarte.",
+      "whenToUse": "Acude a esta ruta cuando decidas denunciar penalmente los hechos.",
       "phones": [
         "122"
       ],
-      "address": "URI Bucaramanga [POR CONFIRMAR dirección]; CAIVAS [POR CONFIRMAR dirección]",
-      "hours": "URI: 24 horas [POR CONFIRMAR]"
+      "address": "Portal ¡A Denunciar!: adenunciar.fiscalia.gov.co",
+      "hours": null
     },
     {
-      "id": "a07",
+      "id": "a22",
       "schemaVersion": 1,
-      "name": "Instituto Nacional de Medicina Legal — Bucaramanga",
-      "role": "Realiza la valoración médico-legal de las lesiones o de la agresión sexual por remisión de la Fiscalía o de la Comisaría. Su dictamen es prueba dentro del proceso.",
-      "whenToUse": "Cuando la Fiscalía o la Comisaría te remitan. En casos de violencia sexual, si te es posible, procura no bañarte ni cambiarte de ropa antes del examen para conservar las evidencias — y si ya lo hiciste, acude de todas formas: el examen sigue siendo válido.",
+      "name": "Instituto Nacional de Medicina Legal, Seccional Santander",
+      "role": "Valoración médico-legal de lesiones y de violencia sexual.",
+      "whenToUse": "Se acude por remisión de la Fiscalía, la Comisaría o la Policía; ese examen es prueba dentro del proceso.",
       "phones": [
-        "[POR CONFIRMAR]"
+        "607 697 8503",
+        "607 697 8577"
       ],
-      "address": "Bucaramanga [POR CONFIRMAR dirección]",
-      "hours": "[POR CONFIRMAR]"
+      "address": "Calle 45 # 1-51, Bucaramanga.",
+      "hours": null
     },
     {
-      "id": "a08",
+      "id": "a23",
       "schemaVersion": 1,
-      "name": "Casa de Justicia de Bucaramanga",
-      "role": "Reúne en un solo lugar varios servicios: comisaría de familia, fiscalía local, conciliación y orientación jurídica gratuita.",
-      "whenToUse": "Cuando quieras recibir orientación sobre tu caso y conocer tus opciones antes de decidir qué camino tomar.",
+      "name": "Casa de Justicia, Bucaramanga (Norte)",
+      "role": "Reúne varios servicios de justicia en un solo lugar: comisaría de familia, inspección de policía, fiscalía local y otros.",
+      "whenToUse": "Acude a esta ruta cuando decidas denunciar penalmente los hechos.",
+      "phones": [],
+      "address": "Calle 7N # 19-19, barrio La Juventud.",
+      "hours": "Lunes a viernes, 7 a.m. a 3 p.m."
+    },
+    {
+      "id": "a24",
+      "schemaVersion": 1,
+      "name": "Casa de Justicia, Floridablanca",
+      "role": "Reúne comisaría de familia, inspección de policía, fiscalía local y otros servicios de justicia.",
+      "whenToUse": "Acude a esta ruta cuando decidas denunciar penalmente los hechos.",
       "phones": [
-        "[POR CONFIRMAR]"
+        "607 691 1050"
       ],
-      "address": "[POR CONFIRMAR — Bucaramanga tiene Casa de Justicia en el barrio La Libertad y otra en el Norte]",
-      "hours": "Lunes a viernes en horario de oficina [POR CONFIRMAR]"
+      "address": "Avenida 60 # 42-63, barrio El Carmen Etapa 3. casadejusticia@floridablanca.gov.co",
+      "hours": null
+    },
+    {
+      "id": "a25",
+      "schemaVersion": 1,
+      "name": "Defensoría del Pueblo, Regional Santander",
+      "role": "Orientación jurídica gratuita y defensa de tus derechos.",
+      "whenToUse": "Acude si necesitas asesoría legal o si una entidad vulnera tus derechos.",
+      "phones": [
+        "607 645 4444"
+      ],
+      "address": "Carrera 22 # 28-07, barrio Alarcón, Bucaramanga. santander@defensoria.gov.co",
+      "hours": null
+    },
+    {
+      "id": "a26",
+      "schemaVersion": 1,
+      "name": "Personerías municipales",
+      "role": "Vigilan que las entidades te atiendan bien.",
+      "whenToUse": "Acude si alguna entidad se niega a atenderte o vulnera tus derechos.",
+      "phones": [],
+      "address": "[POR CONFIRMAR] Floridablanca: Calle 5 # 8-25. Girón: Carrera 25 # 29-19. Piedecuesta: Carrera 6 # 9-98",
+      "hours": null
     }
   ]
 }
