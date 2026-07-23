@@ -124,24 +124,21 @@ export function PublishPage() {
             ),
         [agencies.entries],
     )
-    const publishedRouteIds = useMemo(
+    const publishedLineIds = useMemo(
         () =>
             new Set(
-                (routes.entries ?? [])
+                (lines.entries ?? [])
                     .filter((entry) => entry.liveData !== null)
                     .map((entry) => entry.docId),
             ),
-        [routes.entries],
+        [lines.entries],
     )
-    const routeNames = useMemo(
+    const lineNames = useMemo(
         () =>
             new Map(
-                (routes.entries ?? []).map((entry) => [
-                    entry.docId,
-                    entry.data.title || entry.docId,
-                ]),
+                (lines.entries ?? []).map((entry) => [entry.docId, entry.data.name || entry.docId]),
             ),
-        [routes.entries],
+        [lines.entries],
     )
 
     const pendingCount =
@@ -180,7 +177,12 @@ export function PublishPage() {
         [forms.entries],
     )
     const formIssues = (entry: ResourceEntry<FormDoc>) => [
-        ...validateQuestionnaire(entry.data, publishedRouteIds, routeNames),
+        ...validateQuestionnaire(entry.data, {
+            lineIds: publishedLineIds,
+            agencyIds: publishedAgencyIds,
+            lineNames,
+            agencyNames,
+        }),
         ...validatePublishVersion(entry.data, maxLiveFormVersion),
     ]
 

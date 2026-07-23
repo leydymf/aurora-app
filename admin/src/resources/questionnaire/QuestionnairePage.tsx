@@ -1,12 +1,13 @@
-// Editor del cuestionario orientador (RF-43): metadatos, escala, preguntas
-// (pesos y piso crítico) y niveles (umbrales, consejos y rutas recomendadas).
+// Editor del cuestionario orientador validado v2 (RF-43): metadatos,
+// reconocimiento, escalas, bloques, municipios, preguntas (bloque/escala/peso/
+// contexto), dimensiones (Track 1), banderas críticas (Track 2) y niveles
+// (umbrales, consejos y accesos por municipio).
 //
 // La app elige el formulario de MAYOR `version` entre los válidos
 // (FirestoreQuestionnaireRepository.kt), así que cada guardado del borrador
 // estampa version = max(versiones vivas) + 1: al publicar, la nueva
 // configuración rige de inmediato (RF-44). Publicar exige pasar TODAS las
-// validaciones de coherencia (coherence.ts): la app descarta el documento
-// completo ante cualquier pieza inválida.
+// validaciones de coherencia (coherence.ts).
 import { useMemo } from 'react'
 import { EditorActions } from '../../components/EditorActions'
 import { EditorStatus } from '../../components/EditorStatus'
@@ -16,9 +17,23 @@ import { StringListField } from '../../components/StringListField'
 import { nextOpaqueId } from '../../lib/ids'
 import { useEntries } from '../../lib/useEntries'
 import { useResourceEditor } from '../../lib/useResourceEditor'
-import { routeFromRaw } from '../routes/schemas'
-import { maxAchievableScore, validatePublishVersion, validateQuestionnaire } from './coherence'
-import { emptyForm, formFromRaw, normalizeForm, type FormDoc, type QuestionDoc } from './formSchema'
+import { agencyFromRaw, lineFromRaw } from '../routes/schemas'
+import {
+    maxAchievableScore,
+    validatePublishVersion,
+    validateQuestionnaire,
+    type PublishedDirectory,
+} from './coherence'
+import {
+    emptyForm,
+    formFromRaw,
+    normalizeForm,
+    type CountFlagDoc,
+    type FormDoc,
+    type ThresholdFlagDoc,
+} from './formSchema'
+
+type Ref = { id: string; name: string; published: boolean }
 
 function moveItem<T>(items: readonly T[], index: number, delta: number): T[] {
     const target = index + delta
@@ -35,12 +50,73 @@ function parseIntOr0(value: string): number {
     return Number.isNaN(parsed) ? 0 : parsed
 }
 
+/** Selector de referencias (ids) con fichas removibles: preguntas, líneas o entidades. */
+function RefPicker({
+    label,
+    selected,
+    options,
+    onChange,
+}: {
+    label: string
+    selected: readonly string[]
+    options: readonly Ref[]
+    onChange: (ids: string[]) => void
+}) {
+    return (
+        <div className="field">
+            <span>{label}</span>
+            {selected.map((id, index) => {
+                const option = options.find((candidate) => candidate.id === id)
+                return (
+                    <div className="picker__row" key={id}>
+                        <span className="picker__name">
+                            {option?.name ?? id}
+                            {option !== undefined && !option.published && (
+                                <span className="picker__warn"> · sin publicar</span>
+                            )}
+                            {option === undefined && (
+                                <span className="picker__warn"> · desconocido</span>
+                            )}
+                        </span>
+                        <button
+                            type="button"
+                            className="btn--ghost"
+                            aria-label={`Quitar ${id}`}
+                            onClick={() => {
+                                onChange(selected.filter((_, i) => i !== index))
+                            }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )
+            })}
+            <select
+                className="picker__add"
+                value=""
+                onChange={(e) => {
+                    if (e.target.value === '') return
+                    onChange([...selected, e.target.value])
+                }}
+            >
+                <option value="">Agregar…</option>
+                {options
+                    .filter((option) => !selected.includes(option.id))
+                    .map((option) => (
+                        <option key={option.id} value={option.id}>
+                            {option.name + (option.published ? '' : ' (sin publicar)')}
+                        </option>
+                    ))}
+            </select>
+        </div>
+    )
+}
+
 export function QuestionnairePage() {
     const forms = useEntries('forms', formFromRaw)
-    const routes = useEntries('routes', routeFromRaw)
+    const lines = useEntries('lines', lineFromRaw)
+    const agencies = useEntries('agencies', agencyFromRaw)
 
-    // La app usa maxBy(version) sobre los documentos VIVOS: guardar el
-    // borrador con la siguiente versión garantiza que, al publicar, rija.
     const nextVersion = useMemo(
         () =>
             (forms.entries ?? []).reduce(
@@ -58,37 +134,46 @@ export function QuestionnairePage() {
         normalize: (form: FormDoc) => ({ ...normalizeForm(form), version: nextVersion }),
     })
     const { editing, selected, selectedId } = editor
-    const error = forms.error ?? routes.error
+    const error = forms.error ?? lines.error ?? agencies.error
 
-    const publishedRouteIds = useMemo(
+    const lineRefs = useMemo<Ref[]>(
         () =>
-            new Set(
-                (routes.entries ?? [])
-                    .filter((entry) => entry.liveData !== null)
-                    .map((entry) => entry.docId),
-            ),
-        [routes.entries],
+            (lines.entries ?? []).map((entry) => ({
+                id: entry.docId,
+                name: entry.data.name || entry.docId,
+                published: entry.liveData !== null,
+            })),
+        [lines.entries],
     )
-    const routeNames = useMemo(
+    const agencyRefs = useMemo<Ref[]>(
         () =>
-            new Map(
-                (routes.entries ?? []).map((entry) => [
-                    entry.docId,
-                    entry.data.title || entry.docId,
-                ]),
-            ),
-        [routes.entries],
+            (agencies.entries ?? []).map((entry) => ({
+                id: entry.docId,
+                name: entry.data.name || entry.docId,
+                published: entry.liveData !== null,
+            })),
+        [agencies.entries],
+    )
+
+    const published = useMemo<PublishedDirectory>(
+        () => ({
+            lineIds: new Set(lineRefs.filter((ref) => ref.published).map((ref) => ref.id)),
+            agencyIds: new Set(agencyRefs.filter((ref) => ref.published).map((ref) => ref.id)),
+            lineNames: new Map(lineRefs.map((ref) => [ref.id, ref.name])),
+            agencyNames: new Map(agencyRefs.map((ref) => [ref.id, ref.name])),
+        }),
+        [lineRefs, agencyRefs],
     )
 
     const publishIssues = useMemo(
         () =>
             selected !== null && selected.status === 'borrador'
                 ? [
-                      ...validateQuestionnaire(selected.data, publishedRouteIds, routeNames),
+                      ...validateQuestionnaire(selected.data, published),
                       ...validatePublishVersion(selected.data, nextVersion - 1),
                   ]
                 : [],
-        [selected, publishedRouteIds, routeNames, nextVersion],
+        [selected, published, nextVersion],
     )
     const canPublish =
         selected !== null &&
@@ -98,7 +183,6 @@ export function QuestionnairePage() {
 
     const maxScore = editing ? maxAchievableScore(editing) : 0
 
-    // El cuestionario que rige HOY en la app: el vivo de mayor versión.
     const vigenteId = useMemo(() => {
         let id: string | null = null
         let maxVersion = 0
@@ -111,14 +195,15 @@ export function QuestionnairePage() {
         return id
     }, [forms.entries])
 
-    // Solo se protege el cuestionario VIGENTE (el vivo de mayor versión: el
-    // único que la app usa): borrarlo dejaría a la app sin el que rige o con
-    // una versión vieja. Los publicados ya superados y los nunca publicados
-    // se eliminan sin efecto alguno sobre lo que ven las usuarias.
     const deleteBlockedReason =
         selected !== null && selected.docId === vigenteId
-            ? 'No se elimina el cuestionario vigente: la app quedaría sin el que rige. Publica otro (pasará a ser el vigente) y luego elimina este.'
+            ? 'No se elimina el cuestionario vigente: la app quedaría sin el que rige. Publica otro y luego elimina este.'
             : null
+
+    function patch(next: Partial<FormDoc>) {
+        if (!editing) return
+        editor.setEditing({ ...editing, ...next })
+    }
 
     function startNew() {
         if (!forms.entries) return
@@ -129,123 +214,14 @@ export function QuestionnairePage() {
         editor.startNew(docId, emptyForm())
     }
 
-    // ---- Escala ----
-
-    function addScaleOption() {
-        if (!editing) return
-        const id = nextOpaqueId(
-            's',
-            editing.scale.map((option) => option.id),
-            1,
-        )
-        const maxValue = editing.scale.reduce((max, option) => Math.max(max, option.value), -1)
-        editor.setEditing({
-            ...editing,
-            scale: [
-                ...editing.scale,
-                { id, order: editing.scale.length + 1, label: '', value: maxValue + 1 },
-            ],
-        })
-    }
-
-    function updateScaleOption(index: number, patch: { label?: string; value?: number }) {
-        if (!editing) return
-        editor.setEditing({
-            ...editing,
-            scale: editing.scale.map((option, i) =>
-                i === index ? { ...option, ...patch } : option,
-            ),
-        })
-    }
-
-    // ---- Preguntas ----
-
-    function addQuestion() {
-        if (!editing) return
-        const id = nextOpaqueId(
-            'q',
-            editing.questions.map((question) => question.id),
-        )
-        editor.setEditing({
-            ...editing,
-            questions: [
-                ...editing.questions,
-                { id, order: editing.questions.length + 1, text: '', weight: 1 },
-            ],
-        })
-    }
-
-    function updateQuestion(index: number, patch: { text?: string; weight?: number }) {
-        if (!editing) return
-        editor.setEditing({
-            ...editing,
-            questions: editing.questions.map((question, i) =>
-                i === index ? { ...question, ...patch } : question,
-            ),
-        })
-    }
-
-    function setQuestionAlertLevel(index: number, alertLevelId: string) {
-        if (!editing) return
-        editor.setEditing({
-            ...editing,
-            questions: editing.questions.map((question, i) => {
-                if (i !== index) return question
-                const base: QuestionDoc = {
-                    id: question.id,
-                    order: question.order,
-                    text: question.text,
-                    weight: question.weight,
-                }
-                return alertLevelId === '' ? base : { ...base, alertLevelId }
-            }),
-        })
-    }
-
-    // ---- Niveles ----
-
-    function addLevel() {
-        if (!editing) return
-        const id = nextOpaqueId(
-            'n',
-            editing.levels.map((level) => level.id),
-        )
-        const maxMin = editing.levels.reduce((max, level) => Math.max(max, level.minScore), -1)
-        editor.setEditing({
-            ...editing,
-            levels: [
-                ...editing.levels,
-                {
-                    id,
-                    order: editing.levels.length + 1,
-                    minScore: maxMin + 1,
-                    title: '',
-                    summary: '',
-                    advice: [],
-                    routeIds: [],
-                },
-            ],
-        })
-    }
-
-    function updateLevel(
-        index: number,
-        patch: {
-            title?: string
-            summary?: string
-            minScore?: number
-            advice?: string[]
-            routeIds?: string[]
-        },
-    ) {
-        if (!editing) return
-        editor.setEditing({
-            ...editing,
-            levels: editing.levels.map((level, i) =>
-                i === index ? { ...level, ...patch } : level,
-            ),
-        })
-    }
+    const questionRefs: Ref[] = editing
+        ? editing.questions.map((question) => ({
+              id: question.id,
+              name: question.text || question.id,
+              published: true,
+          }))
+        : []
+    const levelOptions = editing ? editing.levels : []
 
     return (
         <section className="resource">
@@ -254,10 +230,10 @@ export function QuestionnairePage() {
                 <span className="resource__rf">RF-43</span>
             </header>
             <p className="resource__desc">
-                Preguntas, pesos, escala y niveles con sus umbrales. No se puede publicar una
+                Instrumento validado v2: preguntas en dos bloques, escalas, dimensiones (tipos),
+                banderas críticas, umbrales y accesos por municipio. No se puede publicar una
                 configuración incompleta o incoherente: la app descartaría el cuestionario completo.
-                Puedes tener varios cuestionarios, pero la app siempre muestra UNO solo: el
-                publicado de mayor versión — al publicar, el publicado rige de inmediato (RF-44).
+                La app siempre muestra UNO solo: el publicado de mayor versión (RF-44).
             </p>
 
             {error !== null && (
@@ -327,7 +303,7 @@ export function QuestionnairePage() {
                             <input
                                 value={editing.title}
                                 onChange={(e) => {
-                                    editor.setEditing({ ...editing, title: e.target.value })
+                                    patch({ title: e.target.value })
                                 }}
                             />
                         </label>
@@ -337,20 +313,51 @@ export function QuestionnairePage() {
                                 rows={3}
                                 value={editing.intro}
                                 onChange={(e) => {
-                                    editor.setEditing({ ...editing, intro: e.target.value })
+                                    patch({ intro: e.target.value })
                                 }}
                             />
                         </label>
                         <label className="field">
-                            <span>Aviso (no es un diagnóstico)</span>
+                            <span>Aviso permanente (RF-30 — visible en todo resultado)</span>
                             <textarea
                                 rows={2}
                                 value={editing.notice}
                                 onChange={(e) => {
-                                    editor.setEditing({ ...editing, notice: e.target.value })
+                                    patch({ notice: e.target.value })
                                 }}
                             />
                         </label>
+                        <div className="editor__grid">
+                            <label className="field">
+                                <span>Reconocimiento · encabezado</span>
+                                <input
+                                    value={editing.recognition.prefix}
+                                    placeholder="Por tus respuestas, aparecen señales de"
+                                    onChange={(e) => {
+                                        patch({
+                                            recognition: {
+                                                ...editing.recognition,
+                                                prefix: e.target.value,
+                                            },
+                                        })
+                                    }}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>Reconocimiento · sin señales</span>
+                                <input
+                                    value={editing.recognition.empty}
+                                    onChange={(e) => {
+                                        patch({
+                                            recognition: {
+                                                ...editing.recognition,
+                                                empty: e.target.value,
+                                            },
+                                        })
+                                    }}
+                                />
+                            </label>
+                        </div>
                         <label className="field">
                             <span>Nota interna (reviewNote — la app la ignora)</span>
                             <textarea
@@ -368,43 +375,195 @@ export function QuestionnairePage() {
                             />
                         </label>
 
+                        {/* ---- Escalas ---- */}
                         <div className="field">
-                            <span>Escala de respuesta (la última opción es la más severa)</span>
-                            {editing.scale.map((option, index) => (
-                                <div className="picker__row" key={option.id}>
-                                    <input
-                                        value={option.label}
-                                        placeholder={`Etiqueta ${String(index + 1)}`}
-                                        onChange={(e) => {
-                                            updateScaleOption(index, { label: e.target.value })
+                            <span>Escalas de respuesta (la última opción es la más severa)</span>
+                            {editing.scales.map((scale, scaleIndex) => (
+                                <div className="level" key={scale.id}>
+                                    <div className="picker__row">
+                                        <strong className="picker__name">
+                                            Escala «{scale.id}»
+                                        </strong>
+                                        <button
+                                            type="button"
+                                            className="btn--ghost"
+                                            aria-label={`Quitar escala ${scale.id}`}
+                                            onClick={() => {
+                                                patch({
+                                                    scales: editing.scales.filter(
+                                                        (_, i) => i !== scaleIndex,
+                                                    ),
+                                                })
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                    {scale.options.map((option, index) => (
+                                        <div className="picker__row" key={option.id}>
+                                            <input
+                                                value={option.label}
+                                                placeholder={`Etiqueta ${String(index + 1)}`}
+                                                onChange={(e) => {
+                                                    patch({
+                                                        scales: editing.scales.map((s, i) =>
+                                                            i === scaleIndex
+                                                                ? {
+                                                                      ...s,
+                                                                      options: s.options.map(
+                                                                          (o, j) =>
+                                                                              j === index
+                                                                                  ? {
+                                                                                        ...o,
+                                                                                        label: e
+                                                                                            .target
+                                                                                            .value,
+                                                                                    }
+                                                                                  : o,
+                                                                      ),
+                                                                  }
+                                                                : s,
+                                                        ),
+                                                    })
+                                                }}
+                                            />
+                                            <input
+                                                className="input--small"
+                                                type="number"
+                                                min={0}
+                                                aria-label={`Valor de la opción ${String(index + 1)}`}
+                                                value={option.value}
+                                                onChange={(e) => {
+                                                    patch({
+                                                        scales: editing.scales.map((s, i) =>
+                                                            i === scaleIndex
+                                                                ? {
+                                                                      ...s,
+                                                                      options: s.options.map(
+                                                                          (o, j) =>
+                                                                              j === index
+                                                                                  ? {
+                                                                                        ...o,
+                                                                                        value: parseIntOr0(
+                                                                                            e.target
+                                                                                                .value,
+                                                                                        ),
+                                                                                    }
+                                                                                  : o,
+                                                                      ),
+                                                                  }
+                                                                : s,
+                                                        ),
+                                                    })
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="btn--ghost"
+                                                aria-label={`Quitar opción ${String(index + 1)}`}
+                                                onClick={() => {
+                                                    patch({
+                                                        scales: editing.scales.map((s, i) =>
+                                                            i === scaleIndex
+                                                                ? {
+                                                                      ...s,
+                                                                      options: s.options.filter(
+                                                                          (_, j) => j !== index,
+                                                                      ),
+                                                                  }
+                                                                : s,
+                                                        ),
+                                                    })
+                                                }}
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        className="btn--ghost listfield__add"
+                                        onClick={() => {
+                                            const optionId = nextOpaqueId(
+                                                scale.id + '-o',
+                                                scale.options.map((o) => o.id),
+                                                1,
+                                            )
+                                            const maxValue = scale.options.reduce(
+                                                (max, o) => Math.max(max, o.value),
+                                                -1,
+                                            )
+                                            patch({
+                                                scales: editing.scales.map((s, i) =>
+                                                    i === scaleIndex
+                                                        ? {
+                                                              ...s,
+                                                              options: [
+                                                                  ...s.options,
+                                                                  {
+                                                                      id: optionId,
+                                                                      order: s.options.length + 1,
+                                                                      label: '',
+                                                                      value: maxValue + 1,
+                                                                  },
+                                                              ],
+                                                          }
+                                                        : s,
+                                                ),
+                                            })
                                         }}
-                                    />
+                                    >
+                                        + Agregar opción
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="btn--ghost listfield__add"
+                                onClick={() => {
+                                    const id = nextOpaqueId(
+                                        'sc',
+                                        editing.scales.map((s) => s.id),
+                                    )
+                                    patch({ scales: [...editing.scales, { id, options: [] }] })
+                                }}
+                            >
+                                + Agregar escala
+                            </button>
+                        </div>
+
+                        {/* ---- Bloques ---- */}
+                        <div className="field">
+                            <span>Bloques</span>
+                            {editing.blocks.map((block, index) => (
+                                <div className="picker__row" key={block.id}>
                                     <input
-                                        className="input--small"
-                                        type="number"
-                                        min={0}
-                                        aria-label={`Valor de la opción ${String(index + 1)}`}
-                                        value={option.value}
+                                        value={block.title}
+                                        placeholder={`Título del bloque ${String(index + 1)}`}
                                         onChange={(e) => {
-                                            updateScaleOption(index, {
-                                                value: parseIntOr0(e.target.value),
+                                            patch({
+                                                blocks: editing.blocks.map((b, i) =>
+                                                    i === index
+                                                        ? { ...b, title: e.target.value }
+                                                        : b,
+                                                ),
                                             })
                                         }}
                                     />
                                     <RowControls
-                                        label={`opción ${String(index + 1)}`}
+                                        label={`bloque ${String(index + 1)}`}
                                         index={index}
-                                        count={editing.scale.length}
+                                        count={editing.blocks.length}
                                         onMove={(delta) => {
-                                            editor.setEditing({
-                                                ...editing,
-                                                scale: moveItem(editing.scale, index, delta),
+                                            patch({
+                                                blocks: moveItem(editing.blocks, index, delta),
                                             })
                                         }}
                                         onRemove={() => {
-                                            editor.setEditing({
-                                                ...editing,
-                                                scale: editing.scale.filter((_, i) => i !== index),
+                                            patch({
+                                                blocks: editing.blocks.filter(
+                                                    (_, i) => i !== index,
+                                                ),
                                             })
                                         }}
                                     />
@@ -414,13 +573,89 @@ export function QuestionnairePage() {
                                 type="button"
                                 className="btn--ghost listfield__add"
                                 onClick={() => {
-                                    addScaleOption()
+                                    const id = nextOpaqueId(
+                                        'b',
+                                        editing.blocks.map((b) => b.id),
+                                    )
+                                    patch({
+                                        blocks: [
+                                            ...editing.blocks,
+                                            { id, order: editing.blocks.length + 1, title: '' },
+                                        ],
+                                    })
                                 }}
                             >
-                                + Agregar opción
+                                + Agregar bloque
                             </button>
                         </div>
 
+                        {/* ---- Municipios ---- */}
+                        <div className="field">
+                            <span>Municipios (para los accesos por nivel)</span>
+                            {editing.municipalities.map((municipality, index) => (
+                                <div className="picker__row" key={municipality.id}>
+                                    <input
+                                        value={municipality.label}
+                                        placeholder={`Municipio ${String(index + 1)}`}
+                                        onChange={(e) => {
+                                            patch({
+                                                municipalities: editing.municipalities.map(
+                                                    (m, i) =>
+                                                        i === index
+                                                            ? { ...m, label: e.target.value }
+                                                            : m,
+                                                ),
+                                            })
+                                        }}
+                                    />
+                                    <RowControls
+                                        label={`municipio ${String(index + 1)}`}
+                                        index={index}
+                                        count={editing.municipalities.length}
+                                        onMove={(delta) => {
+                                            patch({
+                                                municipalities: moveItem(
+                                                    editing.municipalities,
+                                                    index,
+                                                    delta,
+                                                ),
+                                            })
+                                        }}
+                                        onRemove={() => {
+                                            patch({
+                                                municipalities: editing.municipalities.filter(
+                                                    (_, i) => i !== index,
+                                                ),
+                                            })
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="btn--ghost listfield__add"
+                                onClick={() => {
+                                    const id = nextOpaqueId(
+                                        'm',
+                                        editing.municipalities.map((m) => m.id),
+                                    )
+                                    patch({
+                                        municipalities: [
+                                            ...editing.municipalities,
+                                            {
+                                                id,
+                                                order: editing.municipalities.length + 1,
+                                                label: '',
+                                            },
+                                        ],
+                                    })
+                                }}
+                            >
+                                + Agregar municipio
+                            </button>
+                        </div>
+
+                        {/* ---- Preguntas ---- */}
                         <div className="field">
                             <span>Preguntas (peso × valor elegido = puntaje)</span>
                             {editing.questions.map((question, index) => (
@@ -431,7 +666,13 @@ export function QuestionnairePage() {
                                             value={question.text}
                                             placeholder={`Pregunta ${String(index + 1)}`}
                                             onChange={(e) => {
-                                                updateQuestion(index, { text: e.target.value })
+                                                patch({
+                                                    questions: editing.questions.map((q, i) =>
+                                                        i === index
+                                                            ? { ...q, text: e.target.value }
+                                                            : q,
+                                                    ),
+                                                })
                                             }}
                                         />
                                         <RowControls
@@ -439,8 +680,7 @@ export function QuestionnairePage() {
                                             index={index}
                                             count={editing.questions.length}
                                             onMove={(delta) => {
-                                                editor.setEditing({
-                                                    ...editing,
+                                                patch({
                                                     questions: moveItem(
                                                         editing.questions,
                                                         index,
@@ -449,8 +689,7 @@ export function QuestionnairePage() {
                                                 })
                                             }}
                                             onRemove={() => {
-                                                editor.setEditing({
-                                                    ...editing,
+                                                patch({
                                                     questions: editing.questions.filter(
                                                         (_, i) => i !== index,
                                                     ),
@@ -460,34 +699,90 @@ export function QuestionnairePage() {
                                     </div>
                                     <div className="question__meta">
                                         <label className="field field--inline">
-                                            <span>Peso (entero ≥ 1)</span>
+                                            <span>Bloque</span>
+                                            <select
+                                                value={question.blockId}
+                                                onChange={(e) => {
+                                                    patch({
+                                                        questions: editing.questions.map((q, i) =>
+                                                            i === index
+                                                                ? { ...q, blockId: e.target.value }
+                                                                : q,
+                                                        ),
+                                                    })
+                                                }}
+                                            >
+                                                <option value="">—</option>
+                                                {editing.blocks.map((block) => (
+                                                    <option key={block.id} value={block.id}>
+                                                        {block.title || block.id}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="field field--inline">
+                                            <span>Escala</span>
+                                            <select
+                                                value={question.scaleId}
+                                                onChange={(e) => {
+                                                    patch({
+                                                        questions: editing.questions.map((q, i) =>
+                                                            i === index
+                                                                ? { ...q, scaleId: e.target.value }
+                                                                : q,
+                                                        ),
+                                                    })
+                                                }}
+                                            >
+                                                <option value="">—</option>
+                                                {editing.scales.map((scale) => (
+                                                    <option key={scale.id} value={scale.id}>
+                                                        {scale.id}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="field field--inline">
+                                            <span>Peso (≥ 1; contexto = 0)</span>
                                             <input
                                                 className="input--small"
                                                 type="number"
-                                                min={1}
+                                                min={0}
                                                 value={question.weight}
                                                 onChange={(e) => {
-                                                    updateQuestion(index, {
-                                                        weight: parseIntOr0(e.target.value),
+                                                    patch({
+                                                        questions: editing.questions.map((q, i) =>
+                                                            i === index
+                                                                ? {
+                                                                      ...q,
+                                                                      weight: parseIntOr0(
+                                                                          e.target.value,
+                                                                      ),
+                                                                  }
+                                                                : q,
+                                                        ),
                                                     })
                                                 }}
                                             />
                                         </label>
                                         <label className="field field--inline">
-                                            <span>Piso crítico (garantiza al menos ese nivel)</span>
-                                            <select
-                                                value={question.alertLevelId ?? ''}
+                                            <span>De contexto (P0, sin puntaje)</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={question.context}
                                                 onChange={(e) => {
-                                                    setQuestionAlertLevel(index, e.target.value)
+                                                    patch({
+                                                        questions: editing.questions.map((q, i) =>
+                                                            i === index
+                                                                ? {
+                                                                      ...q,
+                                                                      context: e.target.checked,
+                                                                  }
+                                                                : q,
+                                                        ),
+                                                    })
                                                 }}
-                                            >
-                                                <option value="">— sin piso crítico —</option>
-                                                {editing.levels.map((level) => (
-                                                    <option key={level.id} value={level.id}>
-                                                        {level.title || level.id}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            />
                                         </label>
                                     </div>
                                 </div>
@@ -496,13 +791,349 @@ export function QuestionnairePage() {
                                 type="button"
                                 className="btn--ghost listfield__add"
                                 onClick={() => {
-                                    addQuestion()
+                                    const id = nextOpaqueId(
+                                        'q',
+                                        editing.questions.map((q) => q.id),
+                                    )
+                                    patch({
+                                        questions: [
+                                            ...editing.questions,
+                                            {
+                                                id,
+                                                order: editing.questions.length + 1,
+                                                blockId: editing.blocks[0]?.id ?? '',
+                                                scaleId: editing.scales[0]?.id ?? '',
+                                                text: '',
+                                                weight: 1,
+                                                context: false,
+                                            },
+                                        ],
+                                    })
                                 }}
                             >
                                 + Agregar pregunta
                             </button>
                         </div>
 
+                        {/* ---- Dimensiones (Track 1) ---- */}
+                        <div className="field">
+                            <span>
+                                Dimensiones — reconocimiento de tipos (se encienden con ≥ umbral)
+                            </span>
+                            {editing.dimensions.map((dimension, index) => (
+                                <div className="level" key={dimension.id}>
+                                    <div className="picker__row">
+                                        <input
+                                            value={dimension.label}
+                                            placeholder="Etiqueta (p. ej. «violencia psicológica»)"
+                                            onChange={(e) => {
+                                                patch({
+                                                    dimensions: editing.dimensions.map((d, i) =>
+                                                        i === index
+                                                            ? { ...d, label: e.target.value }
+                                                            : d,
+                                                    ),
+                                                })
+                                            }}
+                                        />
+                                        <label className="field field--inline">
+                                            <span>Umbral</span>
+                                            <input
+                                                className="input--small"
+                                                type="number"
+                                                min={1}
+                                                value={dimension.minValue}
+                                                onChange={(e) => {
+                                                    patch({
+                                                        dimensions: editing.dimensions.map(
+                                                            (d, i) =>
+                                                                i === index
+                                                                    ? {
+                                                                          ...d,
+                                                                          minValue: parseIntOr0(
+                                                                              e.target.value,
+                                                                          ),
+                                                                      }
+                                                                    : d,
+                                                        ),
+                                                    })
+                                                }}
+                                            />
+                                        </label>
+                                        <button
+                                            type="button"
+                                            className="btn--ghost"
+                                            aria-label={`Quitar dimensión ${String(index + 1)}`}
+                                            onClick={() => {
+                                                patch({
+                                                    dimensions: editing.dimensions.filter(
+                                                        (_, i) => i !== index,
+                                                    ),
+                                                })
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                    <RefPicker
+                                        label="Preguntas de la dimensión"
+                                        selected={dimension.questionIds}
+                                        options={questionRefs}
+                                        onChange={(questionIds) => {
+                                            patch({
+                                                dimensions: editing.dimensions.map((d, i) =>
+                                                    i === index ? { ...d, questionIds } : d,
+                                                ),
+                                            })
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="btn--ghost listfield__add"
+                                onClick={() => {
+                                    const id = nextOpaqueId(
+                                        'd',
+                                        editing.dimensions.map((d) => d.id),
+                                    )
+                                    patch({
+                                        dimensions: [
+                                            ...editing.dimensions,
+                                            {
+                                                id,
+                                                order: editing.dimensions.length + 1,
+                                                label: '',
+                                                questionIds: [],
+                                                minValue: 1,
+                                            },
+                                        ],
+                                    })
+                                }}
+                            >
+                                + Agregar dimensión
+                            </button>
+                        </div>
+
+                        {/* ---- Banderas críticas (Track 2) ---- */}
+                        <div className="field">
+                            <span>Banderas de umbral (una pregunta ≥ valor eleva al nivel)</span>
+                            {editing.thresholdFlags.map((flag, index) => (
+                                <div className="picker__row" key={index}>
+                                    <select
+                                        aria-label={`Pregunta de la bandera ${String(index + 1)}`}
+                                        value={flag.questionId}
+                                        onChange={(e) => {
+                                            const next: ThresholdFlagDoc[] =
+                                                editing.thresholdFlags.map((f, i) =>
+                                                    i === index
+                                                        ? { ...f, questionId: e.target.value }
+                                                        : f,
+                                                )
+                                            patch({ thresholdFlags: next })
+                                        }}
+                                    >
+                                        <option value="">— pregunta —</option>
+                                        {editing.questions.map((question) => (
+                                            <option key={question.id} value={question.id}>
+                                                {question.id}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        className="input--small"
+                                        type="number"
+                                        min={1}
+                                        aria-label={`Valor mínimo de la bandera ${String(index + 1)}`}
+                                        value={flag.minValue}
+                                        onChange={(e) => {
+                                            const next: ThresholdFlagDoc[] =
+                                                editing.thresholdFlags.map((f, i) =>
+                                                    i === index
+                                                        ? {
+                                                              ...f,
+                                                              minValue: parseIntOr0(e.target.value),
+                                                          }
+                                                        : f,
+                                                )
+                                            patch({ thresholdFlags: next })
+                                        }}
+                                    />
+                                    <select
+                                        aria-label={`Nivel de la bandera ${String(index + 1)}`}
+                                        value={flag.levelId}
+                                        onChange={(e) => {
+                                            const next: ThresholdFlagDoc[] =
+                                                editing.thresholdFlags.map((f, i) =>
+                                                    i === index
+                                                        ? { ...f, levelId: e.target.value }
+                                                        : f,
+                                                )
+                                            patch({ thresholdFlags: next })
+                                        }}
+                                    >
+                                        <option value="">— nivel —</option>
+                                        {levelOptions.map((level) => (
+                                            <option key={level.id} value={level.id}>
+                                                {level.title || level.id}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        className="btn--ghost"
+                                        aria-label={`Quitar bandera ${String(index + 1)}`}
+                                        onClick={() => {
+                                            patch({
+                                                thresholdFlags: editing.thresholdFlags.filter(
+                                                    (_, i) => i !== index,
+                                                ),
+                                            })
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="btn--ghost listfield__add"
+                                onClick={() => {
+                                    patch({
+                                        thresholdFlags: [
+                                            ...editing.thresholdFlags,
+                                            { questionId: '', minValue: 1, levelId: '' },
+                                        ],
+                                    })
+                                }}
+                            >
+                                + Agregar bandera de umbral
+                            </button>
+                        </div>
+
+                        <div className="field">
+                            <span>Banderas de conteo (N preguntas ≥ valor elevan al nivel)</span>
+                            {editing.countFlags.map((flag, index) => (
+                                <div className="level" key={index}>
+                                    <RefPicker
+                                        label={`Preguntas de la bandera de conteo ${String(index + 1)}`}
+                                        selected={flag.questionIds}
+                                        options={questionRefs}
+                                        onChange={(questionIds) => {
+                                            const next: CountFlagDoc[] = editing.countFlags.map(
+                                                (f, i) => (i === index ? { ...f, questionIds } : f),
+                                            )
+                                            patch({ countFlags: next })
+                                        }}
+                                    />
+                                    <div className="question__meta">
+                                        <label className="field field--inline">
+                                            <span>Cada una ≥</span>
+                                            <input
+                                                className="input--small"
+                                                type="number"
+                                                min={1}
+                                                value={flag.eachMinValue}
+                                                onChange={(e) => {
+                                                    const next: CountFlagDoc[] =
+                                                        editing.countFlags.map((f, i) =>
+                                                            i === index
+                                                                ? {
+                                                                      ...f,
+                                                                      eachMinValue: parseIntOr0(
+                                                                          e.target.value,
+                                                                      ),
+                                                                  }
+                                                                : f,
+                                                        )
+                                                    patch({ countFlags: next })
+                                                }}
+                                            />
+                                        </label>
+                                        <label className="field field--inline">
+                                            <span>Al menos</span>
+                                            <input
+                                                className="input--small"
+                                                type="number"
+                                                min={1}
+                                                value={flag.countAtLeast}
+                                                onChange={(e) => {
+                                                    const next: CountFlagDoc[] =
+                                                        editing.countFlags.map((f, i) =>
+                                                            i === index
+                                                                ? {
+                                                                      ...f,
+                                                                      countAtLeast: parseIntOr0(
+                                                                          e.target.value,
+                                                                      ),
+                                                                  }
+                                                                : f,
+                                                        )
+                                                    patch({ countFlags: next })
+                                                }}
+                                            />
+                                        </label>
+                                        <label className="field field--inline">
+                                            <span>Nivel</span>
+                                            <select
+                                                value={flag.levelId}
+                                                onChange={(e) => {
+                                                    const next: CountFlagDoc[] =
+                                                        editing.countFlags.map((f, i) =>
+                                                            i === index
+                                                                ? { ...f, levelId: e.target.value }
+                                                                : f,
+                                                        )
+                                                    patch({ countFlags: next })
+                                                }}
+                                            >
+                                                <option value="">— nivel —</option>
+                                                {levelOptions.map((level) => (
+                                                    <option key={level.id} value={level.id}>
+                                                        {level.title || level.id}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <button
+                                            type="button"
+                                            className="btn--ghost"
+                                            aria-label={`Quitar bandera de conteo ${String(index + 1)}`}
+                                            onClick={() => {
+                                                patch({
+                                                    countFlags: editing.countFlags.filter(
+                                                        (_, i) => i !== index,
+                                                    ),
+                                                })
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="btn--ghost listfield__add"
+                                onClick={() => {
+                                    patch({
+                                        countFlags: [
+                                            ...editing.countFlags,
+                                            {
+                                                questionIds: [],
+                                                eachMinValue: 1,
+                                                countAtLeast: 2,
+                                                levelId: '',
+                                            },
+                                        ],
+                                    })
+                                }}
+                            >
+                                + Agregar bandera de conteo
+                            </button>
+                        </div>
+
+                        {/* ---- Niveles ---- */}
                         <div className="field">
                             <span>Niveles (de menor a mayor severidad)</span>
                             {editing.levels.map((level, index) => (
@@ -512,7 +1143,13 @@ export function QuestionnairePage() {
                                             value={level.title}
                                             placeholder={`Nombre del nivel ${String(index + 1)}`}
                                             onChange={(e) => {
-                                                updateLevel(index, { title: e.target.value })
+                                                patch({
+                                                    levels: editing.levels.map((l, i) =>
+                                                        i === index
+                                                            ? { ...l, title: e.target.value }
+                                                            : l,
+                                                    ),
+                                                })
                                             }}
                                         />
                                         <label className="field field--inline level__threshold">
@@ -523,8 +1160,17 @@ export function QuestionnairePage() {
                                                 min={0}
                                                 value={level.minScore}
                                                 onChange={(e) => {
-                                                    updateLevel(index, {
-                                                        minScore: parseIntOr0(e.target.value),
+                                                    patch({
+                                                        levels: editing.levels.map((l, i) =>
+                                                            i === index
+                                                                ? {
+                                                                      ...l,
+                                                                      minScore: parseIntOr0(
+                                                                          e.target.value,
+                                                                      ),
+                                                                  }
+                                                                : l,
+                                                        ),
                                                     })
                                                 }}
                                             />
@@ -534,14 +1180,12 @@ export function QuestionnairePage() {
                                             index={index}
                                             count={editing.levels.length}
                                             onMove={(delta) => {
-                                                editor.setEditing({
-                                                    ...editing,
+                                                patch({
                                                     levels: moveItem(editing.levels, index, delta),
                                                 })
                                             }}
                                             onRemove={() => {
-                                                editor.setEditing({
-                                                    ...editing,
+                                                patch({
                                                     levels: editing.levels.filter(
                                                         (_, i) => i !== index,
                                                     ),
@@ -555,7 +1199,13 @@ export function QuestionnairePage() {
                                             rows={2}
                                             value={level.summary}
                                             onChange={(e) => {
-                                                updateLevel(index, { summary: e.target.value })
+                                                patch({
+                                                    levels: editing.levels.map((l, i) =>
+                                                        i === index
+                                                            ? { ...l, summary: e.target.value }
+                                                            : l,
+                                                    ),
+                                                })
                                             }}
                                         />
                                     </label>
@@ -565,71 +1215,92 @@ export function QuestionnairePage() {
                                         addLabel="Agregar consejo"
                                         multiline
                                         onChange={(advice) => {
-                                            updateLevel(index, { advice })
+                                            patch({
+                                                levels: editing.levels.map((l, i) =>
+                                                    i === index ? { ...l, advice } : l,
+                                                ),
+                                            })
                                         }}
                                     />
-                                    <div className="field">
-                                        <span>Rutas recomendadas</span>
-                                        {level.routeIds.map((routeId, routeIndex) => (
-                                            <div className="picker__row" key={routeId}>
-                                                <span className="picker__name">
-                                                    {routeNames.get(routeId) ?? routeId}
-                                                    {!publishedRouteIds.has(routeId) && (
-                                                        <span className="picker__warn">
-                                                            {' '}
-                                                            · sin publicar
-                                                        </span>
-                                                    )}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    className="btn--ghost"
-                                                    aria-label={`Quitar ruta ${routeId}`}
-                                                    onClick={() => {
-                                                        updateLevel(index, {
-                                                            routeIds: level.routeIds.filter(
-                                                                (_, i) => i !== routeIndex,
-                                                            ),
-                                                        })
-                                                    }}
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        ))}
-                                        <select
-                                            className="picker__add"
-                                            value=""
-                                            onChange={(e) => {
-                                                if (e.target.value === '') return
-                                                updateLevel(index, {
-                                                    routeIds: [...level.routeIds, e.target.value],
+                                    <RefPicker
+                                        label="Líneas de atención (nacionales, siempre visibles)"
+                                        selected={level.lineIds}
+                                        options={lineRefs}
+                                        onChange={(lineIds) => {
+                                            patch({
+                                                levels: editing.levels.map((l, i) =>
+                                                    i === index ? { ...l, lineIds } : l,
+                                                ),
+                                            })
+                                        }}
+                                    />
+                                    <RefPicker
+                                        label="Entidades fijas (no dependen del municipio)"
+                                        selected={level.agencyIds}
+                                        options={agencyRefs}
+                                        onChange={(agencyIds) => {
+                                            patch({
+                                                levels: editing.levels.map((l, i) =>
+                                                    i === index ? { ...l, agencyIds } : l,
+                                                ),
+                                            })
+                                        }}
+                                    />
+                                    {editing.municipalities.map((municipality) => (
+                                        <RefPicker
+                                            key={municipality.id}
+                                            label={`Entidades en ${municipality.label || municipality.id}`}
+                                            selected={
+                                                level.municipalAgencyIds[municipality.id] ?? []
+                                            }
+                                            options={agencyRefs}
+                                            onChange={(ids) => {
+                                                patch({
+                                                    levels: editing.levels.map((l, i) =>
+                                                        i === index
+                                                            ? {
+                                                                  ...l,
+                                                                  municipalAgencyIds: {
+                                                                      ...l.municipalAgencyIds,
+                                                                      [municipality.id]: ids,
+                                                                  },
+                                                              }
+                                                            : l,
+                                                    ),
                                                 })
                                             }}
-                                        >
-                                            <option value="">Agregar ruta…</option>
-                                            {(routes.entries ?? [])
-                                                .filter(
-                                                    (entry) =>
-                                                        !level.routeIds.includes(entry.docId),
-                                                )
-                                                .map((entry) => (
-                                                    <option key={entry.docId} value={entry.docId}>
-                                                        {(entry.data.title || entry.docId) +
-                                                            (entry.liveData === null
-                                                                ? ' (sin publicar)'
-                                                                : '')}
-                                                    </option>
-                                                ))}
-                                        </select>
-                                    </div>
+                                        />
+                                    ))}
                                 </div>
                             ))}
                             <button
                                 type="button"
                                 className="btn--ghost listfield__add"
                                 onClick={() => {
-                                    addLevel()
+                                    const id = nextOpaqueId(
+                                        'n',
+                                        editing.levels.map((l) => l.id),
+                                    )
+                                    const maxMin = editing.levels.reduce(
+                                        (max, l) => Math.max(max, l.minScore),
+                                        -1,
+                                    )
+                                    patch({
+                                        levels: [
+                                            ...editing.levels,
+                                            {
+                                                id,
+                                                order: editing.levels.length + 1,
+                                                minScore: maxMin + 1,
+                                                title: '',
+                                                summary: '',
+                                                advice: [],
+                                                lineIds: [],
+                                                agencyIds: [],
+                                                municipalAgencyIds: {},
+                                            },
+                                        ],
+                                    })
                                 }}
                             >
                                 + Agregar nivel
@@ -656,7 +1327,6 @@ export function QuestionnairePage() {
                                 void editor.publish(publishIssues)
                             }}
                             onDelete={() => {
-                                // Compuerta también en lógica, no solo en el botón.
                                 if (deleteBlockedReason !== null) return
                                 void editor.remove()
                             }}

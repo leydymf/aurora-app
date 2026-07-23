@@ -12,15 +12,11 @@ import { buildOrderIndex } from '../../lib/drafts'
 import { nextOpaqueId } from '../../lib/ids'
 import { useEntries } from '../../lib/useEntries'
 import { useResourceEditor } from '../../lib/useResourceEditor'
-import { formFromRaw } from '../questionnaire/formSchema'
 import { agencyFromRaw, emptyRoute, normalizeRoute, routeFromRaw, validateRoute } from './schemas'
 
 export function RoutesTab() {
     const routes = useEntries('routes', routeFromRaw)
     const agencies = useEntries('agencies', agencyFromRaw)
-    // Solo para el bloqueo de eliminación: los niveles del cuestionario
-    // recomiendan rutas por id (RF-43) y no deben quedar referencias rotas.
-    const forms = useEntries('forms', formFromRaw)
     const editor = useResourceEditor({
         resource: 'routes',
         entries: routes.entries,
@@ -76,30 +72,9 @@ export function RoutesTab() {
         !editor.isDirty &&
         publishIssues.length === 0
 
-    // Bloqueo de eliminación: niveles del cuestionario (en borrador o
-    // publicados) que recomiendan la ruta seleccionada.
-    const referencingLevels = useMemo(() => {
-        if (!selected) return []
-        const names = new Set<string>()
-        for (const form of forms.entries ?? []) {
-            const levels = [...form.data.levels, ...(form.liveData?.levels ?? [])]
-            for (const level of levels) {
-                if (level.routeIds.includes(selected.docId)) {
-                    names.add(`«${level.title || level.id}»`)
-                }
-            }
-        }
-        return [...names]
-    }, [forms.entries, selected])
-
-    const deleteBlockedReason =
-        forms.entries === null
-            ? 'Verificando si el cuestionario recomienda esta ruta…'
-            : referencingLevels.length > 0
-              ? `No se puede eliminar: la recomiendan los niveles ${referencingLevels.join(
-                    ', ',
-                )} del cuestionario. Quítala primero de esos niveles.`
-              : null
+    // El cuestionario validado v2 ya no recomienda rutas por id (sus accesos
+    // referencian líneas y entidades, no rutas): eliminar una ruta no deja
+    // referencias rotas en `forms`, así que no hay bloqueo por ese motivo.
 
     function startNew() {
         if (!routes.entries) return
@@ -285,7 +260,7 @@ export function RoutesTab() {
                             canPublish={canPublish}
                             isNew={editor.isNew}
                             confirmingDelete={editor.confirmingDelete}
-                            deleteBlockedReason={deleteBlockedReason}
+                            deleteBlockedReason={null}
                             onSave={() => {
                                 void editor.save()
                             }}
@@ -293,8 +268,6 @@ export function RoutesTab() {
                                 void editor.publish(publishIssues)
                             }}
                             onDelete={() => {
-                                // Compuerta también en lógica, no solo en el botón.
-                                if (deleteBlockedReason !== null) return
                                 void editor.remove()
                             }}
                             onCancelNew={() => {
