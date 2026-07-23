@@ -2,6 +2,7 @@ package com.auroraclima.app.questionnaire.data.remote
 
 import com.auroraclima.app.questionnaire.data.toDomain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,13 +18,30 @@ class QuestionnaireDocumentParsingTest {
         val dto = wellFormedForm().toFormDto("f01")
 
         assertEquals("f01", dto.id)
-        assertEquals(1L, dto.schemaVersion)
+        assertEquals(2L, dto.schemaVersion)
         assertEquals(2L, dto.version)
         assertEquals("Título", dto.title)
-        assertEquals(ScaleOptionDto("s0", 1L, "Nunca", 0L), dto.scale.single())
-        assertEquals(QuestionDto("q01", 1L, "Pregunta", 2L, "n01"), dto.questions.single())
+        assertEquals(ScaleOptionDto("s0", 1L, "Nunca", 0L), dto.scales.single().options.single())
+        assertEquals("freq", dto.scales.single().id)
+        assertEquals(BlockDto("a", 1L, "Bloque"), dto.blocks.single())
+        assertEquals(QuestionDto("q01", 1L, "a", "freq", "Pregunta", 2L, false), dto.questions.single())
+        assertEquals(DimensionDto("d1", 1L, "psicológica", listOf("q01"), 1L), dto.dimensions.single())
+        assertEquals(RecognitionDto("Prefijo", "Vacío"), dto.recognition)
+        assertEquals(ThresholdFlagDto("q01", 1L, "n01"), dto.thresholdFlags.single())
+        assertEquals(CountFlagDto(listOf("q01"), 1L, 2L, "n01"), dto.countFlags.single())
+        assertEquals(MunicipalityDto("m01", 1L, "Bucaramanga"), dto.municipalities.single())
         assertEquals(
-            LevelDto("n01", 1L, 0L, "Nivel", "Resumen", listOf("Consejo"), listOf("r01")),
+            LevelDto(
+                id = "n01",
+                order = 1L,
+                minScore = 0L,
+                title = "Nivel",
+                summary = "Resumen",
+                advice = listOf("Consejo"),
+                lineIds = listOf("l01"),
+                agencyIds = listOf("a13"),
+                municipalAgencyIds = mapOf("bucaramanga" to listOf("a07"))
+            ),
             dto.levels.single()
         )
     }
@@ -31,11 +49,12 @@ class QuestionnaireDocumentParsingTest {
     @Test
     fun `campos de nivel superior con tipo incorrecto quedan nulos sin lanzar`() {
         val dto = mapOf(
-            "schemaVersion" to "uno",
+            "schemaVersion" to "dos",
             "version" to "dos",
             "title" to 123L,
             "intro" to listOf("no es texto"),
-            "notice" to 456L
+            "notice" to 456L,
+            "recognition" to "no es mapa"
         ).toFormDto("f01")
 
         assertNull(dto.schemaVersion)
@@ -43,19 +62,24 @@ class QuestionnaireDocumentParsingTest {
         assertNull(dto.title)
         assertNull(dto.intro)
         assertNull(dto.notice)
+        assertNull(dto.recognition)
     }
 
     @Test
     fun `una lista embebida corrupta queda vacia sin lanzar`() {
         val dto = mapOf(
-            "scale" to "no es lista",
+            "scales" to "no es lista",
             "questions" to mapOf("no" to "lista"),
-            "levels" to 7L
+            "levels" to 7L,
+            "dimensions" to 3L,
+            "municipalities" to false
         ).toFormDto("f01")
 
-        assertTrue(dto.scale.isEmpty())
+        assertTrue(dto.scales.isEmpty())
         assertTrue(dto.questions.isEmpty())
         assertTrue(dto.levels.isEmpty())
+        assertTrue(dto.dimensions.isEmpty())
+        assertTrue(dto.municipalities.isEmpty())
     }
 
     @Test
@@ -85,6 +109,39 @@ class QuestionnaireDocumentParsingTest {
     }
 
     @Test
+    fun `el campo context ausente o corrupto se lee como falso`() {
+        val ausente = mapOf("questions" to listOf(mapOf("id" to "q01"))).toFormDto("f01")
+        assertFalse(ausente.questions.single().context)
+
+        val presente = mapOf(
+            "questions" to listOf(mapOf("id" to "p0", "context" to true))
+        ).toFormDto("f01")
+        assertTrue(presente.questions.single().context)
+    }
+
+    @Test
+    fun `el mapa de accesos por municipio tolera claves y listas corruptas`() {
+        val dto = mapOf(
+            "levels" to listOf(
+                mapOf(
+                    "id" to "n01",
+                    "municipalAgencyIds" to mapOf(
+                        "bucaramanga" to listOf("a07", 5L),
+                        "giron" to "no es lista",
+                        7L to listOf("a11")
+                    )
+                )
+            )
+        ).toFormDto("f01")
+
+        val municipal = dto.levels.single().municipalAgencyIds
+        assertEquals(listOf("a07"), municipal["bucaramanga"])
+        assertEquals(emptyList<String>(), municipal["giron"])
+        // La clave que no es texto se descarta.
+        assertFalse(municipal.containsKey("7"))
+    }
+
+    @Test
     fun `un peso decimal se rechaza en vez de truncarse`() {
         // Truncar 2,5 → 2 sesgaría el puntaje frente a umbrales calibrados;
         // el campo queda nulo y el mapper descarta el formulario completo.
@@ -101,7 +158,8 @@ class QuestionnaireDocumentParsingTest {
 
         assertNull(dto.schemaVersion)
         assertNull(dto.version)
-        assertTrue(dto.scale.isEmpty() && dto.questions.isEmpty() && dto.levels.isEmpty())
+        assertNull(dto.recognition)
+        assertTrue(dto.scales.isEmpty() && dto.questions.isEmpty() && dto.levels.isEmpty())
     }
 
     @Test
@@ -112,16 +170,50 @@ class QuestionnaireDocumentParsingTest {
         assertNull(corrupt.toDomain())
     }
 
+    @Test
+    fun `un formulario bien formado se mapea a dominio`() {
+        assertEquals("f01", wellFormedForm().toFormDto("f01").toDomain()?.id)
+    }
+
     private fun wellFormedForm(): Map<String, Any?> = mapOf(
-        "schemaVersion" to 1L,
+        "schemaVersion" to 2L,
         "version" to 2L,
         "title" to "Título",
         "intro" to "Intro",
         "notice" to "Aviso",
-        "scale" to listOf(mapOf("id" to "s0", "order" to 1L, "label" to "Nunca", "value" to 0L)),
-        "questions" to listOf(
-            mapOf("id" to "q01", "order" to 1L, "text" to "Pregunta", "weight" to 2L, "alertLevelId" to "n01")
+        "scales" to listOf(
+            mapOf(
+                "id" to "freq",
+                "options" to listOf(mapOf("id" to "s0", "order" to 1L, "label" to "Nunca", "value" to 0L))
+            )
         ),
+        "blocks" to listOf(mapOf("id" to "a", "order" to 1L, "title" to "Bloque")),
+        "questions" to listOf(
+            mapOf(
+                "id" to "q01",
+                "order" to 1L,
+                "blockId" to "a",
+                "scaleId" to "freq",
+                "text" to "Pregunta",
+                "weight" to 2L,
+                "context" to false
+            )
+        ),
+        "dimensions" to listOf(
+            mapOf(
+                "id" to "d1",
+                "order" to 1L,
+                "label" to "psicológica",
+                "questionIds" to listOf("q01"),
+                "minValue" to 1L
+            )
+        ),
+        "recognition" to mapOf("prefix" to "Prefijo", "empty" to "Vacío"),
+        "thresholdFlags" to listOf(mapOf("questionId" to "q01", "minValue" to 1L, "levelId" to "n01")),
+        "countFlags" to listOf(
+            mapOf("questionIds" to listOf("q01"), "eachMinValue" to 1L, "countAtLeast" to 2L, "levelId" to "n01")
+        ),
+        "municipalities" to listOf(mapOf("id" to "m01", "order" to 1L, "label" to "Bucaramanga")),
         "levels" to listOf(
             mapOf(
                 "id" to "n01",
@@ -130,7 +222,9 @@ class QuestionnaireDocumentParsingTest {
                 "title" to "Nivel",
                 "summary" to "Resumen",
                 "advice" to listOf("Consejo"),
-                "routeIds" to listOf("r01")
+                "lineIds" to listOf("l01"),
+                "agencyIds" to listOf("a13"),
+                "municipalAgencyIds" to mapOf("bucaramanga" to listOf("a07"))
             )
         )
     )

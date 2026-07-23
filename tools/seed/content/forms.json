@@ -1,114 +1,254 @@
 {
-  "_comment": "BORRADOR A VALIDAR por la directora del trabajo de grado (P-38, hermano de P-23). Cuestionario orientador (RF-27, RF-29): seis preguntas de elaboración propia — sin escala Danger Assessment (nota de RF-27) — inspiradas en las dimensiones de los instrumentos de valoración de riesgo usados en Colombia (protocolo INMLCF): escalada física, amenazas, violencia sexual, control, aislamiento/humillación y percepción propia de peligro. Escala fija de 3 opciones y niveles en palabras (decisión F6 de A2-6). El campo reviewNote hace que seed.mjs OMITA este documento por defecto: solo se siembra con --borrador en un entorno de prueba, jamás a usuarias reales sin validación. Semántica: puntaje = suma de weight×value; nivel = mayor minScore <= puntaje (a igual minScore gana el de mayor order); alertLevelId = pregunta crítica cuya opción de mayor value garantiza al menos ese nivel. IDs opacos y nombres neutros (RNF-05, auditoría D4 H-1).",
+  "_comment": "Cuestionario orientador VALIDADO por la directora (reunión 2026-07-21; fuente de verdad: tools/seed/source/cuestionario-validado-2026-07.md). Instrumento de elaboración propia (RF-27, sin escala Danger Assessment). Esquema v2: 12 preguntas (P0 de contexto SIN puntaje + 11 puntuables) en dos bloques visibles (A «Lo que estás viviendo», B «Tu seguridad»), escala de frecuencia 0–3 de 12 meses (P1–P10), escala de percepción de riesgo de P11 y escala de vínculo de P0. Dos vías de cálculo (§5.4): Track 1 reconocimiento de tipos (dimensions) y Track 2 nivel de riesgo (umbrales 0/10/25/41 sobre 0–66 + banderas críticas que solo elevan: thresholdFlags P6≥1/≥2, P7≥1/≥2, P8≥1, P11=3; countFlags 2+ entre P6/P7/P8→Extremo). Textos LITERALES del documento (preguntas §4, aviso §6.1, reconocimiento §6.1, niveles §6.2–6.5). Los accesos por nivel referencian lines (nacionales/departamental) y agencies por municipio de CARGA 1 (§6.6): a06 (ESE Piedecuesta) y a26 (Personerías) siguen retenidas por [POR CONFIRMAR] en agencies.json — un id sin resolver simplemente no se muestra (RF-42) y se encenderá solo al confirmarse. IDs opacos y nombres neutros de encuesta (RNF-05, auditoría D4 H-1). El campo reviewNote se retiró: la directora validó el instrumento (P-38).",
   "collection": "forms",
   "documents": [
     {
       "id": "f01",
-      "schemaVersion": 1,
-      "version": 1,
-      "reviewNote": "[POR CONFIRMAR: BORRADOR — preguntas, pesos, umbrales, pisos críticos (alertLevelId) y rutas por nivel pendientes de validación por la directora (P-38). Retirar este campo y re-ejecutar la siembra tras el visto bueno.]",
+      "schemaVersion": 2,
+      "version": 2,
       "title": "Reconocer tu situación.",
-      "intro": "Seis preguntas cortas para ayudarte a poner en palabras lo que vives. No hay respuestas correctas. Al responder, piensa en tu pareja o expareja y en los últimos meses.",
-      "notice": "Es una orientación, no un diagnóstico: el resultado no sustituye una evaluación profesional.",
-      "scale": [
-        { "id": "s0", "order": 1, "label": "Nunca", "value": 0 },
-        { "id": "s1", "order": 2, "label": "Alguna vez", "value": 1 },
-        { "id": "s2", "order": 3, "label": "Con frecuencia", "value": 2 }
+      "intro": "Son doce preguntas cortas para ayudarte a poner en palabras lo que estás viviendo. No hay respuestas correctas ni mejores. Piensa en la persona que más te preocupa y en cómo han sido las cosas en los últimos doce meses. Puedes avanzar, retroceder o salir cuando quieras: nada de lo que respondas se guarda.",
+      "notice": "Esto es una orientación preliminar, no un diagnóstico. No reemplaza la evaluación de un profesional. Tú decides qué hacer con esta información.",
+      "scales": [
+        {
+          "id": "freq",
+          "options": [
+            { "id": "f0", "order": 1, "label": "Nunca", "value": 0 },
+            { "id": "f1", "order": 2, "label": "Una vez", "value": 1 },
+            { "id": "f2", "order": 3, "label": "Varias veces", "value": 2 },
+            { "id": "f3", "order": 4, "label": "Muchas veces o casi siempre", "value": 3 }
+          ]
+        },
+        {
+          "id": "fear",
+          "options": [
+            { "id": "r0", "order": 1, "label": "Nunca", "value": 0 },
+            { "id": "r1", "order": 2, "label": "A veces", "value": 1 },
+            { "id": "r2", "order": 3, "label": "Con frecuencia", "value": 2 },
+            { "id": "r3", "order": 4, "label": "Todo el tiempo", "value": 3 }
+          ]
+        },
+        {
+          "id": "link",
+          "options": [
+            { "id": "k0", "order": 1, "label": "Pareja o expareja", "value": 0 },
+            { "id": "k1", "order": 2, "label": "Familiar", "value": 0 },
+            { "id": "k2", "order": 3, "label": "Alguien de tu trabajo o estudio", "value": 0 },
+            { "id": "k3", "order": 4, "label": "Persona conocida", "value": 0 },
+            { "id": "k4", "order": 5, "label": "Prefiero no decirlo", "value": 0 }
+          ]
+        }
+      ],
+      "blocks": [
+        { "id": "a", "order": 1, "title": "Lo que estás viviendo" },
+        { "id": "b", "order": 2, "title": "Tu seguridad" }
       ],
       "questions": [
         {
-          "id": "q01",
+          "id": "p0",
           "order": 1,
-          "text": "¿Controla lo que haces: a dónde vas, con quién hablas, cómo vistes o cómo usas tu dinero?",
-          "weight": 1
+          "blockId": "a",
+          "scaleId": "link",
+          "text": "Para orientarte mejor, ¿con quién tiene que ver lo que vas a responder?",
+          "weight": 0,
+          "context": true
         },
         {
-          "id": "q02",
+          "id": "p1",
           "order": 2,
-          "text": "¿Te humilla, te descalifica o te ha ido alejando de tu familia o de tus amistades?",
+          "blockId": "a",
+          "scaleId": "freq",
+          "text": "En los últimos 12 meses, ¿esa persona te ha insultado, humillado o hecho sentir que no vales?",
           "weight": 1
         },
         {
-          "id": "q03",
+          "id": "p2",
           "order": 3,
-          "text": "¿Te ha causado daño físico, como golpes, empujones o zarandeos, aunque no dejen marcas?",
-          "weight": 3,
-          "alertLevelId": "n03"
+          "blockId": "a",
+          "scaleId": "freq",
+          "text": "¿Esa persona ha controlado a dónde vas, con quién hablas, cómo te vistes, o ha revisado tu celular sin tu permiso?",
+          "weight": 1
         },
         {
-          "id": "q04",
+          "id": "p3",
           "order": 4,
-          "text": "¿Te ha amenazado con hacerte daño a ti, a tus hijos e hijas o a alguien que quieres?",
-          "weight": 3,
-          "alertLevelId": "n04"
+          "blockId": "a",
+          "scaleId": "freq",
+          "text": "¿Esa persona ha tratado de alejarte de tu familia, tus amistades o tus redes de apoyo?",
+          "weight": 2
         },
         {
-          "id": "q05",
+          "id": "p4",
           "order": 5,
-          "text": "¿Te ha presionado u obligado a tener intimidad o contacto sexual cuando tú no querías?",
-          "weight": 3,
-          "alertLevelId": "n03"
+          "blockId": "a",
+          "scaleId": "freq",
+          "text": "¿Esa persona ha controlado tu dinero, te ha impedido trabajar o estudiar, o ha retenido tus documentos o tus cosas?",
+          "weight": 1
         },
         {
-          "id": "q06",
+          "id": "p5",
           "order": 6,
-          "text": "¿Sientes miedo de lo que pueda hacerte?",
-          "weight": 2,
-          "alertLevelId": "n03"
+          "blockId": "a",
+          "scaleId": "freq",
+          "text": "¿Esa persona te ha empujado, sacudido, abofeteado, golpeado o herido tu cuerpo?",
+          "weight": 2
+        },
+        {
+          "id": "p8",
+          "order": 7,
+          "blockId": "a",
+          "scaleId": "freq",
+          "text": "¿Esa persona te ha presionado, obligado o forzado a actos sexuales que no querías, o ha difundido o amenazado con difundir imágenes íntimas tuyas sin tu permiso?",
+          "weight": 3
+        },
+        {
+          "id": "p6",
+          "order": 8,
+          "blockId": "b",
+          "scaleId": "freq",
+          "text": "¿Esa persona te ha apretado el cuello, te ha tapado la boca o la nariz, o te ha impedido respirar?",
+          "weight": 3
+        },
+        {
+          "id": "p7",
+          "order": 9,
+          "blockId": "b",
+          "scaleId": "freq",
+          "text": "¿Esa persona te ha amenazado con un arma, o con matarte o hacerte un daño grave?",
+          "weight": 3
+        },
+        {
+          "id": "p9",
+          "order": 10,
+          "blockId": "b",
+          "scaleId": "freq",
+          "text": "En los últimos meses, ¿estas situaciones se han vuelto más frecuentes o más fuertes?",
+          "weight": 2
+        },
+        {
+          "id": "p10",
+          "order": 11,
+          "blockId": "b",
+          "scaleId": "freq",
+          "text": "¿Alguna de estas situaciones ha alcanzado o amenazado a tus hijos, hijas u otras personas que quieres?",
+          "weight": 2
+        },
+        {
+          "id": "p11",
+          "order": 12,
+          "blockId": "b",
+          "scaleId": "fear",
+          "text": "Cuando piensas en tu seguridad, ¿con qué frecuencia sientes miedo por ti o por tu vida?",
+          "weight": 2
         }
+      ],
+      "dimensions": [
+        { "id": "psico", "order": 1, "label": "violencia psicológica", "questionIds": ["p1", "p2", "p3"], "minValue": 1 },
+        { "id": "fisica", "order": 2, "label": "violencia física", "questionIds": ["p5", "p6"], "minValue": 1 },
+        { "id": "sexual", "order": 3, "label": "violencia sexual", "questionIds": ["p8"], "minValue": 1 },
+        { "id": "economica", "order": 4, "label": "violencia económica", "questionIds": ["p4"], "minValue": 1 }
+      ],
+      "recognition": {
+        "prefix": "Por tus respuestas, aparecen señales de",
+        "empty": "No aparecen señales claras de violencia en tus respuestas, pero conocer las señales te ayuda a cuidarte."
+      },
+      "thresholdFlags": [
+        { "questionId": "p6", "minValue": 1, "levelId": "grave" },
+        { "questionId": "p6", "minValue": 2, "levelId": "extremo" },
+        { "questionId": "p7", "minValue": 1, "levelId": "grave" },
+        { "questionId": "p7", "minValue": 2, "levelId": "extremo" },
+        { "questionId": "p8", "minValue": 1, "levelId": "grave" },
+        { "questionId": "p11", "minValue": 3, "levelId": "grave" }
+      ],
+      "countFlags": [
+        { "questionIds": ["p6", "p7", "p8"], "eachMinValue": 1, "countAtLeast": 2, "levelId": "extremo" }
+      ],
+      "municipalities": [
+        { "id": "bucaramanga", "order": 1, "label": "Bucaramanga" },
+        { "id": "floridablanca", "order": 2, "label": "Floridablanca" },
+        { "id": "giron", "order": 3, "label": "Girón" },
+        { "id": "piedecuesta", "order": 4, "label": "Piedecuesta" }
       ],
       "levels": [
         {
-          "id": "n01",
+          "id": "variable",
           "order": 1,
           "minScore": 0,
-          "title": "Variable",
-          "summary": "Por ahora, tus respuestas no muestran un patrón de riesgo alto. Aun así, lo que sientes importa: ninguna forma de control o de daño es normal, y estar atenta a cómo evoluciona tu situación también es cuidarte.",
+          "title": "Para tener presente",
+          "summary": "Por lo que respondiste, hoy no aparecen señales fuertes de violencia, pero mereces relaciones que te respeten siempre. Conocer las señales te ayuda a cuidarte.",
           "advice": [
-            "Explora la sección de información: reconocer las señales a tiempo hace la diferencia.",
-            "Si algo de lo que viviste te inquieta, las líneas de orientación te escuchan de forma gratuita y confidencial, sin exigirte nada.",
-            "Confía en tu percepción: si sientes que algo no está bien, busca acompañamiento."
+            "Revisa la sección Tipos de violencia para reconocer las señales a tiempo.",
+            "Guarda a mano las líneas de atención.",
+            "Confía en lo que sientes: si algo te incomoda, mereces buscar orientación."
           ],
-          "routeIds": ["r01"]
+          "lineIds": ["l02", "l01"],
+          "agencyIds": [],
+          "municipalAgencyIds": {}
         },
         {
-          "id": "n02",
+          "id": "moderado",
           "order": 2,
-          "minScore": 4,
-          "title": "Moderado",
-          "summary": "Tus respuestas muestran señales que merecen atención. No tienes que esperar a que la situación empeore para buscar apoyo: pedir orientación es tu derecho y no te compromete a nada.",
-          "advice": [
-            "Habla con alguien de tu confianza sobre lo que está pasando: nombrarlo es el primer paso.",
-            "La Comisaría de Familia puede orientarte sobre medidas de protección, sin que tengas que iniciar un proceso penal.",
-            "Las líneas de atención te orientan de forma gratuita y confidencial, a cualquier hora."
-          ],
-          "routeIds": ["r01", "r02"]
-        },
-        {
-          "id": "n03",
-          "order": 3,
           "minScore": 10,
-          "title": "Grave",
-          "summary": "Lo que describes indica un riesgo serio para tu bienestar y tu integridad. No es tu culpa y no estás sola: mereces protección y hay entidades preparadas para dártela.",
+          "title": "Vale la pena que te orientes",
+          "summary": "Lo que cuentas incluye situaciones que sí son violencia y que conviene no dejar pasar, porque tienden a repetirse o a aumentar. Buscar orientación ahora es una forma de cuidarte.",
           "advice": [
-            "Acude a la Comisaría de Familia: puede dictar medidas de protección para ti y para tus hijos e hijas, como ordenar que se aleje.",
-            "Si sufriste una agresión, el sector salud te atiende de forma inmediata y gratuita, sin necesidad de denuncia previa.",
-            "Prepara apoyos por si los necesitas: alguien de confianza, tus documentos a la mano y un lugar al que puedas ir."
+            "Comunícate con la Línea 155: te explican tus derechos y tus opciones.",
+            "Considera acercarte a una Comisaría de Familia o al Centro Integral de la Mujer.",
+            "Identifica una persona de confianza con quien hablar.",
+            "Guarda las líneas de atención en un lugar seguro."
           ],
-          "routeIds": ["r02", "r03", "r01"]
+          "lineIds": ["l02"],
+          "agencyIds": ["a13"],
+          "municipalAgencyIds": {
+            "bucaramanga": ["a07", "a08", "a09"],
+            "floridablanca": ["a10"],
+            "giron": ["a11"],
+            "piedecuesta": ["a12"]
+          }
         },
         {
-          "id": "n04",
-          "order": 4,
-          "minScore": 17,
-          "title": "Extremo",
-          "summary": "Tus respuestas indican que tu seguridad puede estar en peligro. Tu vida y tu integridad son lo primero: busca protección cuanto antes. Si sientes que el peligro es inmediato, llama al 123.",
+          "id": "grave",
+          "order": 3,
+          "minScore": 25,
+          "title": "Es importante que busques apoyo pronto",
+          "summary": "Por lo que respondiste, estás viviendo situaciones serias que ponen en riesgo tu bienestar y tu seguridad. No tienes que enfrentarlas sola, y buscar ayuda no es exagerar.",
           "advice": [
-            "Si el peligro es ahora mismo, llama al 123 (Policía): funciona las 24 horas en todo el país.",
-            "La Comisaría de Familia puede ordenar de inmediato medidas para que se aleje de ti; es gratuito y no necesitas abogado.",
-            "Prepara tu salida con el apoyo de una entidad o de alguien de total confianza, sin anunciar tus decisiones a quien te hace daño."
+            "Comunícate con la Línea 155 o con la línea departamental 607 691 0980 para orientarte sobre el paso que sigue.",
+            "Acude a una Comisaría de Familia para pedir medidas de protección (gratis y sin abogado).",
+            "Si hubo lesiones o violencia sexual, ve a urgencias (idealmente antes de 72 horas).",
+            "Ten lista la salida rápida de la aplicación y una persona de confianza."
           ],
-          "routeIds": ["r02", "r03"]
+          "lineIds": ["l02", "l01"],
+          "agencyIds": [],
+          "municipalAgencyIds": {
+            "bucaramanga": ["a07", "a08", "a09", "a02"],
+            "floridablanca": ["a10", "a03", "a04"],
+            "giron": ["a11", "a05"],
+            "piedecuesta": ["a12", "a06"]
+          }
+        },
+        {
+          "id": "extremo",
+          "order": 4,
+          "minScore": 41,
+          "title": "Tu seguridad puede estar en riesgo ahora",
+          "summary": "Lo que respondiste incluye señales asociadas a un peligro alto. Mereces estar a salvo. Si estás en peligro en este momento, marca 123.",
+          "advice": [
+            "Si hay peligro inmediato, llama al 123 ya.",
+            "Contacta la Línea 155 para activar la ruta y solicitar medidas urgentes.",
+            "Acude a la URI de la Fiscalía (24 horas) o a urgencias.",
+            "Pide medidas de protección en la Comisaría de Familia.",
+            "Si hay niñas o niños en riesgo, comunícate con la Línea 141 (ICBF).",
+            "Ten un plan de salida y usa la salida rápida si necesitas cerrar la aplicación de inmediato."
+          ],
+          "lineIds": ["l01", "l02", "l04"],
+          "agencyIds": ["a17"],
+          "municipalAgencyIds": {
+            "bucaramanga": ["a07", "a08", "a09"],
+            "floridablanca": ["a10"],
+            "giron": ["a11"],
+            "piedecuesta": ["a12"]
+          }
         }
       ]
     }

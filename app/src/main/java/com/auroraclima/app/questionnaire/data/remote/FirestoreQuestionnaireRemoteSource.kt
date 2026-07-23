@@ -44,15 +44,26 @@ internal fun Map<String, Any?>.toFormDto(id: String) = FormDto(
     title = str("title"),
     intro = str("intro"),
     notice = str("notice"),
-    scale = entryList("scale").map { it.toScaleOptionDto() },
+    scales = entryList("scales").map { it.toScaleDto() },
+    blocks = entryList("blocks").map { it.toBlockDto() },
     questions = entryList("questions").map { it.toQuestionDto() },
+    dimensions = entryList("dimensions").map { it.toDimensionDto() },
+    recognition = (this["recognition"] as? Map<*, *>)?.toRecognitionDto(),
+    thresholdFlags = entryList("thresholdFlags").map { it.toThresholdFlagDto() },
+    countFlags = entryList("countFlags").map { it.toCountFlagDto() },
+    municipalities = entryList("municipalities").map { it.toMunicipalityDto() },
     levels = entryList("levels").map { it.toLevelDto() }
 )
 
 // Una entrada que no sea mapa se convierte en DTO vacío: el mapper la
 // rechazará y descartará el documento entero (estrictez deliberada).
-private fun Map<String, Any?>.entryList(field: String): List<Map<*, *>> =
+private fun Map<*, *>.entryList(field: String): List<Map<*, *>> =
     (this[field] as? List<*>)?.map { it as? Map<*, *> ?: emptyMap<Any, Any>() } ?: emptyList()
+
+private fun Map<*, *>.toScaleDto() = ScaleDto(
+    id = str("id"),
+    options = entryList("options").map { it.toScaleOptionDto() }
+)
 
 private fun Map<*, *>.toScaleOptionDto() = ScaleOptionDto(
     id = str("id"),
@@ -61,12 +72,52 @@ private fun Map<*, *>.toScaleOptionDto() = ScaleOptionDto(
     value = num("value")
 )
 
+private fun Map<*, *>.toBlockDto() = BlockDto(
+    id = str("id"),
+    order = num("order"),
+    title = str("title")
+)
+
 private fun Map<*, *>.toQuestionDto() = QuestionDto(
     id = str("id"),
     order = num("order"),
+    blockId = str("blockId"),
+    scaleId = str("scaleId"),
     text = str("text"),
     weight = num("weight"),
-    alertLevelId = str("alertLevelId")
+    context = bool("context")
+)
+
+private fun Map<*, *>.toDimensionDto() = DimensionDto(
+    id = str("id"),
+    order = num("order"),
+    label = str("label"),
+    questionIds = strList("questionIds"),
+    minValue = num("minValue")
+)
+
+private fun Map<*, *>.toRecognitionDto() = RecognitionDto(
+    prefix = str("prefix"),
+    empty = str("empty")
+)
+
+private fun Map<*, *>.toThresholdFlagDto() = ThresholdFlagDto(
+    questionId = str("questionId"),
+    minValue = num("minValue"),
+    levelId = str("levelId")
+)
+
+private fun Map<*, *>.toCountFlagDto() = CountFlagDto(
+    questionIds = strList("questionIds"),
+    eachMinValue = num("eachMinValue"),
+    countAtLeast = num("countAtLeast"),
+    levelId = str("levelId")
+)
+
+private fun Map<*, *>.toMunicipalityDto() = MunicipalityDto(
+    id = str("id"),
+    order = num("order"),
+    label = str("label")
 )
 
 private fun Map<*, *>.toLevelDto() = LevelDto(
@@ -76,10 +127,14 @@ private fun Map<*, *>.toLevelDto() = LevelDto(
     title = str("title"),
     summary = str("summary"),
     advice = strList("advice"),
-    routeIds = strList("routeIds")
+    lineIds = strList("lineIds"),
+    agencyIds = strList("agencyIds"),
+    municipalAgencyIds = strListMap("municipalAgencyIds")
 )
 
 private fun Map<*, *>.str(key: String): String? = this[key] as? String
+
+private fun Map<*, *>.bool(key: String): Boolean = this[key] as? Boolean ?: false
 
 // Solo valores enteros: truncar un decimal alteraría pesos o umbrales
 // calibrados sin descartar el documento — un decimal se trata como corrupto.
@@ -88,3 +143,16 @@ private fun Map<*, *>.num(key: String): Long? =
 
 private fun Map<*, *>.strList(key: String): List<String> =
     (this[key] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+
+// Mapa municipio → ids de entidades (accesos por municipio, §6). Una clave sin
+// lista válida queda con lista vacía; el mapper y el resolvedor de accesos
+// toleran ids sin resolver (mismo criterio que las referencias huérfanas RF-42).
+private fun Map<*, *>.strListMap(key: String): Map<String, List<String>> {
+    val raw = this[key] as? Map<*, *> ?: return emptyMap()
+    val result = LinkedHashMap<String, List<String>>()
+    for ((rawKey, rawValue) in raw) {
+        val municipality = rawKey as? String ?: continue
+        result[municipality] = (rawValue as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+    }
+    return result
+}
