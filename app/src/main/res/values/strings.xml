@@ -170,6 +170,9 @@
     <string name="guidance_result_level">NIVEL ORIENTATIVO</string>
     <string name="guidance_result_partial">Respondiste %1$d de %2$d preguntas. Con pocas respuestas la orientación puede quedarse corta: tómala como un punto de partida.</string>
     <string name="guidance_result_actions">QUÉ PUEDES HACER</string>
+    <string name="guidance_result_access">CONTACTOS DIRECTOS</string>
+    <string name="guidance_result_municipality_prompt">Elige tu municipio para ver a dónde acudir cerca de ti.</string>
+    <string name="guidance_call">Llamar</string>
     <string name="guidance_result_routes">Ver rutas de atención</string>
     <string name="guidance_result_finish">Terminar</string>
     <string name="journal_tag">MI REGISTRO</string>

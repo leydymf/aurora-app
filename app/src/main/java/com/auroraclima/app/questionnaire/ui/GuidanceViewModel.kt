@@ -3,7 +3,9 @@ package com.auroraclima.app.questionnaire.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.core.directory.DirectoryProvider
 import com.auroraclima.app.core.security.SessionManager
+import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
 import com.auroraclima.app.questionnaire.domain.repository.QuestionnaireRepository
 import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,21 +17,24 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Flujo del cuestionario orientador (RF-27): avanzar, retroceder y abandonar
- * en cualquier momento, una pregunta por pantalla (decisión F6 de A2-6).
+ * Flujo del cuestionario orientador validado (RF-27): avanzar, retroceder y
+ * abandonar en cualquier momento, una pregunta por pantalla en dos bloques.
  *
- * Avanzar no exige responder: el motor de RF-29 trata la pregunta sin
- * respuesta como aporte 0 y `answeredCount` deja que la UI lo matice — no se
- * obliga a nadie a contestar una pregunta dura para continuar (nota de
- * lenguaje cuidado de RF-27).
+ * Avanzar no exige responder: el motor de RF-29 trata la pregunta sin respuesta
+ * como aporte 0 y `answeredCount` deja que la UI lo matice — no se obliga a
+ * nadie a contestar una pregunta dura para continuar (nota de lenguaje cuidado
+ * de RF-27).
  *
- * Todo fallo del repositorio se traduce a un mensaje genérico: el detalle del
- * SDK jamás llega a la UI ni a un log (P-24, guía §3).
+ * Al llegar al resultado se resuelven los accesos directos (§6) contra content
+ * a través del contrato de core; el municipio elegido solo filtra en memoria.
+ * Todo fallo se traduce a un mensaje genérico o se ignora en silencio: el
+ * detalle del SDK jamás llega a la UI ni a un log (P-24, guía §3).
  */
 @HiltViewModel
 class GuidanceViewModel @Inject constructor(
     private val repository: QuestionnaireRepository,
     private val calculateGuidanceLevel: CalculateGuidanceLevelUseCase,
+    private val directory: DirectoryProvider,
     sessionManager: SessionManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(GuidanceUiState())
@@ -63,16 +68,15 @@ class GuidanceViewModel @Inject constructor(
     }
 
     fun onNext() {
-        _uiState.update { state ->
-            val questionnaire = state.questionnaire
-            when {
-                questionnaire == null || state.phase != GuidancePhase.QUESTION -> state
-                state.isLastQuestion -> state.copy(
-                    phase = GuidancePhase.RESULT,
-                    result = calculateGuidanceLevel(questionnaire, state.answers)
-                )
-                else -> state.copy(questionIndex = state.questionIndex + 1)
-            }
+        val state = _uiState.value
+        val questionnaire = state.questionnaire ?: return
+        if (state.phase != GuidancePhase.QUESTION) return
+        if (state.isLastQuestion) {
+            val result = calculateGuidanceLevel(questionnaire, state.answers)
+            _uiState.update { it.copy(phase = GuidancePhase.RESULT, result = result) }
+            resolveAccess(result.level)
+        } else {
+            _uiState.update { it.copy(questionIndex = it.questionIndex + 1) }
         }
     }
 
@@ -87,6 +91,11 @@ class GuidanceViewModel @Inject constructor(
         }
     }
 
+    /** Elegir el municipio filtra en memoria las entidades ya resueltas (§6). */
+    fun onMunicipalitySelected(municipalityId: String) {
+        _uiState.update { it.copy(selectedMunicipalityId = municipalityId) }
+    }
+
     /**
      * Abandono limpio (RF-27 criterio 2): las respuestas y el resultado se
      * descartan por completo antes de salir. El pop de la ruta destruye además
@@ -96,13 +105,29 @@ class GuidanceViewModel @Inject constructor(
         discardAnswers()
     }
 
+    /**
+     * Resuelve todos los accesos posibles del nivel (líneas + entidades fijas +
+     * entidades de todos los municipios) en una sola consulta; la selección de
+     * municipio luego filtra en memoria. Un fallo se ignora en silencio (§3): el
+     * resultado se muestra sin contactos y los consejos ya nombran las líneas.
+     */
+    private fun resolveAccess(level: GuidanceLevel) {
+        val entityIds = (level.agencyIds + level.municipalAgencyIds.values.flatten()).distinct()
+        viewModelScope.launch {
+            directory.resolve(level.lineIds, entityIds)
+                .onSuccess { access -> _uiState.update { it.copy(access = access) } }
+        }
+    }
+
     private fun discardAnswers() {
         _uiState.update {
             it.copy(
                 phase = GuidancePhase.INTRO,
                 questionIndex = 0,
                 answers = emptyMap(),
-                result = null
+                result = null,
+                selectedMunicipalityId = null,
+                access = null
             )
         }
     }

@@ -1,18 +1,27 @@
 package com.auroraclima.app.questionnaire.ui
 
 import androidx.annotation.StringRes
+import com.auroraclima.app.core.directory.DirectoryAccess
+import com.auroraclima.app.core.directory.DirectoryEntity
+import com.auroraclima.app.core.directory.DirectoryLine
+import com.auroraclima.app.questionnaire.domain.model.Block
 import com.auroraclima.app.questionnaire.domain.model.GuidanceResult
 import com.auroraclima.app.questionnaire.domain.model.Question
 import com.auroraclima.app.questionnaire.domain.model.Questionnaire
+import com.auroraclima.app.questionnaire.domain.model.ScaleOption
 
-/** Fase del flujo: portada → una pregunta por pantalla → resultado (F6 de A2-6). */
+/** Fase del flujo: portada → una pregunta por pantalla → resultado. */
 enum class GuidancePhase { INTRO, QUESTION, RESULT }
 
 /**
- * Estado del cuestionario orientador (RF-27, mockups P15–P17). Las respuestas
- * viven SOLO aquí, en memoria: no hay SavedStateHandle, ni rememberSaveable,
- * ni repositorio alguno que las reciba — abandonar o morir el proceso no deja
- * nada en disco (RF-27 criterio 2, base de RF-28).
+ * Estado del cuestionario orientador validado (RF-27). Las respuestas viven
+ * SOLO aquí, en memoria: no hay SavedStateHandle, ni rememberSaveable, ni
+ * repositorio alguno que las reciba — abandonar o morir el proceso no deja nada
+ * en disco (RF-27 criterio 2, base de RF-28).
+ *
+ * Los accesos ([access]) se resuelven contra content al llegar al resultado; el
+ * municipio elegido ([selectedMunicipalityId]) solo filtra en memoria las
+ * entidades ya resueltas, sin nuevas consultas.
  */
 data class GuidanceUiState(
     val isLoading: Boolean = true,
@@ -22,10 +31,26 @@ data class GuidanceUiState(
     val questionIndex: Int = 0,
     /** id de pregunta → id de la opción elegida. */
     val answers: Map<String, String> = emptyMap(),
-    val result: GuidanceResult? = null
+    val result: GuidanceResult? = null,
+    val selectedMunicipalityId: String? = null,
+    val access: DirectoryAccess? = null
 ) {
     val currentQuestion: Question?
         get() = questionnaire?.questions?.getOrNull(questionIndex)
+
+    /** Bloque al que pertenece la pregunta visible, para el encabezado (§3 del documento). */
+    val currentBlock: Block?
+        get() {
+            val question = currentQuestion ?: return null
+            return questionnaire?.blocks?.firstOrNull { it.id == question.blockId }
+        }
+
+    /** Opciones de la escala de la pregunta visible (frecuencia, percepción o vínculo). */
+    val currentOptions: List<ScaleOption>
+        get() {
+            val question = currentQuestion ?: return emptyList()
+            return questionnaire?.scales?.firstOrNull { it.id == question.scaleId }?.options ?: emptyList()
+        }
 
     /** Respuesta de la pregunta visible, si la usuaria eligió alguna. */
     val selectedOptionId: String?
@@ -33,4 +58,45 @@ data class GuidanceUiState(
 
     val isLastQuestion: Boolean
         get() = questionnaire != null && questionIndex == questionnaire.questions.lastIndex
+
+    /**
+     * Línea de reconocimiento de tipos (§6.1): nombra las dimensiones encendidas
+     * o, si no hay ninguna, el texto de ausencia. Los fragmentos y el texto de
+     * ausencia son literales del documento (viven en el cuestionario, no en el APK).
+     */
+    val recognitionText: String?
+        get() {
+            val recognition = questionnaire?.recognition ?: return null
+            val dimensions = result?.dimensions ?: return null
+            if (dimensions.isEmpty()) return recognition.empty
+            return "${recognition.prefix} ${joinWithConjunction(dimensions.map { it.label })}."
+        }
+
+    /** Líneas nacionales del nivel (siempre visibles), ya resueltas y en orden. */
+    val nationalLines: List<DirectoryLine>
+        get() = access?.lines ?: emptyList()
+
+    /** Entidades fijas del nivel (no dependen del municipio). */
+    val fixedEntities: List<DirectoryEntity>
+        get() = entitiesFor(result?.level?.agencyIds)
+
+    /** Entidades del municipio elegido; vacío hasta que la usuaria elige uno. */
+    val municipalEntities: List<DirectoryEntity>
+        get() {
+            val municipality = selectedMunicipalityId ?: return emptyList()
+            return entitiesFor(result?.level?.municipalAgencyIds?.get(municipality))
+        }
+
+    private fun entitiesFor(ids: List<String>?): List<DirectoryEntity> {
+        if (ids.isNullOrEmpty()) return emptyList()
+        val byId = access?.entities?.associateBy { it.id } ?: return emptyList()
+        return ids.mapNotNull { byId[it] }
+    }
+}
+
+/** Une etiquetas en español: «a», «a y b», «a, b y c». */
+private fun joinWithConjunction(labels: List<String>): String = when (labels.size) {
+    0 -> ""
+    1 -> labels.first()
+    else -> labels.dropLast(1).joinToString(", ") + " y " + labels.last()
 }

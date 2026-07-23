@@ -1,5 +1,8 @@
 package com.auroraclima.app.questionnaire.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -26,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
+import com.auroraclima.app.core.directory.DirectoryEntity
+import com.auroraclima.app.core.directory.DirectoryLine
 import com.auroraclima.app.core.ui.components.ErrorState
 import com.auroraclima.app.core.ui.components.LoadingState
 import com.auroraclima.app.core.ui.components.PrimaryButton
@@ -65,18 +72,18 @@ import com.auroraclima.app.core.ui.theme.Sky
 import com.auroraclima.app.core.ui.theme.Steel
 import com.auroraclima.app.core.ui.theme.SteelDeep
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
+import com.auroraclima.app.questionnaire.domain.model.Municipality
 import com.auroraclima.app.questionnaire.domain.model.Question
 
 /**
- * Cuestionario orientador (RF-27; mockups P15/P16 — alta-fidelidad-24/25).
- * Vive dentro del grafo seguro: bloqueo de capturas y recientes, nube de
- * salida y reporte de interacción (toques y scroll) llegan por construcción
- * (RNF-02/03, P-21).
+ * Cuestionario orientador validado (RF-27; documento §3–§6). Vive dentro del
+ * grafo seguro: bloqueo de capturas y recientes, nube de salida y reporte de
+ * interacción (toques y scroll) llegan por construcción (RNF-02/03, P-21).
  * No hay campos de texto: la regla P-15 no aplica a estas pantallas.
  *
- * Los textos de preguntas, escala y avisos llegan del documento administrable
- * y nunca van en el APK (RNF-05); los estáticos usan claves neutras
- * `guidance_*` vigiladas por CamouflageResourcesTest.
+ * Los textos de preguntas, escala, bloques, aviso, reconocimiento y niveles
+ * llegan del documento administrable y nunca van en el APK (RNF-05); los
+ * estáticos usan claves neutras `guidance_*` vigiladas por CamouflageResourcesTest.
  */
 @Composable
 fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
@@ -104,6 +111,7 @@ fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
         onOptionSelected = viewModel::onOptionSelected,
         onNext = viewModel::onNext,
         onPrevious = viewModel::onPrevious,
+        onMunicipalitySelected = viewModel::onMunicipalitySelected,
         onOpenRoutes = onOpenRoutes,
         onRetry = viewModel::onRetry
     )
@@ -117,6 +125,7 @@ internal fun GuidanceScreen(
     onOptionSelected: (String) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    onMunicipalitySelected: (String) -> Unit,
     onOpenRoutes: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
@@ -141,6 +150,7 @@ internal fun GuidanceScreen(
                 )
                 GuidancePhase.RESULT -> ResultContent(
                     state = state,
+                    onMunicipalitySelected = onMunicipalitySelected,
                     onOpenRoutes = onOpenRoutes,
                     onFinish = onDismiss
                 )
@@ -149,7 +159,7 @@ internal fun GuidanceScreen(
     }
 }
 
-/** Portada del cuestionario (P15): título e introducción del documento, reglas y aviso. */
+/** Portada del cuestionario: título e introducción del documento, reglas y aviso. */
 @Composable
 private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss: () -> Unit) {
     val questionnaire = state.questionnaire ?: return
@@ -227,7 +237,12 @@ private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss:
     }
 }
 
-/** Una pregunta por pantalla (P16): progreso, opciones de la escala y navegación. */
+/**
+ * Una pregunta por pantalla, con el título de su bloque como encabezado (los
+ * dos bloques del documento, §3): progreso, opciones de la escala de esa
+ * pregunta y navegación. La pregunta de contexto P0 usa su escala de vínculo,
+ * el resto la de frecuencia o la de percepción.
+ */
 @Composable
 private fun QuestionContent(
     state: GuidanceUiState,
@@ -278,11 +293,15 @@ private fun QuestionContent(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            state.currentBlock?.let { block ->
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionTag(block.title)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             QuestionText(question)
             Spacer(modifier = Modifier.height(20.dp))
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                questionnaire.scale.forEach { option ->
+                state.currentOptions.forEach { option ->
                     ScaleOptionRow(
                         label = option.label,
                         selected = option.id == state.selectedOptionId,
@@ -327,17 +346,22 @@ private fun QuestionContent(
 }
 
 /**
- * Resultado orientativo (RF-29, mockup P17). La etiqueta, el nivel y el aviso
- * de alcance van en la zona FIJA de la columna — fuera del área desplazable —
- * para que el aviso sea visible en todo resultado sin necesidad de scroll
- * (RF-30 criterio 1, «visible en 360×800 sin desplazarse» de F6); solo las
- * recomendaciones y el acceso a rutas se desplazan.
+ * Resultado orientativo (RF-29, documento §6). El orden es el exigido: el aviso
+ * de alcance (RF-30), la línea de reconocimiento de tipos y el nivel van en la
+ * zona FIJA de la columna —fuera del área desplazable— para que el aviso sea
+ * visible en todo resultado sin necesidad de scroll (RF-30 criterio 1); las
+ * recomendaciones y los accesos por municipio se desplazan.
  *
- * «Guardar resultado» del mockup no se pinta: RF-31 queda como trabajo futuro
- * y el resultado se descarta siempre al terminar.
+ * «Guardar resultado» no se pinta: RF-31 queda como trabajo futuro y el
+ * resultado se descarta siempre al terminar.
  */
 @Composable
-private fun ResultContent(state: GuidanceUiState, onOpenRoutes: () -> Unit, onFinish: () -> Unit) {
+private fun ResultContent(
+    state: GuidanceUiState,
+    onMunicipalitySelected: (String) -> Unit,
+    onOpenRoutes: () -> Unit,
+    onFinish: () -> Unit
+) {
     val questionnaire = state.questionnaire ?: return
     val result = state.result ?: return
     Column(
@@ -348,9 +372,19 @@ private fun ResultContent(state: GuidanceUiState, onOpenRoutes: () -> Unit, onFi
         Spacer(modifier = Modifier.height(20.dp))
         SectionTag(stringResource(R.string.guidance_result_tag))
         Spacer(modifier = Modifier.height(12.dp))
-        LevelCard(level = result.level)
-        Spacer(modifier = Modifier.height(10.dp))
         NoticeCard(questionnaire.notice)
+        state.recognitionText?.let { recognition ->
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = recognition,
+                fontFamily = PlexSans,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+                color = Night
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        LevelCard(level = result.level)
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -376,10 +410,12 @@ private fun ResultContent(state: GuidanceUiState, onOpenRoutes: () -> Unit, onFi
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 result.level.advice.forEach { advice -> GuidanceBullet(advice) }
             }
-            if (result.level.routeIds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(18.dp))
-                RoutesLinkRow(onClick = onOpenRoutes)
-            }
+            AccessSection(
+                state = state,
+                onMunicipalitySelected = onMunicipalitySelected
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            RoutesLinkRow(onClick = onOpenRoutes)
             Spacer(modifier = Modifier.height(16.dp))
         }
         PrimaryButton(
@@ -393,11 +429,60 @@ private fun ResultContent(state: GuidanceUiState, onOpenRoutes: () -> Unit, onFi
 }
 
 /**
+ * Accesos directos del nivel (§6): líneas nacionales y entidades fijas, luego el
+ * selector de municipio y las entidades de ese municipio. Las líneas y entidades
+ * llegan resueltas del contrato de core; un id sin resolver simplemente no
+ * aparece (RF-42).
+ */
+@Composable
+private fun AccessSection(state: GuidanceUiState, onMunicipalitySelected: (String) -> Unit) {
+    val questionnaire = state.questionnaire ?: return
+    val level = state.result?.level ?: return
+    val hasAny = level.lineIds.isNotEmpty() || level.agencyIds.isNotEmpty() || level.municipalAgencyIds.isNotEmpty()
+    if (!hasAny) return
+
+    Spacer(modifier = Modifier.height(18.dp))
+    SectionTag(stringResource(R.string.guidance_result_access))
+    Spacer(modifier = Modifier.height(12.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        state.nationalLines.forEach { line -> LineRow(line) }
+        state.fixedEntities.forEach { entity -> EntityRow(entity) }
+    }
+    if (level.municipalAgencyIds.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = stringResource(R.string.guidance_result_municipality_prompt),
+            fontFamily = PlexSans,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            color = SteelDeep
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            questionnaire.municipalities.forEach { municipality ->
+                MunicipalityRow(
+                    municipality = municipality,
+                    selected = municipality.id == state.selectedMunicipalityId,
+                    onClick = { onMunicipalitySelected(municipality.id) }
+                )
+            }
+        }
+        val municipalEntities = state.municipalEntities
+        if (municipalEntities.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                municipalEntities.forEach { entity -> EntityRow(entity) }
+            }
+        }
+    }
+}
+
+/**
  * Tarjeta del nivel: el nombre del nivel es el protagonista tipográfico y una
  * franja lateral lo acompaña con un acento POR NIVEL tomado solo de la paleta
  * serena de la marca — sin semáforos ni rojos de alarma (ajuste de la usuaria
  * 2026-07-13 sobre la decisión F6 de A2-6, anotado en P-41: F6 mantiene «el
- * nivel se dice con palabras» y el acento gradúa dentro del mismo cielo).
+ * nivel se dice con palabras», ratificado con el cuestionario 2026-07-21).
  */
 @Composable
 private fun LevelCard(level: GuidanceLevel) {
@@ -419,8 +504,8 @@ private fun LevelCard(level: GuidanceLevel) {
                 Text(
                     text = level.title,
                     fontFamily = Marcellus,
-                    fontSize = 34.sp,
-                    lineHeight = 42.sp,
+                    fontSize = 30.sp,
+                    lineHeight = 38.sp,
                     color = Night
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -448,7 +533,7 @@ private fun levelAccent(order: Int): Color = when {
     else -> Plum
 }
 
-/** Acceso a las rutas de atención (RF-29 criterio 2): navegación, nunca import de content (§2). */
+/** Acceso a las rutas de atención completas (RF-29 criterio 2): navegación, nunca import de content (§2). */
 @Composable
 private fun RoutesLinkRow(onClick: () -> Unit) {
     Surface(
@@ -530,7 +615,82 @@ private fun ScaleOptionRow(label: String, selected: Boolean, onClick: () -> Unit
     }
 }
 
-/** Punto de viñeta + texto (tarjeta de reglas de P15). */
+/** Selección de municipio para los accesos (§6): misma fila selectable que la escala. */
+@Composable
+private fun MunicipalityRow(municipality: Municipality, selected: Boolean, onClick: () -> Unit) {
+    ScaleOptionRow(label = municipality.label, selected = selected, onClick = onClick)
+}
+
+/**
+ * Línea de atención: toca la fila para abrir el marcador con el número puesto
+ * (RF-23, decisión F5); ACTION_DIAL no exige permiso (RNF-04) y no marca solo.
+ */
+@Composable
+private fun LineRow(line: DirectoryLine) {
+    val context = LocalContext.current
+    ContactCard(
+        title = line.name,
+        subtitle = line.number,
+        onCall = { dialNumber(context, line.number) }
+    )
+}
+
+/** Entidad: toca la fila para llamar al primer número disponible (§6). */
+@Composable
+private fun EntityRow(entity: DirectoryEntity) {
+    val context = LocalContext.current
+    val number = entity.phones.firstOrNull()
+    ContactCard(
+        title = entity.name,
+        subtitle = entity.address ?: entity.role,
+        onCall = number?.let { { dialNumber(context, it) } }
+    )
+}
+
+@Composable
+private fun ContactCard(title: String, subtitle: String, onCall: (() -> Unit)?) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = CloudWhite
+    ) {
+        Row(
+            modifier = Modifier
+                .then(if (onCall != null) Modifier.clickable(onClick = onCall) else Modifier)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontFamily = PlexSans,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
+                    color = Night
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    fontFamily = PlexSans,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = SteelDeep
+                )
+            }
+            if (onCall != null) {
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(
+                    imageVector = Icons.Filled.Call,
+                    contentDescription = stringResource(R.string.guidance_call),
+                    tint = SteelDeep
+                )
+            }
+        }
+    }
+}
+
+/** Punto de viñeta + texto (tarjeta de reglas de la portada y recomendaciones del nivel). */
 @Composable
 private fun GuidanceBullet(text: String) {
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -568,6 +728,19 @@ private fun NoticeCard(text: String, modifier: Modifier = Modifier) {
             color = Night,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         )
+    }
+}
+
+/**
+ * Abre el marcador con el número puesto (RF-23, decisión F5): ACTION_DIAL no
+ * exige permiso (RNF-04), no marca por sí solo y la app no conserva rastro. Sin
+ * marcador instalado la acción se descarta en silencio (mismo criterio que el
+ * único punto de salida de content, D4 S2 B-1). El cuestionario lo replica sin
+ * importar content (§2), igual que la barra de práctica del tutorial.
+ */
+private fun dialNumber(context: Context, number: String) {
+    runCatching {
+        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)))
     }
 }
 

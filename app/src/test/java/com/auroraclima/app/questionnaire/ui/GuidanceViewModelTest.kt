@@ -3,12 +3,22 @@ package com.auroraclima.app.questionnaire.ui
 import androidx.lifecycle.ViewModelStore
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.directory.DirectoryAccess
+import com.auroraclima.app.core.directory.DirectoryEntity
+import com.auroraclima.app.core.directory.DirectoryLine
+import com.auroraclima.app.core.directory.DirectoryProvider
 import com.auroraclima.app.core.security.MonotonicClock
 import com.auroraclima.app.core.security.SessionManager
+import com.auroraclima.app.questionnaire.domain.model.Block
+import com.auroraclima.app.questionnaire.domain.model.Dimension
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
+import com.auroraclima.app.questionnaire.domain.model.Municipality
 import com.auroraclima.app.questionnaire.domain.model.Question
 import com.auroraclima.app.questionnaire.domain.model.Questionnaire
+import com.auroraclima.app.questionnaire.domain.model.Recognition
+import com.auroraclima.app.questionnaire.domain.model.Scale
 import com.auroraclima.app.questionnaire.domain.model.ScaleOption
+import com.auroraclima.app.questionnaire.domain.model.ThresholdFlag
 import com.auroraclima.app.questionnaire.domain.repository.QuestionnaireRepository
 import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -22,9 +32,10 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * Flujo del cuestionario (RF-27): avance, retroceso, abandono y carga con el
- * contrato de error genérico. Las respuestas viven solo en el estado del
- * ViewModel: el descarte las deja vacías sin tocar repositorio alguno.
+ * Flujo del cuestionario (RF-27): avance, retroceso, abandono, cálculo del
+ * resultado y resolución de los accesos por municipio (§6). Las respuestas
+ * viven solo en el estado del ViewModel: el descarte las deja vacías sin tocar
+ * repositorio alguno.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GuidanceViewModelTest {
@@ -32,6 +43,7 @@ class GuidanceViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeQuestionnaireRepository()
+    private val directory = FakeDirectoryProvider()
 
     @Test
     fun `la carga exitosa expone el cuestionario en la portada`() = runTest {
@@ -86,6 +98,7 @@ class GuidanceViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(GuidancePhase.QUESTION, state.phase)
         assertEquals("q01", state.currentQuestion?.id)
+        assertEquals(listOf("s0", "s1", "s2"), state.currentOptions.map { it.id })
     }
 
     @Test
@@ -170,8 +183,8 @@ class GuidanceViewModelTest {
 
     @Test
     fun `el resultado se calcula con el motor al terminar`() = runTest {
-        // RF-29: todo «Con frecuencia» → (1+1+3)×2 = 10 → nivel n03, con sus
-        // rutas recomendadas listas para el acceso directo (criterio 2).
+        // RF-29: todo «Con frecuencia» → (1+1+3)×2 = 10 → nivel n03; la
+        // dimensión de q01 se enciende (Track 1).
         val viewModel = viewModel()
         advanceUntilIdle()
         viewModel.onStart()
@@ -185,7 +198,7 @@ class GuidanceViewModelTest {
         assertEquals(10, result?.score)
         assertEquals(3, result?.answeredCount)
         assertEquals(3, result?.questionCount)
-        assertEquals(listOf("r03"), result?.level?.routeIds)
+        assertEquals(listOf("d1"), result?.dimensions?.map { it.id })
     }
 
     @Test
@@ -204,14 +217,53 @@ class GuidanceViewModelTest {
     }
 
     @Test
-    fun `abandonar descarta todas las respuestas y vuelve a la portada`() = runTest {
+    fun `al llegar al resultado se resuelven las lineas y entidades fijas`() = runTest {
+        // §6: los accesos se resuelven contra content por el contrato de core.
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf("l1"), state.nationalLines.map { it.id })
+        assertEquals(listOf("af"), state.fixedEntities.map { it.id })
+        // La consulta pide TODAS las entidades posibles (fijas + de todo municipio).
+        assertEquals(listOf("af", "am1"), directory.lastEntityIds)
+    }
+
+    @Test
+    fun `elegir municipio muestra las entidades de ese municipio`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+        advanceUntilIdle()
+        assertEquals(emptyList<String>(), viewModel.uiState.value.municipalEntities.map { it.id })
+
+        viewModel.onMunicipalitySelected("m1")
+
+        assertEquals(listOf("am1"), viewModel.uiState.value.municipalEntities.map { it.id })
+    }
+
+    @Test
+    fun `abandonar descarta respuestas resultado municipio y accesos`() = runTest {
         // RF-27 criterio 2: al abandonar no se guarda ninguna respuesta.
         val viewModel = viewModel()
         advanceUntilIdle()
         viewModel.onStart()
-        viewModel.onOptionSelected("s2")
-        viewModel.onNext()
-        viewModel.onOptionSelected("s1")
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+        advanceUntilIdle()
+        viewModel.onMunicipalitySelected("m1")
 
         viewModel.onAbandon()
 
@@ -220,6 +272,8 @@ class GuidanceViewModelTest {
         assertEquals(0, state.questionIndex)
         assertEquals(emptyMap<String, String>(), state.answers)
         assertNull(state.result)
+        assertNull(state.selectedMunicipalityId)
+        assertNull(state.access)
     }
 
     @Test
@@ -286,6 +340,7 @@ class GuidanceViewModelTest {
     private fun viewModel(sessionManager: SessionManager = sessionManager()) = GuidanceViewModel(
         repository = repository,
         calculateGuidanceLevel = CalculateGuidanceLevelUseCase(),
+        directory = directory,
         sessionManager = sessionManager
     )
 
@@ -307,23 +362,52 @@ internal class FakeQuestionnaireRepository : QuestionnaireRepository {
     }
 }
 
-/** Instrumento mínimo de prueba: 3 preguntas, escala F6 y umbrales 0/4/10. */
+private class FakeDirectoryProvider : DirectoryProvider {
+    var lastLineIds: List<String>? = null
+    var lastEntityIds: List<String>? = null
+    var access = DirectoryAccess(
+        lines = listOf(DirectoryLine("l1", "Línea", "123", "descripción", null)),
+        entities = listOf(
+            DirectoryEntity("af", "Entidad fija", "rol", "cuándo", listOf("111"), null, null),
+            DirectoryEntity("am1", "Entidad municipal", "rol", "cuándo", listOf("222"), null, null)
+        )
+    )
+
+    override suspend fun resolve(lineIds: List<String>, entityIds: List<String>): Result<DirectoryAccess> {
+        lastLineIds = lineIds
+        lastEntityIds = entityIds
+        return Result.success(access)
+    }
+}
+
+/** Instrumento mínimo de prueba: 3 preguntas puntuables, escala 0–2, umbrales 0/4/10. */
 internal fun questionnaire() = Questionnaire(
     id = "f01",
-    version = 1,
+    version = 2,
     title = "Título",
     intro = "Intro",
     notice = "Aviso",
-    scale = listOf(
-        ScaleOption("s0", 1, "Nunca", 0),
-        ScaleOption("s1", 2, "Alguna vez", 1),
-        ScaleOption("s2", 3, "Con frecuencia", 2)
+    scales = listOf(
+        Scale(
+            "freq",
+            listOf(
+                ScaleOption("s0", 1, "Nunca", 0),
+                ScaleOption("s1", 2, "Alguna vez", 1),
+                ScaleOption("s2", 3, "Con frecuencia", 2)
+            )
+        )
     ),
+    blocks = listOf(Block("a", 1, "Lo que estás viviendo")),
     questions = listOf(
-        Question("q01", 1, "primera", weight = 1),
-        Question("q02", 2, "segunda", weight = 1),
-        Question("q03", 3, "tercera", weight = 3, alertLevelId = "n03")
+        Question("q01", 1, "a", "freq", "primera", weight = 1),
+        Question("q02", 2, "a", "freq", "segunda", weight = 1),
+        Question("q03", 3, "a", "freq", "tercera", weight = 3)
     ),
+    dimensions = listOf(Dimension("d1", 1, "violencia psicológica", listOf("q01"), 1)),
+    recognition = Recognition("Por tus respuestas, aparecen señales de", "No aparecen señales"),
+    thresholdFlags = listOf(ThresholdFlag("q03", 2, "n03")),
+    countFlags = emptyList(),
+    municipalities = listOf(Municipality("m1", 1, "Bucaramanga"), Municipality("m2", 2, "Girón")),
     levels = listOf(
         level("n01", order = 1, minScore = 0),
         level("n02", order = 2, minScore = 4),
@@ -338,5 +422,7 @@ private fun level(id: String, order: Int, minScore: Int) = GuidanceLevel(
     title = "Nivel $id",
     summary = "Resumen",
     advice = listOf("Consejo"),
-    routeIds = listOf("r0$order")
+    lineIds = if (id == "n03") listOf("l1") else emptyList(),
+    agencyIds = if (id == "n03") listOf("af") else emptyList(),
+    municipalAgencyIds = if (id == "n03") mapOf("m1" to listOf("am1")) else emptyMap()
 )
