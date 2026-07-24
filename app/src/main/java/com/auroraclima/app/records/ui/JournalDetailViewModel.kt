@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.usecase.DeleteJournalEntryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,6 +33,7 @@ const val ENTRY_ID_ARG = "entryId"
 class JournalDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: JournalRepository,
+    private val attachmentRepository: JournalAttachmentRepository,
     private val deleteJournalEntry: DeleteJournalEntryUseCase
 ) : ViewModel() {
     // El argumento llega como String de la ruta; uno malformado o ausente no
@@ -67,6 +69,10 @@ class JournalDetailViewModel @Inject constructor(
                 .onFailure {
                     _uiState.update { it.copy(isLoading = false, errorRes = R.string.common_error_generic) }
                 }
+            // Los adjuntos no son críticos (RF-33): si su lectura falla, la
+            // sección simplemente no se pinta — sin error adicional.
+            attachmentRepository.attachments(id)
+                .onSuccess { attachments -> _uiState.update { it.copy(attachments = attachments) } }
         }
     }
 

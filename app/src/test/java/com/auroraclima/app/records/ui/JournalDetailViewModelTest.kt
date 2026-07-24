@@ -3,7 +3,9 @@ package com.auroraclima.app.records.ui
 import androidx.lifecycle.SavedStateHandle
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.EntryKind
+import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.usecase.DeleteJournalEntryUseCase
 import java.time.LocalDate
@@ -29,12 +31,14 @@ class JournalDetailViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeJournalRepository()
+    private val attachments = FakeJournalAttachmentRepository()
     private val sync = FakeJournalSyncRepository()
 
     private fun viewModel(id: Long = 7) = JournalDetailViewModel(
         SavedStateHandle(mapOf(ENTRY_ID_ARG to id.toString())),
         repository,
-        DeleteJournalEntryUseCase(repository, sync)
+        attachments,
+        DeleteJournalEntryUseCase(repository, attachments, sync)
     )
 
     private val entry = JournalEntry(
@@ -55,6 +59,41 @@ class JournalDetailViewModelTest {
         val state = viewModel.uiState.value
         assertNull(state.errorRes)
         assertEquals(entry, state.entry)
+    }
+
+    @Test
+    fun `carga los adjuntos del registro para la seccion del detalle`() = runTest {
+        // RF-33 criterio 2: visibles en el detalle, solo dentro de la app.
+        repository.entryResult = Result.success(entry)
+        attachments.attachmentsResult = Result.success(
+            listOf(
+                JournalAttachment(4, AttachmentKind.IMAGE),
+                JournalAttachment(5, AttachmentKind.AUDIO)
+            )
+        )
+
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, state.attachments.size)
+        assertTrue(state.hasAudio)
+    }
+
+    @Test
+    fun `un fallo al leer adjuntos no rompe el detalle`() = runTest {
+        repository.entryResult = Result.success(entry)
+        attachments.attachmentsResult = Result.failure(IllegalStateException("bd"))
+
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.errorRes)
+        assertEquals(entry, state.entry)
+        assertTrue(state.attachments.isEmpty())
     }
 
     @Test
@@ -105,7 +144,8 @@ class JournalDetailViewModelTest {
         val viewModel = JournalDetailViewModel(
             SavedStateHandle(mapOf(ENTRY_ID_ARG to "no-numerico")),
             repository,
-            DeleteJournalEntryUseCase(repository, sync)
+            attachments,
+            DeleteJournalEntryUseCase(repository, attachments, sync)
         )
         viewModel.refresh()
         advanceUntilIdle()

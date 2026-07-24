@@ -44,6 +44,8 @@ import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
 import com.auroraclima.app.records.ui.JournalEditorRoute
 import com.auroraclima.app.records.ui.JournalListRoute
+import com.auroraclima.app.records.ui.JournalMediaRoute
+import com.auroraclima.app.records.ui.MEDIA_ID_ARG
 import com.auroraclima.app.weather.ui.ForecastRoute
 import com.auroraclima.app.weather.ui.WeatherScreen
 import com.auroraclima.app.weather.ui.WeatherViewModel
@@ -197,8 +199,17 @@ fun AuroraApp(sessionManager: SessionManager) {
                         },
                         // Eliminación (RF-36): el pop regresa al listado, que se
                         // refresca al volver a componerse — sin mensaje de éxito.
-                        onDeleted = { navController.popBackStack() }
+                        onDeleted = { navController.popBackStack() },
+                        // Adjuntos (RF-33): visor interno, dentro del grafo seguro.
+                        onOpenAttachment = { mediaId ->
+                            navController.navigate("$JOURNAL_MEDIA_BASE/$mediaId")
+                        }
                     )
+                }
+                // Visor interno de un adjunto (RF-33 criterio 2): imagen o PDF,
+                // sin salir jamás del grafo seguro (RNF-02).
+                screen(JOURNAL_MEDIA_ROUTE) {
+                    JournalMediaRoute(onBack = { navController.popBackStack() })
                 }
                 // Edición de un registro (RF-35, P19). El pop tras guardar
                 // regresa al detalle, que se refresca al volver a componerse.
@@ -263,11 +274,14 @@ fun AuroraApp(sessionManager: SessionManager) {
     }
     // Al pasar a background dentro del grafo seguro, la pila vuelve a la fachada:
     // recientes, muerte de proceso y botón atrás nunca reabren el espacio interno
-    // sin código (RF-06, auditoría M-02 / P-10).
+    // sin código (RF-06, auditoría M-02 / P-10). Única excepción: la ida-y-vuelta
+    // esperada a un selector o cámara del sistema (RF-33) — de un solo uso, con
+    // caducidad y siempre bajo los plazos de la sesión.
     SecureBackStackGuard(
         navController = navController,
         secureGraphRoute = INNER_ROUTE,
-        facadeRoute = HOME_ROUTE
+        facadeRoute = HOME_ROUTE,
+        suppressStopPop = sessionManager::isAwaitingSystemReturn
     )
     // Sesión del espacio interno: entrar al grafo la inicia; salida rápida,
     // inactividad de 5 min o background prolongado la cierran y hacen pop a la
@@ -335,6 +349,8 @@ private const val JOURNAL_NEW_ROUTE = "journal_new"
 private const val JOURNAL_DETAIL_ROUTE = "$JOURNAL_ROUTE/{$ENTRY_ID_ARG}"
 private const val JOURNAL_EDIT_BASE = "journal_edit"
 private const val JOURNAL_EDIT_ROUTE = "$JOURNAL_EDIT_BASE/{$ENTRY_ID_ARG}"
+private const val JOURNAL_MEDIA_BASE = "journal_media"
+private const val JOURNAL_MEDIA_ROUTE = "$JOURNAL_MEDIA_BASE/{$MEDIA_ID_ARG}"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"

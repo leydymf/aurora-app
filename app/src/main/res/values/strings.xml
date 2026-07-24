@@ -202,7 +202,24 @@
     <string name="journal_detail_edit">Editar</string>
     <string name="journal_detail_delete">Eliminar</string>
     <string name="journal_delete_title">¿Eliminar este registro?</string>
-    <string name="journal_delete_body">Se borrará de aquí y de la nube. Esta acción no se puede deshacer.</string>
+    <string name="journal_delete_body">Se borrará de aquí y de la nube, junto con sus adjuntos. Esta acción no se puede deshacer.</string>
     <string name="journal_delete_keep">Conservar</string>
     <string name="journal_delete_confirm">Sí, eliminar</string>
+    <string name="journal_media_label">Adjuntos (opcional)</string>
+    <string name="journal_media_gallery">Galería</string>
+    <string name="journal_media_camera">Cámara</string>
+    <string name="journal_media_document">Archivo</string>
+    <string name="journal_media_note">Lo que adjuntes queda protegido y solo se ve aquí. El original sigue en tu galería o en tus archivos, y al usar la cámara algunos teléfonos guardan una copia propia.</string>
+    <string name="journal_media_error">No se pudo adjuntar el archivo.</string>
+    <string name="journal_media_full">Ya alcanzaste el máximo de adjuntos en este registro.</string>
+    <string name="journal_media_remove">Quitar el adjunto</string>
+    <string name="journal_media_open">Ver el adjunto</string>
+    <string name="journal_media_section">ADJUNTOS</string>
+    <string name="journal_media_only_here">Tus adjuntos solo se ven dentro de la app.</string>
+    <string name="journal_media_audio_note">Los audios quedan guardados y protegidos; podrás reproducirlos en una próxima versión.</string>
+    <string name="journal_media_tag">MI REGISTRO · ADJUNTO</string>
+    <plurals name="journal_media_count">
+        <item quantity="one">1 ADJUNTO</item>
+        <item quantity="other">%d ADJUNTOS</item>
+    </plurals>
 </resources>

@@ -22,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,20 +46,29 @@ import com.auroraclima.app.core.ui.theme.PlexSans
 import com.auroraclima.app.core.ui.theme.Plum
 import com.auroraclima.app.core.ui.theme.Sky
 import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
 
 /**
  * Detalle de un registro (RF-34; mockup P20 / alta-fidelidad-30, sin estado de
- * sincronización ni evidencias — RF-33 fuera del MVP y la sync es silenciosa,
- * P-45b) con «Editar» (RF-35) y «Eliminar» en dos pasos (RF-36; el diálogo de
- * P20·b va en [SecureDialog], única ventana propia permitida — RNF-02).
+ * sincronización — la sync es silenciosa, P-45b) con la sección de adjuntos
+ * (RF-33: chips por familia, tocar abre el visor interno de imagen/PDF y la
+ * nota recuerda que solo se ven aquí), «Editar» (RF-35) y «Eliminar» en dos
+ * pasos (RF-36; el diálogo de P20·b va en [SecureDialog], única ventana propia
+ * permitida — RNF-02). Quitar adjuntos se hace desde «Editar», como el resto
+ * del contenido.
  *
  * P-15: los botones del diálogo registran interacción — el diálogo es una
  * ventana propia que el observador de toques del grafo seguro no ve, igual que
  * el selector de fecha del editor.
  */
 @Composable
-fun JournalDetailRoute(onBack: () -> Unit, onEdit: (Long) -> Unit, onDeleted: () -> Unit) {
+fun JournalDetailRoute(
+    onBack: () -> Unit,
+    onEdit: (Long) -> Unit,
+    onDeleted: () -> Unit,
+    onOpenAttachment: (Long) -> Unit
+) {
     val viewModel: JournalDetailViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     val sessionManager = LocalSessionManager.current
@@ -73,6 +83,7 @@ fun JournalDetailRoute(onBack: () -> Unit, onEdit: (Long) -> Unit, onDeleted: ()
         onBack = onBack,
         onRetry = viewModel::refresh,
         onEdit = { viewModel.entryId?.let(onEdit) },
+        onOpenAttachment = onOpenAttachment,
         onRequestDelete = viewModel::onRequestDelete,
         onDismissDelete = {
             sessionManager.registerInteraction()
@@ -91,6 +102,7 @@ internal fun JournalDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onEdit: () -> Unit,
+    onOpenAttachment: (Long) -> Unit,
     onRequestDelete: () -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
@@ -113,6 +125,9 @@ internal fun JournalDetailScreen(
                 ErrorState(messageRes = state.errorRes ?: R.string.common_error_generic, onRetry = onRetry)
             else -> JournalDetailContent(
                 entry = state.entry,
+                attachments = state.attachments,
+                hasAudio = state.hasAudio,
+                onOpenAttachment = onOpenAttachment,
                 onEdit = onEdit,
                 onRequestDelete = onRequestDelete
             )
@@ -129,7 +144,14 @@ internal fun JournalDetailScreen(
 }
 
 @Composable
-private fun JournalDetailContent(entry: JournalEntry, onEdit: () -> Unit, onRequestDelete: () -> Unit) {
+private fun JournalDetailContent(
+    entry: JournalEntry,
+    attachments: List<JournalAttachment>,
+    hasAudio: Boolean,
+    onOpenAttachment: (Long) -> Unit,
+    onEdit: () -> Unit,
+    onRequestDelete: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -157,6 +179,14 @@ private fun JournalDetailContent(entry: JournalEntry, onEdit: () -> Unit, onRequ
                 modifier = Modifier.padding(16.dp)
             )
         }
+        if (attachments.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(20.dp))
+            AttachmentSection(
+                attachments = attachments,
+                hasAudio = hasAudio,
+                onOpenAttachment = onOpenAttachment
+            )
+        }
         Spacer(modifier = Modifier.height(28.dp))
         OutlinedActionButton(text = stringResource(R.string.journal_detail_edit), onClick = onEdit)
         Spacer(modifier = Modifier.height(4.dp))
@@ -173,6 +203,41 @@ private fun JournalDetailContent(entry: JournalEntry, onEdit: () -> Unit, onRequ
         }
         // Aire final para no chocar con el botón nube de salida rápida.
         Spacer(modifier = Modifier.height(88.dp))
+    }
+}
+
+/** Sección «ADJUNTOS · N» del mockup P20 (RF-33): chips que abren el visor interno. */
+@Composable
+private fun AttachmentSection(
+    attachments: List<JournalAttachment>,
+    hasAudio: Boolean,
+    onOpenAttachment: (Long) -> Unit
+) {
+    MonoLabel(
+        pluralStringResource(R.plurals.journal_media_count, attachments.size, attachments.size)
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    AttachmentChipGrid(
+        attachments = attachments,
+        onOpen = { onOpenAttachment(it.id) },
+        onRemove = null
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        text = stringResource(R.string.journal_media_only_here),
+        fontFamily = PlexSans,
+        fontSize = 12.sp,
+        color = SteelDeep
+    )
+    if (hasAudio) {
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.journal_media_audio_note),
+            fontFamily = PlexSans,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            color = SteelDeep
+        )
     }
 }
 

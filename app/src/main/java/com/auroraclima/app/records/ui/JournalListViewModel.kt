@@ -3,6 +3,7 @@ package com.auroraclima.app.records.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -15,11 +16,14 @@ import kotlinx.coroutines.launch
 /**
  * Listado del historial (RF-34). [refresh] se invoca en cada entrada en
  * composición de la pantalla: al volver del editor (RF-32) la ruta reingresa
- * a composición y el registro nuevo aparece sin plomería adicional.
+ * a composición y el registro nuevo aparece sin plomería adicional. Los
+ * contadores de adjuntos (RF-33, P18) no son críticos: si fallan, las filas
+ * se pintan sin contador y sin error propio.
  */
 @HiltViewModel
 class JournalListViewModel @Inject constructor(
-    private val repository: JournalRepository
+    private val repository: JournalRepository,
+    private val attachmentRepository: JournalAttachmentRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(JournalListUiState())
     val uiState: StateFlow<JournalListUiState> = _uiState.asStateFlow()
@@ -34,6 +38,8 @@ class JournalListViewModel @Inject constructor(
                 .onFailure {
                     _uiState.update { it.copy(isLoading = false, errorRes = R.string.common_error_generic) }
                 }
+            attachmentRepository.counts()
+                .onSuccess { counts -> _uiState.update { it.copy(attachmentCounts = counts) } }
         }
     }
 }

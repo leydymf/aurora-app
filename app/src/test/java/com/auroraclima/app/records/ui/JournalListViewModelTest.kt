@@ -26,11 +26,14 @@ class JournalListViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeJournalRepository()
+    private val attachments = FakeJournalAttachmentRepository()
+
+    private fun viewModel() = JournalListViewModel(repository, attachments)
 
     @Test
     fun `expone los registros en el orden del repositorio`() = runTest {
         repository.entriesResult = Result.success(listOf(entry(2, "reciente"), entry(1, "antiguo")))
-        val viewModel = JournalListViewModel(repository)
+        val viewModel = viewModel()
 
         viewModel.refresh()
         advanceUntilIdle()
@@ -44,7 +47,7 @@ class JournalListViewModelTest {
     @Test
     fun `un fallo del repositorio se muestra solo como mensaje generico`() = runTest {
         repository.entriesResult = Result.failure(IllegalStateException("blob corrupto: detalle interno"))
-        val viewModel = JournalListViewModel(repository)
+        val viewModel = viewModel()
 
         viewModel.refresh()
         advanceUntilIdle()
@@ -57,7 +60,7 @@ class JournalListViewModelTest {
     @Test
     fun `refrescar tras un fallo recupera el listado`() = runTest {
         repository.entriesResult = Result.failure(IllegalStateException("fallo transitorio"))
-        val viewModel = JournalListViewModel(repository)
+        val viewModel = viewModel()
         viewModel.refresh()
         advanceUntilIdle()
 
@@ -69,6 +72,34 @@ class JournalListViewModelTest {
         assertNull(state.errorRes)
         assertEquals(1, state.entries.size)
         assertEquals(2, repository.entriesCalls)
+    }
+
+    @Test
+    fun `expone los contadores de adjuntos por registro`() = runTest {
+        // RF-33 (P18): «· N ADJUNTOS» junto a la fecha de cada fila.
+        repository.entriesResult = Result.success(listOf(entry(1, "x")))
+        attachments.countsResult = Result.success(mapOf(1L to 2))
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertEquals(mapOf(1L to 2), viewModel.uiState.value.attachmentCounts)
+    }
+
+    @Test
+    fun `un fallo de los contadores no rompe el listado`() = runTest {
+        repository.entriesResult = Result.success(listOf(entry(1, "x")))
+        attachments.countsResult = Result.failure(IllegalStateException("bd"))
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.errorRes)
+        assertEquals(1, state.entries.size)
+        assertTrue(state.attachmentCounts.isEmpty())
     }
 
     private fun entry(id: Long, detail: String) = JournalEntry(

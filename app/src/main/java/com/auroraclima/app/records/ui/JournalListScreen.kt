@@ -24,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,7 +96,11 @@ internal fun JournalListScreen(
             when {
                 state.isLoading -> LoadingState()
                 state.errorRes != null -> ErrorState(messageRes = state.errorRes, onRetry = onRetry)
-                else -> JournalListContent(entries = state.entries, onEntrySelected = onEntrySelected)
+                else -> JournalListContent(
+                    entries = state.entries,
+                    attachmentCounts = state.attachmentCounts,
+                    onEntrySelected = onEntrySelected
+                )
             }
         }
         // El botón permanece visible aun con error: agregar no depende de leer.
@@ -110,7 +115,11 @@ internal fun JournalListScreen(
 }
 
 @Composable
-private fun JournalListContent(entries: List<JournalEntry>, onEntrySelected: (Long) -> Unit) {
+private fun JournalListContent(
+    entries: List<JournalEntry>,
+    attachmentCounts: Map<Long, Int>,
+    onEntrySelected: (Long) -> Unit
+) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
@@ -122,7 +131,11 @@ private fun JournalListContent(entries: List<JournalEntry>, onEntrySelected: (Lo
         }
         itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                EntryCard(entry = entry, onClick = { onEntrySelected(entry.id) })
+                EntryCard(
+                    entry = entry,
+                    attachmentCount = attachmentCounts[entry.id] ?: 0,
+                    onClick = { onEntrySelected(entry.id) }
+                )
                 if (index < entries.lastIndex) Spacer(modifier = Modifier.height(10.dp))
             }
         }
@@ -130,9 +143,9 @@ private fun JournalListContent(entries: List<JournalEntry>, onEntrySelected: (Lo
     }
 }
 
-/** Fila del mockup P18: fecha en mono, tipo en seminegrita y primera línea del relato. */
+/** Fila del mockup P18: fecha en mono (con «· N ADJUNTOS» si los hay, RF-33), tipo y primera línea. */
 @Composable
-private fun EntryCard(entry: JournalEntry, onClick: () -> Unit) {
+private fun EntryCard(entry: JournalEntry, attachmentCount: Int, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -145,8 +158,14 @@ private fun EntryCard(entry: JournalEntry, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                val dateLine = if (attachmentCount > 0) {
+                    entry.occurredOn.toShortDayText() + " · " +
+                        pluralStringResource(R.plurals.journal_media_count, attachmentCount, attachmentCount)
+                } else {
+                    entry.occurredOn.toShortDayText()
+                }
                 Text(
-                    text = entry.occurredOn.toShortDayText(),
+                    text = dateLine,
                     fontFamily = PlexMono,
                     fontSize = 11.sp,
                     letterSpacing = 0.12.em,

@@ -1,9 +1,15 @@
 package com.auroraclima.app.records.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
@@ -30,6 +37,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -54,27 +62,61 @@ import com.auroraclima.app.core.ui.theme.PlexSans
 import com.auroraclima.app.core.ui.theme.Plum
 import com.auroraclima.app.core.ui.theme.Sky
 import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.EntryKind
+import com.auroraclima.app.records.domain.model.JournalAttachment
 import java.time.LocalDate
 
 /**
  * Creación (RF-32) y edición (RF-35) de un registro; mockup P19 /
- * alta-fidelidad-29, sin la fila de evidencias — RF-33 queda fuera del MVP.
- * Tipo con selección de radio en un solo gesto (decisión F7) y validación en
- * línea sin pérdida (criterio 2). En modo edición la pantalla es la misma con
- * el formulario prellenado; solo cambian rótulo y título.
+ * alta-fidelidad-29, ahora con la fila de adjuntos (RF-33) y su tercera vía
+ * «Archivo» de la política ampliada (D0 §5.1.iii). Tipo con selección de radio
+ * en un solo gesto (decisión F7) y validación en línea sin pérdida (criterio
+ * 2). En modo edición la pantalla es la misma con el formulario prellenado;
+ * solo cambian rótulo y título.
  *
  * P-15: el campo de texto reporta cada tecla como interacción — el teclado es
  * una ventana propia que el observador de toques del grafo seguro no ve — y
  * las acciones del selector de fecha hacen lo mismo por idéntica razón.
+ *
+ * RF-33: los tres orígenes son pantallas DEL SISTEMA lanzadas por
+ * ActivityResult (Photo Picker, cámara con EXTRA_OUTPUT al FileProvider
+ * privado, ACTION_OPEN_DOCUMENT) — ninguna pide permisos (RNF-04). Antes de
+ * cada lanzamiento se arma la ida-y-vuelta esperada (`expectSystemReturn`):
+ * sin ella, el ON_STOP de la pantalla externa vaciaría la pila y la usuaria
+ * jamás regresaría al formulario con su selección.
  */
 @Composable
 fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
     val viewModel: JournalEditorViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     val sessionManager = LocalSessionManager.current
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        viewModel.onImagePicked(uri?.toString())
+    }
+    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        viewModel.onCaptureResult(saved)
+    }
+    val pickDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        viewModel.onDocumentPicked(uri?.toString())
+    }
     LaunchedEffect(viewModel) {
         viewModel.savedEvents.collect { onSaved() }
+    }
+    // Plomería única de lanzamiento hacia una pantalla del sistema: armar la
+    // ida-y-vuelta y, si el lanzamiento falla, desarmarla — extraída para que
+    // ninguna vía (ni una futura) pueda olvidar el cancelSystemReturn.
+    val launchExternal: (() -> Unit) -> Unit = { launch ->
+        sessionManager.expectSystemReturn()
+        runCatching(launch).onFailure {
+            sessionManager.cancelSystemReturn()
+            viewModel.onLaunchFailed()
+        }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.captureEvents.collect { uri ->
+            launchExternal { takePicture.launch(Uri.parse(uri)) }
+        }
     }
     JournalEditorScreen(
         state = state,
@@ -94,6 +136,18 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
             sessionManager.registerInteraction()
             viewModel.onDetailChange(it)
         },
+        onPickGallery = {
+            launchExternal {
+                pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }
+        },
+        onPickCamera = viewModel::onRequestCapture,
+        onPickDocument = {
+            launchExternal {
+                pickDocument.launch(AttachmentPolicy.allowedDocumentTypes.toTypedArray())
+            }
+        },
+        onRemoveAttachment = viewModel::onRemoveAttachment,
         onSubmit = viewModel::onSubmit
     )
 }
@@ -108,6 +162,10 @@ internal fun JournalEditorScreen(
     onDaySelected: (LocalDate) -> Unit,
     onKindSelected: (EntryKind) -> Unit,
     onDetailChange: (String) -> Unit,
+    onPickGallery: () -> Unit,
+    onPickCamera: () -> Unit,
+    onPickDocument: () -> Unit,
+    onRemoveAttachment: (Long) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -130,6 +188,10 @@ internal fun JournalEditorScreen(
                 onOpenDatePicker = onOpenDatePicker,
                 onKindSelected = onKindSelected,
                 onDetailChange = onDetailChange,
+                onPickGallery = onPickGallery,
+                onPickCamera = onPickCamera,
+                onPickDocument = onPickDocument,
+                onRemoveAttachment = onRemoveAttachment,
                 onSubmit = onSubmit
             )
         }
@@ -152,6 +214,10 @@ private fun JournalEditorForm(
     onOpenDatePicker: () -> Unit,
     onKindSelected: (EntryKind) -> Unit,
     onDetailChange: (String) -> Unit,
+    onPickGallery: () -> Unit,
+    onPickCamera: () -> Unit,
+    onPickDocument: () -> Unit,
+    onRemoveAttachment: (Long) -> Unit,
     onSubmit: () -> Unit
 ) {
     Column(
@@ -187,6 +253,17 @@ private fun JournalEditorForm(
             isError = state.detailErrorRes != null
         )
         FieldMessage(messageRes = state.detailErrorRes, fallbackRes = null)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MediaSection(
+            attachments = state.attachments,
+            canAttach = state.canAttach,
+            mediaErrorRes = state.mediaErrorRes,
+            onPickGallery = onPickGallery,
+            onPickCamera = onPickCamera,
+            onPickDocument = onPickDocument,
+            onRemoveAttachment = onRemoveAttachment
+        )
         FieldMessage(messageRes = state.saveErrorRes, fallbackRes = null)
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -198,6 +275,98 @@ private fun JournalEditorForm(
         )
         // Aire final para no chocar con el botón nube de salida rápida.
         Spacer(modifier = Modifier.height(48.dp))
+    }
+}
+
+/**
+ * Sección «Adjuntos» del mockup P19 con las tres vías de la política aprobada
+ * (D0 §5.1) y la advertencia de rastros — original en galería/archivos y
+ * posible copia propia de la cámara (§5.2, riesgo residual del ADR RF-33).
+ */
+@Composable
+private fun MediaSection(
+    attachments: List<JournalAttachment>,
+    canAttach: Boolean,
+    mediaErrorRes: Int?,
+    onPickGallery: () -> Unit,
+    onPickCamera: () -> Unit,
+    onPickDocument: () -> Unit,
+    onRemoveAttachment: (Long) -> Unit
+) {
+    FieldLabel(stringResource(R.string.journal_media_label))
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        MediaSourceButton(
+            text = stringResource(R.string.journal_media_gallery),
+            iconRes = R.drawable.ic_media_image,
+            enabled = canAttach,
+            onClick = onPickGallery,
+            modifier = Modifier.weight(1f)
+        )
+        MediaSourceButton(
+            text = stringResource(R.string.journal_media_camera),
+            iconRes = R.drawable.ic_media_camera,
+            enabled = canAttach,
+            onClick = onPickCamera,
+            modifier = Modifier.weight(1f)
+        )
+        MediaSourceButton(
+            text = stringResource(R.string.journal_media_document),
+            iconRes = R.drawable.ic_media_file,
+            enabled = canAttach,
+            onClick = onPickDocument,
+            modifier = Modifier.weight(1f)
+        )
+    }
+    if (attachments.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(12.dp))
+        AttachmentChipGrid(
+            attachments = attachments,
+            onOpen = null,
+            onRemove = { onRemoveAttachment(it.id) }
+        )
+    }
+    FieldMessage(messageRes = mediaErrorRes, fallbackRes = null)
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        text = stringResource(R.string.journal_media_note),
+        fontFamily = PlexSans,
+        fontSize = 12.sp,
+        lineHeight = 17.sp,
+        color = SteelDeep
+    )
+}
+
+/** Botón de origen del mockup P19 (Galería/Cámara) más la vía «Archivo». */
+@Composable
+private fun MediaSourceButton(
+    text: String,
+    iconRes: Int,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Sky),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = if (enabled) SteelDeep else Sky,
+            modifier = Modifier.width(18.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            fontFamily = PlexSans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp,
+            color = if (enabled) Night else SteelDeep
+        )
     }
 }
 
