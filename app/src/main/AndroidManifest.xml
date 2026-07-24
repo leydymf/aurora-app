@@ -27,6 +27,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Destino de la captura con la cámara del sistema (EXTRA_OUTPUT, RF-33).
+             NO exportado: solo el permiso puntual por URI que concede el intent al
+             lanzarse; ninguna app puede descubrirlo ni consultarlo por su cuenta.
+             Sin permiso CAMERA (RNF-04); autoridad y rutas neutras (RNF-05). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

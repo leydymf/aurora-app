@@ -18,12 +18,12 @@ import kotlinx.coroutines.withContext
 @Singleton
 class JournalStoreEraser @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val repository: LocalJournalRepository
+    private val storeAccess: JournalStoreAccess
 ) : LocalAccountDataEraser {
     override suspend fun erase() {
         // Mejor esfuerzo por paso: un cierre que falle no debe impedir borrar el
         // archivo (deleteDatabase elimina también -wal y -shm).
-        runCatching { repository.close() }
+        runCatching { storeAccess.close() }
         withContext(Dispatchers.IO) {
             runCatching { context.deleteDatabase(JournalDatabase.NAME) }
         }

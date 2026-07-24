@@ -82,6 +82,10 @@ dependencies {
     // Cifrado en reposo de la BD central del espacio interno (RNF-01, P-03)
     implementation(libs.sqlcipher.android)
 
+    // Orientación EXIF al sanear imágenes adjuntas (RF-33); la limpieza de
+    // metadatos la hace la re-codificación — esta lib solo evita fotos acostadas
+    implementation(libs.androidx.exifinterface)
+
     // Red (Open-Meteo)
     implementation(libs.retrofit)
     implementation(libs.okhttp)

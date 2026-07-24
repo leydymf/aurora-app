@@ -37,9 +37,11 @@ class LocalJournalRepositoryTest {
         database.close()
     }
 
+    private fun repositoryOf(source: JournalDatabaseSource) = LocalJournalRepository(JournalStoreAccess(source))
+
     @Test
     fun `guarda y devuelve los registros mapeados al dominio`() = runTest {
-        val repository = LocalJournalRepository { database }
+        val repository = repositoryOf { database }
 
         val saved = repository.add(
             NewJournalEntry(
@@ -61,7 +63,7 @@ class LocalJournalRepositoryTest {
     @Test
     fun `la fuente no se abre hasta el primer uso y se abre una sola vez`() = runTest {
         var opened = 0
-        val repository = LocalJournalRepository {
+        val repository = repositoryOf {
             opened++
             database
         }
@@ -79,7 +81,7 @@ class LocalJournalRepositoryTest {
     fun `una fuente que lanza se traduce a failure en todas las operaciones`() = runTest {
         // P-36 (a): el blob corrupto lanza a propósito (DatabaseKeyManager);
         // aquí el repositorio es el garante de la promesa «quien consume traduce».
-        val repository = LocalJournalRepository { error("blob corrupto") }
+        val repository = repositoryOf { error("blob corrupto") }
 
         assertTrue(repository.add(NewJournalEntry(LocalDate.now(), EntryKind.SEXUAL, "x")).isFailure)
         assertTrue(repository.entries().isFailure)
@@ -94,7 +96,7 @@ class LocalJournalRepositoryTest {
     fun `edita y borra un registro existente`() = runTest {
         // RF-35/RF-36 sobre el esquema real: el contenido editado se relee y el
         // borrado deja de exponer el registro.
-        val repository = LocalJournalRepository { database }
+        val repository = repositoryOf { database }
         val id = repository.add(
             NewJournalEntry(LocalDate.of(2026, 6, 28), EntryKind.ECONOMIC, "original")
         ).getOrThrow()
@@ -116,7 +118,7 @@ class LocalJournalRepositoryTest {
     @Test
     fun `un fallo de apertura no se memoriza y el siguiente uso reintenta`() = runTest {
         var attempts = 0
-        val repository = LocalJournalRepository {
+        val repository = repositoryOf {
             attempts++
             if (attempts == 1) error("fallo transitorio") else database
         }
@@ -132,7 +134,7 @@ class LocalJournalRepositoryTest {
         val knownId = database.journalDao().insert(
             JournalEntryRow(day = 2, kind = "economic", detail = "y", createdAt = 2)
         )
-        val repository = LocalJournalRepository { database }
+        val repository = repositoryOf { database }
 
         val entries = repository.entries().getOrThrow()
 

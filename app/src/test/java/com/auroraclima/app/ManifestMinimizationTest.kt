@@ -12,9 +12,11 @@ import org.w3c.dom.Element
  *
  * - Permisos: exactamente los del inventario aprobado (solo INTERNET; esperable en
  *   una app de clima). Cualquier permiso nuevo debe justificarse contra un RF.
- * - Componentes: un único activity exportado (el launcher). Ningún service, receiver
- *   ni provider propio: nada que un explorador de ajustes o un intent externo pueda
- *   descubrir.
+ * - Componentes: un único activity exportado (el launcher) y, desde RF-33, un único
+ *   provider — el FileProvider NO exportado que recibe la captura de la cámara del
+ *   sistema (EXTRA_OUTPUT); sus propiedades se auditan una a una abajo. Ningún
+ *   service, receiver ni otro provider: nada que un explorador de ajustes o un
+ *   intent externo pueda descubrir.
  * - allowBackup=false: el auto-backup no debe copiar la futura BD interna (P-00/P-03).
  *
  * El manifest FUSIONADO del APK (permisos que agregan las libs) se revisa aparte: P-06.
@@ -65,16 +67,38 @@ class ManifestMinimizationTest {
     }
 
     @Test
-    fun `el unico componente es el activity launcher`() {
+    fun `los unicos componentes son el activity launcher y el provider de captura`() {
         val activities = elements("activity")
-        val others = listOf("service", "receiver", "provider", "activity-alias")
+        val providers = elements("provider")
+        val others = listOf("service", "receiver", "activity-alias")
             .flatMap { elements(it) }
 
         assertEquals("Debe existir exactamente un activity", 1, activities.size)
+        assertEquals("Debe existir exactamente un provider (el de captura, RF-33)", 1, providers.size)
         assertTrue(
-            "No debe haber services, receivers, providers ni aliases propios (RF-06)",
+            "No debe haber services, receivers ni aliases propios (RF-06)",
             others.isEmpty()
         )
+    }
+
+    @Test
+    fun `el provider de captura es el FileProvider de androidx, no exportado y de rutas acotadas`() {
+        val provider = elements("provider").single()
+
+        // La implementación es la de la plataforma androidx — sin clase propia que
+        // auditar ni superficie nueva de código exportable.
+        assertEquals("androidx.core.content.FileProvider", provider.androidAttr("name"))
+        // No exportado: solo el permiso puntual por URI del intent de cámara.
+        assertEquals("false", provider.androidAttr("exported"))
+        assertEquals("true", provider.androidAttr("grantUriPermissions"))
+        // Autoridad neutra derivada del applicationId (RNF-05).
+        assertEquals("\${applicationId}.files", provider.androidAttr("authorities"))
+
+        val metadata = provider.getElementsByTagName("meta-data")
+        assertEquals("El provider declara solo sus rutas", 1, metadata.length)
+        val paths = metadata.item(0) as Element
+        assertEquals("android.support.FILE_PROVIDER_PATHS", paths.androidAttr("name"))
+        assertEquals("@xml/file_paths", paths.androidAttr("resource"))
     }
 
     @Test

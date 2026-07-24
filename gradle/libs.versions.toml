@@ -27,6 +27,10 @@ hiltNavigationCompose = "1.2.0"
 # sucesor mantenido de android-database-sqlcipher (EOL en 4.5.4, sin parches
 # desde 2023) — ver ADR en docs/ARQUITECTURA.md
 sqlcipherAndroid = "4.9.0"
+# Lectura de la orientación EXIF al sanear imágenes adjuntas (RF-33) y escritura
+# de fixtures con GPS en los tests. Oficial, ~100 KB, sin dependencias
+# transitivas y de implementación Java pura (probable en la JVM) — cumple A2-1
+exifinterface = "1.3.7"
 # Solo tests unitarios (no entra al APK): P-13 exige probar la capa data real
 # de access (SharedPreferences) en la JVM
 robolectric = "4.15.1"
@@ -62,6 +66,7 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutinesTest" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipherAndroid" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }

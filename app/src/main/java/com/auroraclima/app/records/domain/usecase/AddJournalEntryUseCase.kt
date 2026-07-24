@@ -2,6 +2,7 @@ package com.auroraclima.app.records.domain.usecase
 
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.model.NewJournalEntry
+import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.repository.JournalSyncRepository
 import javax.inject.Inject
@@ -14,13 +15,22 @@ import javax.inject.Inject
  * mejor esfuerzo y su resultado se descarta a propósito — un fallo de red no
  * revierte lo guardado ni produce un error visible (§3, camuflaje). La escritura
  * queda en la cola durable de Firestore y sube sola al reconectar (RF-38).
+ *
+ * RF-33: los adjuntos importados durante la creación quedan en preparación y el
+ * guardado los reclama con el id recién asignado. El reclamo es de mejor
+ * esfuerzo, como la sync: si fallara (improbable — la BD acaba de escribir),
+ * los adjuntos quedan huérfanos y el barrido los limpia; el registro guardado
+ * jamás se revierte por ellos. Las evidencias NO se sincronizan (política D0
+ * §5.3): el push cifrado lleva solo el contenido del registro.
  */
 class AddJournalEntryUseCase @Inject constructor(
     private val journalRepository: JournalRepository,
+    private val attachmentRepository: JournalAttachmentRepository,
     private val syncRepository: JournalSyncRepository
 ) {
-    suspend operator fun invoke(entry: NewJournalEntry): Result<Unit> {
+    suspend operator fun invoke(entry: NewJournalEntry, attachmentIds: List<Long> = emptyList()): Result<Unit> {
         val id = journalRepository.add(entry).getOrElse { return Result.failure(it) }
+        if (attachmentIds.isNotEmpty()) attachmentRepository.claim(attachmentIds, id)
         // Mejor esfuerzo: el registro ya está a salvo localmente. Su fallo se ignora.
         syncRepository.push(
             JournalEntry(id = id, occurredOn = entry.occurredOn, kind = entry.kind, detail = entry.detail)
