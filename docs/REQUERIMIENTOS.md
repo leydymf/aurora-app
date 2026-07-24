@@ -369,7 +369,7 @@ El sistema debe permitir adjuntar imágenes a un incidente desde galería o cám
 1. Se pueden adjuntar imágenes desde galería o cámara.
 2. Las evidencias quedan protegidas, asociadas al incidente y visibles solo dentro de Aurora.
 
-*Notas:* -
+*Notas:* Nota provisional (política de evidencias aprobada por la directora el 2026-07-21, `docs/DECISIONES_DIRECTORA.md` §5; pendiente reflejar en el xlsx fuente): el alcance se AMPLÍA a tres vías sin permisos — imágenes de galería, foto con la cámara DEL SISTEMA con salida directa al almacén cifrado (sin pasar por la galería) y archivos existentes (PDF, documentos, audio) —; se EXCLUYE la grabación de audio propia (permiso de micrófono delator). Al importar imágenes se eliminan los metadatos (GPS incluido). Las evidencias son SOLO LOCALES (sin sincronización) en esta etapa (§5.3). Ver ADR 2026-07-24 en `docs/ARQUITECTURA.md`.
 
 ## RF-34 — Listado cronológico de incidentes
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-32
