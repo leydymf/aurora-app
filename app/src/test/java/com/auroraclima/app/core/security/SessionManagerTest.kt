@@ -212,4 +212,126 @@ class SessionManagerTest {
         assertFalse(manager.isSessionActive.value)
         assertEquals(2, events.size)
     }
+
+    // --- Ida y vuelta esperada a una pantalla del sistema (RF-33) ---
+
+    @Test
+    fun `una ida-y-vuelta armada sobrevive a la gracia normal y conserva la sesion al volver`() = runTest {
+        // El selector o la cámara del sistema tardan más que los 30 s normales:
+        // elegir una foto o encuadrarla no debe expulsar a la usuaria.
+        val manager = sessionManager()
+        manager.startSession()
+
+        manager.expectSystemReturn()
+        assertTrue(manager.isAwaitingSystemReturn())
+        manager.appMovedToBackground()
+        assertTrue(manager.isAwaitingSystemReturn())
+
+        advanceTimeBy(SessionManager.BACKGROUND_GRACE_MS + 1)
+        assertTrue(manager.isSessionActive.value)
+
+        manager.appReturnedToForeground()
+        assertTrue(manager.isSessionActive.value)
+        // Consumida al volver: no queda armada de más.
+        assertFalse(manager.isAwaitingSystemReturn())
+    }
+
+    @Test
+    fun `si no vuelve dentro de la gracia ampliada la sesion se cierra igual`() = runTest {
+        val manager = sessionManager()
+        val events = collectCloseEvents(manager)
+        manager.startSession()
+
+        manager.expectSystemReturn()
+        manager.appMovedToBackground()
+        advanceTimeBy(SessionManager.SYSTEM_RETURN_GRACE_MS + 1)
+
+        assertFalse(manager.isSessionActive.value)
+        assertEquals(1, events.size)
+        assertFalse(manager.isAwaitingSystemReturn())
+    }
+
+    @Test
+    fun `el armado caduca si la pantalla externa nunca abre`() = runTest {
+        // Un lanzamiento fallido no debe dejar viva la excepción: el siguiente
+        // background real (Home, otra app) vuelve a la gracia y al pop normales.
+        val manager = sessionManager()
+        manager.startSession()
+
+        manager.expectSystemReturn()
+        advanceTimeBy(SessionManager.SYSTEM_RETURN_ARM_WINDOW_MS + 1)
+        assertFalse(manager.isAwaitingSystemReturn())
+
+        manager.appMovedToBackground()
+        advanceTimeBy(SessionManager.BACKGROUND_GRACE_MS + 1)
+        assertFalse(manager.isSessionActive.value)
+    }
+
+    @Test
+    fun `la excepcion es de un solo uso`() = runTest {
+        val manager = sessionManager()
+        manager.startSession()
+
+        manager.expectSystemReturn()
+        manager.appMovedToBackground()
+        manager.appReturnedToForeground()
+        assertTrue(manager.isSessionActive.value)
+
+        // Segundo background sin armar: gracia normal.
+        manager.appMovedToBackground()
+        advanceTimeBy(SessionManager.BACKGROUND_GRACE_MS + 1)
+        assertFalse(manager.isSessionActive.value)
+    }
+
+    @Test
+    fun `cancelar el armado restaura la gracia normal`() = runTest {
+        val manager = sessionManager()
+        manager.startSession()
+
+        manager.expectSystemReturn()
+        manager.cancelSystemReturn()
+        assertFalse(manager.isAwaitingSystemReturn())
+
+        manager.appMovedToBackground()
+        advanceTimeBy(SessionManager.BACKGROUND_GRACE_MS + 1)
+        assertFalse(manager.isSessionActive.value)
+    }
+
+    @Test
+    fun `con timers congelados el regreso re-verifica contra la gracia ampliada`() = runTest {
+        // Suspensión profunda (H-3): el delay no corre, pero el reloj monótono sí.
+        val clock = FakeMonotonicClock()
+        val manager = sessionManager(clock = clock)
+        manager.startSession()
+
+        manager.expectSystemReturn()
+        manager.appMovedToBackground()
+        clock.nowMs += SessionManager.SYSTEM_RETURN_GRACE_MS + 1
+
+        manager.appReturnedToForeground()
+        assertFalse(manager.isSessionActive.value)
+    }
+
+    @Test
+    fun `con timers congelados un regreso dentro de la gracia ampliada conserva la sesion`() = runTest {
+        val clock = FakeMonotonicClock()
+        val manager = sessionManager(clock = clock)
+        manager.startSession()
+
+        manager.expectSystemReturn()
+        manager.appMovedToBackground()
+        clock.nowMs += SessionManager.BACKGROUND_GRACE_MS + 1
+
+        manager.appReturnedToForeground()
+        assertTrue(manager.isSessionActive.value)
+    }
+
+    @Test
+    fun `sin sesion activa el armado no hace nada`() = runTest {
+        val manager = sessionManager()
+
+        manager.expectSystemReturn()
+
+        assertFalse(manager.isAwaitingSystemReturn())
+    }
 }

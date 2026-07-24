@@ -17,9 +17,21 @@ import java.util.UUID
  * Los cambios de configuración (rotación) no expulsan: la usuaria sigue en pantalla.
  * La restauración se revisa también al componer, porque en API 26-27 el estado de
  * navegación se guarda antes de ON_STOP y podría restaurar una ruta interna.
+ *
+ * [suppressStopPop] (RF-33): una ida-y-vuelta esperada a una pantalla del sistema
+ * (selector de archivos, cámara) también dispara ON_STOP, pero la usuaria DEBE
+ * regresar a su formulario con lo elegido — limpiarle la pila rompería el flujo.
+ * La excepción la gobierna `SessionManager.isAwaitingSystemReturn()`: de un solo
+ * uso, con caducidad, y con la sesión aún bajo el plazo de gracia y el temporizador
+ * de inactividad (si no vuelve a tiempo, el cierre de sesión hace el pop igual).
  */
 @Composable
-fun SecureBackStackGuard(navController: NavController, secureGraphRoute: String, facadeRoute: String) {
+fun SecureBackStackGuard(
+    navController: NavController,
+    secureGraphRoute: String,
+    facadeRoute: String,
+    suppressStopPop: () -> Boolean = { false }
+) {
     // Síncrono en la fase de apply, ANTES del primer draw (auditoría A2): una
     // restauración tras muerte de proceso que caiga dentro del grafo seguro vuelve
     // a la fachada sin que la pantalla interna llegue a dibujarse ni un frame.
@@ -36,7 +48,9 @@ fun SecureBackStackGuard(navController: NavController, secureGraphRoute: String,
         onDispose { }
     }
     AppBackgroundObserver(
-        onStopWithoutRotation = { navController.exitSecureGraph(secureGraphRoute, facadeRoute) }
+        onStopWithoutRotation = {
+            if (!suppressStopPop()) navController.exitSecureGraph(secureGraphRoute, facadeRoute)
+        }
     )
 }
 

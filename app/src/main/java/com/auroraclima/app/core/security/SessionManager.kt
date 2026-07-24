@@ -60,6 +60,9 @@ class SessionManager @Inject constructor(
     private var inactivityJob: Job? = null
     private var backgroundJob: Job? = null
     private var backgroundSinceMs: Long? = null
+    private var backgroundGraceMs: Long = BACKGROUND_GRACE_MS
+    private var systemReturnArmedAtMs: Long? = null
+    private var inSystemReturn = false
 
     /** Idempotente: entrar al grafo seguro con la sesión ya activa no reinicia nada. */
     fun startSession() {
@@ -75,17 +78,57 @@ class SessionManager @Inject constructor(
     }
 
     /**
-     * ON_STOP sin rotación: si la app no vuelve dentro de [BACKGROUND_GRACE_MS], la
+     * Ida y vuelta esperada a una pantalla del sistema (RF-33): la usuaria va a
+     * elegir o capturar un archivo con el selector o la cámara DEL SISTEMA —
+     * ambas son activities externas y disparan el mismo ON_STOP que «irse de la
+     * app». Armar esta excepción de un solo uso hace dos cosas en el ON_STOP
+     * inmediato: SecureBackStackGuard NO limpia la pila (la usuaria debe volver
+     * al formulario con su selección) y la gracia se amplía a
+     * [SYSTEM_RETURN_GRACE_MS] — tomar una foto tarda más de 30 s.
+     *
+     * La excepción caduca en [SYSTEM_RETURN_ARM_WINDOW_MS] si la pantalla externa
+     * nunca llega a abrirse, se consume con el primer background y se descarta en
+     * cualquier retorno o cierre: nunca queda armada de más.
+     */
+    fun expectSystemReturn() {
+        if (!_isSessionActive.value) return
+        systemReturnArmedAtMs = monotonicClock.nowMs()
+    }
+
+    /** Descarta una excepción armada (p. ej. si el lanzamiento del selector falló). */
+    fun cancelSystemReturn() {
+        systemReturnArmedAtMs = null
+        inSystemReturn = false
+    }
+
+    /**
+     * `true` mientras una ida-y-vuelta al sistema está armada (recién pedida) o en
+     * curso (background con la excepción consumida). SecureBackStackGuard lo
+     * consulta en ON_STOP para conservar la pila.
+     */
+    fun isAwaitingSystemReturn(): Boolean {
+        if (inSystemReturn) return true
+        val armedAt = systemReturnArmedAtMs ?: return false
+        return monotonicClock.nowMs() - armedAt < SYSTEM_RETURN_ARM_WINDOW_MS
+    }
+
+    /**
+     * ON_STOP sin rotación: si la app no vuelve dentro del plazo de gracia, la
      * sesión se cierra. El back stack ya lo limpió SecureBackStackGuard en el mismo
-     * ON_STOP; la gracia solo conserva el desbloqueo para que una interrupción breve
-     * (llamada, cambio momentáneo de app) no exija iniciar sesión de nuevo.
+     * ON_STOP (salvo ida-y-vuelta al sistema); la gracia solo conserva el desbloqueo
+     * para que una interrupción breve (llamada, cambio momentáneo de app) no exija
+     * iniciar sesión de nuevo. Con una ida-y-vuelta armada la gracia se amplía por
+     * esta única vez y la excepción queda consumida.
      */
     fun appMovedToBackground() {
         if (!_isSessionActive.value) return
+        inSystemReturn = isAwaitingSystemReturn()
+        systemReturnArmedAtMs = null
+        backgroundGraceMs = if (inSystemReturn) SYSTEM_RETURN_GRACE_MS else BACKGROUND_GRACE_MS
         backgroundSinceMs = monotonicClock.nowMs()
         backgroundJob?.cancel()
         backgroundJob = scope.launch {
-            delay(BACKGROUND_GRACE_MS)
+            delay(backgroundGraceMs)
             closeSession()
         }
     }
@@ -101,9 +144,13 @@ class SessionManager @Inject constructor(
         backgroundJob?.cancel()
         backgroundJob = null
         val since = backgroundSinceMs
+        val grace = backgroundGraceMs
         backgroundSinceMs = null
+        backgroundGraceMs = BACKGROUND_GRACE_MS
+        inSystemReturn = false
+        systemReturnArmedAtMs = null
         if (!_isSessionActive.value) return
-        if (since != null && monotonicClock.nowMs() - since >= BACKGROUND_GRACE_MS) {
+        if (since != null && monotonicClock.nowMs() - since >= grace) {
             closeSession()
         } else {
             restartInactivityTimer()
@@ -127,6 +174,9 @@ class SessionManager @Inject constructor(
         backgroundJob?.cancel()
         backgroundJob = null
         backgroundSinceMs = null
+        backgroundGraceMs = BACKGROUND_GRACE_MS
+        systemReturnArmedAtMs = null
+        inSystemReturn = false
         runCleaners()
         _closeEvents.tryEmit(Unit)
     }
@@ -162,5 +212,17 @@ class SessionManager @Inject constructor(
 
         /** Gracia tras pasar a segundo plano antes de cerrar la sesión. */
         const val BACKGROUND_GRACE_MS: Long = 30 * 1000
+
+        /**
+         * Gracia ampliada para una ida-y-vuelta esperada al sistema (RF-33):
+         * elegir un archivo o tomar una foto tarda más que la gracia normal.
+         * Igual al plazo de inactividad — la exposición total nunca supera el
+         * presupuesto de RNF-03 (el temporizador de inactividad sigue corriendo
+         * en paralelo y cierra igual a los 5 min sin interacción).
+         */
+        const val SYSTEM_RETURN_GRACE_MS: Long = INACTIVITY_TIMEOUT_MS
+
+        /** Validez del armado: si la pantalla externa no abre en este lapso, caduca. */
+        const val SYSTEM_RETURN_ARM_WINDOW_MS: Long = 15 * 1000
     }
 }
