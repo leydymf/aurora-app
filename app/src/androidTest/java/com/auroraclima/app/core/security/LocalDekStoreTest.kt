@@ -27,19 +27,20 @@ class LocalDekStoreTest {
     }
 
     @Test
-    fun writeThenReadRoundTripsWithGeneration() {
-        store.write("uid-a", dek, generation = 3)
+    fun writeThenReadRoundTripsWithGenerationAndRevision() {
+        store.write("uid-a", dek, generation = 3, revision = "aa11")
 
         val stored = store.read("uid-a")
 
         assertArrayEquals(dek, stored?.dek)
         assertEquals(3L, stored?.generation)
+        assertEquals("aa11", stored?.revision)
     }
 
     @Test
     fun readWithAnotherUidReturnsNull() {
         // Una cuenta nueva en el mismo teléfono jamás hereda la DEK de la anterior.
-        store.write("uid-a", dek, generation = 1)
+        store.write("uid-a", dek, generation = 1, revision = "aa11")
 
         assertNull(store.read("uid-b"))
     }
@@ -51,33 +52,35 @@ class LocalDekStoreTest {
 
     @Test
     fun writeReplacesPreviousCopy() {
-        // Auto-reparación y cambio de contraseña re-publican: la copia local
-        // debe quedar en la generación nueva, no acumular estados.
-        store.write("uid-a", dek, generation = 1)
+        // Adopción y auto-reparación re-escriben: la copia local queda en el
+        // sobre nuevo, sin acumular estados.
+        store.write("uid-a", dek, generation = 1, revision = "aa11")
         val rotated = ByteArray(32).also { SecureRandom().nextBytes(it) }
 
-        store.write("uid-a", rotated, generation = 2)
+        store.write("uid-a", rotated, generation = 2, revision = "bb22")
 
         val stored = store.read("uid-a")
         assertArrayEquals(rotated, stored?.dek)
         assertEquals(2L, stored?.generation)
+        assertEquals("bb22", stored?.revision)
     }
 
     @Test
     fun survivesNewInstance() {
         // La copia vive en prefs + Keystore, no en la instancia (proceso nuevo).
-        store.write("uid-a", dek, generation = 5)
+        store.write("uid-a", dek, generation = 5, revision = "cc33")
 
         val stored = LocalDekStore(ApplicationProvider.getApplicationContext()).read("uid-a")
 
         assertArrayEquals(dek, stored?.dek)
         assertEquals(5L, stored?.generation)
+        assertEquals("cc33", stored?.revision)
     }
 
     @Test
     fun eraseRemovesEverything() {
         // RF-20: tras la eliminación, el siguiente uso parte como instalación limpia.
-        store.write("uid-a", dek, generation = 1)
+        store.write("uid-a", dek, generation = 1, revision = "aa11")
 
         store.erase()
 

@@ -2,22 +2,42 @@ package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
+import com.auroraclima.app.core.security.SyncKeyManager
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 
 /**
  * Crea la cuenta validando primero en el dispositivo (RF-07): formato de correo
  * y contraseña de mínimo 8 caracteres. Solo si la entrada es válida se contacta
  * al proveedor de autenticación — así una contraseña débil se rechaza indicando
  * los requisitos sin tráfico de red innecesario (criterio 3).
+ *
+ * RF-39: la cuenta recién creada publica de una vez su sobre de llaves
+ * ([SyncKeyManager.establish]) aprovechando la contraseña en memoria. Mejor
+ * esfuerzo y silencioso (§3): si falla, el primer login lo reintenta — no hay
+ * restauradores que correr porque una cuenta nueva no tiene nada en la nube.
  */
 class CreateAccountUseCase @Inject constructor(
-    private val repository: AuthRepository
+    private val repository: AuthRepository,
+    private val syncKeys: SyncKeyManager
 ) {
     suspend operator fun invoke(email: String, password: String): CreateAccountResult {
         val normalizedEmail = email.trim()
         if (!EMAIL_PATTERN.matches(normalizedEmail)) return CreateAccountResult.InvalidEmail
         if (password.length < MIN_PASSWORD_LENGTH) return CreateAccountResult.WeakPassword
-        return repository.createAccount(normalizedEmail, password)
+        val result = repository.createAccount(normalizedEmail, password)
+        if (result == CreateAccountResult.Success) establishBackupKeys(password)
+        return result
+    }
+
+    private suspend fun establishBackupKeys(password: String) {
+        try {
+            syncKeys.establish(password)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (ignored: Exception) {
+            // Mejor esfuerzo (§3): el primer inicio de sesión reintenta.
+        }
     }
 
     companion object {

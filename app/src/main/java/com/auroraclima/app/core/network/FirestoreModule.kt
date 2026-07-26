@@ -1,5 +1,6 @@
 package com.auroraclima.app.core.network
 
+import com.auroraclima.app.core.security.AccountIdentity
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -35,6 +36,10 @@ object FirestoreModule {
     @Provides
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    /** Identidad mínima para los componentes de llaves (RF-39): solo el uid, sin SDK. */
+    @Provides
+    fun provideAccountIdentity(auth: FirebaseAuth): AccountIdentity = AccountIdentity { auth.currentUser?.uid }
 
     /** La caché persistente del SDK muere con la cuenta (RF-20, riesgo P-22). */
     @Provides

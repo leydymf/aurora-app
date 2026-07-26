@@ -1,13 +1,15 @@
 package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CreateAccountUseCaseTest {
     private val repository = FakeAuthRepository()
-    private val useCase = CreateAccountUseCase(repository)
+    private val syncKeys = FakeSyncKeyManager()
+    private val useCase = CreateAccountUseCase(repository, syncKeys)
 
     @Test
     fun `con correo valido y contrasena de 8 o mas la cuenta se crea`() = runTest {
@@ -51,6 +53,31 @@ class CreateAccountUseCaseTest {
             CreateAccountResult.EmailAlreadyInUse,
             useCase("usuaria@correo.co", "clave-segura-1")
         )
+    }
+
+    @Test
+    fun `la cuenta creada publica su sobre de llaves con la contrasena`() = runTest {
+        // RF-39: único momento con la contraseña en memoria además del login.
+        useCase("usuaria@correo.co", "clave-segura-1")
+
+        assertEquals(listOf("clave-segura-1"), syncKeys.establishedPasswords)
+    }
+
+    @Test
+    fun `una creacion rechazada no toca las llaves`() = runTest {
+        repository.nextCreateResult = CreateAccountResult.EmailAlreadyInUse
+
+        useCase("usuaria@correo.co", "clave-segura-1")
+
+        assertEquals(0, syncKeys.establishedPasswords.size)
+    }
+
+    @Test
+    fun `un fallo del sobre no rompe la creacion`() = runTest {
+        // Mejor esfuerzo (§3): el primer login reintenta el establecimiento.
+        syncKeys.establishOutcome = Result.failure(IllegalStateException())
+
+        assertEquals(CreateAccountResult.Success, useCase("usuaria@correo.co", "clave-segura-1"))
     }
 }
 // El fake compartido vive en AuthFakes.kt.

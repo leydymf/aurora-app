@@ -20,11 +20,13 @@ import javax.inject.Singleton
  * passphrase de la BD y este payload no comparten llave (una responsabilidad,
  * una llave). El alias es neutro (RNF-05), como `local_store_key`.
  *
- * Consecuencia aceptada (decisión de sesión, RF-39 diferido): al estar ligada al
- * dispositivo, el blob en la nube solo es descifrable en este mismo teléfono; una
- * reinstalación o un dispositivo nuevo no puede restaurarlo. La restauración
- * multi-dispositivo (RF-39) requerirá una llave recuperable y queda documentada
- * como trabajo futuro.
+ * LEGADO desde RF-39: los payloads se sellan ahora con la DEK recuperable
+ * ([DekPayloadCipher] es el [PayloadCipher] inyectado) porque esta llave, al
+ * estar ligada al dispositivo, hacía irrestaurable el respaldo en cualquier
+ * otro aparato. La clase permanece solo para que RF-20 destruya el alias en
+ * instalaciones que suban desde el esquema v1 (`SyncKeyEraser`); ningún camino
+ * de lectura la usa — los blobs v1 se re-suben desde la BD local, no se
+ * descifran de la nube.
  */
 @Singleton
 class KeystorePayloadCipher @Inject constructor() : PayloadCipher {

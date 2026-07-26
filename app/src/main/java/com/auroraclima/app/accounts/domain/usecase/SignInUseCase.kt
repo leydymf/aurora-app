@@ -5,7 +5,10 @@ import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.security.WallClock
+import com.auroraclima.app.core.security.AccountDataRestorer
+import com.auroraclima.app.core.security.SyncKeyManager
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 
 /**
  * Inicio de sesión con bloqueo temporal (RF-15). El contador de intentos es
@@ -20,11 +23,20 @@ import javax.inject.Inject
  * - El éxito limpia el contador.
  * - Durante el bloqueo ni se consulta el proveedor: sin tráfico que delate el
  *   reintento.
+ *
+ * RF-39: el login es el único momento con la contraseña en memoria, así que el
+ * éxito establece la llave del respaldo ([SyncKeyManager.establish] — en un
+ * dispositivo nuevo eso desenvuelve la DEK de la nube) y después dispara los
+ * restauradores de cada feature. Ambos pasos son de mejor esfuerzo y
+ * silenciosos (§3): su fallo jamás degrada el acceso concedido ni asoma un
+ * error revelador; el siguiente inicio de sesión reintenta.
  */
 class SignInUseCase @Inject constructor(
     private val repository: AuthRepository,
     private val attemptStore: SignInAttemptStore,
-    private val clock: WallClock
+    private val clock: WallClock,
+    private val syncKeys: SyncKeyManager,
+    private val restorers: Set<@JvmSuppressWildcards AccountDataRestorer>
 ) {
     /** Milisegundos restantes del bloqueo vigente, o 0 si no hay bloqueo. */
     suspend fun currentLockMillis(): Long {
@@ -37,10 +49,26 @@ class SignInUseCase @Inject constructor(
         return when (repository.signIn(email, password)) {
             SignInResult.Success -> {
                 attemptStore.clear()
+                establishBackupKeys(password)
                 SignInOutcome.Success
             }
             SignInResult.InvalidCredentials -> registerRejection()
             SignInResult.GenericFailure -> SignInOutcome.Failure
+        }
+    }
+
+    /** Llave del respaldo y restauración (RF-39), silenciosas: nada revierte el acceso. */
+    private suspend fun establishBackupKeys(password: String) {
+        try {
+            // Los restauradores solo corren con la DEK establecida: sin ella no
+            // habría cómo abrir lo descargado y el intento sería ruido.
+            if (syncKeys.establish(password).isSuccess) {
+                restorers.forEach { restorer -> restorer.restore() }
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (ignored: Exception) {
+            // Mejor esfuerzo (§3): el siguiente inicio de sesión reintenta.
         }
     }
 

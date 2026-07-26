@@ -39,42 +39,27 @@ import javax.inject.Singleton
 @Singleton
 class LocalDekStore @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : DekStore {
     private val preferences: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    /** DEK local con la generación del sobre que la publicó. */
-    data class StoredDek(val dek: ByteArray, val generation: Long) {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is StoredDek) return false
-            return dek.contentEquals(other.dek) && generation == other.generation
-        }
-
-        override fun hashCode(): Int = 31 * dek.contentHashCode() + generation.toInt()
-    }
-
-    /**
-     * DEK guardada para [uid], o null si no hay copia o pertenece a otra cuenta
-     * (una cuenta nueva en este teléfono jamás hereda la llave de la anterior).
-     */
     @Synchronized
-    fun read(uid: String): StoredDek? {
+    override fun read(uid: String): DekStore.StoredDek? {
         if (preferences.getString(OWNER_KEY, null) != uid) return null
         val iv = preferences.getString(IV_KEY, null) ?: return null
         val blob = preferences.getString(BLOB_KEY, null) ?: return null
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, obtainWrappingKey(), GCMParameterSpec(TAG_SIZE_BITS, decode(iv)))
-        return StoredDek(
+        return DekStore.StoredDek(
             dek = cipher.doFinal(decode(blob)),
-            generation = preferences.getLong(GENERATION_KEY, 0)
+            generation = preferences.getLong(GENERATION_KEY, 0),
+            revision = preferences.getString(REVISION_KEY, null).orEmpty()
         )
     }
 
-    /** Guarda (o reemplaza) la copia local de la DEK de [uid] con su [generation]. */
     @Synchronized
-    fun write(uid: String, dek: ByteArray, generation: Long) {
+    override fun write(uid: String, dek: ByteArray, generation: Long, revision: String) {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, obtainWrappingKey())
         val blob = cipher.doFinal(dek)
@@ -83,6 +68,7 @@ class LocalDekStore @Inject constructor(
             .putString(IV_KEY, encode(cipher.iv))
             .putString(BLOB_KEY, encode(blob))
             .putLong(GENERATION_KEY, generation)
+            .putString(REVISION_KEY, revision)
             .commit()
         // Un fallo silencioso dejaría el respaldo remoto adelantado respecto a lo
         // que este dispositivo cree tener (mismo criterio que DatabaseKeyManager).
@@ -95,7 +81,7 @@ class LocalDekStore @Inject constructor(
      * el blob mismo. La DEK sigue recuperable desde la nube con la contraseña.
      */
     @Synchronized
-    fun erase() {
+    override fun erase() {
         runCatching {
             KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.deleteEntry(KEY_ALIAS)
         }
@@ -132,6 +118,7 @@ class LocalDekStore @Inject constructor(
         const val IV_KEY = "b1"
         const val BLOB_KEY = "b2"
         const val GENERATION_KEY = "b3"
+        const val REVISION_KEY = "b4"
 
         const val WRAPPING_KEY_SIZE_BITS = 256
         const val TAG_SIZE_BITS = 128

@@ -1,6 +1,8 @@
 package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.SignInResult
+import com.auroraclima.app.core.security.AccountDataRestorer
+import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -12,7 +14,10 @@ class SignInUseCaseTest {
     private val repository = FakeAuthRepository()
     private val store = FakeSignInAttemptStore()
     private val clock = MutableWallClock()
-    private val useCase = SignInUseCase(repository, store, clock)
+    private val syncKeys = FakeSyncKeyManager()
+    private var restoreCalls = 0
+    private val restorer = AccountDataRestorer { restoreCalls++ }
+    private val useCase = SignInUseCase(repository, store, clock, syncKeys, setOf(restorer))
 
     @Test
     fun `credenciales correctas dan acceso`() = runTest {
@@ -112,5 +117,42 @@ class SignInUseCaseTest {
     @Test
     fun `sin bloqueo el restante es cero`() = runTest {
         assertEquals(0, useCase.currentLockMillis())
+    }
+
+    @Test
+    fun `el exito establece la llave del respaldo y dispara los restauradores`() = runTest {
+        // RF-39: el login es el único momento con la contraseña en memoria.
+        assertEquals(SignInOutcome.Success, useCase("usuaria@correo.co", "clave-segura-1"))
+
+        assertEquals(listOf("clave-segura-1"), syncKeys.establishedPasswords)
+        assertEquals(1, restoreCalls)
+    }
+
+    @Test
+    fun `un rechazo no toca llaves ni restauradores`() = runTest {
+        repository.nextSignInResult = SignInResult.InvalidCredentials
+
+        useCase("usuaria@correo.co", "clave-mala")
+
+        assertEquals(0, syncKeys.establishedPasswords.size)
+        assertEquals(0, restoreCalls)
+    }
+
+    @Test
+    fun `sin llave establecida no corren los restauradores`() = runTest {
+        // Sin DEK no habría cómo abrir lo descargado: el intento sería ruido.
+        syncKeys.establishOutcome = Result.failure(IllegalStateException())
+
+        assertEquals(SignInOutcome.Success, useCase("usuaria@correo.co", "clave-segura-1"))
+
+        assertEquals(0, restoreCalls)
+    }
+
+    @Test
+    fun `un fallo del respaldo jamas degrada el acceso concedido`() = runTest {
+        // Mejor esfuerzo (§3): el siguiente inicio de sesión reintenta.
+        syncKeys.establishOutcome = Result.failure(IllegalStateException())
+
+        assertEquals(SignInOutcome.Success, useCase("usuaria@correo.co", "clave-segura-1"))
     }
 }

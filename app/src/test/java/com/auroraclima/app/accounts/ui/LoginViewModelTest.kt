@@ -8,6 +8,7 @@ import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeSignInAttemptStore
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
@@ -36,7 +37,10 @@ class LoginViewModelTest {
      *  se re-ancla al deadline persistido en cada tick y ambos deben avanzar juntos. */
     private fun TestScope.createViewModel(): LoginViewModel {
         val clock = WallClock { BASE_EPOCH_MS + testScheduler.currentTime }
-        return LoginViewModel(SignInUseCase(repository, store, clock), repository)
+        return LoginViewModel(
+            SignInUseCase(repository, store, clock, FakeSyncKeyManager(), emptySet()),
+            repository
+        )
     }
 
     private fun TestScope.collectOpenEvents(viewModel: LoginViewModel): List<Unit> {
