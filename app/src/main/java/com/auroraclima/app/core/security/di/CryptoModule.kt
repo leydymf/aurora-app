@@ -1,11 +1,9 @@
 package com.auroraclima.app.core.security.di
 
-import com.auroraclima.app.core.network.FirestoreKeyEnvelopeRemoteSource
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.DefaultSyncKeyManager
 import com.auroraclima.app.core.security.DekPayloadCipher
 import com.auroraclima.app.core.security.DekStore
-import com.auroraclima.app.core.security.KeyEnvelopeRemoteSource
 import com.auroraclima.app.core.security.KeystoreMediaCipher
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.LocalDekStore
@@ -47,8 +45,8 @@ abstract class CryptoModule {
     @Binds
     abstract fun bindPasswordKeyDerivation(impl: Pbkdf2PasswordKeyDerivation): PasswordKeyDerivation
 
-    @Binds
-    abstract fun bindKeyEnvelopeRemoteSource(impl: FirestoreKeyEnvelopeRemoteSource): KeyEnvelopeRemoteSource
+    // KeyEnvelopeRemoteSource se bindea en su implementador (core/network,
+    // FirestoreBindingsModule) — mismo criterio que FirestoreCacheEraser.
 
     /** Las llaves de los payloads (legado y sobre doble) mueren con la cuenta (RF-20). */
     @Binds

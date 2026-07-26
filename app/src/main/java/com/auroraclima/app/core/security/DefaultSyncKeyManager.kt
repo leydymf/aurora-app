@@ -131,13 +131,23 @@ class DefaultSyncKeyManager @Inject constructor(
      * esquema, documentada en el ADR y el informe). Purga primero — si falla,
      * nada avanza y el siguiente login re-entra aquí, idempotente — y solo
      * entonces publica el sobre nuevo y levanta el aviso de una sola vez.
+     *
+     * El documento de llaves NO se purga (auditoría D2 A-1): el `publish` lo
+     * sobreescribe de todos modos, y borrarlo antes perdería el contador de
+     * generación si el proceso muriera a mitad — el siguiente login partiría
+     * como primer arranque en generación 1, chocando con las constancias del
+     * dispositivo viejo, cuyo historial jamás volvería a subir. Conservarlo
+     * hace la re-entrada tras un crash idempotente: siempre se suma sobre la
+     * generación publicada.
      */
     private suspend fun restartBackup(
         uid: String,
         password: String,
         published: PublishedKeyEnvelope
     ): KeyEstablishment {
-        remoteErasers.forEach { eraser -> eraser.erase().getOrThrow() }
+        remoteErasers
+            .filterNot { it is SyncKeyRemoteEraser }
+            .forEach { eraser -> eraser.erase().getOrThrow() }
         val dek = freshDek()
         val generation = published.generation + 1
         val revision = freshRevision()

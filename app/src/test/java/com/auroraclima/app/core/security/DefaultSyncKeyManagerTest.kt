@@ -109,6 +109,37 @@ class DefaultSyncKeyManagerTest {
     }
 
     @Test
+    fun `el reinicio no borra el documento de llaves y sobrevive a una interrupcion`() = runTest {
+        // Auditoría D2 A-1: el keydoc se sobreescribe con publish, jamás se
+        // purga — si el proceso muere entre la purga de datos y el publish, el
+        // siguiente login sigue viendo la generación publicada y suma sobre
+        // ella (nunca re-parte en gen 1, que chocaría con las constancias del
+        // dispositivo viejo y dejaría su historial sin re-subir).
+        val keydocEraser = SyncKeyRemoteEraser(remote)
+        val managerWithKeydocEraser = DefaultSyncKeyManager(
+            identity = { uid },
+            remote = remote,
+            dekStore = dekStore,
+            keyWrapper = wrapper,
+            remoteErasers = setOf(eraser, keydocEraser)
+        )
+        remote.stored = PublishedKeyEnvelope(wrapper.wrap(ByteArray(32) { 7 }, "contrasena-olvidada"), 3, "r3")
+        // «Crash a mitad»: la purga de datos corre pero publicar falla.
+        remote.failPublish = true
+        assertTrue(managerWithKeydocEraser.establish("contrasena-nueva").isFailure)
+        assertEquals(0, remote.deleteCalls)
+        assertEquals(3L, remote.stored?.generation)
+
+        // El «siguiente login» re-entra al reinicio partiendo del keydoc vivo.
+        remote.failPublish = false
+        val outcome = managerWithKeydocEraser.establish("contrasena-nueva")
+
+        assertEquals(KeyEstablishment.Restarted, outcome.getOrThrow())
+        assertEquals(4L, remote.stored?.generation)
+        assertEquals(0, remote.deleteCalls)
+    }
+
+    @Test
     fun `si la purga falla el reinicio no avanza y se reintenta despues`() = runTest {
         val abandoned = PublishedKeyEnvelope(wrapper.wrap(ByteArray(32) { 7 }, "contrasena-olvidada"), 3, "r3")
         remote.stored = abandoned
