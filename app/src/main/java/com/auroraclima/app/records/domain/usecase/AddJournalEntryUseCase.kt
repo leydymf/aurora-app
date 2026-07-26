@@ -1,6 +1,5 @@
 package com.auroraclima.app.records.domain.usecase
 
-import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.model.NewJournalEntry
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
@@ -31,10 +30,9 @@ class AddJournalEntryUseCase @Inject constructor(
     suspend operator fun invoke(entry: NewJournalEntry, attachmentIds: List<Long> = emptyList()): Result<Unit> {
         val id = journalRepository.add(entry).getOrElse { return Result.failure(it) }
         if (attachmentIds.isNotEmpty()) attachmentRepository.claim(attachmentIds, id)
-        // Mejor esfuerzo: el registro ya está a salvo localmente. Su fallo se ignora.
-        syncRepository.push(
-            JournalEntry(id = id, occurredOn = entry.occurredOn, kind = entry.kind, detail = entry.detail)
-        )
+        // Mejor esfuerzo: el registro ya está a salvo localmente. Su fallo se
+        // ignora — la fila queda pendiente y el reconciliador la retoma (RF-39).
+        syncRepository.push(id)
         return Result.success(Unit)
     }
 }

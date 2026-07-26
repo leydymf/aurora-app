@@ -16,10 +16,22 @@ interface JournalDao {
     @Query("SELECT * FROM entries WHERE id = :id")
     suspend fun entryById(id: Long): JournalEntryRow?
 
-    /** Edita el contenido (RF-35) sin tocar `created_at`: el orden del listado no cambia. */
-    @Query("UPDATE entries SET day = :day, kind = :kind, detail = :detail WHERE id = :id")
+    /**
+     * Edita el contenido (RF-35) sin tocar `created_at`: el orden del listado no
+     * cambia. `synced_gen` vuelve a 0 (RF-39): la copia subida quedó desfasada y
+     * si la re-subida inmediata fallara, el reconciliador la retoma.
+     */
+    @Query("UPDATE entries SET day = :day, kind = :kind, detail = :detail, synced_gen = 0 WHERE id = :id")
     suspend fun update(id: Long, day: Long, kind: String, detail: String)
 
     @Query("DELETE FROM entries WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    /** Registros cuya copia remota no corresponde a la generación vigente (RF-39). */
+    @Query("SELECT * FROM entries WHERE synced_gen != :generation")
+    suspend fun pendingSync(generation: Long): List<JournalEntryRow>
+
+    /** Deja constancia de con qué generación subió el registro (RF-39). */
+    @Query("UPDATE entries SET synced_gen = :generation WHERE id = :id")
+    suspend fun markSynced(id: Long, generation: Long)
 }

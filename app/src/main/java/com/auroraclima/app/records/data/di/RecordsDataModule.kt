@@ -1,6 +1,7 @@
 package com.auroraclima.app.records.data.di
 
 import com.auroraclima.app.core.database.EncryptedDatabaseFactory
+import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.RemoteAccountDataEraser
 import com.auroraclima.app.core.security.SensitiveStateCleaner
@@ -10,6 +11,7 @@ import com.auroraclima.app.records.data.JournalMediaEraser
 import com.auroraclima.app.records.data.JournalMediaSessionCleaner
 import com.auroraclima.app.records.data.JournalRemoteEraser
 import com.auroraclima.app.records.data.JournalStoreEraser
+import com.auroraclima.app.records.data.JournalSyncReconciler
 import com.auroraclima.app.records.data.LocalJournalAttachmentRepository
 import com.auroraclima.app.records.data.LocalJournalRepository
 import com.auroraclima.app.records.data.local.JournalDatabase
@@ -66,17 +68,28 @@ abstract class RecordsDataModule {
     @IntoSet
     abstract fun bindJournalMediaSessionCleaner(impl: JournalMediaSessionCleaner): SensitiveStateCleaner
 
+    /** RF-39: tras cada login, el historial se reconcilia con la nube (migración y re-subidas). */
+    @Binds
+    @IntoSet
+    abstract fun bindJournalSyncReconciler(impl: JournalSyncReconciler): AccountDataRestorer
+
     companion object {
         /**
          * Solo captura la fábrica: NO construye la BD aquí (P-36) — la apertura
          * hace I/O y puede lanzar, y eso ocurre recién dentro del repositorio,
-         * en su dispatcher de I/O y traducido a Result. La migración v1→v2
-         * (adjuntos, RF-33) conserva el historial ya guardado.
+         * en su dispatcher de I/O y traducido a Result. Las migraciones v1→v2
+         * (adjuntos, RF-33) y v2→v3 (constancia de sync, RF-39) conservan el
+         * historial ya guardado.
          */
         @Provides
         fun provideJournalDatabaseSource(factory: EncryptedDatabaseFactory): JournalDatabaseSource =
             JournalDatabaseSource {
-                factory.create(JournalDatabase::class.java, JournalDatabase.NAME, JournalDatabase.MIGRATION_1_2)
+                factory.create(
+                    JournalDatabase::class.java,
+                    JournalDatabase.NAME,
+                    JournalDatabase.MIGRATION_1_2,
+                    JournalDatabase.MIGRATION_2_3
+                )
             }
     }
 }

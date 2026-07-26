@@ -35,12 +35,9 @@ class AddJournalEntryUseCaseTest {
 
         assertTrue(result.isSuccess)
         assertEquals(1, repository.added.size)
-        // El docId de la sync es el id local (mapeo determinista, RF-37).
-        assertEquals(1, sync.pushed.size)
-        assertEquals(1L, sync.pushed[0].id)
-        assertEquals(entry.occurredOn, sync.pushed[0].occurredOn)
-        assertEquals(entry.kind, sync.pushed[0].kind)
-        assertEquals(entry.detail, sync.pushed[0].detail)
+        // La sync recibe el id local recién asignado (docId determinista, RF-37);
+        // el contenido lo lee la implementación desde la fila (RF-39).
+        assertEquals(listOf(1L), sync.pushed)
     }
 
     @Test

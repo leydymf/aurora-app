@@ -111,9 +111,9 @@ class JournalEditorViewModelTest {
         assertEquals(LocalDate.of(2026, 6, 28), saved.occurredOn)
         assertEquals(EntryKind.ECONOMIC, saved.kind)
         assertEquals("tomó el dinero del mercado", saved.detail)
-        // RF-37: el registro guardado también se sincroniza (recortado, mismo contenido).
-        assertEquals(1, sync.pushed.size)
-        assertEquals("tomó el dinero del mercado", sync.pushed[0].detail)
+        // RF-37: el registro guardado también se sincroniza con su id local
+        // (el contenido lo lee la implementación desde la fila, RF-39).
+        assertEquals(listOf(1L), sync.pushed)
         // replay = 1: el evento queda en la caché para la suscripción de la UI.
         assertEquals(listOf(Unit), viewModel.savedEvents.replayCache)
     }
@@ -179,9 +179,7 @@ class JournalEditorViewModelTest {
         assertEquals(EntryKind.PSYCHOLOGICAL, saved.kind)
         assertEquals("el relato corregido", saved.detail)
         // El cambio se refleja en la sincronización, al MISMO documento.
-        assertEquals(1, sync.pushed.size)
-        assertEquals(7L, sync.pushed[0].id)
-        assertEquals("el relato corregido", sync.pushed[0].detail)
+        assertEquals(listOf(7L), sync.pushed)
         assertEquals(listOf(Unit), viewModel.savedEvents.replayCache)
     }
 

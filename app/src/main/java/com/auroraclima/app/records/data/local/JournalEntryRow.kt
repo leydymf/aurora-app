@@ -11,6 +11,12 @@ import androidx.room.PrimaryKey
  *
  * `day` es el epochDay de la fecha del hecho; `createdAt` desempata el orden
  * cronológico inverso entre registros del mismo día (RF-34 criterio 1).
+ *
+ * `syncedGeneration` (v3, RF-39) es la generación de la DEK con la que este
+ * registro subió por última vez: 0 = pendiente de subir. Un valor distinto de
+ * la generación vigente marca el registro para la re-subida del reconciliador
+ * — así la migración al sobre nuevo, sus interrupciones y los push perdidos
+ * convergen en un único mecanismo. Nombre de columna neutro, como el resto.
  */
 @Entity(tableName = "entries")
 data class JournalEntryRow(
@@ -18,5 +24,6 @@ data class JournalEntryRow(
     val day: Long,
     val kind: String,
     val detail: String,
-    @ColumnInfo(name = "created_at") val createdAt: Long
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    @ColumnInfo(name = "synced_gen", defaultValue = "0") val syncedGeneration: Long = 0
 )

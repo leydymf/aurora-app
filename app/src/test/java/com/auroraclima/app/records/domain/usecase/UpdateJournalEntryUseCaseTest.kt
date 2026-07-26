@@ -33,10 +33,9 @@ class UpdateJournalEntryUseCaseTest {
 
         assertTrue(result.isSuccess)
         assertEquals(listOf(edited), repository.updated)
-        // La re-subida apunta al MISMO docId (sobrescritura idempotente, RF-37).
-        assertEquals(1, sync.pushed.size)
-        assertEquals(7L, sync.pushed[0].id)
-        assertEquals("el relato corregido", sync.pushed[0].detail)
+        // La re-subida apunta al MISMO docId (sobrescritura idempotente, RF-37);
+        // el contenido editado lo lee la implementación desde la fila (RF-39).
+        assertEquals(listOf(7L), sync.pushed)
     }
 
     @Test

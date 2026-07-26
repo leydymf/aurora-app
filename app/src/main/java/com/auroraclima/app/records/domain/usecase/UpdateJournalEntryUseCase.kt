@@ -20,8 +20,10 @@ class UpdateJournalEntryUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(entry: JournalEntry): Result<Unit> {
         journalRepository.update(entry).getOrElse { return Result.failure(it) }
-        // Mejor esfuerzo: el cambio ya está a salvo localmente. Su fallo se ignora.
-        syncRepository.push(entry)
+        // Mejor esfuerzo: el cambio ya está a salvo localmente. Su fallo se
+        // ignora — la edición dejó la fila pendiente y el reconciliador la
+        // retoma en el siguiente login (RF-39).
+        syncRepository.push(entry.id)
         return Result.success(Unit)
     }
 }

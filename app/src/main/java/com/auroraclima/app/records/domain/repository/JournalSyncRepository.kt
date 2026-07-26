@@ -1,7 +1,5 @@
 package com.auroraclima.app.records.domain.repository
 
-import com.auroraclima.app.records.domain.model.JournalEntry
-
 /**
  * Sincronización cifrada del historial con la nube (RF-37). El contenido del
  * registro se cifra EN EL CLIENTE antes de subir: el proyecto de Firebase solo
@@ -13,11 +11,16 @@ import com.auroraclima.app.records.domain.model.JournalEntry
  * fallo de red jamás rompe el guardado local ni asoma un error revelador. La cola
  * offline→online la aporta la persistencia del propio Firestore (RF-38 fuera de
  * alcance: no hay outbox propio).
+ *
+ * Desde RF-39 el push va POR ID: la implementación lee la fila local (fuente de
+ * verdad, incluido `created_at` — el orden debe sobrevivir a la restauración),
+ * la sella con la DEK recuperable y deja constancia de la generación con la que
+ * subió; un push que no llega a sellarse queda pendiente para el reconciliador.
  */
 interface JournalSyncRepository {
-    /** Sube (o re-sube, idempotente) un registro ya guardado localmente. */
-    suspend fun push(entry: JournalEntry): Result<Unit>
+    /** Sube (o re-sube, idempotente) el registro local [entryId] ya guardado. */
+    suspend fun push(entryId: Long): Result<Unit>
 
-    /** Borra en la nube el registro [entryId] (preparación de RF-36/RF-20; sin UI aún). */
+    /** Borra en la nube el registro [entryId] (RF-36/RF-20). */
     suspend fun remove(entryId: Long): Result<Unit>
 }
