@@ -78,6 +78,13 @@
     <string name="common_back">Volver</string>
     <string name="common_retry">Reintentar</string>
     <string name="account_password_toggle">Cambiar visibilidad de la contraseña</string>
+    <string name="account_password_change_tag">TU CUENTA</string>
+    <string name="account_password_change_title">Cambiar tu contraseña.</string>
+    <string name="account_password_change_current_label">Contraseña actual</string>
+    <string name="account_password_change_new_label">Contraseña nueva</string>
+    <string name="account_password_change_confirm_label">Confirmar contraseña nueva</string>
+    <string name="account_password_change_submit">Guardar contraseña</string>
+    <string name="account_password_change_offline">Necesitas conexión para cambiar la contraseña. Nada se ha modificado.</string>
     <string name="account_login_tag">INICIO DE SESIÓN</string>
     <string name="account_login_title">Hola de nuevo.</string>
     <string name="account_login_submit">Entrar</string>
@@ -89,6 +96,7 @@
     <string name="access_settings_title">Configuración.</string>
     <string name="access_settings_group_security">SEGURIDAD</string>
     <string name="access_settings_change_code">Cambiar tu clave personal</string>
+    <string name="access_settings_change_password">Cambiar tu contraseña</string>
     <string name="access_settings_guide">Ver el tutorial de nuevo</string>
     <string name="access_change_tag">CONFIGURACIÓN · CLAVE</string>
     <string name="access_change_title">Cambiar tu clave.</string>

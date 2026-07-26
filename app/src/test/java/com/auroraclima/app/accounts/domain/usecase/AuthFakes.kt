@@ -4,6 +4,7 @@ import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
+import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
@@ -59,6 +60,17 @@ internal class FakeAuthRepository : AuthRepository {
         deleteCalls++
         callLog?.add("deleteUser")
         return nextDeleteResult
+    }
+
+    var nextUpdatePasswordResult: UpdatePasswordResult = UpdatePasswordResult.Success
+
+    /** Contraseñas que llegaron a updatePassword; su tamaño es el conteo de llamadas. */
+    val updatedPasswords = mutableListOf<String>()
+
+    override suspend fun updatePassword(newPassword: String): UpdatePasswordResult {
+        updatedPasswords += newPassword
+        callLog?.add("updatePassword")
+        return nextUpdatePasswordResult
     }
 }
 

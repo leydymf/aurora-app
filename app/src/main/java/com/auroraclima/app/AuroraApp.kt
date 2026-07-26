@@ -20,6 +20,7 @@ import com.auroraclima.app.access.ui.CodeSetupRoute
 import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.access.ui.SettingsScreen
 import com.auroraclima.app.access.ui.TutorialRoute
+import com.auroraclima.app.accounts.ui.ChangePasswordRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.accounts.ui.DeleteAccountRoute
@@ -165,6 +166,9 @@ fun AuroraApp(sessionManager: SessionManager) {
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
                         onChangeCode = { navController.navigate(SETTINGS_CODE_ROUTE) },
+                        // RF-39: cambio de contraseña (re-envuelve la DEK, no
+                        // re-cifra registros); pantalla de accounts.
+                        onChangePassword = { navController.navigate(SETTINGS_PASSWORD_ROUTE) },
                         onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) },
                         onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) },
                         // RF-19: el cierre explícito converge en la rutina única de
@@ -190,6 +194,14 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(SETTINGS_CODE_ROUTE) {
                     ChangeCodeRoute(
                         onCodeChanged = { navController.popBackStack() },
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                // Cambio de la contraseña de la cuenta (RF-39): guardar regresa
+                // a configuración; el formulario no queda en la pila.
+                screen(SETTINGS_PASSWORD_ROUTE) {
+                    ChangePasswordRoute(
+                        onPasswordChanged = { navController.popBackStack() },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -361,6 +373,7 @@ private const val PANEL_ROUTE = "panel"
 private const val SETTINGS_ROUTE = "settings"
 private const val PRIVACY_ROUTE = "privacy"
 private const val SETTINGS_CODE_ROUTE = "settings_code"
+private const val SETTINGS_PASSWORD_ROUTE = "settings_password"
 private const val SETTINGS_ACCOUNT_ROUTE = "settings_account"
 private const val GUIDANCE_ROUTE = "guidance"
 private const val JOURNAL_ROUTE = "journal"

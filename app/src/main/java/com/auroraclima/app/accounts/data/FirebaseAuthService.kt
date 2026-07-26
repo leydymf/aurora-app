@@ -57,6 +57,10 @@ class FirebaseAuthService @Inject constructor(
         translatingFailures { user -> user.delete().awaitCompletion() }
     }
 
+    override suspend fun updatePassword(newPassword: String) {
+        translatingFailures { user -> user.updatePassword(newPassword).awaitCompletion() }
+    }
+
     /**
      * Único punto que traduce los fallos del proveedor para las operaciones de
      * RF-20. La caída de red llega como excepción propia (no [FirebaseAuthException])

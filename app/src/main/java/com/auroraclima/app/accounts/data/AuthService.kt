@@ -24,6 +24,13 @@ interface AuthService {
 
     /** Elimina la cuenta de la sesión vigente en el proveedor (RF-20 criterio 3). */
     suspend fun deleteCurrentUser()
+
+    /**
+     * Cambia la contraseña de la sesión vigente (RF-39, cambio conociendo la
+     * actual). El proveedor exige login reciente: siempre precedido de
+     * [reauthenticate].
+     */
+    suspend fun updatePassword(newPassword: String)
 }
 
 /**

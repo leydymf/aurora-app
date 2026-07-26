@@ -4,6 +4,7 @@ import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
+import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -67,6 +68,21 @@ class FirebaseAuthRepository @Inject constructor(
                 DeleteUserResult.NoConnection
             } else {
                 DeleteUserResult.GenericFailure
+            }
+        }
+    }
+
+    override suspend fun updatePassword(newPassword: String): UpdatePasswordResult = withContext(Dispatchers.IO) {
+        try {
+            service.updatePassword(newPassword)
+            UpdatePasswordResult.Success
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            when (errorCode(error)) {
+                ERROR_WEAK_PASSWORD -> UpdatePasswordResult.WeakPassword
+                AuthServiceException.ERROR_NETWORK -> UpdatePasswordResult.NoConnection
+                else -> UpdatePasswordResult.GenericFailure
             }
         }
     }

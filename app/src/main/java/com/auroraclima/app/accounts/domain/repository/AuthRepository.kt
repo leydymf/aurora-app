@@ -4,8 +4,9 @@ import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
+import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
 
-/** Autenticación de la cuenta de la usuaria (RF-07, RF-15, RF-20). */
+/** Autenticación de la cuenta de la usuaria (RF-07, RF-15, RF-20, RF-39). */
 interface AuthRepository {
     /** Crea la cuenta con correo y contraseña. Nunca lanza: todo fallo es un [CreateAccountResult]. */
     suspend fun createAccount(email: String, password: String): CreateAccountResult
@@ -21,4 +22,7 @@ interface AuthRepository {
 
     /** Elimina la cuenta del proveedor. Nunca lanza (RF-20 criterio 3). */
     suspend fun deleteCurrentUser(): DeleteUserResult
+
+    /** Cambia la contraseña de la sesión vigente. Nunca lanza (RF-39). */
+    suspend fun updatePassword(newPassword: String): UpdatePasswordResult
 }

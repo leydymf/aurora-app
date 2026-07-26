@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +74,7 @@ import com.auroraclima.app.core.ui.theme.SteelDeep
 fun SettingsScreen(
     onBack: () -> Unit,
     onChangeCode: () -> Unit,
+    onChangePassword: () -> Unit,
     onReopenGuide: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onSignOut: () -> Unit,
@@ -102,6 +104,14 @@ fun SettingsScreen(
                 icon = rememberVectorPainter(Icons.Outlined.Lock),
                 title = stringResource(R.string.access_settings_change_code),
                 onClick = onChangeCode
+            )
+            SettingsRowDivider()
+            // RF-39: la contraseña de la cuenta también se cambia desde aquí;
+            // la pantalla es de accounts y la conexión, por navegación (§2).
+            SettingsRow(
+                icon = rememberVectorPainter(Icons.Outlined.Person),
+                title = stringResource(R.string.access_settings_change_password),
+                onClick = onChangePassword
             )
             SettingsRowDivider()
             SettingsRow(

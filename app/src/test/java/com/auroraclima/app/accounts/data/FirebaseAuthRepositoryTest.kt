@@ -219,4 +219,8 @@ private class FakeAuthService : AuthService {
     override suspend fun deleteCurrentUser() {
         nextError?.let { throw it }
     }
+
+    override suspend fun updatePassword(newPassword: String) {
+        nextError?.let { throw it }
+    }
 }
