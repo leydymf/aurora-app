@@ -23,4 +23,15 @@ interface JournalSyncRepository {
 
     /** Borra en la nube el registro [entryId] (RF-36/RF-20). */
     suspend fun remove(entryId: Long): Result<Unit>
+
+    /**
+     * Restauración multi-dispositivo (RF-39 criterio 1): descarga los
+     * documentos de la cuenta, los descifra con la DEK recuperable y repone los
+     * registros — con sus MISMOS ids y su orden — SOLO si el historial local
+     * está vacío (dispositivo nuevo o reinstalación); mezclar con datos vivos
+     * podría resucitar registros con borrado aún en cola. Lo indescifrable
+     * (blobs v1 de la llave vieja, restos de otra generación) se omite en
+     * silencio.
+     */
+    suspend fun restore(): Result<Unit>
 }

@@ -7,6 +7,7 @@ import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.core.security.SealedPayload
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.local.JournalEntryRow
+import com.auroraclima.app.records.data.remote.EncryptedEntryDto
 import java.util.Base64
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
@@ -155,6 +156,92 @@ class FirestoreJournalSyncRepositoryTest {
 
         remote.reconnect()
         assertEquals(listOf("7"), remote.deleted)
+    }
+
+    // ---- Restauración multi-dispositivo (RF-39 criterio 1) ----
+
+    private fun sealedDto(day: Long, detail: String, createdAt: Long, schemaVersion: Long = 2L): EncryptedEntryDto {
+        val json = JSONObject()
+            .put("day", day)
+            .put("kind", "economic")
+            .put("detail", detail)
+            .put("at", createdAt)
+        val sealed = cipher.seal(json.toString().toByteArray(Charsets.UTF_8))
+        return EncryptedEntryDto(
+            ciphertext = Base64.getEncoder().encodeToString(sealed.ciphertext),
+            iv = Base64.getEncoder().encodeToString(sealed.iv),
+            schemaVersion = schemaVersion
+        )
+    }
+
+    @Test
+    fun `sobre un historial vacio repone los registros con sus ids y su orden`() = runTest {
+        // «Dispositivo B»: BD local vacía; en la nube hay dos registros v2.
+        remote.remoteDocs += "3" to sealedDto(day = 20_632, detail = "el más reciente", createdAt = 200)
+        remote.remoteDocs += "1" to sealedDto(day = 20_632, detail = "el más antiguo", createdAt = 100)
+
+        val result = repository.restore()
+
+        assertTrue(result.isSuccess)
+        val rows = database.journalDao().entries()
+        // Mismo día: el created_at restaurado del payload preserva el desempate (RF-34).
+        assertEquals(listOf(3L, 1L), rows.map { it.id })
+        assertEquals(listOf("el más reciente", "el más antiguo"), rows.map { it.detail })
+        // Lo restaurado ya está en la nube: queda con constancia, no se re-sube.
+        assertTrue(rows.all { it.syncedGeneration == 4L })
+    }
+
+    @Test
+    fun `tras restaurar los registros nuevos no chocan con los ids repuestos`() = runTest {
+        remote.remoteDocs += "5" to sealedDto(day = 20_632, detail = "restaurado", createdAt = 100)
+        repository.restore()
+
+        val newId = database.journalDao().insert(
+            JournalEntryRow(day = 20_640, kind = "physical", detail = "nuevo", createdAt = 300)
+        )
+
+        // AUTOINCREMENT continúa por encima del máximo restaurado: el docId
+        // determinista jamás sobreescribe un documento ajeno.
+        assertTrue(newId > 5L)
+    }
+
+    @Test
+    fun `con historial local no vacio no repone nada`() = runTest {
+        // Mezclar podría resucitar registros con borrado aún en cola.
+        val existing = seedRow()
+        remote.remoteDocs += "9" to sealedDto(day = 20_632, detail = "remoto", createdAt = 100)
+
+        val result = repository.restore()
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf(existing), database.journalDao().entries().map { it.id })
+    }
+
+    @Test
+    fun `los blobs ilegibles y los formatos viejos se omiten sin romper la restauracion`() = runTest {
+        // Un doc v1 (llave del dispositivo viejo) y un blob corrupto no deben
+        // impedir reponer lo que sí abre.
+        remote.remoteDocs += "1" to sealedDto(day = 20_632, detail = "legible", createdAt = 100)
+        remote.remoteDocs += "2" to sealedDto(day = 20_632, detail = "v1", createdAt = 50, schemaVersion = 1L)
+        remote.remoteDocs += "3" to EncryptedEntryDto(
+            ciphertext = Base64.getEncoder().encodeToString(byteArrayOf(1, 2, 3)),
+            iv = Base64.getEncoder().encodeToString(ByteArray(12)),
+            schemaVersion = 2L
+        )
+
+        val result = repository.restore()
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf(1L), database.journalDao().entries().map { it.id })
+    }
+
+    @Test
+    fun `sin DEK establecida la restauracion falla sin tocar la BD`() = runTest {
+        keyManager.generation = null
+        remote.remoteDocs += "1" to sealedDto(day = 20_632, detail = "x", createdAt = 100)
+
+        assertTrue(repository.restore().isFailure)
+        assertEquals(0L, database.journalDao().count())
     }
 
     private fun openPayload(ciphertext: String, iv: String): String = cipher.open(

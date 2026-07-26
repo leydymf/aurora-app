@@ -29,6 +29,15 @@ class FakeJournalSyncRemoteSource : JournalSyncRemoteSource {
         if (online) deleted += documentId else queuedDeletes += documentId
     }
 
+    /** Documentos «en el servidor» que servirá [downloadAll] (restauración RF-39). */
+    val remoteDocs = mutableListOf<Pair<String, EncryptedEntryDto>>()
+
+    override suspend fun downloadAll(): List<Pair<String, EncryptedEntryDto>> {
+        // Es una lectura del servidor: sin red, lanza (como Source.SERVER).
+        if (!online) throw IllegalStateException()
+        return remoteDocs.toList()
+    }
+
     /** Reconexión: la cola durable se aplica automáticamente (RF-38). */
     fun reconnect() {
         online = true

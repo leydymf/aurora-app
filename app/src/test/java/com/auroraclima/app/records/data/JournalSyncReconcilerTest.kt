@@ -112,6 +112,32 @@ class JournalSyncReconcilerTest {
     }
 
     @Test
+    fun `en un dispositivo nuevo repone desde la nube y no re-sube lo repuesto`() = runTest {
+        // RF-39 criterio 1, punta a punta en la reconciliación: BD vacía +
+        // documentos v2 en el servidor → registros repuestos con constancia,
+        // sin re-subir nada (ya están en la nube con esta DEK).
+        val cipher = ReversiblePayloadCipher()
+        val payload = org.json.JSONObject()
+            .put("day", 20_632L)
+            .put("kind", "economic")
+            .put("detail", "registro remoto")
+            .put("at", 100L)
+        val sealed = cipher.seal(payload.toString().toByteArray(Charsets.UTF_8))
+        remote.remoteDocs += "7" to com.auroraclima.app.records.data.remote.EncryptedEntryDto(
+            ciphertext = java.util.Base64.getEncoder().encodeToString(sealed.ciphertext),
+            iv = java.util.Base64.getEncoder().encodeToString(sealed.iv),
+            schemaVersion = 2L
+        )
+
+        reconciler.restore()
+
+        assertEquals(listOf(7L), database.journalDao().entries().map { it.id })
+        assertEquals("registro remoto", database.journalDao().entryById(7)?.detail)
+        assertEquals(1L, database.journalDao().entryById(7)?.syncedGeneration)
+        assertTrue(remote.uploaded.isEmpty())
+    }
+
+    @Test
     fun `sin DEK establecida no hace nada`() = runTest {
         seedRows(2)
         keyManager.generation = null

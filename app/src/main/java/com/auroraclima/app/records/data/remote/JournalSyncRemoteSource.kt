@@ -12,6 +12,15 @@ interface JournalSyncRemoteSource {
 
     /** Elimina el documento [documentId] (borrado remoto, RF-36/RF-20). */
     suspend fun delete(documentId: String)
+
+    /**
+     * Todos los documentos cifrados de la cuenta, DESDE EL SERVIDOR
+     * (restauración RF-39): la caché local de una instalación nueva está vacía
+     * y la restauración debe ver el estado real. Lanza sin red — la
+     * reconciliación lo traduce a fallo silencioso y reintenta al siguiente
+     * login.
+     */
+    suspend fun downloadAll(): List<Pair<String, EncryptedEntryDto>>
 }
 
 /**

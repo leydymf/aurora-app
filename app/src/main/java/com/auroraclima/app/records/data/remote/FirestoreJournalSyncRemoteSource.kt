@@ -1,7 +1,9 @@
 package com.auroraclima.app.records.data.remote
 
+import com.auroraclima.app.core.network.awaitCompletion
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,6 +36,17 @@ class FirestoreJournalSyncRemoteSource @Inject constructor(
     override suspend fun delete(documentId: String) {
         entries().document(documentId).delete()
     }
+
+    /** Restauración (RF-39): aquí SÍ se espera al servidor — es una lectura. */
+    override suspend fun downloadAll(): List<Pair<String, EncryptedEntryDto>> =
+        entries().get(Source.SERVER).awaitCompletion().documents.mapNotNull { document ->
+            val dto = EncryptedEntryDto(
+                ciphertext = document.getString(FIELD_PAYLOAD) ?: return@mapNotNull null,
+                iv = document.getString(FIELD_IV) ?: return@mapNotNull null,
+                schemaVersion = document.getLong(FIELD_SCHEMA_VERSION) ?: return@mapNotNull null
+            )
+            document.id to dto
+        }
 
     /** `/users/{uid}/entries` de la usuaria autenticada. */
     private fun entries() = firestore.collection(USERS)

@@ -33,6 +33,9 @@ class JournalSyncReconciler @Inject constructor(
 ) : AccountDataRestorer {
     override suspend fun restore() {
         val generation = currentGenerationOrNull() ?: return
+        // Primero reponer (solo actúa sobre un historial vacío: dispositivo
+        // nuevo, RF-39 criterio 1); su fallo es silencioso y no impide subir.
+        syncRepository.restore()
         val pending = storeAccess.withDatabase { db -> db.journalDao().pendingSync(generation) }
             .getOrNull() ?: return
         // Push por registro: cada éxito deja su constancia de inmediato — una

@@ -70,6 +70,7 @@
     <string name="account_register_confirm_label">Confirmar contraseña</string>
     <string name="account_error_password_mismatch">Las contraseñas no coinciden.</string>
     <string name="account_register_submit">Crear cuenta y continuar</string>
+    <string name="account_register_login_link">¿Ya tienes una cuenta? Inicia sesión.</string>
     <string name="account_error_email_taken">Este correo ya tiene una cuenta. Puedes iniciar sesión con él.</string>
     <string name="account_error_email_format">Revisa el formato del correo.</string>
     <string name="account_error_password_short">La contraseña necesita mínimo 8 caracteres.</string>
@@ -180,6 +181,8 @@
     <string name="journal_empty_title">Aún no hay nada aquí.</string>
     <string name="journal_empty_body">Lo que escribas queda protegido y solo tú podrás verlo.</string>
     <string name="journal_add">Agregar un registro</string>
+    <string name="journal_backup_notice">No fue posible recuperar tu información anterior. Tus nuevos registros se guardarán con normalidad.</string>
+    <string name="journal_backup_notice_dismiss">Entendido</string>
     <string name="journal_entry_section">QUÉ PASÓ</string>
     <string name="journal_new_tag">MI REGISTRO · NUEVO</string>
     <string name="journal_new_title">Registrar lo que pasó.</string>

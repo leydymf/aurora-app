@@ -2,6 +2,7 @@ package com.auroraclima.app.records.ui
 
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalEntry
 import java.time.LocalDate
@@ -27,8 +28,9 @@ class JournalListViewModelTest {
 
     private val repository = FakeJournalRepository()
     private val attachments = FakeJournalAttachmentRepository()
+    private val keyManager = FakeSyncKeyManager()
 
-    private fun viewModel() = JournalListViewModel(repository, attachments)
+    private fun viewModel() = JournalListViewModel(repository, attachments, keyManager)
 
     @Test
     fun `expone los registros en el orden del repositorio`() = runTest {
@@ -100,6 +102,25 @@ class JournalListViewModelTest {
         assertNull(state.errorRes)
         assertEquals(1, state.entries.size)
         assertTrue(state.attachmentCounts.isEmpty())
+    }
+
+    @Test
+    fun `el aviso de respaldo reiniciado se muestra una vez y se puede cerrar`() = runTest {
+        // RF-39: contraseña restablecida sin la anterior → mensaje genérico.
+        keyManager.restartNotice = true
+
+        val viewModel = viewModel()
+
+        assertTrue(viewModel.uiState.value.showsBackupNotice)
+        viewModel.onBackupNoticeDismissed()
+        assertFalse(viewModel.uiState.value.showsBackupNotice)
+        // Consumido: un ViewModel nuevo (otra visita) ya no lo muestra.
+        assertFalse(viewModel().uiState.value.showsBackupNotice)
+    }
+
+    @Test
+    fun `sin reinicio no hay aviso`() = runTest {
+        assertFalse(viewModel().uiState.value.showsBackupNotice)
     }
 
     private fun entry(id: Long, detail: String) = JournalEntry(

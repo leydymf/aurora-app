@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -35,6 +37,7 @@ import com.auroraclima.app.core.ui.components.SecretField
 import com.auroraclima.app.core.ui.components.SectionTag
 import com.auroraclima.app.core.ui.components.SectionTitle
 import com.auroraclima.app.core.ui.theme.Mist
+import com.auroraclima.app.core.ui.theme.Night
 import com.auroraclima.app.core.ui.theme.PlexSans
 import com.auroraclima.app.core.ui.theme.Plum
 
@@ -43,9 +46,13 @@ import com.auroraclima.app.core.ui.theme.Plum
  * primer uso. Los campos reportan cada tecla como interacción (P-15): el teclado
  * es una ventana propia sin eventos de puntero sobre la app y el temporizador de
  * inactividad (RNF-03) expiraría mientras la usuaria escribe.
+ *
+ * RF-39: el enlace «ya tengo una cuenta» abre el inicio de sesión dentro del
+ * mismo flujo de activación — es la puerta de la restauración multi-dispositivo
+ * (dispositivo nuevo: activación → login → código nuevo).
  */
 @Composable
-fun CreateAccountRoute(onAccountCreated: () -> Unit) {
+fun CreateAccountRoute(onAccountCreated: () -> Unit, onOpenLogin: () -> Unit) {
     val viewModel: CreateAccountViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     val sessionManager = LocalSessionManager.current
@@ -54,6 +61,7 @@ fun CreateAccountRoute(onAccountCreated: () -> Unit) {
     }
     CreateAccountScreen(
         state = state,
+        onOpenLogin = onOpenLogin,
         onEmailChange = {
             sessionManager.registerInteraction()
             viewModel.onEmailChange(it)
@@ -79,6 +87,7 @@ fun CreateAccountRoute(onAccountCreated: () -> Unit) {
 @Composable
 internal fun CreateAccountScreen(
     state: CreateAccountUiState,
+    onOpenLogin: () -> Unit,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
@@ -162,7 +171,20 @@ internal fun CreateAccountScreen(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
         }
+        Spacer(modifier = Modifier.height(16.dp))
+        // RF-39: puerta hacia la restauración en un dispositivo nuevo.
+        Text(
+            text = stringResource(R.string.account_register_login_link),
+            fontFamily = PlexSans,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            color = Night,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .clickable(onClick = onOpenLogin)
+                .padding(8.dp)
+        )
         // Aire final para no chocar con el botón nube de salida rápida.
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(40.dp))
     }
 }

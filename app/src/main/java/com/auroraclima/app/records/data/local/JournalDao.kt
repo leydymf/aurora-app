@@ -31,6 +31,10 @@ interface JournalDao {
     @Query("SELECT * FROM entries WHERE synced_gen != :generation")
     suspend fun pendingSync(generation: Long): List<JournalEntryRow>
 
+    /** La restauración (RF-39) solo repone sobre un historial vacío. */
+    @Query("SELECT COUNT(*) FROM entries")
+    suspend fun count(): Long
+
     /** Deja constancia de con qué generación subió el registro (RF-39). */
     @Query("UPDATE entries SET synced_gen = :generation WHERE id = :id")
     suspend fun markSynced(id: Long, generation: Long)

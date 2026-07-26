@@ -13,5 +13,11 @@ data class JournalListUiState(
     val isLoading: Boolean = true,
     val entries: List<JournalEntry> = emptyList(),
     val attachmentCounts: Map<Long, Int> = emptyMap(),
+    /**
+     * Aviso genérico de una sola vez (RF-39): la contraseña fue restablecida
+     * sin la anterior y el respaldo previo quedó ilegible; el respaldo se
+     * reinició. Redacción honesta y sin tecnicismos, nada del esquema de llaves.
+     */
+    val showsBackupNotice: Boolean = false,
     @StringRes val errorRes: Int? = null
 )

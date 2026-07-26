@@ -68,7 +68,8 @@ fun JournalListRoute(onBack: () -> Unit, onAddEntry: () -> Unit, onEntrySelected
         onBack = onBack,
         onAddEntry = onAddEntry,
         onEntrySelected = onEntrySelected,
-        onRetry = viewModel::refresh
+        onRetry = viewModel::refresh,
+        onNoticeDismissed = viewModel::onBackupNoticeDismissed
     )
 }
 
@@ -79,6 +80,7 @@ internal fun JournalListScreen(
     onAddEntry: () -> Unit,
     onEntrySelected: (Long) -> Unit,
     onRetry: () -> Unit,
+    onNoticeDismissed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -92,6 +94,14 @@ internal fun JournalListScreen(
             onBack = onBack,
             modifier = Modifier.padding(horizontal = 12.dp)
         )
+        // Aviso de respaldo reiniciado (RF-39): genérico, cerrable y sin
+        // tecnicismos — lo anterior no pudo recuperarse; lo nuevo sigue normal.
+        if (state.showsBackupNotice) {
+            BackupNoticeCard(
+                onDismiss = onNoticeDismissed,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             when {
                 state.isLoading -> LoadingState()
@@ -194,6 +204,38 @@ private fun EntryCard(entry: JournalEntry, attachmentCount: Int, onClick: () -> 
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = Steel
+            )
+        }
+    }
+}
+
+/** Tarjeta silenciosa del aviso (RF-39): un texto y «Entendido», nada más. */
+@Composable
+private fun BackupNoticeCard(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = CloudWhite
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = stringResource(R.string.journal_backup_notice),
+                fontFamily = PlexSans,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = SteelDeep
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.journal_backup_notice_dismiss),
+                fontFamily = PlexSans,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                color = Night,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .clickable(onClick = onDismiss)
+                    .padding(4.dp)
             )
         }
     }

@@ -18,4 +18,13 @@ class FakeJournalSyncRepository : JournalSyncRepository {
         removed += entryId
         return removeResult
     }
+
+    var restoreCalls = 0
+        private set
+    var restoreResult: Result<Unit> = Result.success(Unit)
+
+    override suspend fun restore(): Result<Unit> {
+        restoreCalls++
+        return restoreResult
+    }
 }

@@ -3,6 +3,7 @@ package com.auroraclima.app.records.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.SyncKeyManager
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,10 +24,20 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class JournalListViewModel @Inject constructor(
     private val repository: JournalRepository,
-    private val attachmentRepository: JournalAttachmentRepository
+    private val attachmentRepository: JournalAttachmentRepository,
+    keyManager: SyncKeyManager
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(JournalListUiState())
+    // El aviso de respaldo reiniciado (RF-39) se consume UNA vez y vive en el
+    // estado hasta que la usuaria lo cierre; si el proceso muere antes de
+    // verse, se pierde — es informativo, los datos nuevos no dependen de él.
+    private val _uiState = MutableStateFlow(
+        JournalListUiState(showsBackupNotice = keyManager.consumeRestartNotice())
+    )
     val uiState: StateFlow<JournalListUiState> = _uiState.asStateFlow()
+
+    fun onBackupNoticeDismissed() {
+        _uiState.update { it.copy(showsBackupNotice = false) }
+    }
 
     fun refresh() {
         _uiState.update { it.copy(isLoading = true, errorRes = null) }

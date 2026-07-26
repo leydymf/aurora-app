@@ -90,6 +90,24 @@ fun AuroraApp(sessionManager: SessionManager) {
                             navController.navigate(SETUP_ROUTE) {
                                 popUpTo(INTRO_ROUTE) { inclusive = true }
                             }
+                        },
+                        // RF-39: cuenta existente en un dispositivo nuevo —
+                        // inicia sesión dentro del flujo de activación; «Atrás»
+                        // regresa al formulario de creación.
+                        onOpenLogin = { navController.navigate(ENTRY_SETUP_ROUTE) }
+                    )
+                }
+                // Inicio de sesión del flujo de activación (RF-39): mismo login
+                // de RF-15, pero al conceder acceso continúa a crear el código
+                // nuevo (RF-08) — en este dispositivo aún no existe. La llave
+                // del respaldo y la restauración ya corrieron dentro del caso
+                // de uso del login; nada de la pila anterior debe quedar.
+                screen(ENTRY_SETUP_ROUTE) {
+                    LoginRoute(
+                        onAccessGranted = {
+                            navController.navigate(SETUP_ROUTE) {
+                                popUpTo(INTRO_ROUTE) { inclusive = true }
+                            }
                         }
                     )
                 }
@@ -335,6 +353,7 @@ private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
+private const val ENTRY_SETUP_ROUTE = "entry_setup"
 private const val GUIDE_ROUTE = "guide"
 private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"

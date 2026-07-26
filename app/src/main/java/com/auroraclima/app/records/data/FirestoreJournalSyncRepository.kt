@@ -2,6 +2,7 @@ package com.auroraclima.app.records.data
 
 import com.auroraclima.app.core.network.networkResult
 import com.auroraclima.app.core.security.PayloadCipher
+import com.auroraclima.app.core.security.SealedPayload
 import com.auroraclima.app.core.security.SyncKeyManager
 import com.auroraclima.app.records.data.local.JournalEntryRow
 import com.auroraclima.app.records.data.remote.EncryptedEntryDto
@@ -58,6 +59,45 @@ class FirestoreJournalSyncRepository @Inject constructor(
         remote.delete(entryId.toString())
     }
 
+    override suspend fun restore(): Result<Unit> = networkResult {
+        val generation = keyManager.currentGeneration() ?: throw IllegalStateException()
+        val isEmpty = storeAccess.withDatabase { db -> db.journalDao().count() == 0L }.getOrThrow()
+        if (!isEmpty) return@networkResult
+        val documents = remote.downloadAll()
+        storeAccess.withDatabase { db ->
+            documents.forEach { (documentId, dto) ->
+                // Lo que no abre o no corresponde al formato se omite: un blob
+                // v1 (llave del dispositivo viejo) o de una DEK anterior es
+                // ilegible aquí por diseño y no debe tumbar la restauración.
+                val row = dto.toRow(documentId, generation) ?: return@forEach
+                db.journalDao().insert(row)
+            }
+        }.getOrThrow()
+    }
+
+    /** Deshace [serialize]: el registro se repone con su MISMO id y su orden (RF-34). */
+    private fun EncryptedEntryDto.toRow(documentId: String, generation: Long): JournalEntryRow? {
+        if (schemaVersion != PAYLOAD_SCHEMA_VERSION) return null
+        val id = documentId.toLongOrNull() ?: return null
+        return try {
+            val payload = cipher.open(
+                SealedPayload(ciphertext = decode(ciphertext), iv = decode(iv))
+            )
+            val json = JSONObject(payload.toString(Charsets.UTF_8))
+            JournalEntryRow(
+                id = id,
+                day = json.getLong(FIELD_DAY),
+                kind = json.getString(FIELD_KIND),
+                detail = json.getString(FIELD_DETAIL),
+                createdAt = json.optLong(FIELD_CREATED_AT),
+                // Lo restaurado YA está en la nube con esta DEK: no se re-sube.
+                syncedGeneration = generation
+            )
+        } catch (unreadable: Exception) {
+            null
+        }
+    }
+
     /** JSON compacto del registro. Va cifrado, así que los nombres pueden ser claros (restaurar, RF-39). */
     private fun JournalEntryRow.serialize(): ByteArray {
         val json = JSONObject()
@@ -69,6 +109,8 @@ class FirestoreJournalSyncRepository @Inject constructor(
     }
 
     private fun encode(bytes: ByteArray): String = Base64.getEncoder().encodeToString(bytes)
+
+    private fun decode(text: String): ByteArray = Base64.getDecoder().decode(text)
 
     companion object {
         /** v2 (RF-39): sellado con la DEK recuperable y `at` dentro del payload. */
