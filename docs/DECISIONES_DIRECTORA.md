@@ -404,6 +404,46 @@ en la galería y borrado de la ubicación GPS**— como base para construir la f
 
 ---
 
+## 6. Propuesta de cambio de la política de evidencias: sincronización cifrada *(2026-07-27, pendiente de ratificación)*
+
+**Contexto.** La política aprobada en §5 estableció que las evidencias viven **solo en el
+dispositivo**, con dos motivos: el servicio de nube gratuito no es adecuado para archivos
+y mantenerlas locales reducía la superficie de exposición. Con la recuperación
+multi-dispositivo (RF-39) ya construida, esa política dejaba un hueco que la propia acta
+de la reunión anticipó: el criterio de aceptación de RF-39 dice «registros y **evidencias**
+íntegros», y con la política vigente las evidencias se perdían al cambiar de teléfono.
+
+**Qué se propone (e implementó de forma reversible).** Extender a las evidencias el mismo
+esquema de llave envuelta de los registros:
+
+- Cada adjunto viaja a la nube **cifrado con la llave recuperable** (la misma DEK del
+  respaldo de registros, que solo se abre con la contraseña de la cuenta) y **troceado**
+  en documentos de ~640 KB — así cabe en la base de datos gratuita (límite de 1 MiB por
+  documento) **sin contratar nada ni registrar tarjeta**; se descartó Firebase Storage
+  precisamente porque hoy exige plan de pago.
+- Los **metadatos** (a qué registro pertenece, tipo, fecha) también viajan **sellados**:
+  en la nube no hay nada legible — ni siquiera se distingue una foto de un PDF.
+- En el teléfono **nada cambia**: los archivos siguen cifrados con la llave del
+  dispositivo, los originales de galería no se tocan y la advertencia del rastro se
+  mantiene.
+- La eliminación (de un registro, RF-36, o de la cuenta, RF-20) **borra también las
+  copias en la nube**, y el caso «contraseña restablecida» las purga junto con los
+  registros.
+
+**Contrapartidas a valorar:** (a) las evidencias pasan a existir cifradas fuera del
+teléfono — ilegibles sin la contraseña, pero presentes en el proyecto de Firebase; (b) el
+respaldo consume cuota gratuita (1 GiB de almacenamiento): con los topes vigentes
+(10 adjuntos × 10 MB por registro) el margen es amplio para un piloto, y se documenta
+como límite operativo; (c) el mismo residual de fuerza bruta offline de los registros
+(P-62) aplica ahora a las evidencias.
+
+> **Ratificación (sí / con reservas / revertir):** PENDIENTE. La usuaria aprobó el cambio
+> el 2026-07-27 y la implementación quedó lista y probada; si la directora lo rechaza, se
+> desactiva la subida (los adjuntos vuelven a ser solo locales) sin tocar el resto de
+> RF-39.  **Fecha:** —
+
+---
+
 ## Tabla resumen: decisión → pendiente(s) que cierra → impacto en el código
 
 | # | Decisión a tomar | Pendiente(s) | Impacto en el trabajo técnico |
