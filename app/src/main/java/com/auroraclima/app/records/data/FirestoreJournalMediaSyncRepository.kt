@@ -8,6 +8,7 @@ import com.auroraclima.app.core.security.SealedPayload
 import com.auroraclima.app.core.security.SyncKeyManager
 import com.auroraclima.app.records.data.local.AttachmentRow
 import com.auroraclima.app.records.data.remote.EncryptedMediaHeaderDto
+import com.auroraclima.app.records.data.remote.FirestoreJournalMediaRemoteSource
 import com.auroraclima.app.records.data.remote.JournalMediaRemoteSource
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.repository.JournalMediaSyncRepository
@@ -81,6 +82,12 @@ class FirestoreJournalMediaSyncRepository @Inject constructor(
     /** Repone UN adjunto; lanza (y su llamador omite) ante cualquier pieza ilegible. */
     private suspend fun restoreOne(ref: String, header: EncryptedMediaHeaderDto, generation: Long) {
         if (header.schemaVersion != MEDIA_SCHEMA_VERSION) return
+        // Confianza mínima en datos de la nube (auditoría D2 M-1): el docId se
+        // usa como nombre de archivo — solo se acepta el formato exacto del
+        // almacén (32 hex; veda ../ y cualquier rareza) — y el conteo de trozos
+        // no autenticado queda acotado antes de tocar red o disco.
+        if (!REF_PATTERN.matches(ref)) return
+        if (header.partCount !in 1..FirestoreJournalMediaRemoteSource.MAX_BLIND_PARTS) return
         val meta = JSONObject(
             metaCipher.open(SealedPayload(decode(header.meta), decode(header.iv))).toString(Charsets.UTF_8)
         )
@@ -204,6 +211,9 @@ class FirestoreJournalMediaSyncRepository @Inject constructor(
         // Nombres neutros; el prefijo exige ≥3 caracteres (createTempFile).
         const val RELAY_DIRECTORY = "media_relay"
         private const val TEMP_PREFIX = "mtx"
+
+        /** Formato exacto de los nombres del almacén (auditoría D2 M-1). */
+        private val REF_PATTERN = Regex("[0-9a-f]{32}")
         private const val FIELD_OWNER = "owner"
         private const val FIELD_KIND = "kind"
         private const val FIELD_CREATED_AT = "at"

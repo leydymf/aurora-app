@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -199,6 +200,27 @@ class FirestoreJournalMediaSyncRepositoryTest {
         assertEquals(1, restored.size)
         assertNotNull(store.read(restored.single().ref) { it.readBytes() })
         assertTrue(database.attachmentDao().byOwner(8).isEmpty())
+    }
+
+    @Test
+    fun `un docId malformado o un conteo fuera de rango se rechazan antes de tocar disco`() = runTest {
+        // Auditoría D2 M-1: el docId se usa como nombre de archivo y el conteo
+        // no está autenticado — datos de la nube con confianza mínima.
+        val id = seedAttachment()
+        repository.push(id).getOrThrow()
+        val goodHeader = remote.headers.values.first()
+        database.attachmentDao().deleteById(id)
+        store.deleteAll()
+        remote.headers.clear()
+        remote.headers["../evil"] = goodHeader
+        remote.headers["ff00"] = goodHeader // 4 hex: formato inválido
+        remote.headers["a".repeat(32)] = goodHeader.copy(partCount = 999)
+
+        repository.restore().getOrThrow()
+
+        assertTrue(database.attachmentDao().count() == 0L)
+        assertFalse(File(context.filesDir, "evil").exists())
+        assertFalse(File(context.cacheDir, "evil").exists())
     }
 
     @Test

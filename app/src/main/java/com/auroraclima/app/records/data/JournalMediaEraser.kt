@@ -1,7 +1,10 @@
 package com.auroraclima.app.records.data
 
+import android.content.Context
 import com.auroraclima.app.core.security.KeystoreMediaCipher
 import com.auroraclima.app.core.security.LocalAccountDataEraser
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +22,7 @@ import kotlinx.coroutines.withContext
  */
 @Singleton
 class JournalMediaEraser @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val store: AttachmentStore,
     private val captureBuffer: CaptureBuffer,
     private val mediaCipher: KeystoreMediaCipher
@@ -30,6 +34,11 @@ class JournalMediaEraser @Inject constructor(
             runCatching { mediaCipher.destroyKey() }
             runCatching { store.deleteAll() }
             runCatching { captureBuffer.clear() }
+            // Temporales solo-cifrados del viaje de evidencias (RF-39,
+            // auditoría D2 M-2): RF-20 promete que nada sobreviva.
+            runCatching {
+                File(context.cacheDir, FirestoreJournalMediaSyncRepository.RELAY_DIRECTORY).deleteRecursively()
+            }
         }
     }
 }

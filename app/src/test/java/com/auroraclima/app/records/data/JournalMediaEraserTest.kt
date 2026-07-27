@@ -22,21 +22,25 @@ class JournalMediaEraserTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val store = AttachmentStore(context, ReversibleMediaCipher())
     private val captureBuffer = CaptureBuffer(context)
-    private val eraser = JournalMediaEraser(store, captureBuffer, KeystoreMediaCipher())
+    private val eraser = JournalMediaEraser(context, store, captureBuffer, KeystoreMediaCipher())
 
     @Test
-    fun `el borrado elimina almacen, cache de visualizacion y capturas`() = runTest {
+    fun `el borrado elimina almacen, cache de visualizacion, capturas y temporales de viaje`() = runTest {
         store.write("ref1") { it.write("contenido".toByteArray()) }
         store.newViewFile("ref1")
         // Directo al búfer: FileProvider exige el manifest real, ausente en
         // Robolectric sin recursos (mismo criterio que el test del repositorio).
         File(context.cacheDir, "media_pending").apply { mkdirs() }
             .resolve("c0ffee").writeBytes("captura pendiente".toByteArray())
+        // Resto de un viaje interrumpido (RF-39, auditoría D2 M-2).
+        File(context.cacheDir, "media_relay").apply { mkdirs() }
+            .resolve("mtx123.tmp").writeBytes(byteArrayOf(1, 2, 3))
 
         eraser.erase()
 
         assertFalse(File(context.filesDir, "media_store").exists())
         assertFalse(File(context.cacheDir, "media_view").exists())
+        assertFalse(File(context.cacheDir, "media_relay").exists())
         assertFalse(File(context.cacheDir, "media_pending").listFiles()?.isNotEmpty() ?: false)
     }
 }
