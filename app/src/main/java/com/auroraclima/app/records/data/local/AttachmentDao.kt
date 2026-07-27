@@ -37,6 +37,21 @@ interface AttachmentDao {
      */
     @Query("SELECT * FROM attachments WHERE owner NOT IN (SELECT id FROM entries)")
     suspend fun orphans(): List<AttachmentRow>
+
+    /**
+     * Adjuntos reclamados cuya copia remota no corresponde a la generación
+     * vigente (RF-39): los en preparación (owner = 0) jamás suben.
+     */
+    @Query("SELECT * FROM attachments WHERE owner != 0 AND synced_gen != :generation")
+    suspend fun pendingSync(generation: Long): List<AttachmentRow>
+
+    /** Deja constancia de con qué generación subió el adjunto (RF-39). */
+    @Query("UPDATE attachments SET synced_gen = :generation WHERE id = :id")
+    suspend fun markSynced(id: Long, generation: Long)
+
+    /** La restauración de evidencias (RF-39) solo repone sobre un almacén vacío. */
+    @Query("SELECT COUNT(*) FROM attachments")
+    suspend fun count(): Long
 }
 
 /** Proyección del contador por registro para el listado (P18). */

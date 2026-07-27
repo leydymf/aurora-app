@@ -14,8 +14,9 @@ import javax.inject.Singleton
  * cubre blobs huérfanos de una instalación anterior con el mismo uid, cuyos ids
  * ya no existen localmente. Sin red, la consulta falla — deliberado: el borrado
  * debe ser completo o no iniciarse. Idempotente: borrar lo ya borrado es no-op,
- * así que un fallo a mitad se resuelve reintentando. Hoy `entries` es la única
- * subcolección bajo el uid; una colección nueva deberá sumarse aquí.
+ * así que un fallo a mitad se resuelve reintentando. Purga `entries` y, desde
+ * RF-39 con evidencias, también `media` y `mediaparts` (por eso son
+ * colecciones PLANAS: enumerables sin consultas de grupo).
  */
 @Singleton
 class FirestoreJournalPurgeRemoteSource @Inject constructor(
@@ -25,19 +26,25 @@ class FirestoreJournalPurgeRemoteSource @Inject constructor(
     override suspend fun deleteAll() {
         // Sin sesión no hay qué purgar; excepción neutra y sin mensaje (regla 4).
         val uid = firebaseAuth.currentUser?.uid ?: throw IllegalStateException()
-        val entries = firestore.collection(USERS).document(uid).collection(ENTRIES)
-        val snapshot = entries.get(Source.SERVER).awaitCompletion()
-        snapshot.documents.chunked(BATCH_LIMIT).forEach { chunk ->
-            val batch = firestore.batch()
-            chunk.forEach { document -> batch.delete(document.reference) }
-            batch.commit().awaitCompletion()
+        COLLECTIONS.forEach { name ->
+            val collection = firestore.collection(USERS).document(uid).collection(name)
+            val snapshot = collection.get(Source.SERVER).awaitCompletion()
+            snapshot.documents.chunked(BATCH_LIMIT).forEach { chunk ->
+                val batch = firestore.batch()
+                chunk.forEach { document -> batch.delete(document.reference) }
+                batch.commit().awaitCompletion()
+            }
         }
     }
 
     private companion object {
         // Mismos nombres neutros que la sync (RNF-05).
         const val USERS = "users"
-        const val ENTRIES = "entries"
+        val COLLECTIONS = listOf(
+            "entries",
+            FirestoreJournalMediaRemoteSource.MEDIA,
+            FirestoreJournalMediaRemoteSource.MEDIA_PARTS
+        )
 
         /** Límite documentado de operaciones por WriteBatch de Firestore. */
         const val BATCH_LIMIT = 500

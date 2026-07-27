@@ -5,6 +5,7 @@ import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.RemoteAccountDataEraser
 import com.auroraclima.app.core.security.SensitiveStateCleaner
+import com.auroraclima.app.records.data.FirestoreJournalMediaSyncRepository
 import com.auroraclima.app.records.data.FirestoreJournalSyncRepository
 import com.auroraclima.app.records.data.JournalDatabaseSource
 import com.auroraclima.app.records.data.JournalMediaEraser
@@ -15,11 +16,14 @@ import com.auroraclima.app.records.data.JournalSyncReconciler
 import com.auroraclima.app.records.data.LocalJournalAttachmentRepository
 import com.auroraclima.app.records.data.LocalJournalRepository
 import com.auroraclima.app.records.data.local.JournalDatabase
+import com.auroraclima.app.records.data.remote.FirestoreJournalMediaRemoteSource
 import com.auroraclima.app.records.data.remote.FirestoreJournalPurgeRemoteSource
 import com.auroraclima.app.records.data.remote.FirestoreJournalSyncRemoteSource
+import com.auroraclima.app.records.data.remote.JournalMediaRemoteSource
 import com.auroraclima.app.records.data.remote.JournalPurgeRemoteSource
 import com.auroraclima.app.records.data.remote.JournalSyncRemoteSource
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
+import com.auroraclima.app.records.domain.repository.JournalMediaSyncRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.repository.JournalSyncRepository
 import dagger.Binds
@@ -44,6 +48,13 @@ abstract class RecordsDataModule {
 
     @Binds
     abstract fun bindJournalSyncRemoteSource(impl: FirestoreJournalSyncRemoteSource): JournalSyncRemoteSource
+
+    /** RF-39: las evidencias también viajan cifradas, troceadas por el límite de 1 MiB. */
+    @Binds
+    abstract fun bindJournalMediaSyncRepository(impl: FirestoreJournalMediaSyncRepository): JournalMediaSyncRepository
+
+    @Binds
+    abstract fun bindJournalMediaRemoteSource(impl: FirestoreJournalMediaRemoteSource): JournalMediaRemoteSource
 
     @Binds
     abstract fun bindJournalPurgeRemoteSource(impl: FirestoreJournalPurgeRemoteSource): JournalPurgeRemoteSource
@@ -88,7 +99,8 @@ abstract class RecordsDataModule {
                     JournalDatabase::class.java,
                     JournalDatabase.NAME,
                     JournalDatabase.MIGRATION_1_2,
-                    JournalDatabase.MIGRATION_2_3
+                    JournalDatabase.MIGRATION_2_3,
+                    JournalDatabase.MIGRATION_3_4
                 )
             }
     }

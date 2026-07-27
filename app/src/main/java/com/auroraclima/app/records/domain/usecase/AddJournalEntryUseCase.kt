@@ -2,6 +2,7 @@ package com.auroraclima.app.records.domain.usecase
 
 import com.auroraclima.app.records.domain.model.NewJournalEntry
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
+import com.auroraclima.app.records.domain.repository.JournalMediaSyncRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.repository.JournalSyncRepository
 import javax.inject.Inject
@@ -19,13 +20,15 @@ import javax.inject.Inject
  * guardado los reclama con el id recién asignado. El reclamo es de mejor
  * esfuerzo, como la sync: si fallara (improbable — la BD acaba de escribir),
  * los adjuntos quedan huérfanos y el barrido los limpia; el registro guardado
- * jamás se revierte por ellos. Las evidencias NO se sincronizan (política D0
- * §5.3): el push cifrado lleva solo el contenido del registro.
+ * jamás se revierte por ellos. RF-39 (cambio de política D0 §5.3): las
+ * evidencias reclamadas también suben, cifradas con la DEK y troceadas — mejor
+ * esfuerzo igual que el registro; lo que no suba lo retoma el reconciliador.
  */
 class AddJournalEntryUseCase @Inject constructor(
     private val journalRepository: JournalRepository,
     private val attachmentRepository: JournalAttachmentRepository,
-    private val syncRepository: JournalSyncRepository
+    private val syncRepository: JournalSyncRepository,
+    private val mediaSyncRepository: JournalMediaSyncRepository
 ) {
     suspend operator fun invoke(entry: NewJournalEntry, attachmentIds: List<Long> = emptyList()): Result<Unit> {
         val id = journalRepository.add(entry).getOrElse { return Result.failure(it) }
@@ -33,6 +36,7 @@ class AddJournalEntryUseCase @Inject constructor(
         // Mejor esfuerzo: el registro ya está a salvo localmente. Su fallo se
         // ignora — la fila queda pendiente y el reconciliador la retoma (RF-39).
         syncRepository.push(id)
+        attachmentIds.forEach { attachmentId -> mediaSyncRepository.push(attachmentId) }
         return Result.success(Unit)
     }
 }

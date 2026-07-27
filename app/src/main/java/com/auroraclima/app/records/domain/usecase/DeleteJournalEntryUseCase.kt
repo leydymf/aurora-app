@@ -15,8 +15,9 @@ import javax.inject.Inject
  * ilegibles sin la BD que las referenciaba — y el barrido las limpia después.
  * La propagación remota apunta al mismo docId determinista (ADR RF-37) y es
  * silenciosa: sin red, el `delete` queda en la cola durable de Firestore y se
- * aplica solo al reconectar. De evidencias no hay nada que borrar en la nube:
- * son SOLO locales por política (D0 §5.3).
+ * aplica solo al reconectar. RF-39 (cambio de política D0 §5.3): el borrado de
+ * cada evidencia también propaga a la nube — lo hace el propio repositorio de
+ * adjuntos al eliminar las filas, con el mismo mejor esfuerzo encolado.
  */
 class DeleteJournalEntryUseCase @Inject constructor(
     private val journalRepository: JournalRepository,

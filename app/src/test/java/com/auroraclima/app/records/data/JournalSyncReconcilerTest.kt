@@ -28,7 +28,18 @@ class JournalSyncReconcilerTest {
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 1)
     private val syncRepository =
         FirestoreJournalSyncRepository(remote, ReversiblePayloadCipher(), storeAccess, keyManager)
-    private val reconciler = JournalSyncReconciler(storeAccess, syncRepository, keyManager)
+    private val store = AttachmentStore(context, ReversibleMediaCipher())
+    private val mediaRemote = FakeJournalMediaRemoteSource()
+    private val mediaSyncRepository = FirestoreJournalMediaSyncRepository(
+        context = context,
+        remote = mediaRemote,
+        storeAccess = storeAccess,
+        store = store,
+        travelCipher = ReversibleRecoverableMediaCipher(),
+        metaCipher = ReversiblePayloadCipher(),
+        keyManager = keyManager
+    )
+    private val reconciler = JournalSyncReconciler(storeAccess, syncRepository, mediaSyncRepository, keyManager)
 
     @After
     fun tearDown() {
@@ -145,5 +156,63 @@ class JournalSyncReconcilerTest {
         reconciler.restore()
 
         assertTrue(remote.uploaded.isEmpty())
+        assertTrue(mediaRemote.headers.isEmpty())
+    }
+
+    @Test
+    fun `los adjuntos pendientes tambien se reconcilian y quedan con constancia`() = runTest {
+        // Migración RF-39 de evidencias: los adjuntos existentes (synced_gen 0)
+        // suben troceados en el primer login tras actualizar.
+        val ids = seedRows(1)
+        val ref = store.newRef()
+        store.write(ref) { it.write("evidencia local".toByteArray(Charsets.UTF_8)) }
+        val attachmentId = database.attachmentDao().insert(
+            com.auroraclima.app.records.data.local.AttachmentRow(
+                owner = ids[0],
+                ref = ref,
+                kind = "image/jpeg",
+                createdAt = 5
+            )
+        )
+
+        reconciler.restore()
+
+        assertEquals(setOf(ref), mediaRemote.headers.keys)
+        assertEquals(1L, database.attachmentDao().byId(attachmentId)?.syncedGeneration)
+
+        // Repetir no re-sube (constancia al día).
+        val uploadsAfterFirst = mediaRemote.uploadCalls
+        reconciler.restore()
+        assertEquals(uploadsAfterFirst, mediaRemote.uploadCalls)
+    }
+
+    @Test
+    fun `en un dispositivo nuevo las evidencias se reponen despues de los registros`() = runTest {
+        // «Dispositivo A»: registro + adjunto subidos.
+        val ids = seedRows(1)
+        val ref = store.newRef()
+        val content = "evidencia restaurable".toByteArray(Charsets.UTF_8)
+        store.write(ref) { it.write(content) }
+        database.attachmentDao().insert(
+            com.auroraclima.app.records.data.local.AttachmentRow(
+                owner = ids[0],
+                ref = ref,
+                kind = "image/jpeg",
+                createdAt = 5
+            )
+        )
+        reconciler.restore()
+        // «Dispositivo B»: nada local.
+        database.journalDao().deleteById(ids[0])
+        database.attachmentDao().byOwner(ids[0]).forEach { database.attachmentDao().deleteById(it.id) }
+        store.deleteAll()
+
+        reconciler.restore()
+
+        // El registro volvió y su evidencia también, íntegra y legible.
+        assertEquals(1, database.journalDao().entries().size)
+        val restored = database.attachmentDao().byOwner(ids[0]).single()
+        assertEquals(ref, restored.ref)
+        org.junit.Assert.assertArrayEquals(content, store.read(ref) { it.readBytes() })
     }
 }

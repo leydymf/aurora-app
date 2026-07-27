@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import com.auroraclima.app.records.data.local.AttachmentRow
 import com.auroraclima.app.records.data.local.JournalDatabase
+import com.auroraclima.app.records.data.remote.JournalMediaRemoteSource
 import com.auroraclima.app.records.domain.model.AttachmentContent
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
@@ -37,7 +38,8 @@ class LocalJournalAttachmentRepository @Inject constructor(
     private val storeAccess: JournalStoreAccess,
     private val store: AttachmentStore,
     private val imageImporter: ImageImporter,
-    private val captureBuffer: CaptureBuffer
+    private val captureBuffer: CaptureBuffer,
+    private val mediaRemote: JournalMediaRemoteSource
 ) : JournalAttachmentRepository {
     override suspend fun importImage(uri: String, owner: Long): Result<JournalAttachment> =
         storeAccess.withDatabase { db ->
@@ -119,23 +121,49 @@ class LocalJournalAttachmentRepository @Inject constructor(
         val row = db.attachmentDao().byId(id) ?: return@withDatabase
         db.attachmentDao().deleteById(id)
         store.delete(row.ref)
+        removeRemoteCopy(row)
     }
 
     override suspend fun deleteForOwner(owner: Long): Result<Unit> = storeAccess.withDatabase { db ->
         val rows = db.attachmentDao().byOwner(owner)
         if (rows.isEmpty()) return@withDatabase
         db.attachmentDao().deleteByIds(rows.map { it.id })
-        rows.forEach { store.delete(it.ref) }
+        rows.forEach {
+            store.delete(it.ref)
+            removeRemoteCopy(it)
+        }
     }
 
     override suspend fun sweepOrphans(): Result<Unit> = storeAccess.withDatabase { db ->
         val rows = db.attachmentDao().orphans()
         if (rows.isNotEmpty()) {
             db.attachmentDao().deleteByIds(rows.map { it.id })
-            rows.forEach { store.delete(it.ref) }
+            rows.forEach {
+                store.delete(it.ref)
+                // Un huérfano reclamado (resto de un borrado interrumpido) pudo
+                // haber subido: su copia remota se va con él (RF-36 criterio 2).
+                removeRemoteCopy(it)
+            }
         }
         // Restos de visualización de un proceso muerto en la ventana de apertura.
         store.clearViewCache()
+    }
+
+    /**
+     * Borrado remoto de mejor esfuerzo (RF-36 criterio 2, RF-39): los adjuntos
+     * en preparación jamás subieron y se omiten; para los reclamados, el
+     * `delete` queda en la cola durable del SDK y se aplica al reconectar —
+     * ningún fallo revierte el borrado local ni asoma un error (§3).
+     */
+    private suspend fun removeRemoteCopy(row: AttachmentRow) {
+        if (row.owner == AttachmentPolicy.STAGED_OWNER) return
+        try {
+            mediaRemote.delete(row.ref)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (ignored: Exception) {
+            // Silencioso: la purga de RF-20 barre cualquier resto.
+        }
     }
 
     private suspend fun importSanitizedImage(

@@ -3,6 +3,7 @@ package com.auroraclima.app.records.domain.usecase
 import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.NewJournalEntry
 import com.auroraclima.app.records.ui.FakeJournalAttachmentRepository
+import com.auroraclima.app.records.ui.FakeJournalMediaSyncRepository
 import com.auroraclima.app.records.ui.FakeJournalRepository
 import com.auroraclima.app.records.ui.FakeJournalSyncRepository
 import java.time.LocalDate
@@ -21,7 +22,8 @@ class AddJournalEntryUseCaseTest {
     private val repository = FakeJournalRepository()
     private val attachments = FakeJournalAttachmentRepository()
     private val sync = FakeJournalSyncRepository()
-    private val useCase = AddJournalEntryUseCase(repository, attachments, sync)
+    private val mediaSync = FakeJournalMediaSyncRepository()
+    private val useCase = AddJournalEntryUseCase(repository, attachments, sync, mediaSync)
 
     private val entry = NewJournalEntry(
         occurredOn = LocalDate.of(2026, 6, 28),
@@ -66,6 +68,30 @@ class AddJournalEntryUseCaseTest {
         useCase(entry)
 
         assertTrue(attachments.claimed.isEmpty())
+    }
+
+    @Test
+    fun `los adjuntos reclamados tambien se sincronizan`() = runTest {
+        // RF-39 (cambio de política D0 §5.3): las evidencias suben cifradas.
+        useCase(entry, attachmentIds = listOf(4L, 9L))
+
+        assertEquals(listOf(4L, 9L), mediaSync.pushed)
+    }
+
+    @Test
+    fun `sin adjuntos no hay sync de evidencias`() = runTest {
+        useCase(entry)
+
+        assertTrue(mediaSync.pushed.isEmpty())
+    }
+
+    @Test
+    fun `un fallo de la sync de evidencias no afecta el guardado`() = runTest {
+        mediaSync.pushResult = Result.failure(IllegalStateException("sin sesión"))
+
+        val result = useCase(entry, attachmentIds = listOf(4L))
+
+        assertTrue(result.isSuccess)
     }
 
     @Test

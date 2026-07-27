@@ -79,4 +79,33 @@ class JournalDatabaseMigrationTest {
             assertEquals(0L, cursor.getLong(0))
         }
     }
+
+    @Test
+    fun `v3 a v4 agrega la constancia a attachments conservando los adjuntos`() {
+        // Esquema v3: entries ya migrada; attachments tal como quedó en RF-33.
+        val db = openV2WithData()
+        JournalDatabase.MIGRATION_2_3.migrate(db)
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `attachments` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`owner` INTEGER NOT NULL, `ref` TEXT NOT NULL, " +
+                "`kind` TEXT NOT NULL, `created_at` INTEGER NOT NULL)"
+        )
+        db.execSQL(
+            "INSERT INTO attachments (owner, ref, kind, created_at) VALUES (1, 'abc123', 'image/jpeg', 42)"
+        )
+
+        JournalDatabase.MIGRATION_3_4.migrate(db)
+
+        db.query("SELECT owner, ref, kind, created_at, synced_gen FROM attachments").use { cursor ->
+            assertEquals(1, cursor.count)
+            cursor.moveToFirst()
+            assertEquals(1L, cursor.getLong(0))
+            assertEquals("abc123", cursor.getString(1))
+            assertEquals("image/jpeg", cursor.getString(2))
+            assertEquals(42L, cursor.getLong(3))
+            // El adjunto previo queda PENDIENTE: la re-subida troceada lo migrará.
+            assertEquals(0L, cursor.getLong(4))
+        }
+    }
 }

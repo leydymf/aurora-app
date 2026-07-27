@@ -37,10 +37,11 @@ class JournalEditorViewModelTest {
     private val repository = FakeJournalRepository()
     private val attachments = FakeJournalAttachmentRepository()
     private val sync = FakeJournalSyncRepository()
+    private val mediaSync = FakeJournalMediaSyncRepository()
 
     private fun viewModel(entryId: Long? = null) = JournalEditorViewModel(
         SavedStateHandle(entryId?.let { mapOf(ENTRY_ID_ARG to it.toString()) }.orEmpty()),
-        AddJournalEntryUseCase(repository, attachments, sync),
+        AddJournalEntryUseCase(repository, attachments, sync, mediaSync),
         UpdateJournalEntryUseCase(repository, sync),
         repository,
         attachments
@@ -206,7 +207,7 @@ class JournalEditorViewModelTest {
         // ni dejar el string crudo en un stacktrace de logcat.
         val viewModel = JournalEditorViewModel(
             SavedStateHandle(mapOf(ENTRY_ID_ARG to "no-numerico")),
-            AddJournalEntryUseCase(repository, attachments, sync),
+            AddJournalEntryUseCase(repository, attachments, sync, mediaSync),
             UpdateJournalEntryUseCase(repository, sync),
             repository,
             attachments

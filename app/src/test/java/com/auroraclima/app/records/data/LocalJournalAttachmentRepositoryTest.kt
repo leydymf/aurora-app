@@ -43,12 +43,14 @@ class LocalJournalAttachmentRepositoryTest {
     private val database = Room.inMemoryDatabaseBuilder(context, JournalDatabase::class.java).build()
     private val store = AttachmentStore(context, ReversibleMediaCipher())
     private val captureBuffer = CaptureBuffer(context)
+    private val mediaRemote = FakeJournalMediaRemoteSource()
     private val repository = LocalJournalAttachmentRepository(
         context = context,
         storeAccess = JournalStoreAccess { database },
         store = store,
         imageImporter = ImageImporter(),
-        captureBuffer = captureBuffer
+        captureBuffer = captureBuffer,
+        mediaRemote = mediaRemote
     )
 
     private val mediaDir = File(context.filesDir, "media_store")
@@ -212,7 +214,8 @@ class LocalJournalAttachmentRepositoryTest {
             storeAccess = JournalStoreAccess { error("blob corrupto") },
             store = store,
             imageImporter = ImageImporter(),
-            captureBuffer = captureBuffer
+            captureBuffer = captureBuffer,
+            mediaRemote = mediaRemote
         )
 
         assertTrue(broken.importCapture(1).isFailure)
@@ -223,6 +226,43 @@ class LocalJournalAttachmentRepositoryTest {
         assertTrue(broken.delete(1).isFailure)
         assertTrue(broken.deleteForOwner(1).isFailure)
         assertTrue(broken.sweepOrphans().isFailure)
+    }
+
+    @Test
+    fun `borrar un adjunto reclamado propaga el borrado remoto`() = runTest {
+        // RF-36 criterio 2 + RF-39: la copia troceada en la nube se va con él.
+        database.attachmentDao().insert(AttachmentRow(owner = 7, ref = "r1", kind = "image/jpeg", createdAt = 1))
+        store.write("r1") { it.write(byteArrayOf(1)) }
+
+        repository.delete(1).getOrThrow()
+
+        assertEquals(listOf("r1"), mediaRemote.deleted)
+    }
+
+    @Test
+    fun `borrar un adjunto en preparacion no toca la nube`() = runTest {
+        // Los adjuntos con owner = 0 jamás subieron: no hay nada que borrar.
+        database.attachmentDao().insert(
+            AttachmentRow(owner = AttachmentPolicy.STAGED_OWNER, ref = "r0", kind = "image/jpeg", createdAt = 1)
+        )
+        store.write("r0") { it.write(byteArrayOf(1)) }
+
+        repository.delete(1).getOrThrow()
+
+        assertTrue(mediaRemote.deleted.isEmpty())
+    }
+
+    @Test
+    fun `el borrado en cascada del registro propaga cada adjunto a la nube`() = runTest {
+        database.journalDao().insert(JournalEntryRow(day = 1, kind = "economic", detail = "x", createdAt = 1))
+        database.attachmentDao().insert(AttachmentRow(owner = 1, ref = "r1", kind = "image/jpeg", createdAt = 1))
+        database.attachmentDao().insert(AttachmentRow(owner = 1, ref = "r2", kind = "application/pdf", createdAt = 2))
+        store.write("r1") { it.write(byteArrayOf(1)) }
+        store.write("r2") { it.write(byteArrayOf(2)) }
+
+        repository.deleteForOwner(1).getOrThrow()
+
+        assertEquals(listOf("r1", "r2"), mediaRemote.deleted)
     }
 
     @Test

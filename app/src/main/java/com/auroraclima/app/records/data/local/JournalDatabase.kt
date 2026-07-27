@@ -11,12 +11,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * El nombre del archivo es neutro (RNF-05), como `store_meta`/`search_index`.
  *
  * v2 (RF-33): tabla `attachments` — el índice de adjuntos vive cifrado junto a
- * los registros. v3 (RF-39): columna `synced_gen` — generación de la DEK con la
- * que cada registro subió; 0 marca «pendiente», así que el propio DEFAULT de la
- * migración deja TODO el historial existente listo para re-subirse con el sobre
- * nuevo. Ambas migraciones conservan lo ya guardado.
+ * los registros. v3 (RF-39): columna `synced_gen` en `entries` — generación de
+ * la DEK con la que cada registro subió; 0 marca «pendiente», así que el propio
+ * DEFAULT de la migración deja TODO el historial existente listo para
+ * re-subirse con el sobre nuevo. v4 (RF-39 con evidencias): la misma columna en
+ * `attachments` — los adjuntos existentes quedan pendientes de subir troceados.
+ * Todas las migraciones conservan lo ya guardado.
  */
-@Database(entities = [JournalEntryRow::class, AttachmentRow::class], version = 3, exportSchema = false)
+@Database(entities = [JournalEntryRow::class, AttachmentRow::class], version = 4, exportSchema = false)
 abstract class JournalDatabase : RoomDatabase() {
     abstract fun journalDao(): JournalDao
 
@@ -49,6 +51,13 @@ abstract class JournalDatabase : RoomDatabase() {
         val MIGRATION_2_3: Migration = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `entries` ADD COLUMN `synced_gen` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** v3 → v4 (RF-39 con evidencias): la misma constancia, ahora en `attachments`. */
+        val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `attachments` ADD COLUMN `synced_gen` INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

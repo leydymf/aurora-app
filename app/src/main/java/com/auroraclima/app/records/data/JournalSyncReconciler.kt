@@ -2,6 +2,7 @@ package com.auroraclima.app.records.data
 
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.SyncKeyManager
+import com.auroraclima.app.records.domain.repository.JournalMediaSyncRepository
 import com.auroraclima.app.records.domain.repository.JournalSyncRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,18 +30,27 @@ import javax.inject.Singleton
 class JournalSyncReconciler @Inject constructor(
     private val storeAccess: JournalStoreAccess,
     private val syncRepository: JournalSyncRepository,
+    private val mediaSyncRepository: JournalMediaSyncRepository,
     private val keyManager: SyncKeyManager
 ) : AccountDataRestorer {
     override suspend fun restore() {
         val generation = currentGenerationOrNull() ?: return
         // Primero reponer (solo actúa sobre un historial vacío: dispositivo
         // nuevo, RF-39 criterio 1); su fallo es silencioso y no impide subir.
+        // Las evidencias van DESPUÉS de los registros: su reposición exige que
+        // el registro dueño ya exista localmente.
         syncRepository.restore()
+        mediaSyncRepository.restore()
         val pending = storeAccess.withDatabase { db -> db.journalDao().pendingSync(generation) }
             .getOrNull() ?: return
         // Push por registro: cada éxito deja su constancia de inmediato — una
         // interrupción conserva el avance y el reintento solo re-sube el resto.
         pending.forEach { row -> syncRepository.push(row.id) }
+        // Igual para las evidencias reclamadas (la migración de los adjuntos
+        // existentes al esquema troceado es exactamente este camino).
+        val pendingMedia = storeAccess.withDatabase { db -> db.attachmentDao().pendingSync(generation) }
+            .getOrNull() ?: return
+        pendingMedia.forEach { row -> mediaSyncRepository.push(row.id) }
     }
 
     // currentGeneration lanza si la copia local no descifra (contrato DekStore);
