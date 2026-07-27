@@ -2,6 +2,7 @@ package com.auroraclima.app.core.security.di
 
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.DefaultSyncKeyManager
+import com.auroraclima.app.core.security.DekMediaCipher
 import com.auroraclima.app.core.security.DekPayloadCipher
 import com.auroraclima.app.core.security.DekStore
 import com.auroraclima.app.core.security.KeystoreMediaCipher
@@ -13,6 +14,7 @@ import com.auroraclima.app.core.security.PasswordKeyDerivation
 import com.auroraclima.app.core.security.PasswordKeyWrapper
 import com.auroraclima.app.core.security.PayloadCipher
 import com.auroraclima.app.core.security.Pbkdf2PasswordKeyDerivation
+import com.auroraclima.app.core.security.RecoverableMediaCipher
 import com.auroraclima.app.core.security.RemoteAccountDataEraser
 import com.auroraclima.app.core.security.SyncKeyEraser
 import com.auroraclima.app.core.security.SyncKeyManager
@@ -35,6 +37,10 @@ abstract class CryptoModule {
 
     @Binds
     abstract fun bindMediaCipher(impl: KeystoreMediaCipher): MediaCipher
+
+    /** RF-39: el viaje de las evidencias a la nube se sella con la DEK recuperable. */
+    @Binds
+    abstract fun bindRecoverableMediaCipher(impl: DekMediaCipher): RecoverableMediaCipher
 
     @Binds
     abstract fun bindSyncKeyManager(impl: DefaultSyncKeyManager): SyncKeyManager
