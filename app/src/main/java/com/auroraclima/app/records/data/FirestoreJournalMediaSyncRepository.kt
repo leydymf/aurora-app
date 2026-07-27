@@ -17,6 +17,7 @@ import java.io.InputStream
 import java.util.Base64
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 
 /**
@@ -60,14 +61,20 @@ class FirestoreJournalMediaSyncRepository @Inject constructor(
     }
 
     override suspend fun restore(): Result<Unit> = networkResult {
-        keyManager.currentGeneration() ?: throw IllegalStateException()
+        val generation = keyManager.currentGeneration() ?: throw IllegalStateException()
         val isEmpty = storeAccess.withDatabase { db -> db.attachmentDao().count() == 0L }.getOrThrow()
         if (!isEmpty) return@networkResult
-        val generation = keyManager.currentGeneration() ?: throw IllegalStateException()
         remote.downloadHeaders().forEach { (ref, header) ->
             // Lo que no abre, no está completo o es de un formato futuro se
-            // omite en silencio: no debe tumbar la restauración (§3, §6).
-            runCatching { restoreOne(ref, header, generation) }
+            // omite en silencio: no debe tumbar la restauración (§3, §6). La
+            // cancelación SÍ se relanza (contrato de la casa, revisión D2 M-2).
+            try {
+                restoreOne(ref, header, generation)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (unreadable: Exception) {
+                // Adjunto ilegible o a medias: se omite y se continúa.
+            }
         }
     }
 
@@ -105,9 +112,19 @@ class FirestoreJournalMediaSyncRepository @Inject constructor(
         }.getOrThrow()
     }
 
+    /**
+     * Temporales del viaje (siempre SOLO-CIFRADOS) en un subdirectorio propio:
+     * el cleaner de cierre de sesión lo barre — un resto por muerte de proceso
+     * no sobrevive entre sesiones (revisión D2 M-5).
+     */
+    private fun newRelayFile(): File {
+        val directory = File(context.cacheDir, RELAY_DIRECTORY).apply { mkdirs() }
+        return File.createTempFile(TEMP_PREFIX, null, directory)
+    }
+
     /** Archivo local → temporal sellado con la DEK (nunca en claro, nunca completo en memoria). */
     private fun sealForTravel(ref: String): File {
-        val sealed = File.createTempFile(TEMP_PREFIX, null, context.cacheDir)
+        val sealed = newRelayFile()
         try {
             sealed.outputStream().use { raw ->
                 travelCipher.sealing(raw).use { out -> store.read(ref) { input -> input.copyTo(out) } }
@@ -121,7 +138,7 @@ class FirestoreJournalMediaSyncRepository @Inject constructor(
 
     /** Trozos base64 descargados → temporal sellado listo para abrirse con la DEK. */
     private suspend fun assembleParts(ref: String, partCount: Int): File {
-        val sealed = File.createTempFile(TEMP_PREFIX, null, context.cacheDir)
+        val sealed = newRelayFile()
         try {
             sealed.outputStream().use { out ->
                 repeat(partCount) { index ->
@@ -184,7 +201,8 @@ class FirestoreJournalMediaSyncRepository @Inject constructor(
         /** ≤640 KiB por trozo: en base64 (~854 KiB) queda bajo el límite de 1 MiB por documento. */
         const val CHUNK_BYTES = 640 * 1024
 
-        // Neutro y ≥3 caracteres (exigencia de createTempFile).
+        // Nombres neutros; el prefijo exige ≥3 caracteres (createTempFile).
+        const val RELAY_DIRECTORY = "media_relay"
         private const val TEMP_PREFIX = "mtx"
         private const val FIELD_OWNER = "owner"
         private const val FIELD_KIND = "kind"

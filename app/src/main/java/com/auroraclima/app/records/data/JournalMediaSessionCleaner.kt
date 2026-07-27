@@ -1,6 +1,9 @@
 package com.auroraclima.app.records.data
 
+import android.content.Context
 import com.auroraclima.app.core.security.SensitiveStateCleaner
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,11 +20,18 @@ import javax.inject.Singleton
  */
 @Singleton
 class JournalMediaSessionCleaner @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val store: AttachmentStore,
     private val captureBuffer: CaptureBuffer
 ) : SensitiveStateCleaner {
     override fun onSessionCleanup() {
         runCatching { store.clearViewCache() }
         runCatching { captureBuffer.clear() }
+        // Temporales SOLO-CIFRADOS del viaje de evidencias (RF-39, revisión D2
+        // M-5): los finally los borran en el camino normal; esto barre restos
+        // de una muerte de proceso.
+        runCatching {
+            File(context.cacheDir, FirestoreJournalMediaSyncRepository.RELAY_DIRECTORY).deleteRecursively()
+        }
     }
 }

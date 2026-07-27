@@ -202,6 +202,22 @@ class FirestoreJournalMediaSyncRepositoryTest {
     }
 
     @Test
+    fun `el borrado a ciegas cubre el adjunto mas grande permitido`() {
+        // Revisión D2 M-4: MAX_BLIND_PARTS, CHUNK_BYTES y el tope de archivo
+        // están acoplados entre clases — este invariante evita que un cambio
+        // futuro deje trozos huérfanos en la nube sin que nada avise.
+        val gcmOverheadBytes = 12 + 16 // nonce + tag
+        val maxSealedBytes = com.auroraclima.app.records.domain.model.AttachmentPolicy.MAX_DOCUMENT_BYTES +
+            gcmOverheadBytes
+        val chunk = FirestoreJournalMediaSyncRepository.CHUNK_BYTES
+        val maxParts = ((maxSealedBytes + chunk - 1) / chunk).toInt()
+
+        assertTrue(
+            com.auroraclima.app.records.data.remote.FirestoreJournalMediaRemoteSource.MAX_BLIND_PARTS >= maxParts
+        )
+    }
+
+    @Test
     fun `un trozo faltante omite ese adjunto sin romper la restauracion`() = runTest {
         val id = seedAttachment()
         repository.push(id).getOrThrow()

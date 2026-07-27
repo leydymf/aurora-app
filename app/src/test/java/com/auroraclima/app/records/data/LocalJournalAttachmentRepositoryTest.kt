@@ -44,13 +44,15 @@ class LocalJournalAttachmentRepositoryTest {
     private val store = AttachmentStore(context, ReversibleMediaCipher())
     private val captureBuffer = CaptureBuffer(context)
     private val mediaRemote = FakeJournalMediaRemoteSource()
+    private val mediaSync = com.auroraclima.app.records.ui.FakeJournalMediaSyncRepository()
     private val repository = LocalJournalAttachmentRepository(
         context = context,
         storeAccess = JournalStoreAccess { database },
         store = store,
         imageImporter = ImageImporter(),
         captureBuffer = captureBuffer,
-        mediaRemote = mediaRemote
+        mediaRemote = mediaRemote,
+        mediaSync = mediaSync
     )
 
     private val mediaDir = File(context.filesDir, "media_store")
@@ -215,7 +217,8 @@ class LocalJournalAttachmentRepositoryTest {
             store = store,
             imageImporter = ImageImporter(),
             captureBuffer = captureBuffer,
-            mediaRemote = mediaRemote
+            mediaRemote = mediaRemote,
+            mediaSync = mediaSync
         )
 
         assertTrue(broken.importCapture(1).isFailure)
@@ -226,6 +229,36 @@ class LocalJournalAttachmentRepositoryTest {
         assertTrue(broken.delete(1).isFailure)
         assertTrue(broken.deleteForOwner(1).isFailure)
         assertTrue(broken.sweepOrphans().isFailure)
+    }
+
+    @Test
+    fun `importar con dueño asignado sube de una vez (modo edicion)`() = runTest {
+        // Verificación D2 H1: en edición el import ya lleva dueño y no pasa por
+        // el claim del guardado — el push debe salir aquí mismo.
+        database.journalDao().insert(JournalEntryRow(day = 1, kind = "economic", detail = "x", createdAt = 1))
+        stageCapture()
+
+        val imported = repository.importCapture(owner = 1).getOrThrow()
+
+        assertEquals(listOf(imported.id), mediaSync.pushed)
+    }
+
+    @Test
+    fun `importar en preparacion no sube (el guardado lo hara tras el claim)`() = runTest {
+        stageCapture()
+
+        repository.importCapture(owner = AttachmentPolicy.STAGED_OWNER).getOrThrow()
+
+        assertTrue(mediaSync.pushed.isEmpty())
+    }
+
+    @Test
+    fun `un fallo del push no afecta la importacion en edicion`() = runTest {
+        database.journalDao().insert(JournalEntryRow(day = 1, kind = "economic", detail = "x", createdAt = 1))
+        mediaSync.pushResult = Result.failure(IllegalStateException("sin red"))
+        stageCapture()
+
+        assertTrue(repository.importCapture(owner = 1).isSuccess)
     }
 
     @Test

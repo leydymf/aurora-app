@@ -11,6 +11,7 @@ import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
+import com.auroraclima.app.records.domain.repository.JournalMediaSyncRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.io.InputStream
@@ -39,7 +40,8 @@ class LocalJournalAttachmentRepository @Inject constructor(
     private val store: AttachmentStore,
     private val imageImporter: ImageImporter,
     private val captureBuffer: CaptureBuffer,
-    private val mediaRemote: JournalMediaRemoteSource
+    private val mediaRemote: JournalMediaRemoteSource,
+    private val mediaSync: JournalMediaSyncRepository
 ) : JournalAttachmentRepository {
     override suspend fun importImage(uri: String, owner: Long): Result<JournalAttachment> =
         storeAccess.withDatabase { db ->
@@ -48,7 +50,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
             importSanitizedImage(db, owner) {
                 context.contentResolver.openInputStream(parsed) ?: throw IOException()
             }
-        }
+        }.alsoPushIfClaimed(owner)
 
     override suspend fun importDocument(uri: String, owner: Long): Result<JournalAttachment> =
         storeAccess.withDatabase { db ->
@@ -67,7 +69,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
             }
             val id = db.attachmentDao().insert(newRow(owner = owner, ref = ref, kind = mime))
             JournalAttachment(id = id, kind = kind)
-        }
+        }.alsoPushIfClaimed(owner)
 
     override suspend fun beginCapture(): Result<String> = withContext(Dispatchers.IO) {
         try {
@@ -89,7 +91,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
             // exitosa o no (política D0 §5.1.ii).
             captureBuffer.clear()
         }
-    }
+    }.alsoPushIfClaimed(owner)
 
     override suspend fun discardCapture() {
         withContext(Dispatchers.IO) { runCatching { captureBuffer.clear() } }
@@ -147,6 +149,22 @@ class LocalJournalAttachmentRepository @Inject constructor(
         }
         // Restos de visualización de un proceso muerto en la ventana de apertura.
         store.clearViewCache()
+    }
+
+    /**
+     * Subida de mejor esfuerzo del adjunto importado YA reclamado (RF-39,
+     * verificación D2 H1): en modo edición el import asigna el dueño de una
+     * vez y NO pasa por el claim del guardado — sin este push, la evidencia
+     * añadida al editar no subiría hasta el siguiente reingreso. En creación
+     * (owner = 0) no hace nada: el caso de uso empuja tras el claim. Mismo
+     * criterio de convergencia en el repositorio que [removeRemoteCopy].
+     */
+    private suspend fun Result<JournalAttachment>.alsoPushIfClaimed(owner: Long): Result<JournalAttachment> {
+        if (owner == AttachmentPolicy.STAGED_OWNER) return this
+        // Mejor esfuerzo silencioso (§3): el resultado del push se descarta —
+        // la fila quedó pendiente y el reconciliador la retoma.
+        getOrNull()?.let { attachment -> mediaSync.push(attachment.id) }
+        return this
     }
 
     /**

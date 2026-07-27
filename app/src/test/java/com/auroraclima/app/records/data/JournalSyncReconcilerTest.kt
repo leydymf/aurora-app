@@ -187,6 +187,42 @@ class JournalSyncReconcilerTest {
     }
 
     @Test
+    fun `la migracion de adjuntos interrumpida conserva el avance y el reintento sube el resto`() = runTest {
+        // Verificación D2 H2: espejo del test de registros, ahora para media.
+        val ids = seedRows(1)
+        val refs = (1..3).map { index ->
+            val ref = store.newRef()
+            store.write(ref) { it.write("evidencia $index".toByteArray(Charsets.UTF_8)) }
+            database.attachmentDao().insert(
+                com.auroraclima.app.records.data.local.AttachmentRow(
+                    owner = ids[0],
+                    ref = ref,
+                    kind = "image/jpeg",
+                    createdAt = index.toLong()
+                )
+            )
+            ref
+        }
+        // La red cae tras la primera subida de adjunto.
+        mediaRemote.failAfterUploads = 1
+
+        reconciler.restore()
+
+        assertEquals(1, mediaRemote.headers.size)
+        assertEquals(1L, database.attachmentDao().byId(1)?.syncedGeneration)
+        assertEquals(0L, database.attachmentDao().byId(2)?.syncedGeneration)
+
+        // «Siguiente login»: la red volvió; solo lo pendiente vuelve a subir.
+        mediaRemote.failAfterUploads = null
+        reconciler.restore()
+
+        assertEquals(refs.toSet(), mediaRemote.headers.keys)
+        (1L..3L).forEach { id ->
+            assertEquals(1L, database.attachmentDao().byId(id)?.syncedGeneration)
+        }
+    }
+
+    @Test
     fun `en un dispositivo nuevo las evidencias se reponen despues de los registros`() = runTest {
         // «Dispositivo A»: registro + adjunto subidos.
         val ids = seedRows(1)
