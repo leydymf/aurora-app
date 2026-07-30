@@ -1,5 +1,8 @@
 package com.auroraclima.app.questionnaire.data.remote
 
+import com.auroraclima.app.core.network.num
+import com.auroraclima.app.core.network.str
+import com.auroraclima.app.core.network.strList
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import javax.inject.Inject
@@ -132,17 +135,7 @@ private fun Map<*, *>.toLevelDto() = LevelDto(
     municipalAgencyIds = strListMap("municipalAgencyIds")
 )
 
-private fun Map<*, *>.str(key: String): String? = this[key] as? String
-
 private fun Map<*, *>.bool(key: String): Boolean = this[key] as? Boolean ?: false
-
-// Solo valores enteros: truncar un decimal alteraría pesos o umbrales
-// calibrados sin descartar el documento — un decimal se trata como corrupto.
-private fun Map<*, *>.num(key: String): Long? =
-    (this[key] as? Number)?.takeIf { it.toDouble() == it.toLong().toDouble() }?.toLong()
-
-private fun Map<*, *>.strList(key: String): List<String> =
-    (this[key] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
 
 // Mapa municipio → ids de entidades (accesos por municipio, §6). Una clave sin
 // lista válida queda con lista vacía; el mapper y el resolvedor de accesos

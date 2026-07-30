@@ -57,6 +57,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.directory.DirectoryEntity
 import com.auroraclima.app.core.directory.DirectoryLine
+import com.auroraclima.app.core.ui.components.BulletRow
 import com.auroraclima.app.core.ui.components.ErrorState
 import com.auroraclima.app.core.ui.components.LoadingState
 import com.auroraclima.app.core.ui.components.PrimaryButton
@@ -310,38 +311,48 @@ private fun QuestionContent(
                 }
             }
         }
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = onPrevious,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Sky),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = CloudWhite,
-                    contentColor = SteelDeep
-                )
-            ) {
-                Text(
-                    text = stringResource(R.string.guidance_previous),
-                    fontFamily = PlexSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            PrimaryButton(
-                text = stringResource(
-                    if (state.isLastQuestion) R.string.guidance_see_result else R.string.guidance_next
-                ),
-                onClick = onNext,
-                enabled = true,
-                isLoading = false,
-                modifier = Modifier.weight(1.6f)
+        QuestionNavigationRow(
+            isLastQuestion = state.isLastQuestion,
+            onPrevious = onPrevious,
+            onNext = onNext
+        )
+        Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
+    }
+}
+
+/** Fila inferior de navegación de la pregunta: atrás y siguiente/ver resultado (P-42b). */
+@Composable
+private fun QuestionNavigationRow(isLastQuestion: Boolean, onPrevious: () -> Unit, onNext: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = onPrevious,
+            modifier = Modifier
+                .weight(1f)
+                .height(52.dp),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, Sky),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = CloudWhite,
+                contentColor = SteelDeep
+            )
+        ) {
+            Text(
+                text = stringResource(R.string.guidance_previous),
+                fontFamily = PlexSans,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp
             )
         }
-        Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
+        Spacer(modifier = Modifier.width(12.dp))
+        PrimaryButton(
+            text = stringResource(
+                if (isLastQuestion) R.string.guidance_see_result else R.string.guidance_next
+            ),
+            onClick = onNext,
+            enabled = true,
+            isLoading = false,
+            modifier = Modifier.weight(1.6f)
+        )
     }
 }
 
@@ -690,26 +701,10 @@ private fun ContactCard(title: String, subtitle: String, onCall: (() -> Unit)?) 
     }
 }
 
-/** Punto de viñeta + texto (tarjeta de reglas de la portada y recomendaciones del nivel). */
+/** Viñeta compartida (P-42a) con el cuerpo tipográfico propio del cuestionario. */
 @Composable
 private fun GuidanceBullet(text: String) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .padding(top = 7.dp)
-                .size(7.dp)
-                .clip(RoundedCornerShape(percent = 50))
-                .background(Steel)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            fontFamily = PlexSans,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            color = Night
-        )
-    }
+    BulletRow(text = text, fontSize = 14.sp, lineHeight = 20.sp)
 }
 
 /** Aviso destacado en ciruela serena (sin rojo de alarma, decisión F2/F6 de A2-6). */

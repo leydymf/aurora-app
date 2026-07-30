@@ -33,6 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.content.domain.model.Topic
 import com.auroraclima.app.core.ui.components.BackHeader
+import com.auroraclima.app.core.ui.components.BulletRow
 import com.auroraclima.app.core.ui.components.ErrorState
 import com.auroraclima.app.core.ui.components.LoadingState
 import com.auroraclima.app.core.ui.components.SectionTag

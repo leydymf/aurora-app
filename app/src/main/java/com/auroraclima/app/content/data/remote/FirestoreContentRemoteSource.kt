@@ -1,5 +1,8 @@
 package com.auroraclima.app.content.data.remote
 
+import com.auroraclima.app.core.network.num
+import com.auroraclima.app.core.network.str
+import com.auroraclima.app.core.network.strList
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import javax.inject.Inject
@@ -88,16 +91,6 @@ internal fun Map<String, Any?>.toLineDto(id: String) = LineDto(
     description = str("description"),
     hours = str(FIELD_HOURS)
 )
-
-private fun Map<String, Any?>.str(field: String): String? = this[field] as? String
-
-// Solo valores enteros: truncar un decimal alteraría órdenes o versiones
-// sin descartar el documento — un decimal se trata como campo corrupto.
-private fun Map<String, Any?>.num(field: String): Long? =
-    (this[field] as? Number)?.takeIf { it.toDouble() == it.toLong().toDouble() }?.toLong()
-
-private fun Map<String, Any?>.strList(field: String): List<String> =
-    (this[field] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
 
 private const val FIELD_SCHEMA_VERSION = "schemaVersion"
 private const val FIELD_ORDER = "order"
