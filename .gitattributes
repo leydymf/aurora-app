@@ -1,0 +1,3 @@
+# Sin normalización de fin de línea: cada archivo se versiona byte a byte.
+# Evita que gradlew.bat (CRLF, generado por Gradle) aparezca eternamente modificado.
+* -text
