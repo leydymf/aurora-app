@@ -1,256 +1,261 @@
-# Aurora — Resultados de pruebas (cierre Fase 3, TRL 4)
+# Aurora — Resultados de pruebas (cierre v0.2.0-trl4)
 
-> Evidencia para el informe. Corresponde al tag `v0.1.0-trl4` (Día 7).
-> Fecha de la corrida: 2026-07-15. Alcance: todos los RF de prioridad **Alta**
-> alcanzables sin el panel web (ver `PLAN_FASE3.md`). Los RF **Media** y el panel
-> quedan como trabajo futuro (ver `docs/PENDIENTES.md`).
->
-> **Actualización 2026-07-17:** la Fase B2 (panel administrativo, RF-40–44) fue
-> implementada y verificada end-to-end contra el proyecto real — ver **§6**. La
-> corrida formal de sus CP y la regresión de contenido quedan para la Fase B3.
+> Evidencia para el informe. Corrida del **2026-07-30** sobre el árbol completo
+> (app + panel), previa al tag `v0.2.0-trl4`. Alcance: todos los RF implementados
+> desde `v0.1.0-trl4` (RF-04, 09, 11, 19, 20, 24, 25, 33, 35, 36, 37 pleno, 39,
+> 40–44 y el cuestionario v2) más la regresión de los anteriores.
+> La línea base anterior (`v0.1.0-trl4`, 2026-07-15) se conserva como referencia
+> de comparación en §1 y en las secciones históricas §6/§7.
 
-## 1. Resumen de la corrida automatizada
+## 1. Resumen de la corrida automatizada (v0.2.0)
 
-Comando: `./gradlew test ktlintCheck lint assembleDebug` → **BUILD SUCCESSFUL**.
+Comandos: `./gradlew test ktlintCheck lint assembleDebug assembleRelease` →
+**BUILD SUCCESSFUL**; en `admin/`: `npm run test`, `npm run lint`, `npm run build`
+→ todo en verde.
 
-| Métrica | Resultado |
-|---|---|
-| Pruebas unitarias (JVM, variantes debug+release) | **260 pruebas, 0 fallos, 0 errores, 0 omitidas** (43 clases de test) |
-| ktlint | Sin violaciones |
-| Lint | **0 errores · 51 warnings** — todos preexistentes e informativos (42 `GradleDependency` = versiones más nuevas disponibles, 3 `AndroidGradlePluginVersion`, 2 `Typos`, 1 `UnusedResources`, 1 `RedundantLabel`, 1 `PluralsCandidate`, 1 `OldTargetApi`). **Cero warnings nuevos.** |
-| `assembleDebug` | OK |
-| `assembleRelease` (R8 + shrink, ver §2) | OK |
+| Métrica | v0.1.0 (2026-07-15) | v0.2.0 (2026-07-30) |
+|---|---|---|
+| Pruebas unitarias JVM | 260 por variante (43 clases) | **522 por variante — debug y release, 1044 ejecuciones, 0 fallos, 0 errores, 0 omitidas (74 clases)** |
+| ktlint | Sin violaciones | **Sin violaciones** |
+| Lint | 0 errores · 51 warnings | **0 errores · 56 warnings** (comparación abajo) |
+| `assembleDebug` / `assembleRelease` (R8 + shrink) | OK | **OK** (§2) |
+| Panel `admin/` — vitest | 66/66 (B2) | **71/71** |
+| Panel `admin/` — eslint + prettier / build | en verde | **en verde** (solo el aviso preexistente de tamaño de chunk de Vite) |
 
-Pruebas instrumentadas (emulador, no entran en `./gradlew test`): las de cifrado
-`KeystorePayloadCipherTest` (5/5) y la cabecera SQLCipher se verificaron en emulador
-API 35 (ver P-03/P-49 en PENDIENTES); `KeystoreSecretCodeHasherTest` 8/8.
+**Comparación de warnings de lint contra la línea base** (todos informativos;
+cero warnings nuevos sin justificar):
 
-## 2. P-05 — Ofuscación R8 del release (RNF-05)
-
-`app/build.gradle.kts` (release): `isMinifyEnabled = true` + `isShrinkResources = true`,
-reglas en `app/proguard-rules.pro` (SQLCipher JNI + kotlinx.serialization; Room/Hilt/
-Firebase/Retrofit vía sus `consumer-rules` del AAR). `assembleRelease` → BUILD SUCCESSFUL
-(tareas `minifyReleaseWithR8`, `shrinkReleaseRes` ejecutadas).
-
-**Verificación en el DEX** (`apkanalyzer dex packages --defined-only app-release.apk`):
-
-| Nombre buscado | Coincidencias en clases propias |
-|---|---|
-| `SessionManager`, `SecretCode*`, `SearchQueryGate`, `QuickExit*`, `SensitiveState*` | **0** |
-| `Questionnaire*`, `GuidanceLevel`, `CalculateGuidance*` | **0** |
-| paquetes `access`, `questionnaire`, `core.security` | **0** (renombrados a `a`,`b`,`c`…) |
-| `Secure*` (SecureNavigation, SecureFlagLedger, SecureBackStackGuard, SecureDayPicker…) | **0** en `com.auroraclima` |
-
-Únicas clases propias que R8 deja legibles (todas neutras, no delatan el propósito):
-`AuroraApplication` y `MainActivity` (obligadas por el manifest / identidad de clima)
-y `JournalDatabase` / `WeatherDatabase` (+ sus `_Impl`) por el constraint de reflexión
-de Room. «Journal» es palabra genérica; residual documentado (hermano de P-44).
-Los hits sueltos de `Secure`/`SignIn`/`Consent` que aparecen en el DEX pertenecen a
-librerías de terceros (GMS/Firebase), no a `com.auroraclima`.
-
-**Estado P-05: CERRADO.**
-
-## 3. P-06 — Permisos del manifest fusionado (release final) (RNF-04)
-
-`apkanalyzer manifest permissions app-release.apk`:
-
-| Permiso | Origen | Justificación | ¿Peligroso? |
+| Regla | v0.1.0 | v0.2.0 | Nota |
 |---|---|---|---|
-| `android.permission.INTERNET` | Declarado por Aurora | Clima Open-Meteo (RF-02/RF-03) + Firebase Auth/Firestore (RF-07/15/26/37). Esperable en una app de clima | No (normal) |
-| `android.permission.ACCESS_NETWORK_STATE` | Fusionado (Firebase/Firestore) | La persistencia offline de Firestore consulta la conectividad para encolar/subir (RF-26, RF-37/38) | No (normal) |
-| `com.auroraclima.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | Generado por AndroidX Core | Permiso de firma auto-generado que protege receivers dinámicos internos frente a otras apps; solo lo posee esta app, sin capacidad ni superficie de privacidad | No (signature) |
-| `com.google.android.providers.gsf.permission.READ_GSERVICES` | Fusionado (GMS) | Lectura de la config del Google Services Framework, estándar en cualquier app con Firebase | No (normal) |
+| `GradleDependency` | 42 | 45 | Versiones más nuevas disponibles; informativo (política A2-1: no subir dependencias sin justificación) |
+| `AndroidGradlePluginVersion` | 3 | 3 | Igual |
+| `Typos` («momento») / `RedundantLabel` / `PluralsCandidate` / `OldTargetApi` | 5 | 5 | Iguales, falsos positivos conocidos |
+| `UnusedResources` | 1 | 1 | `color.night` preexistente; un segundo hallazgo (`journal_media_section`, resto de RF-33) se **eliminó** en esta sesión |
+| `ApplySharedPref` | 0 | 2 | **Nuevos y deliberados** (RF-20): los `erase()` de `DatabaseKeyManager` y `LocalDekStore` usan `commit()` síncrono — el cripto-borrado debe aterrizar en disco antes de continuar; `apply()` podría perderse si el proceso muere |
+| `ModifierParameter` | 0 | 0 | Apareció en RF-39 (`JournalListScreen`) y se **corrigió** en esta sesión |
+| **Total** | **51** | **56** | |
 
-**Ningún permiso peligroso** (sin runtime prompt): no hay cámara, ubicación, contactos,
-almacenamiento, teléfono ni SMS. En particular **no se solicita `CALL_PHONE`**: la llamada
-de RF-23 usa `ACTION_DIAL` (marcador precargado, la usuaria decide llamar), lo que evita
-el permiso y refuerza el camuflaje.
+**Pruebas instrumentadas** (emulador; no entran en `./gradlew test`): 8 clases /
+~29 `@Test`. Verificadas en emulador API 35 en sus sesiones de origen:
+`KeystoreSecretCodeHasherTest` (5), `KeystorePayloadCipherTest` (5/5) y la
+cabecera SQLCipher (`EncryptedDatabaseFactoryTest`, P-03/P-49). Las nuevas de
+RF-33/RF-39 (`KeystoreMediaCipherTest`, `LocalDekStoreTest`,
+`ImageImporterRejectionTest`) y `WeatherSearchBarFocusTest` se re-ejecutan con
+`./gradlew connectedDebugAndroidTest` en la pasada bloqueante de emulador (§8).
 
-Componentes exportados: solo `MainActivity` (launcher) es propio. Los demás
-(`GenericIdpActivity`, `RecaptchaActivity`, `RevocationBoundService`,
-`ProfileInstallReceiver`) los inyectan los SDK de Firebase Auth / GMS y son genéricos de
-infraestructura de autenticación; no delatan el doble fondo. Residual aceptado.
+## 2. P-05 repetido — Ofuscación R8 del release (RNF-05), incluye RF-33/RF-39
 
-**Estado P-06: CERRADO.**
+`assembleRelease` con `isMinifyEnabled = true` + `isShrinkResources = true`
+(sin cambios de configuración desde v0.1.0). Verificación sobre
+`app-release.apk` con `apkanalyzer dex packages --defined-only` (2026-07-30):
 
-## 4. Matriz de casos de prueba (CP)
+| Nombre buscado en clases propias (`com.auroraclima`) | Coincidencias |
+|---|---|
+| Set v0.1.0: `SessionManager`, `SecretCode*`, `SearchQueryGate`, `QuickExit*`, `SensitiveState*`, `Questionnaire*`, `Guidance*`, `Secure*`, `Consent*`, `SignIn*`, paquetes `access`/`core.security` | **0** |
+| **Nuevos RF-39 (sobres de llaves)**: `Dek*` (`DekStore`, `LocalDekStore`, `DekPayloadCipher`, `DekMediaCipher`), `*Envelope*` (`KeyEnvelopeRemoteSource`), `PasswordKeyWrapper`, `Pbkdf*`, `*Derivation`, `SyncKeyManager`, `JournalSyncReconciler` | **0** |
+| **Nuevos RF-33 (evidencias)**: `*Media*` (`JournalMedia*`, `MediaCipher`, `MediaKeyEraser`), `Attachment*` (`AttachmentStore`, `AttachmentDao`), `ImageImporter`, `CaptureBuffer` | **0** |
+| **Nuevos RF-20**: `*Erasure*`/`*Eraser*` (`AccountDataErasure`, `PendingErasure*`, `JournalStoreEraser`…) | **0** |
 
-Leyenda de estado:
-- **PASA** — cubierto por prueba automatizada (se cita la clase).
-- **MANUAL** — requiere verificación en emulador (se dan pasos y resultado esperado).
-- **NO APLICA** — el RF no está en el alcance de Fase 3 (RF Media / panel web); trabajo futuro.
+Total de líneas propias en el DEX: 85, todas pertenecientes a las **mismas
+únicas clases legibles de v0.1.0** (ninguna nueva): `AuroraApplication` y
+`MainActivity` (obligadas por el manifest / identidad de clima) y
+`JournalDatabase` / `WeatherDatabase` (+ `_Impl`) por el constraint de reflexión
+de Room («journal» es término genérico; residual hermano de P-44). Todo lo demás
+renombrado a `a`,`b`,`c`…
 
-Muchos CP son **mixtos**: la lógica está cubierta por pruebas automatizadas y la parte
-visual/UX o con Firebase real se verifica en emulador. Las pasadas manuales ya
-ejecutadas por la usuaria se marcan ✅.
+**Estado P-05 (v0.2.0): VERIFICADO — sin regresión y sin símbolos nuevos legibles.**
 
-| CP | RF/RNF | Estado | Evidencia automatizada / Pasos manuales |
+## 3. P-06 repetido — Manifest fusionado del release (RNF-04)
+
+`apkanalyzer manifest permissions app-release.apk` (2026-07-30):
+
+| Permiso | Cambio vs. v0.1.0 |
+|---|---|
+| `android.permission.INTERNET` | Igual (clima + Firebase) |
+| `android.permission.ACCESS_NETWORK_STATE` | Igual (Firestore offline) |
+| `com.auroraclima.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | Igual (firma, AndroidX) |
+| `com.google.android.providers.gsf.permission.READ_GSERVICES` | Igual (GMS) |
+
+**Confirmado explícitamente: NINGÚN permiso nuevo pese a RF-33.** El Photo
+Picker del sistema, la cámara del sistema (`ACTION_IMAGE_CAPTURE` vía intent) y
+el SAF (`ACTION_OPEN_DOCUMENT`) no requieren `CAMERA`, `READ_MEDIA_IMAGES`,
+`READ_EXTERNAL_STORAGE` ni ningún otro permiso — esa fue precisamente la
+política de las tres vías (D0 §5.1). Sin permisos peligrosos; sin `CALL_PHONE`.
+
+Único elemento nuevo en el manifest fusionado: el `androidx.core.content.FileProvider`
+(**no exportado**, `grantUriPermissions` puntual) que entrega a la cámara del
+sistema el content-URI del JPEG temporal de captura — componente genérico de
+AndroidX presente en miles de apps; no delata nada.
+
+Componentes **exportados**: idénticos a v0.1.0 — `MainActivity` (propio,
+launcher) + `GenericIdpActivity`, `RecaptchaActivity`, `RevocationBoundService`,
+`ProfileInstallReceiver` (inyectados por Firebase Auth/GMS/profileinstaller,
+genéricos de infraestructura). Residual aceptado, sin cambios.
+
+**Estado P-06 (v0.2.0): VERIFICADO — manifest sin cambios de superficie.**
+
+## 4. Matriz de casos de prueba (CP) — corrida v0.2.0
+
+Leyenda: **PASA** — cubierto por prueba automatizada (se cita la clase y su nº
+de `@Test`); **MANUAL** — requiere emulador (✅ si la usuaria ya la corrió; si
+no, es **bloqueante del tag**, pasos en §8); **NO APLICA** — fuera del alcance
+TRL 4 (trabajo futuro).
+
+| CP | RF/RNF | Estado | Evidencia automatizada / manual |
 |---|---|---|---|
-| CP-01 | RF-01 | PASA + MANUAL | Auto: `CamouflageResourcesTest`, `ManifestMinimizationTest`, `NoTracesGuardTest` (ningún término/permiso/recurso delator). Manual: instalar y confirmar visualmente que ícono, nombre («Aurora»), splash y pantalla inicial son 100% de clima. Esperado: nada sugiere el propósito real. |
-| CP-02 | RF-02, RF-03, RF-04 | PASA (RF-02/03) · RF-04 NO APLICA | Auto: `WeatherViewModelTest` (16), `WeatherRepositoryImplTest` (7), `WeatherCardMapperTest`, `WeatherConditionTest`, `GeocodingApi`/`ForecastApi`. RF-02/03 (búsqueda de ciudad + clima actual + último dato en caché Room). **RF-04 (pronóstico 5 días): NO implementado — trabajo futuro.** |
-| CP-03 | RF-05, RF-06 | PASA + MANUAL | Auto: `ValidateSecretCodeUseCaseTest` (10), `CamouflageResourcesTest`, `NoTracesGuardTest`. Manual: explorar toda la fachada sin código y confirmar que no hay ningún indicio del doble fondo. Esperado: no aparece nada. |
-| CP-04 | RF-07 | PASA + MANUAL (P-29) | Auto: `CreateAccountViewModelTest` (10), `CreateAccountUseCaseTest` (5), `FirebaseAuthRepositoryTest` (10). Manual con Firebase real: crear cuenta válida; reintentar mismo correo → error; contraseña débil → error. Esperado: los tres casos según criterios de RF-07. |
-| CP-05 | RF-08, RF-09 | PASA (RF-08) + MANUAL (P-28) · RF-09 NO APLICA | Auto RF-08: `CreateSecretCodeUseCaseTest` (9), `CodeSetupViewModelTest` (6), `LocalSecretCodeRepositoryTest` (5), `KeystoreSecretCodeHasherTest` (instrum. 8/8). Manual P-28 (parcial ✅ 2026-07-11): rechazos en vivo (corta, `Bucaramanga`, `bogota` sin tilde, confirmación distinta); resta inspeccionar `shared_prefs/` con Device Explorer (solo Base64 bajo claves neutras). **RF-09 (cambio de código): NO implementado — futuro.** |
-| CP-06 | RF-10, RF-11 | PASA (RF-10) + MANUAL ✅ (P-34) · RF-11 NO APLICA | Auto RF-10: `TutorialViewModelTest` (7). Manual P-34 ✅ (2026-07-11): tutorial con práctica real, rechazo de clave incorrecta, sin repetir el tutorial al reingresar. **RF-11 (reabrir tutorial desde configuración): NO implementado — no hay pantalla de configuración aún; futuro.** |
-| CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (P-11, P-14) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4, respuesta en tiempo constante = indistinguible). Manual: P-11 (Gboard no debe aprender/sugerir la clave), P-14 (miniatura de recientes no muestra el código a medio teclear). Pasos en PENDIENTES. |
-| CP-08 | RF-15 | PASA + MANUAL (P-29) | Auto: `SignInUseCaseTest` (9), `LoginViewModelTest` (9), `FirebaseAuthRepositoryTest` (10). Manual P-29 con Firebase real: código→«Hola de nuevo» (no panel); credenciales correctas→panel; contraseña incorrecta/correo inexistente/mal formado→MISMO mensaje; 5 fallos→pausa 5:00 con botón deshabilitado; la pausa se retoma tras reinicio; expirada→acceso normal. |
-| CP-09 | RF-16 | PASA + MANUAL (P-27) | Auto: `SessionManagerTest` (12) (limpieza de estado sensible, `closeSession`), `SecureFlagLedgerTest`. Manual: nube→fachada en <1 s, sin regreso por navegación ni rastro de sesión; llamar→marcador→atrás aterriza en fachada (P-27). |
-| CP-10 | RF-17, RF-18 | PASA + MANUAL (P-16) | Auto: `ConsentViewModelTest` (2) (bloqueante, sin preselección, rechazo sin recolección). Manual: relectura del consentimiento desde privacidad → pendiente de la pantalla de configuración (P-16, futuro). Parte de creación de cuenta cubierta. |
-| CP-11 | RF-19 | NO APLICA | **RF-19 (cierre de sesión de usuaria): NO implementado — futuro.** (La limpieza interna de sesión en salida rápida existe, pero el logout explícito de RF-19 no.) |
-| CP-12 | RF-20 | NO APLICA | **RF-20 (eliminación de cuenta): NO implementado — futuro.** |
-| CP-13 | RF-21, RF-22 | PASA + MANUAL | Auto: `TopicsViewModelTest` (3), `TopicDetailViewModelTest` (4), `RoutesViewModelTest` (3), `FirestoreContentRepositoryTest` (10). Manual: con contenido sembrado, navegar tipos de violencia y rutas de atención completos. Esperado: contenido completo y navegable. |
-| CP-14 | RF-23 | PASA + MANUAL (P-26) | Auto: `AgencyDetailViewModelTest` (4), `LinesViewModelTest` (3). Manual P-26: tocar llamar abre el marcador con el número precargado, sin registro en la app; verificar si el número persiste en recientes. |
-| CP-15 | RF-24, RF-25 | PASA + MANUAL ✅ (2026-07-17, B3) | Auto (Fase B3): `ContentDocumentParsingTest` (7), `QuestionnaireDocumentParsingTest` (8) y casos nuevos de repositorio — malformado omitido sin romper el resto, esquema desconocido que no sustituye a la versión vigente, colección vacía sin error, actualización reflejada en la siguiente consulta. Manual ✅ (usuaria, 2026-07-17): checklist completo de §7 en verde — reflejo sin reinstalar, corrupto simulado en consola sin error visible, caché en modo avión. |
-| CP-16 | RF-26, RNF-08 | MANUAL | Firestore con persistencia offline. Manual: activar modo avión y abrir el contenido informativo. Esperado: contenido completo disponible, carga ≤ 2 s. |
-| CP-17 | RF-27, RF-28 | PASA + MANUAL (P-43) | Auto: `GuidanceViewModelTest` (16). Manual P-43: responder 2 preguntas→retroceder (sigue marcado)→«Abandonar»→reingresar: portada vacía; nube a mitad→fachada→reingreso: portada vacía; `am kill`→sin rastro. |
-| CP-18 | RF-29, RF-30 | PASA + MANUAL (P-43) | Auto: `CalculateGuidanceLevelUseCaseTest` (14) (nivel correcto por respuestas y umbrales), `GuidanceViewModelTest`. Manual P-43: en 360×800 el aviso de RF-30 visible SIN scroll bajo la tarjeta del nivel, también en el nivel más alto; «Ver rutas» abre rutas y vuelve. |
-| CP-19 | RF-31 | NO APLICA | **RF-31 (persistir el resultado con confirmación): NO implementado — «Terminar» siempre descarta (P-41); guardar opcional es futuro.** El descarte-sin-registro sí es el comportamiento actual (cubierto por CP-17). |
-| CP-20 | RF-32 | PASA + MANUAL (P-46) | Auto: `JournalEditorViewModelTest` (7), `AddJournalEntryUseCaseTest` (3), `JournalDaoTest` (4), `LocalJournalRepositoryTest` (5). Manual P-46: validación de obligatorios sin borrar lo diligenciado, selector de fecha con FLAG_SECURE, guardado y borrador que no persiste tras salida rápida. |
-| CP-21 | RF-33 | NO APLICA | **RF-33 (evidencias adjuntas): NO implementado — futuro.** |
-| CP-22 | RF-34, RF-35, RF-36 | PASA (RF-34) + MANUAL (P-46) · RF-35/36 NO APLICA | Auto RF-34: `JournalListViewModelTest` (3), `JournalDetailViewModelTest` (4) (orden cronológico inverso, detalle). Manual P-46: listado con fecha+tipo, fila abre detalle completo. **RF-35/36 (editar/eliminar): NO implementado — futuro.** |
-| CP-23 | RF-37, RF-38 | PASA + MANUAL ✅ (P-49) · RF-38 parcial | Auto RF-37: `FirestoreJournalSyncRepositoryTest` (3), `KeystorePayloadCipherTest` (instrum. 5/5). Manual P-49 ✅ (2026-07-15): offline→reconectar sube solo; en Firestore `payload`/`iv` ilegibles (Base64), sin `day`/`kind`/`detail` en claro. **RF-38 (cola offline): el mecanismo existe vía la cola durable de Firestore y quedó probado en P-49; su formalización como RF propio es futuro.** |
-| CP-24 | RF-39 | NO APLICA | **RF-39 (multi-dispositivo): NO implementado — la llave del payload está ligada al dispositivo (P-48); recuperación en 2.º dispositivo es futuro.** |
-| CP-25 | RF-40 | MANUAL parcial ✅ (B2) | Panel implementado (B1/B2). Acceso con rol admin verificado en uso real del panel (2026-07-17). Denegación a cuentas sin claim implementada (`signOut` inmediato + mensaje genérico, `admin/src/auth/AuthContext.tsx`); **caso negativo verificado en vivo el 2026-07-17 (corrida B3, §7): cuenta sin rol → acceso denegado con mensaje genérico.** |
-| CP-26 | RF-41, RF-42, RF-44 | MANUAL ✅ (2026-07-17) + PASA (panel) | E2E panel→app en el proyecto real: tipo editado y publicado reflejado en la app (el borrador NO es visible antes de publicar); teléfono de entidad actualizado y reflejado; eliminar una entidad referenciada queda bloqueado listando las rutas; una ruta con entidad sin publicar no se publica hasta publicar la entidad. Auto (panel): vitest 66/66 (teléfonos, referencias cruzadas, órdenes, normalización). Corrida formal + RF-24/25 en B3. |
-| CP-27 | RF-43 | MANUAL ✅ (2026-07-17) + PASA (panel) | E2E: la edición publicada rige el cuestionario de la app (versión automática max+1; la app toma el vivo de mayor versión). Bloqueos verificados en vivo: sin preguntas/niveles, umbral inalcanzable, marcador [POR CONFIRMAR] (compuerta M-2) y empate de versión entre varios formularios (pide re-guardar). Eliminación solo de cuestionarios no vigentes. Auto: `coherence.test.ts` (reglas derivadas del motor, fixture = f01 real). |
-| CP-28 | RNF-01 | PASA + MANUAL (P-28/P-46) | Auto: cabecera SQLCipher ≠ «SQLite format 3» (instrum. P-03), `KeystorePayloadCipherTest` (5/5). Manual: Device Explorer sobre `databases/journal_store.db`(+`-wal`) y `shared_prefs/` → ilegibles / solo Base64. |
-| CP-29 | RNF-02 | PASA + MANUAL (P-43/P-14) | Auto: `SecureFlagLedgerTest` (5) (contabilidad de FLAG_SECURE por pantalla interna). Manual: intentar captura en portada/pregunta/resultado y registros → bloqueada; recientes → sin contenido interno. |
-| CP-30 | RNF-03 | PASA + MANUAL | Auto: `SessionManagerTest` (12), `InteractionThrottleTest` (4). Manual: dejar el doble fondo inactivo 5 min → cierre automático a la fachada. Cubierto por construcción para scroll (P-21) y campos de texto (P-15). |
-| CP-31 | RNF-04 | PASA + MANUAL | Auto: `NoTracesGuardTest` (7), `ManifestMinimizationTest` (5). Manual: auditoría de `/data/data` con Device Explorer contra el inventario aprobado (junto a CP-28). |
-| CP-32 | RNF-05 | PASA + MANUAL | Auto: `CamouflageResourcesTest` (2) (términos vedados en recursos/código) + verificación DEX de P-05 (§2). Manual: recorrer la lista de verificación de camuflaje ítem por ítem (nombre, ícono, notificaciones, recientes, permisos, strings, paquete). |
-| CP-33 | RNF-06 | PASA ✅ (P-04) | Auto: `firestore/rules.test.mjs`. Manual ✅ (2026-07-15): CP-37 en el Rules playground **10/10** — dueña allow, otra cuenta/anónima deny sobre registros ajenos; contenido solo lectura autenticada. |
-| CP-34 | RNF-07 | MANUAL | Manual en dispositivo de gama media: arranque ≤ 3 s, interacciones locales ≤ 2 s. |
-| CP-35 | RNF-09 | NO APLICA (Fase 4) | Evaluación heurística formal de usabilidad — corresponde a Fase 4. |
-| CP-36 | RNF-10 | MANUAL | Manual: ejecutar en la versión mínima (API 26) y en un dispositivo reciente. `minSdk = 26` configurado. |
-| CP-37 | RNF-11 | PASA | Revisión de arquitectura por capas: agente `revisora-arquitectura` (pasada final Día 7) + muestreo de `docs/ARQUITECTURA.md`. |
+| CP-01 | RF-01 | PASA + MANUAL ✅ | Auto: `CamouflageResourcesTest` (2), `ManifestMinimizationTest` (6), `NoTracesGuardTest` (7). Manual: verificado en cada pasada de emulador desde v0.1.0 (ícono, nombre, splash 100% clima). |
+| CP-02 | RF-02, RF-03, RF-04 | PASA + MANUAL ✅ | Auto: `WeatherViewModelTest` (16), `WeatherRepositoryImplTest` (12), `ForecastMapperTest` (4), `ForecastViewModelTest` (5), `WeatherCardMapperTest` (2), `WeatherConditionTest` (2). **RF-04 (pronóstico 5 días) implementado 2026-07-21**; CP-02 manual ✅ (usuaria, 2026-07-21). |
+| CP-03 | RF-05, RF-06 | PASA + MANUAL ✅ | Auto: `ValidateSecretCodeUseCaseTest` (10), `CamouflageResourcesTest`, `NoTracesGuardTest`. Manual: fachada explorada sin indicios en las pasadas previas. |
+| CP-04 | RF-07 | PASA + MANUAL (P-29) | Auto: `CreateAccountViewModelTest` (10), `CreateAccountUseCaseTest` (8 — incluye publicación del sobre RF-39), `FirebaseAuthRepositoryTest` (15). Manual P-29 **bloqueante** (§8). |
+| CP-05 | RF-08, RF-09 | PASA + MANUAL ✅/parcial | Auto RF-08: `CreateSecretCodeUseCaseTest` (9), `CodeSetupViewModelTest` (6), `LocalSecretCodeRepositoryTest` (5), `CityNameSetTest` (5), `KeystoreSecretCodeHasherTest` (instr. 5). **RF-09 (cambio de código, C1)**: `ChangeSecretCodeUseCaseTest` (5), `ChangeCodeViewModelTest` (4); manual ✅ P-53 (2026-07-17). P-28 parcial ✅ (2026-07-11); **resta** Device Explorer (`shared_prefs/` solo Base64) — bloqueante (§8). |
+| CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ | Auto: `TutorialViewModelTest` (7), `TutorialUiStateTest` (3). Manual P-34 ✅ (2026-07-11); **RF-11 (reabrir tutorial, C1)** manual ✅ P-53 (2026-07-17). |
+| CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (P-11, P-14) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4). Manuales P-11 (Gboard no aprende la clave) y P-14 (miniatura de recientes) **bloqueantes** (§8). |
+| CP-08 | RF-15 | PASA + MANUAL (P-29) | Auto: `SignInUseCaseTest` (13 — incluye restauración RF-39), `LoginViewModelTest` (9), `FirebaseAuthRepositoryTest` (15). Manual P-29 **bloqueante** (§8). |
+| CP-09 | RF-16 | PASA + MANUAL (P-27) | Auto: `SessionManagerTest` (20 — incluye la ida-y-vuelta de RF-33), `SecureFlagLedgerTest` (5), `SignOutSessionCleanupTest` (2), `AuthSessionCleanerTest` (2). Manual P-27 (llamar→marcador→atrás) **bloqueante** (§8). |
+| CP-10 | RF-17, RF-18 | PASA + MANUAL ✅ | Auto: `ConsentViewModelTest` (2). Relectura desde privacidad (P-16, C1) manual ✅ P-53 (2026-07-17). |
+| CP-11 | RF-19 | PASA + MANUAL ✅ | **Implementado (C1)**: `SignOutSessionCleanupTest` (2), `AuthSessionCleanerTest` (2), convergencia en `SessionManager.quickExit()` (`SessionManagerTest`). Manual ✅ P-53 (2026-07-17). |
+| CP-12 | RF-20 | PASA + MANUAL ✅ | **Implementado (C2)**: `DeleteAccountUseCaseTest` (9), `DeleteAccountViewModelTest` (7), `DatabaseKeyManagerEraseTest`, `PrefsPendingErasureFlagTest`, `PendingErasureRecoveryTest` (3), `JournalRemoteEraserTest` (2), `JournalMediaEraserTest`, `AccessCredentialsEraserTest`, `LocalDekStoreTest` (instr.). Manual E2E ✅ P-54 (2026-07-20, Firebase real). |
+| CP-13 | RF-21, RF-22 | PASA + MANUAL ✅ | Auto: `TopicsViewModelTest` (3), `TopicDetailViewModelTest` (4), `RoutesViewModelTest` (3), `FirestoreContentRepositoryTest` (13). Contenido real sembrado y navegado (P-57 siembra 2026-07-22 + regresión P-50 ✅). |
+| CP-14 | RF-23 | PASA + MANUAL (P-26) | Auto: `AgencyDetailViewModelTest` (4), `LinesViewModelTest` (3). Manual P-26 (número en recientes del marcador) **bloqueante** (§8). |
+| CP-15 | RF-24, RF-25 | PASA + MANUAL ✅ | Auto: `ContentDocumentParsingTest` (7), `QuestionnaireDocumentParsingTest` (11), casos de tolerancia en ambos repositorios. Manual E2E ✅ P-50 (2026-07-17, §7). |
+| CP-16 | RF-26, RNF-08 | MANUAL ✅ | Verificado dentro de P-50 ✅ (2026-07-17): contenido y cuestionario completos en modo avión, sin error. |
+| CP-17 | RF-27, RF-28 | PASA + MANUAL (P-43) | Auto: `GuidanceViewModelTest` (18 — **instrumento v2**, 12 preguntas en dos bloques). Manual P-43 **bloqueante** (§8). |
+| CP-18 | RF-29, RF-30 | PASA + MANUAL (P-43) | Auto: `CalculateGuidanceLevelUseCaseTest` (19 — motor v2: dos vías §5.4, garantía §5.5, banderas críticas, bordes 9/10·24/25·40/41·66), `GuidanceViewModelTest`. Manual P-43 **bloqueante** (§8). |
+| CP-19 | RF-31 | NO APLICA | «Terminar» siempre descarta (P-41); guardado opcional = trabajo futuro. Descarte cubierto por CP-17. |
+| CP-20 | RF-32 | PASA + MANUAL (P-46) | Auto: `JournalEditorViewModelTest` (23), `AddJournalEntryUseCaseTest` (9), `JournalDaoTest` (6), `LocalJournalRepositoryTest` (6). Manual P-46 **bloqueante** (§8). |
+| CP-21 | RF-33 | PASA + MANUAL (P-59) | **Implementado (E1)**: `ImageImporterTest` (5 — limpieza EXIF/GPS), `AttachmentPolicyTest` (6 — lista blanca y tope), `LocalJournalAttachmentRepositoryTest` (17), `JournalMediaViewModelTest` (6), `JournalMediaEraserTest`, `JournalDatabaseMigrationTest` (3), `SessionManagerTest` (ida-y-vuelta), `KeystoreMediaCipherTest` (instr. 6), `ImageImporterRejectionTest` (instr. 2), `ManifestMinimizationTest` (sin permisos nuevos, §3). Manual P-59 **bloqueante** (§8). |
+| CP-22 | RF-34, RF-35, RF-36 | PASA + MANUAL (P-46) | **RF-35/36 implementados (C3)**: `JournalListViewModelTest` (7), `JournalDetailViewModelTest` (11), `UpdateJournalEntryUseCaseTest` (3), `DeleteJournalEntryUseCaseTest` (4 — cascada de evidencias local y remota), `LocalJournalRepositoryTest` (6), `JournalDaoTest` (6). Manual P-46 (CP-22 completo, pasos 9-14) **bloqueante** (§8). |
+| CP-23 | RF-37, RF-38 | PASA + MANUAL ✅ | Auto: `FirestoreJournalSyncRepositoryTest` (13 — payloads v2 de RF-39), `KeystorePayloadCipherTest` (instr. 5/5). Manual P-49 ✅ (2026-07-15). RF-38: cola durable probada en P-49; su formalización sigue como trabajo futuro. |
+| CP-24 | RF-39 | PASA + MANUAL (P-61) | **Implementado (D2, llave envuelta + evidencias troceadas)**: `DefaultSyncKeyManagerTest` (13), `PasswordKeyWrapperTest` (8), `Pbkdf2PasswordKeyDerivationTest` (4), `DekPayloadCipherTest` (6), `DekMediaCipherTest` (7), `JournalSyncReconcilerTest` (9), `FirestoreJournalMediaSyncRepositoryTest` (10), `JournalDatabaseMigrationTest` (3), `ChangePasswordUseCaseTest` (7), `ChangePasswordViewModelTest` (4), `LocalDekStoreTest` (instr. 6). Manual P-61 (dos instalaciones + Firebase real) **bloqueante** (§8). |
+| CP-25 | RF-40 | MANUAL ✅ + PASA | Acceso admin y caso negativo verificados (2026-07-17, B2/B3 §6-§7). |
+| CP-26 | RF-41, RF-42, RF-44 | MANUAL ✅ + PASA | E2E panel→app ✅ (2026-07-17, §6). Auto panel: vitest **71/71** (`schemas.test.ts` 15, `topicSchema.test.ts` 10, `phone.test.ts` 8, `ids.test.ts` 5…). |
+| CP-27 | RF-43 | MANUAL ✅ + PASA | E2E ✅ (2026-07-17, §6) + `coherence.test.ts` (25) y `formSchema.test.ts` (8) actualizados al **instrumento v2** (fixture = `forms.json` v2 real). |
+| CP-28 | RNF-01 | PASA + MANUAL parcial | Auto: cabecera SQLCipher (`EncryptedDatabaseFactoryTest` instr. 3), `KeystorePayloadCipherTest` (5/5), `KeystoreMediaCipherTest` (6), `DekPayloadCipherTest`/`DekMediaCipherTest`. Manual: Device Explorer (BD, `shared_prefs/`, `media_store/`) **bloqueante** — integrado en P-28/P-46/P-59 (§8). |
+| CP-29 | RNF-02 | PASA + MANUAL (P-43/P-14/P-59) | Auto: `SecureFlagLedgerTest` (5). Manual: captura bloqueada en cuestionario (P-43), registros/visor de adjuntos (P-59), recientes (P-14) — **bloqueantes** (§8). |
+| CP-30 | RNF-03 | PASA + MANUAL ✅ | Auto: `SessionManagerTest` (20), `InteractionThrottleTest` (4). Inactividad verificada en pasadas previas; el caso «teclear >5 min» va dentro de P-46 (§8). |
+| CP-31 | RNF-04 | PASA + MANUAL parcial | Auto: `NoTracesGuardTest` (7), `ManifestMinimizationTest` (6) + §3. Manual: auditoría de `/data/data` con Device Explorer (junto a CP-28, §8). |
+| CP-32 | RNF-05 | PASA + MANUAL ✅ | Auto: `CamouflageResourcesTest` (2) + verificación DEX §2. Lista de camuflaje recorrida en las pasadas previas; sin cambios visibles nuevos (RF-33/39 usan léxico «adjuntos»). |
+| CP-33 | RNF-06 | PASA ✅ | `firestore/rules.test.mjs` + Rules playground 10/10 ✅ (2026-07-15) + `/drafts` solo admin ✅ (2026-07-17). Las reglas no cambiaron con RF-39 (media/mediaparts viven bajo `/users/{uid}/`, cubiertas por la regla de dueña). |
+| CP-34 | RNF-07 | MANUAL | Dispositivo de gama media: arranque ≤ 3 s, interacción ≤ 2 s. No bloqueante del tag (sin cambio de presupuesto de arranque en v0.2.0); se recomienda junto a §8. |
+| CP-35 | RNF-09 | NO APLICA (Fase 4) | Evaluación heurística formal de usabilidad. |
+| CP-36 | RNF-10 | MANUAL | API 26 + dispositivo reciente. `minSdk = 26` sin cambios; no bloqueante del tag. |
+| CP-37 | RNF-11 | PASA | Pasada final v0.2.0 de `revisora-arquitectura` sobre todo el repo (§9). |
 
-### Cobertura resumida
+### Cobertura resumida (v0.2.0)
 
-- **CP con cobertura automatizada (total o parcial):** CP-01..CP-10, CP-13, CP-14, CP-15,
-  CP-17, CP-18, CP-20, CP-22, CP-23, CP-28..CP-33, CP-37.
-- **CP solo manual (emulador/dispositivo):** CP-16, CP-34, CP-36.
-- **CP NO APLICA (RF Media / Fase 4):** CP-11, CP-12, CP-19, CP-21,
-  CP-24, CP-35, y las partes RF-04/RF-09/RF-35/RF-36/RF-39 de CP mixtos.
-- **CP del panel verificados en las Fases B2/B3 (2026-07-17, ver §6 y §7):**
-  CP-25 (incluido el caso negativo, corrida B3), CP-26, CP-27 y CP-15
-  (automatizado + corrida manual E2E de la usuaria, P-50 ✅).
+- **RF implementados y con cobertura automatizada**: RF-01..17, 19..30, 32..37,
+  39, 40..44 (todos los del alcance TRL 4 ampliado).
+- **RF diferidos (trabajo futuro)**: RF-31 (guardar resultado), RF-38 como RF
+  formal (el mecanismo existe), RF-18 en su parte de revocación fina.
+- **CP totalmente cerrados (auto + manual ✅)**: CP-01, 02, 03, 05 (salvo Device
+  Explorer), 06, 10, 11, 12, 13, 15, 16, 23, 25, 26, 27, 33, 37.
+- **CP bloqueados solo por corrida manual (§8)**: CP-04/08 (P-29), CP-07
+  (P-11/P-14), CP-09 (P-27), CP-14 (P-26), CP-17/18 (P-43), CP-20/22 (P-46),
+  CP-21 (P-59), CP-24 (P-61), CP-28/31 (Device Explorer).
 
-## 5. Pasadas manuales en emulador ya ejecutadas por la usuaria
+## 5. Pasadas manuales ya ejecutadas por la usuaria (integradas)
 
 | Referencia | Fecha | Resultado |
 |---|---|---|
-| P-34 (CP-06, RF-10) | 2026-07-11 | ✅ Tutorial con práctica real, sin repetir al reingresar |
-| P-28 parcial (CP-05, RF-08) | 2026-07-11 | ✅ Rechazos de la clave en vivo; resta Device Explorer |
-| P-49 (CP-23, RF-37) | 2026-07-15 | ✅ Sync cifrada offline→online; blobs ilegibles en Firestore |
+| P-34 (CP-06, RF-10) | 2026-07-11 | ✅ Tutorial con práctica real |
+| P-28 parcial (CP-05, RF-08) | 2026-07-11 | ✅ Rechazos de clave en vivo; resta Device Explorer |
+| P-49 (CP-23, RF-37) | 2026-07-15 | ✅ Sync cifrada offline→online; blobs ilegibles |
 | P-04/CP-37 (CP-33, RNF-06) | 2026-07-15 | ✅ Rules playground 10/10 |
-| CP-26 (RF-41/42/44, Fase B2) | 2026-07-17 | ✅ E2E panel→app completa (ver §6) |
-| CP-27 (RF-43, Fase B2) | 2026-07-17 | ✅ Editor del cuestionario, bloqueos y reflejo en la app (ver §6) |
-| Reglas + `/drafts` (RNF-06) | 2026-07-17 | ✅ Playground tras desplegar: `/drafts` solo admin; `/users` intacto |
-| P-50 (CP-15 + regresión, Fase B3) | 2026-07-17 | ✅ Ciclo panel→app completo: reflejo sin reinstalar, corrupto simulado tolerado, caché en modo avión, regresión RF-21/22/23/27 y caso negativo de CP-25 (ver §7) |
+| CP-26/CP-27 (B2) + reglas `/drafts` | 2026-07-17 | ✅ E2E panel→app; `/drafts` solo admin |
+| P-50 (CP-15/16/25 + regresión, B3) | 2026-07-17 | ✅ Ciclo completo panel→app, corrupto tolerado, modo avión |
+| P-53 (CP-05/06/10/11 — Configuración C1: RF-09/11/17c2/19) | 2026-07-17 | ✅ Pasada completa en verde |
+| P-54 (CP-12, RF-20) | 2026-07-20 | ✅ Eliminación E2E con Firebase real; Device Explorer sin rastros |
+| CP-02 (RF-04, pronóstico) | 2026-07-21 | ✅ Pronóstico de 5 días en emulador |
+| Siembra P-57 (contenido verificado) | 2026-07-22 | ✅ 4 topics / 5 lines / 3 routes / 24 agencies en producción |
 
-Los CP manuales restantes (P-11, P-14, P-26, P-27, P-29, P-43, P-46 y las inspecciones de
-Device Explorer de CP-28/31) quedan para la pasada final en emulador con la instalación del
-`app-release.apk` (criterio de salida del Día 7).
-
-## 6. Fase B2 — Panel administrativo (post `v0.1.0-trl4`, 2026-07-17)
+## 6. Fase B2 — Panel administrativo (histórico, 2026-07-17)
 
 Alcance: RF-40 a RF-44, commits `3827b83`, `c413523`, `555a602`, `98f1f88`,
 `3e6f863` y `73a29da`. El panel produce EXACTAMENTE el esquema que la app
-consume (espejo de los DTO de `content/data` y `questionnaire/data`;
-`schemaVersion` = 1, sin campos nuevos) y la app solo ve lo publicado: los
-borradores viven en la colección `/drafts`, exclusiva del claim admin. La
-regla nueva fue **desplegada en la consola y verificada en el Playground el
-2026-07-17** (`/drafts` denegada sin claim; `/users/**` intacto, RNF-06).
+consume (espejo de los DTO de `content/data` y `questionnaire/data`) y la app
+solo ve lo publicado: los borradores viven en `/drafts`, exclusiva del claim
+admin; regla desplegada y verificada en el Playground el 2026-07-17
+(`/users/**` intacto, RNF-06). Corrida automatizada de la fase: vitest 66/66
+(hoy 71/71 con el instrumento v2), lint y build en verde. Corrida manual E2E de
+la usuaria (2026-07-17, proyecto real + emulador): publicación reflejada,
+borradores invisibles, bloqueos de integridad referencial y de coherencia del
+cuestionario, versión automática y compuerta `[POR CONFIRMAR]` — todo en verde.
 
-**Corrida automatizada del panel** (`admin/`): `npm run test` → **66/66**
-(vitest: teléfonos colombianos, referencias cruzadas rutas↔entidades↔cuestionario,
-coherencia del cuestionario con el f01 real como fixture, normalización y
-guardarraíl de versiones), `npm run lint` y `npm run build` en verde —
-verificados además commit por commit. Android sin cambios:
-`./gradlew test ktlintCheck assembleDebug` en verde (corrido por la agente
-verificadora; ningún archivo de `app/` tocado en la fase).
-
-**Corrida manual E2E de la usuaria** (2026-07-17, proyecto real
-`aurora-31c37` + emulador `Medium_Phone_API_35`): todos los pasos de
-`admin/README.md` §6 en verde — publicación reflejada y borradores invisibles
-para la app (RF-41/RF-44), teléfono actualizado y bloqueos de integridad
-referencial (RF-42), cuestionario con versión automática, bloqueos de
-coherencia y compuerta `[POR CONFIRMAR]` (RF-43), y el flujo con varios
-cuestionarios: solo rige el vigente, empate de versión bloqueado y eliminación
-permitida únicamente para no vigentes.
-
-**Pendientes que esta corrida NO cierra:**
-- Corrida formal de CP-25 (caso negativo de RF-40), CP-26, CP-27 + CP-15
-  (RF-24/RF-25 contra contenido editado desde el panel, incluido esquema
-  corrupto simulado) y regresión de RF-21/22/23/26/27 → **Fase B3**.
-- Validación de CONTENIDO con la directora (P-38 y datos `[POR CONFIRMAR]`
-  de entidades/líneas): el `reviewNote` del cuestionario se vació solo para
-  estas pruebas; la decisión editorial sigue abierta.
-
-## 7. Fase B3 — Cierre del ciclo de contenido en la app (2026-07-17)
+## 7. Fase B3 — Cierre del ciclo de contenido en la app (histórico, 2026-07-17)
 
 Alcance: RF-24, RF-25 y RF-44 (lado app), commits `ef1f925`, `ec9355d`,
-`14b62d0` y `054b1ce`. La exploración confirmó que el mecanismo del ciclo ya
-operaba desde antes (la app lee solo las colecciones vivas publicadas, con
-`get()` servidor-primero y caché persistente de respaldo, y filtra
-`schemaVersion` desconocido); la brecha real de RF-25 estaba en la capa
-snapshot→DTO: los getters tipados del SDK (`getString`/`getLong`) **lanzan**
-ante un campo con tipo incorrecto, así que UN documento corrupto publicado por
-error tumbaba el fetch completo del módulo (error genérico visible) en vez de
-omitirse — y esa capa no tenía ningún test.
+`14b62d0` y `054b1ce`. Cambio único de producción: el parsing snapshot→DTO pasó
+a casts seguros sobre el mapa crudo (`toXxxDto`) — un documento corrupto se
+omite (content) o se descarta rigiendo el válido de mayor versión
+(questionnaire), sin tumbar el fetch (RF-25); un decimal en campo numérico se
+trata como corrupto (M-2). Suites nuevas `ContentDocumentParsingTest` y
+`QuestionnaireDocumentParsingTest` + casos de repositorio. Corrida manual E2E ✅
+(P-50, 2026-07-17): reflejo sin reinstalar, corrupto simulado en consola
+tolerado sin error visible, modo avión, regresión RF-21/22/23/27 y caso
+negativo de CP-25 — todos los pasos en verde; documentos de prueba restaurados.
+Veredictos de agentes: tres APROBADO. *(Nota v0.2.0: los helpers de parsing se
+extrajeron a `core/network/FirestoreDocumentParsing.kt` al cerrar P-51; los
+tests siguen en verde.)*
 
-**Cambio aplicado (único de producción):** el parsing de ambos remote sources
-pasó a casts seguros sobre el mapa crudo del documento
-(`internal fun Map<String, Any?>.toXxxDto(id)`): un tipo inesperado equivale a
-campo ausente, el mapper omite solo ese documento (content) o descarta el
-formulario y sigue rigiendo el válido de mayor versión presente en `forms`
-(questionnaire) — esa es la conservación de la última versión válida de RF-25.
-Un decimal no entero en campos numéricos (`weight`, `minScore`, `order`…) se
-trata como corrupto en vez de truncarse (mejora M-2 de la revisora: truncar
-2,5 → 2 sesgaría umbrales calibrados sin descartar el documento).
+## 8. Corridas manuales BLOQUEANTES del tag `v0.2.0-trl4`
 
-**Corrida automatizada (2026-07-17):** `./gradlew test ktlintCheck
-assembleDebug` en verde; la verificadora forzó re-ejecución con
-`cleanTestDebugUnitTest`: **278 tests debug / 556 totales, 0 fallos**. Suites
-nuevas: `ContentDocumentParsingTest` (7) y `QuestionnaireDocumentParsingTest`
-(8) — tipos corruptos por campo, listas/entradas embebidas corruptas, mapa
-vacío, decimales rechazados y la cadena completa hasta el descarte del mapper —
-más casos nuevos en los tests de repositorio: malformado omitido sin romper el
-resto, esquema desconocido que no sustituye a la versión vigente (RF-25),
-colección vacía = éxito con lista vacía, y actualización reflejada en la
-siguiente consulta (RF-24/RF-44). La regresión automatizada de
-RF-21/22/23/26/27/42/43 sigue en verde (los DTOs, mappers, repositorios y UI
-no cambiaron).
+Pendientes de la usuaria, en emulador (`Medium_Phone_API_35`, instalación
+limpia, proyecto real `aurora-31c37`). Los pasos completos y numerados están en
+`docs/PENDIENTES.md` (entrada de cada P); aquí el resumen ejecutable. Orden
+sugerido para minimizar reinstalaciones:
 
-**Veredictos de agentes (2026-07-17):** verificadora-rf APROBADO en RF-24,
-RF-25 y RF-44 (parte automatizable); revisora-arquitectura APROBADO (M-1
-registrada en P-51; M-2/M-3 aplicadas en `054b1ce`); auditora-seguridad
-APROBADO sin hallazgos — cero logs/telemetría, fallos silenciosos (§3/P-24),
-colecciones neutras intactas, sin cambios de manifest/reglas/dependencias, y
-la tolerancia nueva ELIMINA un comportamiento anómalo observable (el fetch que
-caía entero) en lugar de introducir uno.
+1. **`connectedDebugAndroidTest`** — correr las 8 suites instrumentadas
+   (~29 tests) en el emulador antes de empezar: deben quedar 0 fallos.
+2. **P-28 final (CP-05/28/31)** — Device Explorer sobre `shared_prefs/`
+   (`search_index.xml`, `store_meta.xml`): solo Base64 bajo claves neutras.
+3. **P-29 (CP-04/08)** — login con Firebase real: mensaje ÚNICO para
+   contraseña/correo inválidos, pausa de 5 fallos que sobrevive al reinicio.
+4. **P-43 (CP-17/18)** — cuestionario v2: abandono sin rastro, nube a mitad,
+   `am kill`, aviso RF-30 visible sin scroll en 360×800, captura bloqueada.
+5. **P-46 (CP-20/22)** — registros: validaciones, FLAG_SECURE en el selector
+   de fecha, borrador no persiste, edición prellenada (mismo doc remoto),
+   eliminación con doble confirmación y propagación (también en modo avión),
+   teclear >5 min sin expirar.
+6. **P-59 (CP-21)** — evidencias: galería sin diálogo de permisos, cámara sin
+   rastro en DCIM con regreso directo al formulario, PDF en visor interno con
+   captura bloqueada, persistencia tras cerrar sesión, `media_store/` solo
+   blobs ilegibles, cascadas RF-36/RF-20, saneamiento del editor.
+7. **P-61 (CP-24)** — RF-39 con DOS instalaciones: A crea y sube (schemaVersion
+   2, meta/profile con el sobre), B restaura íntegro (registros + adjunto),
+   edición cruzada, borrado remoto en cascada, contraseña restablecida →
+   respaldo ilegible con aviso y re-subida desde A, cambio de contraseña sin
+   re-cifrado.
+8. **P-14 + P-11 (CP-07)** — miniatura de recientes sin el código a medio
+   teclear; Gboard no sugiere la clave (ambas barras: fachada y práctica).
+9. **P-26 + P-27 (CP-09/14)** — número pre-marcado en recientes del marcador;
+   llamar→atrás aterriza en la fachada y zanjar el desacuerdo de la gracia.
 
-**Corrida manual E2E ✅ (usuaria, 2026-07-17, P-50 cerrado):** ejecutada
-completa con emulador `Medium_Phone_API_35` + panel (`npm run dev`) + proyecto
-real `aurora-31c37`; **todos los pasos en verde**. Checklist ejecutado:
-1. Con red, abrir el módulo de información y anotar el texto de un tema y una
-   línea.
-2. Editar y publicar ese tema/línea en el panel; salir del módulo en la app y
-   reabrirlo: debe verse el texto editado sin reinstalar (RF-24/RF-44).
-3. Publicar una nueva versión del cuestionario; abrirlo en la app: debe regir
-   la nueva versión (RF-44).
-4. Modo avión: reabrir módulo y cuestionario — última versión ya vista, sin
-   error (RF-25/RF-26).
-5. Adversarial (consola Firestore): `title` numérico en un doc de `topics` →
-   el módulo carga sin ese documento y sin error visible; corromper el `forms`
-   de mayor versión dejando uno válido menor → rige el válido. Restaurar al
-   terminar.
-6. Regresión rápida RF-21/22/23/27 con el contenido editado + caso negativo de
-   CP-25 (cuenta sin claim → acceso denegado con mensaje genérico).
+No bloqueantes pero recomendados en la misma pasada: CP-34 (tiempos en gama
+media) y CP-36 (API 26).
 
-Con esta corrida quedan verificados de punta a punta CP-15 (RF-24/RF-25),
-la parte app de CP-26 (RF-44) y el caso negativo de CP-25 (RF-40); los
-documentos corruptos de prueba fueron restaurados en la consola al terminar.
-La Fase B (panel + ciclo de contenido) queda funcionalmente cerrada; siguen
-abiertas solo la validación editorial con la directora (P-23/P-38) y los
-pendientes post-MVP registrados (P-51 y anteriores).
+## 9. Pasada final de agentes (v0.2.0)
+
+Ejecutada el 2026-07-30 sobre TODO el repo (app + admin/), no solo el diff:
+
+- **auditora-seguridad: APROBADO PARA TAG.** Las 7 reglas innegociables se
+  cumplen (FLAG_SECURE por construcción incluido el visor de adjuntos y las
+  rutas de RF-39; acceso indistinguible con puerta en paralelo; salida rápida
+  convergente; **0 hits** de logs/telemetría; cinco llaves de alias neutro solo
+  en Keystore, nada hardcodeado; identidad 100% clima con los tres guardianes
+  en verde; consentimiento bloqueante). Secretos fuera del repo (seeder y
+  panel los rechazan dentro); reglas Firestore con dos mundos sin puentes.
+  **Ningún riesgo residual nuevo**: todo mapea a P-22/33/35/37/48/56/60/62.
+- **revisora-arquitectura: APROBADO.** Regla de dependencias limpia (cero
+  imports entre features; content y questionnaire comparten helpers VÍA core);
+  cero excepciones hacia UI; 20/20 ViewModels con `StateFlow` inmutable; P-51 y
+  P-42a/b saldados sin abrir grietas. No bloqueantes registrados en P-63.
+- **verificadora-rf: APROBADO PARA TAG.** Re-ejecutó la suite forzando
+  `cleanTestDebugUnitTest`: **522/74/0 en debug y release** (detectó y descartó
+  un filtro residual del daemon que falseaba la primera corrida), ktlint limpio,
+  panel 71/71. Muestreó las 40 clases citadas en §4 para los RF nuevos: **todas
+  existen y los conteos coinciden**. Confirmó que los bloqueantes de §8
+  coinciden EXACTAMENTE con los manuales abiertos de PENDIENTES. Única
+  discrepancia (corregida): la cifra histórica de `KeystoreSecretCodeHasherTest`.
+
+Veredicto conjunto: **el árbol queda LISTO PARA TAG `v0.2.0-trl4`, condicionado
+únicamente a las corridas manuales de §8.**
