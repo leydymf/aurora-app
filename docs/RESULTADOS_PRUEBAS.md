@@ -143,10 +143,11 @@ TRL 4 (trabajo futuro).
 
 ### Cobertura resumida (v0.2.0)
 
-- **RF implementados y con cobertura automatizada**: RF-01..17, 19..30, 32..37,
-  39, 40..44 (todos los del alcance TRL 4 ampliado).
-- **RF diferidos (trabajo futuro)**: RF-31 (guardar resultado), RF-38 como RF
-  formal (el mecanismo existe), RF-18 en su parte de revocación fina.
+- **RF implementados y con cobertura automatizada**: RF-01..30, 32..37, 39,
+  40..44 — **42 de 44** (todo el alcance TRL 4 ampliado).
+- **RF diferidos (trabajo futuro)**: RF-31 (guardar el resultado del
+  cuestionario) y RF-38 como RF formal (el mecanismo de cola durable existe y
+  está probado; faltan sus criterios propios).
 - **CP totalmente cerrados (auto + manual ✅)**: CP-01, 02, 03, 05 (salvo Device
   Explorer), 06, 10, 11, 12, 13, 15, 16, 23, 25, 26, 27, 33, 37.
 - **CP bloqueados solo por corrida manual (§8)**: CP-04/08 (P-29), CP-07
