@@ -225,7 +225,6 @@
     <string name="journal_media_full">Ya alcanzaste el máximo de adjuntos en este registro.</string>
     <string name="journal_media_remove">Quitar el adjunto</string>
     <string name="journal_media_open">Ver el adjunto</string>
-    <string name="journal_media_section">ADJUNTOS</string>
     <string name="journal_media_only_here">Tus adjuntos solo se ven dentro de la app.</string>
     <string name="journal_media_audio_note">Los audios quedan guardados y protegidos; podrás reproducirlos en una próxima versión.</string>
     <string name="journal_media_tag">MI REGISTRO · ADJUNTO</string>

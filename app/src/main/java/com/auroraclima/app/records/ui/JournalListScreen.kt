@@ -80,8 +80,8 @@ internal fun JournalListScreen(
     onAddEntry: () -> Unit,
     onEntrySelected: (Long) -> Unit,
     onRetry: () -> Unit,
-    onNoticeDismissed: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNoticeDismissed: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
