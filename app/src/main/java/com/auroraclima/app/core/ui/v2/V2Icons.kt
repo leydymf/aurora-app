@@ -33,7 +33,7 @@ object V2Icons {
     @DrawableRes val figure = R.drawable.ic_figure
 
     /** Dos lóbulos — tipo «psicológica» de la Guía. */
-    @DrawableRes val mind = R.drawable.ic_mind
+    @DrawableRes val lobes = R.drawable.ic_lobes
 
     /** Círculo con barra (límite) — tipo «sexual» de la Guía. */
     @DrawableRes val slashCircle = R.drawable.ic_slash_circle
@@ -90,7 +90,7 @@ private fun V2IconsPreview() {
     val rows = listOf(
         listOf(
             V2Icons.figure to V2Palette.accentGroup,
-            V2Icons.mind to V2Palette.accentGroup,
+            V2Icons.lobes to V2Palette.accentGroup,
             V2Icons.slashCircle to V2Palette.accentGroup,
             V2Icons.card to V2Palette.accentGroup,
             V2Icons.device to V2Palette.accentGroup,
@@ -102,7 +102,7 @@ private fun V2IconsPreview() {
             V2Icons.call to V2Palette.accentCare,
             V2Icons.guide to V2Palette.accentGroup,
             V2Icons.journal to V2Palette.accentGroup,
-            V2Icons.cloud to V2Palette.accentQuickExit
+            V2Icons.cloud to V2Palette.accentCloud
         ),
         listOf(
             V2Icons.date to V2Palette.accentJustice,

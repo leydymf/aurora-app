@@ -28,7 +28,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import com.auroraclima.app.core.ui.v2.QuickExitCloudVisual
+import com.auroraclima.app.core.ui.v2.CloudReturnVisual
 
 /**
  * Acceso al [SessionManager] desde las pantallas del grafo seguro. Lo provee la
@@ -123,7 +123,7 @@ private fun SecureScreen(content: @Composable () -> Unit) {
         content()
         // Salida rápida (RF-16): la posición al alcance del pulgar y el gesto son
         // del mecanismo; la apariencia (nube violeta V2) se inyecta desde core/ui.
-        QuickExitCloudVisual(
+        CloudReturnVisual(
             onClick = sessionManager::quickExit,
             modifier = Modifier
                 .align(Alignment.BottomEnd)

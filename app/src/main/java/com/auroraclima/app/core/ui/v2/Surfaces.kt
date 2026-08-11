@@ -90,7 +90,7 @@ private fun AccentBadgePreview() {
     AuroraV2Theme(V2Voice.Interior) {
         AccentBadge(
             iconRes = V2Icons.cloud,
-            accent = V2Palette.accentQuickExit,
+            accent = V2Palette.accentCloud,
             modifier = Modifier.padding(8.dp)
         )
     }

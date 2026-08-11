@@ -48,7 +48,7 @@ object V2Palette {
     val accentRecognize = AccentPair(tint = Color(0xFFE3E0EC), stroke = Color(0xFF3A3550))
 
     /** Violeta — EXCLUSIVO de la nube de regreso al clima. Trazo 8.5:1 sobre tinte. */
-    val accentQuickExit = AccentPair(tint = Color(0xFFE7DFEE), stroke = Color(0xFF4A3358))
+    val accentCloud = AccentPair(tint = Color(0xFFE7DFEE), stroke = Color(0xFF4A3358))
 
     /** Azul — protección. Trazo 7.8:1 sobre tinte. */
     val accentProtection = AccentPair(tint = Color(0xFFD5E3EC), stroke = Color(0xFF274456))

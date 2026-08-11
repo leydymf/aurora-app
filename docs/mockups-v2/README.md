@@ -120,7 +120,7 @@ pinta `SecureScreen` por construcción — solo cambia de apariencia, no de meca
 |---|---|---|
 | Fondo de pantalla | `#F3F1F7` (lila muy claro) | — |
 | Tarjeta | `#FFFFFF` · radio **28** | — |
-| Tinta principal | `#1B2530` | **13.6:1** sobre fondo |
+| Tinta principal | `#1B2530` | **13.6:1** sobre fondo (calculado real: 13.84:1, ver §3.6) |
 | Texto secundario | `#5A5568` | **6.4:1** sobre fondo |
 | Lavanda · acción principal | fondo `#B5AECB` · texto `#231F31` | (par definido por el anexo) |
 | Separador | `#F0EEF4` | — |

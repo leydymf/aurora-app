@@ -26,19 +26,19 @@ import com.auroraclima.app.R
  * Para un tercero sigue siendo un botón decorativo «del clima» (F2 de A2-6).
  */
 @Composable
-fun QuickExitCloudVisual(onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun CloudReturnVisual(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(52.dp)
             .shadow(elevation = 6.dp, shape = CircleShape)
-            .background(V2Palette.accentQuickExit.tint)
+            .background(V2Palette.accentCloud.tint)
             .clickable(onClick = onClick, role = Role.Button),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             painter = painterResource(V2Icons.cloud),
             contentDescription = stringResource(R.string.access_back_to_weather),
-            tint = V2Palette.accentQuickExit.stroke,
+            tint = V2Palette.accentCloud.stroke,
             modifier = Modifier.size(24.dp)
         )
     }
@@ -46,8 +46,8 @@ fun QuickExitCloudVisual(onClick: () -> Unit, modifier: Modifier = Modifier) {
 
 @Preview(showBackground = true, backgroundColor = 0xFFF3F1F7)
 @Composable
-private fun QuickExitCloudVisualPreview() {
+private fun CloudReturnVisualPreview() {
     AuroraV2Theme(V2Voice.Interior) {
-        QuickExitCloudVisual(onClick = {}, modifier = Modifier.padding(12.dp))
+        CloudReturnVisual(onClick = {}, modifier = Modifier.padding(12.dp))
     }
 }

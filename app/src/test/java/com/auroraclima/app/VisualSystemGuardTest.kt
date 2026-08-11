@@ -45,7 +45,8 @@ class VisualSystemGuardTest {
 
     @Test
     fun `las features no definen tipografia propia`() {
-        val fontTokens = listOf("FontFamily(", "Font(R.font", "R.font.")
+        // "R.font." subsume cualquier Font(R.font...); no hace falta un tercer token.
+        val fontTokens = listOf("FontFamily(", "R.font.")
         val violations = featureFiles()
             .flatMap { file ->
                 val text = file.readText()
@@ -68,6 +69,10 @@ class VisualSystemGuardTest {
      * Esta lista SOLO puede menguar: cada pantalla que se migre a la V2 debe salir
      * de aquí y quedarse con V2Icons (o el set meteorológico ic_weather_* en la
      * fachada). Prohibido agregar entradas.
+     *
+     * Nota de alcance: los componentes V1 de core/ui (p. ej. StatusElements.kt)
+     * quedan fuera del barrido porque core/ui ES la fuente; mueren con el resto
+     * del tema V1 en la Fase 4 de PLAN_UI_V2.md.
      */
     private val legacyMaterialIconsFiles = setOf(
         "java/com/auroraclima/app/weather/ui/WeatherScreen.kt",
