@@ -17,7 +17,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.auroraclima.app.R
 
 /**
  * Fila de lista con icono de contorno (portada de Guía, rutas, ajustes): insignia
@@ -66,14 +65,14 @@ private fun IconListRowPreview() {
     AuroraV2Theme(V2Voice.Interior) {
         SoftCard(modifier = Modifier.padding(16.dp)) {
             IconListRow(
-                iconRes = R.drawable.ic_cloud_soft,
+                iconRes = V2Icons.protection,
                 accent = V2Palette.accentProtection,
                 title = "Título de la fila",
                 supportingText = "Texto de apoyo de la fila",
                 onClick = {}
             )
             IconListRow(
-                iconRes = R.drawable.ic_cloud_soft,
+                iconRes = V2Icons.guide,
                 accent = V2Palette.accentGroup,
                 title = "Fila sin texto de apoyo"
             )

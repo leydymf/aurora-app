@@ -36,7 +36,7 @@ fun QuickExitCloudVisual(onClick: () -> Unit, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_cloud_soft),
+            painter = painterResource(V2Icons.cloud),
             contentDescription = stringResource(R.string.access_back_to_weather),
             tint = V2Palette.accentQuickExit.stroke,
             modifier = Modifier.size(24.dp)

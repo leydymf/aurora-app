@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.auroraclima.app.R
 
 /**
  * Tarjeta suave del V2: blanca, esquina 28 (anexo v2-29). Solo composición,
@@ -90,7 +89,7 @@ private fun SoftCardPreview() {
 private fun AccentBadgePreview() {
     AuroraV2Theme(V2Voice.Interior) {
         AccentBadge(
-            iconRes = R.drawable.ic_cloud_soft,
+            iconRes = V2Icons.cloud,
             accent = V2Palette.accentQuickExit,
             modifier = Modifier.padding(8.dp)
         )

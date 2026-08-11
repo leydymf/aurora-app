@@ -27,7 +27,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.auroraclima.app.R
 
 /**
  * Botón lleno en lavanda: la ÚNICA acción principal de la pantalla (regla 2 del
@@ -164,7 +163,7 @@ private fun V2ButtonsPreview() {
 private fun AccentChipPreview() {
     AuroraV2Theme(V2Voice.Interior) {
         Row(modifier = Modifier.padding(16.dp)) {
-            AccentChip(text = "Guardado", accent = V2Palette.accentCare, iconRes = R.drawable.ic_cloud_soft)
+            AccentChip(text = "Guardado", accent = V2Palette.accentCare, iconRes = V2Icons.synced)
             Spacer(modifier = Modifier.width(8.dp))
             AccentChip(text = "En espera", accent = V2Palette.accentJustice)
             Spacer(modifier = Modifier.width(8.dp))
