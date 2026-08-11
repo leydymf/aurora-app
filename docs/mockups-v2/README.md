@@ -179,6 +179,37 @@ En espera · Código · Eliminar
   proponía para P21 queda fuera de la V2 (D5) — la V2 respeta el tamaño de fuente
   del sistema.
 
+### 3.6 Ratios de contraste verificados (WCAG AA) — Fase 1, 2026-08-11
+
+Calculados con la fórmula de luminancia relativa de WCAG 2.1 sobre los valores del
+anexo, al implementar los tokens en `core/ui/v2/Palette.kt`. AA exige ≥ 4.5:1 para
+texto normal, ≥ 3:1 para texto grande y elementos no textuales.
+
+| Par | Ratio | AA |
+|---|---|---|
+| Tinta principal `#1B2530` / fondo `#F3F1F7` | 13.84:1 | ✅ |
+| Tinta principal `#1B2530` / tarjeta `#FFFFFF` | 15.51:1 | ✅ |
+| Texto secundario `#5A5568` / fondo `#F3F1F7` | 6.39:1 | ✅ |
+| Texto secundario `#5A5568` / tarjeta `#FFFFFF` | 7.16:1 | ✅ |
+| Texto de acción `#231F31` / lavanda `#B5AECB` | 7.53:1 | ✅ |
+| Lila trazo `#3A3550` / tinte `#E3E0EC` | 8.94:1 | ✅ |
+| Violeta trazo `#4A3358` / tinte `#E7DFEE` | 8.49:1 | ✅ |
+| Azul trazo `#274456` / tinte `#D5E3EC` | 7.83:1 | ✅ |
+| Verde trazo `#2C4A3E` / tinte `#DCE7E1` | 7.68:1 | ✅ |
+| Rosa trazo `#7A3B4D` / tinte `#F0E4E8` | 6.63:1 | ✅ |
+| Arena trazo `#5A4327` / tinte `#EFE5D9` | 7.45:1 | ✅ |
+| Neutro trazo `#4E4A5E` / tinte `#EDEBF3` | 7.21:1 | ✅ (anexo decía 6.9:1; el real es mejor) |
+| Rosa trazo `#7A3B4D` como texto de aviso / fondo `#F3F1F7` | 7.32:1 | ✅ |
+
+Dos hallazgos no textuales, resueltos por diseño en la Fase 1:
+
+- **Borde lavanda `#B5AECB` sobre blanco: 2.13:1** — insuficiente como borde único
+  (3:1). El botón secundario («blanco con borde», regla 2) lleva por eso el borde en
+  el gris del texto secundario `#5A5568` (6.4:1 ✅), no en lavanda.
+- **Relleno lavanda de la barra de progreso sobre su riel: < 3:1** — aceptado porque
+  la regla 3 obliga a que el progreso vaya SIEMPRE acompañado de texto («Paso N
+  de M», segmentos contados); la barra es refuerzo visual, nunca el único indicador.
+
 ---
 
 ## 4. Decisiones de la usuaria (2026-08-11) — cierran las preguntas de la Fase 0
