@@ -72,7 +72,8 @@ pinta `SecureScreen` por construcción — solo cambia de apariencia, no de meca
 - **P20/P20·b** detalle + doble confirmación (v2-22) — mismo flujo con `SecureDialog`;
   cambia a hoja inferior con «Conservar» como acción principal.
 - **P21** ajustes (v2-23) — mismas acciones reagrupadas en tres secciones con la
-  acción delicada al final (ver pregunta Q6 por «Cambiar contraseña»).
+  acción delicada al final; conserva «Cambiar contraseña» aunque el mockup la omita
+  (D6).
 - **P22** login del panel (v2-24), **P23** contenido (v2-25), **P24** rutas y líneas
   (v2-26), **P25** cuestionario (v2-27) — el panel ya tiene chips de estado, aviso de
   integridad y bloqueo de publicación con motivo (RF-41/42/43/44): re-estilo a
@@ -81,17 +82,17 @@ pinta `SecureScreen` por construcción — solo cambia de apariencia, no de meca
 ### CAMBIO ESTRUCTURAL (navegación o datos nuevos)
 
 1. **Fachada con barra de pestañas Hoy · 5 días · Lugares** (v2-01, v2-03). Hoy la
-   fachada navega `home → forecast` sin barra inferior; «Lugares» no existe como
-   pantalla propia (ver Q4). Afecta el NavHost raíz (solo rutas de fachada, fuera de
-   `secureGraph` — sin impacto en camuflaje: identidad 100 % clima).
+   fachada navega `home → forecast` sin barra inferior; «Lugares» abre la búsqueda/
+   recientes actual, la misma P02 (D4). Afecta el NavHost raíz (solo rutas de
+   fachada, fuera de `secureGraph` — sin impacto en camuflaje: identidad 100 % clima).
 2. **Navegación interna por pestañas Inicio · Guía · Mi registro** (v2-10/11/14/16/20).
    Hoy `PanelScreen` es un menú y todo se recorre con back. Las pestañas deben vivir
    ÍNTEGRAS dentro de `secureGraph`/`SecureBackStackGuard` (regresión obligatoria de
    RF-16/RNF-02/RNF-03 — ya previsto en S2 del plan).
-3. **Inicio nuevo (P09)** (v2-10): saludo, tarjeta del cuestionario con conteo de
-   preguntas/duración, accesos rápidos Llamar · Guardar evidencia · Informarme.
-   `PanelScreen` hoy no tiene ViewModel ni datos; la tarjeta del cuestionario exige
-   un dato que ningún UiState del panel tiene (ver Q8).
+3. **Inicio nuevo (P09)** (v2-10): saludo, tarjeta del cuestionario y accesos
+   rápidos Llamar · Guardar evidencia · Informarme. La tarjeta va SIN conteo de
+   preguntas ni duración (D8), así que `PanelScreen` puede seguir sin ViewModel;
+   Ajustes se abre desde el icono de engranaje arriba a la derecha (D3).
 4. **Portada de Guía** (v2-11): pantalla nueva que agrupa tipos, rutas y líneas en
    una sola sección con indicador offline. Reorganiza rutas de navegación de
    `content/`.
@@ -99,12 +100,11 @@ pinta `SecureScreen` por construcción — solo cambia de apariencia, no de meca
    pero pasa de destino secundario a pestaña; además muestra el resultado del
    cuestionario como entrada destacada y el chip global «Todo guardado» (estado de
    sincronización agregado — hoy el estado es por entrada).
-6. **Icono y color propios por tipo de violencia** (v2-12, v2-25, v2-28): exige
-   campos nuevos (`icon`, `color`) en la colección `topics` (schemaVersion), en el
-   panel y en la siembra — toca `domain`/`data`, fuera del alcance «solo capa ui»
-   del plan (ver Q2, decisión previa obligatoria).
-7. **Editor del panel P23·b** (v2-28): la biblioteca cerrada de iconos/colores con
-   vista previa y contraste verificado es UI nueva del editor; depende del punto 6.
+6. **Icono y color propios por tipo de violencia** (v2-12, v2-25, v2-28): resuelto
+   con asignación fija local en `core/ui` (id de topic → icono/matiz, fallback al
+   neutro) — sin campos nuevos en Firestore ni cambios en `domain`/`data` (D2).
+7. **Editor del panel P23·b** (v2-28): el selector de iconos/colores se difiere
+   post-V2 (D2); el editor conserva checklist y vista previa con el neutro.
 
 ---
 
@@ -137,8 +137,8 @@ pinta `SecureScreen` por construcción — solo cambia de apariencia, no de meca
 | Arena | justicia y tiempo | `#EFE5D9` | `#5A4327` | |
 | Neutro | «contiene varias cosas» (tarjetas agrupadoras) | `#EDEBF3` | `#4E4A5E` | contraste **6.9:1** |
 
-*(La lámina v2-04 enuncia otros significados para los mismos matices — ver Q7: se
-propone el anexo v2-29 como fuente normativa.)*
+*(La lámina v2-04 enuncia otros significados para los mismos matices; por decisión
+D7, este anexo v2-29 es la fuente normativa y v2-04 solo aporta las constantes.)*
 
 ### 3.3 Iconografía — librería cerrada de 18
 
@@ -175,51 +175,55 @@ En espera · Código · Eliminar
 - **Un solo botón lleno por pantalla**; la nube de salida siempre alcanzable con el
   pulgar.
 - Nota de cierre (v2-30): **no** hay selector de colores/apariencia en Configuración
-  (elegir color rompería el significado fijo); el anexo propone en su lugar
-  «tamaño de letra» en P21 — pendiente de decisión (Q5).
+  (elegir color rompería el significado fijo); el «tamaño de letra» que el anexo
+  proponía para P21 queda fuera de la V2 (D5) — la V2 respeta el tamaño de fuente
+  del sistema.
 
 ---
 
-## 4. PREGUNTAS PARA LA USUARIA (bloqueantes o de alcance — no se resuelven solas)
+## 4. Decisiones de la usuaria (2026-08-11) — cierran las preguntas de la Fase 0
 
-- **Q1 · Léxico vedado en textos estáticos.** Los mockups reintroducen literales que
-  `CamouflageResourcesTest` veda o que ya se redactaron por camuflaje (ADR
-  2026-07-09/2026-07-10): «Tu código secreto» (P06), «Crea tu espacio seguro.» (P05),
-  y los títulos estáticos de portada/Guía «Entender la violencia», «Tipos de
-  violencia» (v2-11/12/13). Los títulos que vienen de Firestore no son problema; los
-  estáticos sí. ¿Confirmas que **el camuflaje prima**: se mantiene la redacción
-  neutra aprobada («tu clave personal», «tu espacio», claves `content_*` actuales) y
-  la V2 solo cambia el estilo? (Impacta también reflejarlo en A2-6.)
-- **Q2 · Icono/color por tipo (dato nuevo).** P10/P23/P23·b muestran icono y matiz
-  propios por tipo de violencia. Hoy `topics` no tiene esos campos. Opciones:
-  (a) campos `icon`/`color` en Firestore con `schemaVersion` nuevo + panel + siembra
-  (toca `domain`/`data` — excede «solo capa ui»); (b) asignación fija local en la app
-  (id de topic → icono/color, sin tocar datos, pero el panel no podría elegirlos).
-  ¿Cuál autorizas? (Condiciona el punto 6 de brechas y el editor P23·b.)
-- **Q3 · Pestañas internas: ¿tres o cuatro?** El plan dice «Inicio · Guía ·
-  Mi registro · Ajustes», pero los mockups muestran **tres** pestañas y Ajustes con
-  flecha de retorno (v2-23). En P09 hay un icono (¿sol/destello?) arriba a la
-  derecha sin rótulo — ¿es la entrada a Ajustes, otra cosa, o decoración? ¿Cómo se
-  llega a Ajustes en la V2?
-- **Q4 · Pestaña «Lugares» de la fachada.** No hay mockup propio. ¿Es la búsqueda
-  actual (P02) montada como pestaña, o una pantalla nueva de ciudades guardadas?
-  (Recordar: la barra de búsqueda debe seguir siendo la puerta del código — RF-05/12.)
-- **Q5 · Tamaño de letra en Ajustes.** El anexo (v2-30) lo propone explícitamente
-  («Dime si lo agrego a P21»). ¿Entra en el alcance de la V2 o queda post-MVP?
-- **Q6 · «Cambiar contraseña» ausente en P21.** El mockup de Ajustes no la muestra,
-  pero existe hoy (`ChangePasswordScreen`, RF-09/RF-39 — re-envuelve la DEK). ¿Se
-  mantiene dentro de «Tu llave de entrada» aunque el mockup no la dibuje?
-- **Q7 · Inconsistencia interna del documento V2.** La lámina v2-04 asigna otros
-  significados a los matices (rosa=hablar, azul=rutas, salvia=registro,
-  arena=seguridad, violeta=cuidado propio) que contradicen el anexo v2-29
-  (rosa=avisos, azul=protección, verde=salud/llamar, arena=justicia/tiempo,
-  violeta=salida rápida). Propongo tomar **v2-29 (librería) como fuente normativa**
-  por ser el anexo final y traer los pares de contraste. ¿Confirmas?
-- **Q8 · Conteo del cuestionario en Inicio y P15.** Los mockups dicen «6 preguntas ·
-  unos 4 minutos», pero el instrumento vigente es la v2 de **12 preguntas** (ADR
-  2026-07-22). El número debería salir del formulario publicado, lo que exige dar
-  datos (y ViewModel) al Inicio — `PanelScreen` hoy no tiene ninguno. ¿Tarjeta con
-  dato dinámico, o texto sin números («unas pocas preguntas»)?
+Las ocho preguntas quedaron resueltas. Estas decisiones VINCULAN a las Fases 1–3:
+
+- **D1 (Q1) · El camuflaje prima — léxico establecido.** Se mantiene la redacción
+  neutra ya aprobada (ADR 2026-07-09/2026-07-10): «tu clave personal» (no «código
+  secreto»), «tu espacio»/«Crea tu espacio.» (no «espacio seguro»), y las claves
+  `content_*`/`access_panel_*` actuales para los títulos estáticos de Guía. Los
+  mockups aportan SOLO el estilo; `CamouflageResourcesTest` sigue siendo el árbitro.
+- **D2 (Q2) · Icono/color por tipo: asignación fija local en la app.** Sin campos
+  nuevos en Firestore ni cambios en `domain`/`data` (se respeta el alcance «solo
+  capa ui»): un mapa cerrado en `core/ui` de id de topic (`t01`…) → icono/matiz de
+  la librería, con **fallback al neutro** (`#EDEBF3`/`#4E4A5E` + icono de Guía) para
+  topics no mapeados — coherente con la regla 5 del anexo. Consecuencia: el selector
+  de icono/color del editor P23·b se **difiere post-V2** (el editor web conserva el
+  resto: checklist «falta para publicar», vista previa con el neutro); si algún día
+  se quiere elegible desde el panel, será con `schemaVersion` nuevo (opción a).
+- **D3 (Q3) · Tres pestañas; Ajustes desde el Inicio, arriba a la derecha, con el
+  icono de ajustes ya establecido** (engranaje, no el sol del mockup). Barra interna:
+  Inicio · Guía · Mi registro; P21 Ajustes se abre desde ese acceso y vuelve con
+  flecha de retorno, como en v2-23.
+- **D4 (Q4) · «Lugares» = P02.** La pestaña de la fachada abre la búsqueda/recientes
+  actual (misma pantalla que tocar la barra en P01). Innegociable: la barra de
+  búsqueda sigue siendo la puerta del código (RF-05/12) y el estado «sin resultados»
+  sigue compartido (RF-13).
+- **D5 (Q5) · Tamaño de letra: fuera de la V2** (post-MVP, anotado en PENDIENTES).
+  Para mantener el alcance homogéneo, la V2 se limita a respetar el tamaño de fuente
+  del sistema (sp + comprobación con fuente grande), que ya cubre la necesidad de
+  accesibilidad sin añadir una preferencia propia.
+- **D6 (Q6) · «Cambiar contraseña» se mantiene en P21** (omisión del mockup),
+  dentro de «Tu llave de entrada» con el mismo estilo de fila. Regla general
+  derivada: toda pantalla existente SIN mockup V2 (`ChangeCodeScreen`,
+  `ChangePasswordScreen`, `DeleteAccountScreen`, `PrivacyScreen`,
+  `JournalMediaScreen`, tutorial en modo repaso) se re-estiliza **por extensión del
+  sistema** — tokens y componentes de la librería, sin inventar elementos nuevos.
+- **D7 (Q7) · El anexo v2-29 es la fuente normativa** de significados de color y
+  pares de contraste; la lámina v2-04 queda como referencia de constantes
+  tipográficas/de toque únicamente. El §3 de este README ya refleja esa jerarquía.
+- **D8 (Q8) · Sin conteo de preguntas ni duración.** La tarjeta del cuestionario en
+  Inicio (P09) y la intro (P15) pierden el «6 preguntas · unos 4 minutos» /
+  «Seis preguntas cortas»: texto genérico sin números (ni estático ni dinámico).
+  `PanelScreen` puede seguir sin ViewModel; la pantalla de pregunta (P16) no se ve
+  afectada — su progreso ya sale del formulario publicado.
 
 ### Notas (no bloqueantes)
 
