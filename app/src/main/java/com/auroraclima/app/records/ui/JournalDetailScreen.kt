@@ -1,19 +1,18 @@
 package com.auroraclima.app.records.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,43 +23,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
-import com.auroraclima.app.core.security.SecureDialog
-import com.auroraclima.app.core.ui.components.BackHeader
-import com.auroraclima.app.core.ui.components.DestructiveButton
-import com.auroraclima.app.core.ui.components.ErrorState
-import com.auroraclima.app.core.ui.components.FieldMessage
-import com.auroraclima.app.core.ui.components.LoadingState
-import com.auroraclima.app.core.ui.components.SectionTitle
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.PlexMono
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.Plum
-import com.auroraclima.app.core.ui.theme.Sky
-import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.core.security.SecureSheet
+import com.auroraclima.app.core.ui.v2.AccentBadge
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2BackHeader
+import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2FieldMessage
+import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2LoadingState
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.V2SecondaryButton
+import com.auroraclima.app.core.ui.v2.V2SheetCard
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
 
 /**
- * Detalle de un registro (RF-34; mockup P20 / alta-fidelidad-30, sin estado de
+ * Detalle de un registro (RF-34; mockup P20 / v2-22, sin estado de
  * sincronización — la sync es silenciosa, P-45b) con la sección de adjuntos
- * (RF-33: chips por familia, tocar abre el visor interno de imagen/PDF y la
- * nota recuerda que solo se ven aquí), «Editar» (RF-35) y «Eliminar» en dos
- * pasos (RF-36; el diálogo de P20·b va en [SecureDialog], única ventana propia
- * permitida — RNF-02). Quitar adjuntos se hace desde «Editar», como el resto
- * del contenido.
+ * (RF-33: chips por familia, tocar abre el visor interno y la nota recuerda
+ * que solo se ven aquí), «Editar» (RF-35) y «Eliminar» en dos pasos (RF-36).
  *
- * P-15: los botones del diálogo registran interacción — el diálogo es una
- * ventana propia que el observador de toques del grafo seguro no ve, igual que
- * el selector de fecha del editor.
+ * V2 (S4): la confirmación de P20·b pasa de diálogo centrado a HOJA INFERIOR
+ * con «Conservar» como acción principal (v2-22) — mismo mecanismo de dos
+ * pasos sobre el mismo estado (`isConfirmingDelete`) y misma ventana segura:
+ * [SecureSheet] es la variante de hoja de SecureDialog (RNF-02, regla A1).
+ *
+ * P-15: los botones de la hoja registran interacción — la hoja es una ventana
+ * propia que el observador de toques del grafo seguro no ve, igual que el
+ * selector de fecha del editor.
  */
 @Composable
 fun JournalDetailRoute(
@@ -111,18 +108,18 @@ internal fun JournalDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
     ) {
-        BackHeader(
+        V2BackHeader(
             tag = stringResource(R.string.journal_tag),
             onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         when {
-            state.isLoading -> LoadingState()
+            state.isLoading -> V2LoadingState()
             state.errorRes != null || state.entry == null ->
-                ErrorState(messageRes = state.errorRes ?: R.string.common_error_generic, onRetry = onRetry)
+                V2ErrorState(messageRes = state.errorRes ?: R.string.common_error_generic, onRetry = onRetry)
             else -> JournalDetailContent(
                 entry = state.entry,
                 attachments = state.attachments,
@@ -134,7 +131,7 @@ internal fun JournalDetailScreen(
         }
     }
     if (state.isConfirmingDelete) {
-        DeleteConfirmDialog(
+        DeleteConfirmSheet(
             isDeleting = state.isDeleting,
             deleteErrorRes = state.deleteErrorRes,
             onConfirm = onConfirmDelete,
@@ -159,24 +156,36 @@ private fun JournalDetailContent(
             .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))
-        MonoLabel(entry.occurredOn.toShortDayText())
-        Spacer(modifier = Modifier.height(6.dp))
-        SectionTitle(stringResource(entry.kind.labelRes()) + ".")
+        // Cabecera de v2-22: insignia del tipo, fecha y el tipo como título.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val visual = entry.kind.visual()
+            AccentBadge(iconRes = visual.iconRes, accent = visual.accent)
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = entry.occurredOn.toLongDayText(),
+                    style = InteriorTypeVoice.label,
+                    color = V2Palette.inkSecondary
+                )
+                Text(
+                    text = stringResource(entry.kind.labelRes()),
+                    style = InteriorTypeVoice.screenTitle,
+                    color = V2Palette.inkPrimary
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(20.dp))
-        MonoLabel(stringResource(R.string.journal_entry_section))
+        Text(
+            text = stringResource(R.string.journal_entry_section),
+            style = InteriorTypeVoice.label,
+            color = V2Palette.inkSecondary
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            color = CloudWhite
-        ) {
+        SoftCard {
             Text(
                 text = entry.detail,
-                fontFamily = PlexSans,
-                fontSize = 15.sp,
-                lineHeight = 23.sp,
-                color = Night,
-                modifier = Modifier.padding(16.dp)
+                style = InteriorTypeVoice.body,
+                color = V2Palette.inkPrimary
             )
         }
         if (attachments.isNotEmpty()) {
@@ -188,17 +197,18 @@ private fun JournalDetailContent(
             )
         }
         Spacer(modifier = Modifier.height(28.dp))
-        OutlinedActionButton(text = stringResource(R.string.journal_detail_edit), onClick = onEdit)
+        V2SecondaryButton(text = stringResource(R.string.journal_detail_edit), onClick = onEdit)
         Spacer(modifier = Modifier.height(4.dp))
+        // Eliminar en el rosa profundo de avisos (regla 1: irreversible se
+        // anuncia con texto, sin rojo de alarma — decisión F2).
         TextButton(
             onClick = onRequestDelete,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text(
                 text = stringResource(R.string.journal_detail_delete),
-                fontFamily = PlexSans,
-                fontSize = 15.sp,
-                color = Plum
+                style = InteriorTypeVoice.bodyStrong,
+                color = V2Palette.accentNotice.stroke
             )
         }
         // Aire final para no chocar con el botón nube de salida rápida.
@@ -206,15 +216,17 @@ private fun JournalDetailContent(
     }
 }
 
-/** Sección «ADJUNTOS · N» del mockup P20 (RF-33): chips que abren el visor interno. */
+/** Sección «Adjuntos · N» del mockup P20 (RF-33): chips que abren el visor interno. */
 @Composable
 private fun AttachmentSection(
     attachments: List<JournalAttachment>,
     hasAudio: Boolean,
     onOpenAttachment: (Long) -> Unit
 ) {
-    MonoLabel(
-        pluralStringResource(R.plurals.journal_media_count, attachments.size, attachments.size)
+    Text(
+        text = pluralStringResource(R.plurals.journal_media_count, attachments.size, attachments.size),
+        style = InteriorTypeVoice.label,
+        color = V2Palette.inkSecondary
     )
     Spacer(modifier = Modifier.height(8.dp))
     AttachmentChipGrid(
@@ -225,91 +237,75 @@ private fun AttachmentSection(
     Spacer(modifier = Modifier.height(8.dp))
     Text(
         text = stringResource(R.string.journal_media_only_here),
-        fontFamily = PlexSans,
-        fontSize = 12.sp,
-        color = SteelDeep
+        style = InteriorTypeVoice.caption,
+        color = V2Palette.inkSecondary
     )
     if (hasAudio) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.journal_media_audio_note),
-            fontFamily = PlexSans,
-            fontSize = 12.sp,
-            lineHeight = 17.sp,
-            color = SteelDeep
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary
         )
     }
 }
 
-/** Confirmación en dos pasos de la eliminación (RF-36 criterio 1; mockup P20·b). */
+/**
+ * Confirmación en dos pasos de la eliminación (RF-36 criterio 1; mockup P20·b,
+ * v2-22): hoja inferior segura con la papelera en rosa de aviso, «Conservar»
+ * como ÚNICA acción llena (regla 2 — conservar es el camino principal) y
+ * «Sí, eliminar» como texto en el rosa profundo.
+ */
 @Composable
-private fun DeleteConfirmDialog(
+private fun DeleteConfirmSheet(
     isDeleting: Boolean,
     deleteErrorRes: Int?,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    SecureDialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(20.dp), color = CloudWhite) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
-                Text(
-                    text = stringResource(R.string.journal_delete_title),
-                    fontFamily = PlexSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 17.sp,
-                    color = Plum
+    SecureSheet(onDismissRequest = onDismiss) {
+        V2SheetCard {
+            AccentBadge(iconRes = V2Icons.delete, accent = V2Palette.accentNotice)
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = stringResource(R.string.journal_delete_title),
+                style = InteriorTypeVoice.cardTitle,
+                color = V2Palette.inkPrimary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.journal_delete_body),
+                style = InteriorTypeVoice.caption,
+                color = V2Palette.inkSecondary,
+                textAlign = TextAlign.Center
+            )
+            V2FieldMessage(messageRes = deleteErrorRes, fallbackRes = null)
+            Spacer(modifier = Modifier.height(18.dp))
+            V2PrimaryButton(
+                text = stringResource(R.string.journal_delete_keep),
+                onClick = onDismiss,
+                enabled = !isDeleting
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            if (isDeleting) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(vertical = 10.dp)
+                        .size(22.dp),
+                    color = V2Palette.accentNotice.stroke,
+                    strokeWidth = 2.dp
                 )
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = stringResource(R.string.journal_delete_body),
-                    fontFamily = PlexSans,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    color = SteelDeep
-                )
-                FieldMessage(messageRes = deleteErrorRes, fallbackRes = null)
-                Spacer(modifier = Modifier.height(20.dp))
-                OutlinedActionButton(text = stringResource(R.string.journal_delete_keep), onClick = onDismiss)
-                Spacer(modifier = Modifier.height(10.dp))
-                DestructiveButton(
-                    text = stringResource(R.string.journal_delete_confirm),
-                    onClick = onConfirm,
-                    enabled = true,
-                    isLoading = isDeleting,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            } else {
+                TextButton(onClick = onConfirm) {
+                    Text(
+                        text = stringResource(R.string.journal_delete_confirm),
+                        style = InteriorTypeVoice.bodyStrong,
+                        color = V2Palette.accentNotice.stroke
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
-}
-
-/** Botón secundario delineado del mockup P20/P20·b («Editar», «Conservar»). */
-@Composable
-private fun OutlinedActionButton(text: String, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Sky)
-    ) {
-        Text(
-            text = text,
-            fontFamily = PlexSans,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp,
-            color = Night
-        )
-    }
-}
-
-/** Rótulo en mono espaciado del mockup P20 (fecha y «QUÉ PASÓ»). */
-@Composable
-private fun MonoLabel(text: String) {
-    Text(
-        text = text,
-        fontFamily = PlexMono,
-        fontSize = 12.sp,
-        letterSpacing = 0.14.em,
-        color = SteelDeep
-    )
 }
