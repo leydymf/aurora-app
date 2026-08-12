@@ -155,6 +155,12 @@
     <string name="access_panel_guide_body">Unas preguntas para orientarte, a tu ritmo.</string>
     <string name="access_panel_journal_title">Mi registro</string>
     <string name="access_panel_journal_body">Tus notas y archivos, protegidos y solo tuyos.</string>
+    <string name="content_guide_title">Guía</string>
+    <string name="content_guide_subtitle">Todo lo que necesitas saber y a quién acudir, en un solo lugar.</string>
+    <string name="content_guide_topics_support">Los tipos, con señales y ejemplos</string>
+    <string name="content_guide_routes_support">Salud · Protección · Justicia</string>
+    <string name="content_guide_lines_support">Números gratuitos · un toque para llamar</string>
+    <string name="content_guide_offline">Puedes leerlo sin conexión</string>
     <string name="content_info_tag">INFORMACIÓN</string>
     <string name="content_topics_title">Entender lo que pasa.</string>
     <string name="content_topics_subtitle">Lo que te pasa tiene nombre. Conocerlo es el primer paso.</string>

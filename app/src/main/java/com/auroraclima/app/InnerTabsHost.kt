@@ -12,7 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.auroraclima.app.access.ui.PanelScreen
-import com.auroraclima.app.content.ui.TopicsRoute
+import com.auroraclima.app.content.ui.GuideHomeScreen
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.V2Icons
 import com.auroraclima.app.core.ui.v2.V2TabBar
@@ -35,7 +35,8 @@ import com.auroraclima.app.records.ui.JournalListRoute
  *   de qué pestaña estaba abierta (RF-06).
  * - Atrás no cambia de pestaña: sale del grafo a la fachada, como hoy desde el panel.
  *
- * Los ViewModels de Guía y Mi registro quedan scoped a la entrada `panel` y el
+ * Los ViewModels de las pestañas (hoy solo Mi registro: la portada de Guía y el
+ * Inicio son estáticos) quedan scoped a la entrada `panel` y el
  * [rememberSaveableStateHolder] conserva scroll y estado de UI al alternar pestañas;
  * todo muere junto con el pop del grafo (salida rápida, inactividad, background).
  */
@@ -43,7 +44,7 @@ import com.auroraclima.app.records.ui.JournalListRoute
 fun InnerTabsHost(
     onOpenGuidance: () -> Unit,
     onOpenSettings: () -> Unit,
-    onTopicSelected: (String) -> Unit,
+    onOpenTopics: () -> Unit,
     onOpenRoutes: () -> Unit,
     onOpenLines: () -> Unit,
     onAddJournalEntry: () -> Unit,
@@ -57,9 +58,10 @@ fun InnerTabsHost(
             Box(modifier = Modifier.weight(1f)) {
                 when (selectedTab) {
                     GUIDE_TAB -> tabStateHolder.SaveableStateProvider(GUIDE_TAB) {
-                        TopicsRoute(
-                            onBack = null,
-                            onTopicSelected = onTopicSelected,
+                        // Portada de la Guía (v2-11): las tres secciones son
+                        // destinos del grafo seguro; la pestaña solo agrupa.
+                        GuideHomeScreen(
+                            onOpenTopics = onOpenTopics,
                             onOpenRoutes = onOpenRoutes,
                             onOpenLines = onOpenLines
                         )

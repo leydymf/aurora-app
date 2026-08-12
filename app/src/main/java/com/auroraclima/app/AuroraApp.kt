@@ -35,6 +35,7 @@ import com.auroraclima.app.content.ui.ROUTE_ID_ARG
 import com.auroraclima.app.content.ui.RoutesRoute
 import com.auroraclima.app.content.ui.TOPIC_ID_ARG
 import com.auroraclima.app.content.ui.TopicDetailRoute
+import com.auroraclima.app.content.ui.TopicsRoute
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SecureBackStackGuard
@@ -171,9 +172,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                     InnerTabsHost(
                         onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
                         onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
-                        onTopicSelected = { topicId ->
-                            navController.navigate("$TOPICS_ROUTE/$topicId")
-                        },
+                        onOpenTopics = { navController.navigate(TOPICS_ROUTE) },
                         onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
                         onOpenLines = { navController.navigate(LINES_ROUTE) },
                         onAddJournalEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
@@ -284,8 +283,16 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onBack = { navController.popBackStack() }
                     )
                 }
-                // Los tipos (RF-21) son la pestaña «Guía» del hogar; aquí solo
-                // viven el detalle y las rutas que cuelgan de él.
+                // Sección «Entender lo que pasa» de la Guía (RF-21): la lista
+                // de tipos es un destino propio desde la portada (v2-11/v2-12).
+                screen(TOPICS_ROUTE) {
+                    TopicsRoute(
+                        onBack = { navController.popBackStack() },
+                        onTopicSelected = { topicId ->
+                            navController.navigate("$TOPICS_ROUTE/$topicId")
+                        }
+                    )
+                }
                 screen(TOPIC_DETAIL_ROUTE) {
                     TopicDetailRoute(
                         onBack = { navController.popBackStack() },
