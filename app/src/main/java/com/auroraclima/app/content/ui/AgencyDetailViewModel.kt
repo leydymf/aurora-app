@@ -53,7 +53,7 @@ class AgencyDetailViewModel @Inject constructor(
                     val agency = route?.agencies?.firstOrNull { it.id == agencyId }
                     _uiState.update {
                         if (route != null && agency != null) {
-                            it.copy(isLoading = false, routeTitle = route.title, agency = agency)
+                            it.copy(isLoading = false, routeId = route.id, routeTitle = route.title, agency = agency)
                         } else {
                             it.copy(isLoading = false, errorRes = R.string.content_error_generic)
                         }
