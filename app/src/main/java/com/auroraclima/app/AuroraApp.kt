@@ -275,8 +275,9 @@ fun AuroraApp(sessionManager: SessionManager) {
                     )
                 }
                 // Creación de un registro del historial (RF-32, P19). El pop
-                // tras guardar regresa al listado (RF-34), que se refresca al
-                // volver a componerse.
+                // tras guardar regresa al hub en la pestaña donde estaba la
+                // usuaria (Mi registro se refresca al volver a componerse; desde
+                // «Guardar una nota» de P09, al Inicio).
                 screen(JOURNAL_NEW_ROUTE) {
                     JournalEditorRoute(
                         onSaved = { navController.popBackStack() },

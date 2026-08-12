@@ -51,9 +51,9 @@ import com.auroraclima.app.core.ui.v2.V2Voice
 /**
  * Tutorial del espacio interno (RF-10; mockup v2-08, P07). Paso 3 de 3.
  * La vista V2 presenta los TRES momentos juntos en tarjetas (antes, pager de
- * tres páginas): el ViewModel y su máquina de pasos no cambian — la fuente de
- * verdad sigue siendo suya y «Practicar» solo la avanza hasta la práctica
- * (regla «solo capa ui» de PLAN_UI_V2.md; plan de la sesión S2 aprobado).
+ * tres páginas): la máquina de pasos sigue siendo del ViewModel — «Practicar»
+ * invoca su salto directo a la práctica (`onStartPractice`, hallazgo M-1 de la
+ * revisión S2; cambio de VM justificado en el plan de sesión aprobado).
  *
  * La práctica de salida es REAL (decisión de la usuaria sobre P07·b y la nota
  * F3·F4 de A2-6): la nube de la esquina — pintada por el grafo seguro — sale de
@@ -70,13 +70,7 @@ fun TutorialRoute(isReview: Boolean, onClose: () -> Unit) {
         TutorialScreen(
             state = state,
             isReview = isReview,
-            onStartPractice = {
-                // Avanza la máquina del ViewModel hasta la práctica sin tocarla:
-                // la vista une los tres momentos, el orden sigue siendo del VM.
-                while (viewModel.uiState.value.step != TutorialStep.PRACTICE) {
-                    viewModel.onNext()
-                }
-            },
+            onStartPractice = viewModel::onStartPractice,
             onBack = { if (state.isFirstStep) onClose() else viewModel.onBack() },
             onPracticeInputChange = {
                 // El teclado es una ventana propia: cada tecla debe contar como

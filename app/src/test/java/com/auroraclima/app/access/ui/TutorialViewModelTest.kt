@@ -49,6 +49,17 @@ class TutorialViewModelTest {
     }
 
     @Test
+    fun `practicar salta directo a la practica desde el resumen`() = runTest {
+        // Vista V2 (v2-08): los tres momentos se muestran juntos y «Practicar»
+        // salta a la práctica sin recorrer las páginas intermedias.
+        assertEquals(TutorialStep.ENTER, viewModel.uiState.value.step)
+
+        viewModel.onStartPractice()
+
+        assertEquals(TutorialStep.PRACTICE, viewModel.uiState.value.step)
+    }
+
+    @Test
     fun `la clave real logra el ingreso de practica`() = runTest {
         // RF-10 criterio 2: la práctica usa la clave verdadera de la usuaria
         seedUserCode()
