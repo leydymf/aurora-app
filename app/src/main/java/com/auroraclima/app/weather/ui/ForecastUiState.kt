@@ -15,5 +15,9 @@ data class ForecastDayUiState(
     val condition: WeatherCondition,
     val rainProbability: String,
     val maxTemperature: String,
-    val minTemperature: String
+    val minTemperature: String,
+    // Grados enteros para ubicar la barra de temperatura (v2-03) sin parsear
+    // los textos ya formateados; los llena el mapper igual que el resto.
+    val maxDegrees: Int = 0,
+    val minDegrees: Int = 0
 )

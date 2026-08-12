@@ -28,6 +28,9 @@ class ForecastMapperTest {
         assertEquals("80 %", row.rainProbability)
         assertEquals("26°", row.maxTemperature)
         assertEquals("18°", row.minTemperature)
+        // Grados enteros de la barra de temperatura (v2-03), con el mismo redondeo
+        assertEquals(26, row.maxDegrees)
+        assertEquals(18, row.minDegrees)
     }
 
     @Test
@@ -50,6 +53,46 @@ class ForecastMapperTest {
         assertEquals("mié 8", formatForecastDay(LocalDate.of(2026, 7, 8)))
         assertEquals("vie 10", formatForecastDay(LocalDate.of(2026, 7, 10)))
     }
+
+    @Test
+    fun `la barra ubica cada dia dentro del rango termico de la semana`() {
+        // Semana de 18° a 28°: rango 10. mar (18–26) → [0, 0.8]; jue (20–28) → [0.2, 1]
+        val days = listOf(
+            dayRow(minDegrees = 18, maxDegrees = 26),
+            dayRow(minDegrees = 20, maxDegrees = 28)
+        )
+
+        val spans = temperatureSpans(days)
+
+        assertEquals(0.0f, spans[0].startFraction, 0.001f)
+        assertEquals(0.8f, spans[0].endFraction, 0.001f)
+        assertEquals(0.2f, spans[1].startFraction, 0.001f)
+        assertEquals(1.0f, spans[1].endFraction, 0.001f)
+    }
+
+    @Test
+    fun `una semana de temperatura constante no divide por cero`() {
+        val spans = temperatureSpans(listOf(dayRow(minDegrees = 20, maxDegrees = 20)))
+
+        assertEquals(0.0f, spans[0].startFraction, 0.001f)
+        assertEquals(0.0f, spans[0].endFraction, 0.001f)
+    }
+
+    @Test
+    fun `sin dias no hay tramos`() {
+        assertTrue(temperatureSpans(emptyList()).isEmpty())
+    }
+
+    private fun dayRow(minDegrees: Int, maxDegrees: Int) = ForecastDayUiState(
+        isToday = false,
+        dayLabel = "mar 7",
+        condition = WeatherCondition.RAIN,
+        rainProbability = "80 %",
+        maxTemperature = "$maxDegrees°",
+        minTemperature = "$minDegrees°",
+        maxDegrees = maxDegrees,
+        minDegrees = minDegrees
+    )
 
     @Test
     fun `las temperaturas se redondean al grado entero`() {

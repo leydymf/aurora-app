@@ -20,7 +20,7 @@
     <string name="weather_condition_rain">Lluvia</string>
     <string name="weather_condition_snow">Nieve</string>
     <string name="weather_condition_thunderstorm">Tormenta</string>
-    <string name="weather_forecast_title">Pronóstico de 5 días</string>
+    <string name="weather_forecast_title">Próximos 5 días</string>
     <string name="weather_forecast_today">Hoy</string>
     <string name="weather_forecast_back">Volver</string>
     <string name="weather_rain_notice">%1$s de probabilidad</string>

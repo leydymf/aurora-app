@@ -75,7 +75,6 @@ class VisualSystemGuardTest {
      * del tema V1 en la Fase 4 de PLAN_UI_V2.md.
      */
     private val legacyMaterialIconsFiles = setOf(
-        "java/com/auroraclima/app/weather/ui/ForecastScreen.kt",
         "java/com/auroraclima/app/access/ui/TutorialScreen.kt",
         "java/com/auroraclima/app/access/ui/PanelScreen.kt",
         "java/com/auroraclima/app/access/ui/SettingsScreen.kt",

@@ -72,7 +72,10 @@ fun AuroraApp(sessionManager: SessionManager) {
             // Pronóstico extendido (RF-04): pantalla de la fachada, fuera del
             // grafo seguro — refuerza la credibilidad de la app de clima (RNF-05).
             composable(FORECAST_ROUTE) {
-                ForecastRoute(onBack = { navController.popBackStack() })
+                ForecastRoute(
+                    onBack = { navController.popBackStack() },
+                    onOpenPlaces = { navController.popBackStack() }
+                )
             }
             // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y
             // de recientes, botón nube de salida rápida y reporte de interacción
