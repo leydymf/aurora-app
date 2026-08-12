@@ -76,7 +76,6 @@ class VisualSystemGuardTest {
      */
     private val legacyMaterialIconsFiles = setOf(
         "java/com/auroraclima/app/access/ui/SettingsScreen.kt",
-        "java/com/auroraclima/app/content/ui/LinesScreen.kt",
         "java/com/auroraclima/app/questionnaire/ui/GuidanceScreen.kt",
         "java/com/auroraclima/app/records/ui/JournalListScreen.kt",
         "java/com/auroraclima/app/records/ui/JournalEditorScreen.kt"

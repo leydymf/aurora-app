@@ -179,7 +179,7 @@
     <string name="content_agency_call">Llamar %1$s</string>
     <string name="content_agency_call_note">La llamada se abre en el marcador y quedará en el historial de llamadas de tu teléfono, como cualquier otra — puedes borrarla de allí si lo prefieres. Aurora no guarda nada.</string>
     <string name="content_topics_lines_button">Líneas de atención</string>
-    <string name="content_lines_title">Líneas de atención.</string>
+    <string name="content_lines_title">Líneas de atención</string>
     <string name="content_lines_subtitle">Un toque abre el marcador de tu teléfono. Aurora no guarda ninguna llamada.</string>
     <string name="content_lines_meta">%1$s · %2$s</string>
     <string name="content_error_generic">El contenido no está disponible en este momento. Inténtalo de nuevo.</string>
