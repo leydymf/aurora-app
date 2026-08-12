@@ -33,6 +33,9 @@ fun IconListRow(
     supportingText: String? = null,
     supportingMaxLines: Int = Int.MAX_VALUE,
     onClick: (() -> Unit)? = null,
+    // La insignia es decorativa por defecto (regla 3); una fila cuya ACCIÓN es
+    // el icono (llamar, v2-19) lo anuncia aquí para el lector de pantalla.
+    iconDescription: String? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
     val clickModifier = if (onClick != null) {
@@ -49,7 +52,7 @@ fun IconListRow(
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AccentBadge(iconRes = iconRes, accent = accent)
+        AccentBadge(iconRes = iconRes, accent = accent, contentDescription = iconDescription)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = InteriorTypeVoice.bodyStrong, color = V2Palette.inkPrimary)

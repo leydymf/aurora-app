@@ -39,24 +39,33 @@ import com.auroraclima.app.R
 @Composable
 fun V2BackHeader(tag: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(
-            onClick = onBack,
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = V2Palette.cardSurface,
-                contentColor = V2Palette.inkPrimary
-            ),
-            modifier = Modifier
-                .size(44.dp)
-                .background(V2Palette.cardSurface, CircleShape)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_arrow_left_soft),
-                contentDescription = stringResource(R.string.common_back),
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        V2BackButton(onBack = onBack)
         Spacer(modifier = Modifier.size(12.dp))
         Text(text = tag, style = InteriorTypeVoice.bodyStrong, color = V2Palette.inkPrimary)
+    }
+}
+
+/**
+ * El círculo blanco con flecha de [V2BackHeader], suelto: la navegación del
+ * cuestionario (v2-18) lo ancla abajo, junto a «Siguiente», sin etiqueta.
+ */
+@Composable
+fun V2BackButton(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    IconButton(
+        onClick = onBack,
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = V2Palette.cardSurface,
+            contentColor = V2Palette.inkPrimary
+        ),
+        modifier = modifier
+            .size(44.dp)
+            .background(V2Palette.cardSurface, CircleShape)
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_arrow_left_soft),
+            contentDescription = stringResource(R.string.common_back),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
