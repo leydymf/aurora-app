@@ -1,10 +1,13 @@
-// Espejo SVG de la librería CERRADA de iconografía V2 (anexo v2-29), portado
-// 1:1 de core/ui/v2/V2Icons.kt + res/drawable (mismo viewBox 24, trazo 1.9,
-// extremos redondeados). El panel no inventa iconos de significado: si un
-// dibujo no está en la librería de la app, la app no sabe renderizarlo.
+// Espejo SVG de la librería CERRADA de iconografía V2 (anexo v2-29): el
+// SUBCONJUNTO que el panel usa, portado 1:1 de core/ui/v2/V2Icons.kt +
+// res/drawable (paths literales, mismo viewBox 24, trazo 1.9, extremos
+// redondeados). Los iconos que el panel no necesita (home, settings, journal,
+// cloud, media, code, close…) se omiten a propósito — la nube violeta es
+// exclusiva de la app (RF-16). El panel no inventa iconos de significado: si
+// un dibujo no está en la librería de la app, la app no sabe renderizarlo.
 //
 // Además del espejo hay un puñado de MOBILIARIO propio del panel (sobre,
-// candado del campo de contraseña, lápiz, más, salir) — navegación y formularios
+// candado del campo de contraseña, lápiz, más) — navegación y formularios
 // de escritorio, sin significado de contenido; mismo estilo de trazo. El panel
 // es interno y sin camuflaje (admin/CLAUDE.md), por eso el candado es admisible
 // aquí y vedado en la app (regla 4 del anexo).
@@ -28,9 +31,10 @@ export type V2IconName =
     | 'delete' // papelera — eliminar
     | 'info' // círculo de información
     | 'place' // pin de lugar — dónde / rutas
+    | 'signOut' // puerta con flecha — cerrar sesión
 
 /** Mobiliario del panel (sin significado de contenido). */
-export type PanelIconName = 'mail' | 'lock' | 'edit' | 'plus' | 'signOut'
+export type PanelIconName = 'mail' | 'lock' | 'edit' | 'plus'
 
 export type IconName = V2IconName | PanelIconName
 
@@ -77,7 +81,7 @@ const ICONS: Record<IconName, IconSpec> = {
         d: 'M12,7.2 C10.2,5.9 7.3,5.2 4.3,5.2 L4.3,17.4 C7.3,17.4 10.2,18.1 12,19.4 C13.8,18.1 16.7,17.4 19.7,17.4 L19.7,5.2 C16.7,5.2 13.8,5.9 12,7.2 L12,19.4',
     },
     date: {
-        d: 'M6.5,5.5 L17.5,5.5 A2,2 0 0 1 19.5,7.5 L19.5,17.5 A2,2 0 0 1 17.5,19.5 L6.5,19.5 A2,2 0 0 1 4.5,17.5 L4.5,7.5 A2,2 0 0 1 6.5,5.5 Z M4.5,9.6 L19.5,9.6 M8.4,3.9 L8.4,6.6 M15.6,3.9 L15.6,6.6',
+        d: 'M6.5,5.5 L17.5,5.5 A2,2 0 0 1 19.5,7.5 L19.5,17.5 A2,2 0 0 1 17.5,19.5 L6.5,19.5 A2,2 0 0 1 4.5,17.5 L4.5,7.5 A2,2 0 0 1 6.5,5.5 Z M4.5,9.7 L19.5,9.7 M8.6,3.6 L8.6,7 M15.4,3.6 L15.4,7',
     },
     synced: {
         d: 'M12,12 m-8,0 a8,8 0 1 0 16,0 a8,8 0 1 0 -16,0 M8.4,12.4 L11,15 L15.8,9.6',
@@ -94,6 +98,9 @@ const ICONS: Record<IconName, IconSpec> = {
     place: {
         d: 'M12,21.2 C12,21.2 5.2,15 5.2,10.2 a6.8,6.8 0 0 1 13.6,0 C18.8,15 12,21.2 12,21.2 Z M12,10.2 m-2.3,0 a2.3,2.3 0 1 0 4.6,0 a2.3,2.3 0 1 0 -4.6,0',
     },
+    signOut: {
+        d: 'M13.5,8 L13.5,5.5 L4.5,5.5 L4.5,18.5 L13.5,18.5 L13.5,16 M9,12 L19.5,12 M16.8,9.3 L19.5,12 L16.8,14.7',
+    },
 
     // ——— Mobiliario del panel (mismo estilo de trazo) ———
     mail: {
@@ -106,9 +113,6 @@ const ICONS: Record<IconName, IconSpec> = {
         d: 'M14.8,5.6 L18.4,9.2 L9.2,18.4 L4.9,19.1 L5.6,14.8 Z M13.3,7.1 L16.9,10.7',
     },
     plus: { d: 'M12,5.5 L12,18.5 M5.5,12 L18.5,12' },
-    signOut: {
-        d: 'M10,4.5 L5.9,4.5 A1.4,1.4 0 0 0 4.5,5.9 L4.5,18.1 A1.4,1.4 0 0 0 5.9,19.5 L10,19.5 M9.5,12 L19.5,12 M16.2,8.4 L19.8,12 L16.2,15.6',
-    },
 }
 
 /**
