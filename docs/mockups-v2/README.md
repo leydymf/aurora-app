@@ -268,6 +268,19 @@ Las ocho preguntas quedaron resueltas. Estas decisiones VINCULAN a las Fases 1�
   `PanelScreen` puede seguir sin ViewModel; la pantalla de pregunta (P16) no se ve
   afectada — su progreso ya sale del formulario publicado.
 
+### Decisiones S3 (2026-08-12) — Guía
+
+- **Mapeo id → icono/matiz ratificado** (aplica D2; el esquema `schemaVersion` 1
+  no trae el campo): t01 Física → figura + azul (protección) · t02 Psicológica →
+  lóbulos + lila (reconocer) · t03 Sexual → círculo con barra + rosa (aviso) ·
+  t04 Económica y patrimonial → tarjeta + arena (justicia); cualquier otro id →
+  neutro + icono de Guía. Sectores por el anexo: r01 Salud → verde · r02
+  Protección → azul · r03 Justicia → arena. Vive en `core/ui/v2/ContentVisuals.kt`.
+- **Dos iconos que el anexo omitió y sus mockups usan** (mismo criterio que el
+  de la pestaña Inicio): círculo de información («qué hace», v2-15) y pin de
+  lugar («dónde», v2-15; portada v2-11). La flecha de retorno y el chevron de
+  fila son mobiliario de navegación, fuera de la librería de significados.
+
 ### Notas (no bloqueantes)
 
 - Los mockups de fachada cumplen el camuflaje: sin Marcellus, sin marca squircle,

@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -30,6 +31,7 @@ fun IconListRow(
     title: String,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
+    supportingMaxLines: Int = Int.MAX_VALUE,
     onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null
 ) {
@@ -52,7 +54,13 @@ fun IconListRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = InteriorTypeVoice.bodyStrong, color = V2Palette.inkPrimary)
             if (supportingText != null) {
-                Text(text = supportingText, style = InteriorTypeVoice.caption, color = V2Palette.inkSecondary)
+                Text(
+                    text = supportingText,
+                    style = InteriorTypeVoice.caption,
+                    color = V2Palette.inkSecondary,
+                    maxLines = supportingMaxLines,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
         trailing?.invoke()

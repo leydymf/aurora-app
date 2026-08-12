@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -45,17 +46,20 @@ fun SoftCard(
  * (v2-29 §iconografía). El tinte pinta el fondo y el trazo tiñe el icono.
  * Decorativo por defecto (descripción nula): siempre acompaña a un texto
  * visible (regla 3), así que no se repite para el lector de pantalla.
+ * [size] admite las variantes menores de los mockups (vistos de señales,
+ * encabezados de sector en v2-13/v2-14); el icono conserva la proporción 21/46.
  */
 @Composable
 fun AccentBadge(
     @DrawableRes iconRes: Int,
     accent: AccentPair,
     modifier: Modifier = Modifier,
-    contentDescription: String? = null
+    contentDescription: String? = null,
+    size: Dp = 46.dp
 ) {
     Box(
         modifier = modifier
-            .size(46.dp)
+            .size(size)
             .clip(CircleShape)
             .background(accent.tint),
         contentAlignment = Alignment.Center
@@ -64,7 +68,7 @@ fun AccentBadge(
             painter = painterResource(iconRes),
             contentDescription = contentDescription,
             tint = accent.stroke,
-            modifier = Modifier.size(21.dp)
+            modifier = Modifier.size(size * 21f / 46f)
         )
     }
 }

@@ -94,6 +94,14 @@ object V2Icons {
 
     /** Papelera — eliminar. */
     @DrawableRes val delete = R.drawable.ic_bin
+
+    /** Círculo de información — «qué hace» una entidad (v2-15; como [home], el
+     * anexo omitió iconos que sus propios mockups usan — decisión S3 2026-08-12). */
+    @DrawableRes val info = R.drawable.ic_info_soft
+
+    /** Pin de lugar — «dónde» acudir (v2-15/v2-11; misma omisión del anexo,
+     * decisión S3 2026-08-12). */
+    @DrawableRes val place = R.drawable.ic_pin_soft
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFF3F1F7)
