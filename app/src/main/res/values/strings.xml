@@ -184,7 +184,6 @@
     <string name="content_lines_meta">%1$s · %2$s</string>
     <string name="content_error_generic">El contenido no está disponible en este momento. Inténtalo de nuevo.</string>
     <string name="guidance_tag">Reconocer</string>
-    <string name="guidance_back">Volver</string>
     <string name="guidance_intro_point_pace_title">A tu ritmo</string>
     <string name="guidance_intro_point_pace_body">Puedes devolverte, dejar preguntas sin responder o salir cuando quieras.</string>
     <string name="guidance_intro_point_discard_title">Si sales, se borra</string>
@@ -195,7 +194,6 @@
     <string name="guidance_not_now">Ahora no</string>
     <string name="guidance_question_tag">Pregunta %1$d de %2$d</string>
     <string name="guidance_abandon">Salir</string>
-    <string name="guidance_previous">Atrás</string>
     <string name="guidance_next">Siguiente</string>
     <string name="guidance_see_result">Ver resultado</string>
     <string name="guidance_result_tag">Tu resultado</string>

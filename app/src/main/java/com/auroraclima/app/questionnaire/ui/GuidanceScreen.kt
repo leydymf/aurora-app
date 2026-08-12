@@ -130,7 +130,7 @@ internal fun GuidanceScreen(
     ) {
         when {
             state.isLoading -> V2LoadingState()
-            state.errorRes != null -> V2ErrorState(messageRes = R.string.common_error_generic, onRetry = onRetry)
+            state.errorRes != null -> V2ErrorState(messageRes = state.errorRes, onRetry = onRetry)
             else -> when (state.phase) {
                 GuidancePhase.INTRO -> IntroContent(state = state, onStart = onStart, onDismiss = onDismiss)
                 GuidancePhase.QUESTION -> QuestionContent(
@@ -328,7 +328,7 @@ private fun ExitChip(onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_close_soft),
+            painter = painterResource(V2Icons.close),
             contentDescription = null,
             tint = V2Palette.inkPrimary,
             modifier = Modifier.size(13.dp)

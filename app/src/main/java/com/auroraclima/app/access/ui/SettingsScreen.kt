@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureDialog
 import com.auroraclima.app.core.ui.v2.IconListRow
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
@@ -66,6 +67,10 @@ fun SettingsScreen(
     // Solo visibilidad del diálogo: la acción real converge en SessionManager
     // (guía §3: el patrón UiState aplica a pantallas con estado de negocio).
     var showSignOutDialog by rememberSaveable { mutableStateOf(false) }
+    // P-15: los botones del diálogo registran interacción — es una ventana
+    // propia que el observador de toques del grafo seguro no ve (hallazgo H-1
+    // de la auditoría S4, residual pre-S4).
+    val sessionManager = LocalSessionManager.current
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -164,10 +169,14 @@ fun SettingsScreen(
     if (showSignOutDialog) {
         SignOutConfirmDialog(
             onConfirm = {
+                sessionManager.registerInteraction()
                 showSignOutDialog = false
                 onSignOut()
             },
-            onDismiss = { showSignOutDialog = false }
+            onDismiss = {
+                sessionManager.registerInteraction()
+                showSignOutDialog = false
+            }
         )
     }
 }

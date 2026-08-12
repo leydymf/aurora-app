@@ -107,6 +107,11 @@ object V2Icons {
      * criterio S4 2026-08-12: el mockup de Ajustes lo usa y la librería no
      * tenía salida de sesión). */
     @DrawableRes val signOut = R.drawable.ic_door_out
+
+    /** Equis — cerrar o salir de un flujo (chip «Salir» de v2-18). Mobiliario
+     * como la flecha de retorno, pero registrado aquí porque lo consumen las
+     * features (ADR 2026-08-11: todo icono viene de core/ui). */
+    @DrawableRes val close = R.drawable.ic_close_soft
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFF3F1F7)
