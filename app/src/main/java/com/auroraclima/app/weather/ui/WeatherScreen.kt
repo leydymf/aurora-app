@@ -13,18 +13,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -90,24 +92,16 @@ fun WeatherScreen(
             // La barra vive en UNA sola posición de la composición: si cambiara de rama
             // al activarse la búsqueda, Compose recrearía el TextField y el foco (y el
             // teclado) se perderían tras la primera letra tecleada.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                WeatherSearchBar(
-                    query = state.searchQuery,
-                    onQueryChange = onSearchQueryChange,
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(searchFocus)
-                )
-                if (state.isSearchActive) {
-                    TextButton(onClick = onSearchCancel) {
-                        Text(
-                            text = stringResource(R.string.weather_search_cancel),
-                            style = FacadeTypeVoice.label,
-                            color = V2Palette.inkSecondary
-                        )
-                    }
-                }
-            }
+            WeatherSearchBar(
+                query = state.searchQuery,
+                onQueryChange = onSearchQueryChange,
+                isActive = state.isSearchActive,
+                onBack = onSearchCancel,
+                onClear = { onSearchQueryChange("") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(searchFocus)
+            )
             if (!state.isSearchActive && state.weather != null) {
                 CurrentConditionsSummary(weather = state.weather)
             }
@@ -179,8 +173,21 @@ private fun CurrentConditionsSummary(weather: WeatherCardUiState, modifier: Modi
     }
 }
 
+/**
+ * Barra de búsqueda de ciudades y, a la vez, puerta del código (RF-12). El cromo
+ * activo (flecha de regreso y borrar, v2-02) vive en los SLOTS del TextField:
+ * el campo nunca cambia de nodo, así que el foco y el teclado sobreviven a la
+ * activación de la búsqueda.
+ */
 @Composable
-private fun WeatherSearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun WeatherSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    isActive: Boolean,
+    onBack: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     TextField(
         value = query,
         onValueChange = onQueryChange,
@@ -194,20 +201,49 @@ private fun WeatherSearchBar(query: String, onQueryChange: (String) -> Unit, mod
             )
         },
         leadingIcon = {
-            Icon(
-                painter = painterResource(R.drawable.ic_weather_search),
-                contentDescription = null,
-                tint = V2Palette.inkSecondary,
-                modifier = Modifier.size(20.dp)
-            )
+            if (isActive) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_weather_back),
+                        contentDescription = stringResource(R.string.weather_search_cancel),
+                        tint = V2Palette.inkPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_weather_search),
+                    contentDescription = null,
+                    tint = V2Palette.inkSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         trailingIcon = {
-            Icon(
-                painter = painterResource(R.drawable.ic_weather_pin),
-                contentDescription = null,
-                tint = V2Palette.inkSecondary,
-                modifier = Modifier.size(20.dp)
-            )
+            if (isActive) {
+                IconButton(onClick = onClear) {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .background(V2Palette.divider, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_weather_close),
+                            contentDescription = stringResource(R.string.weather_search_clear),
+                            tint = V2Palette.inkSecondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                }
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_weather_pin),
+                    contentDescription = null,
+                    tint = V2Palette.inkSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         singleLine = true,
         // Sin autocorrección: evita que el IME aprenda o sugiera lo tecleado aquí,
@@ -229,50 +265,74 @@ private fun WeatherSearchBar(query: String, onQueryChange: (String) -> Unit, mod
     )
 }
 
+/** Resultados de la búsqueda (v2-02): una sola tarjeta con divisores finos. */
 @Composable
 private fun CitySearchResults(results: List<City>, onCitySelected: (City) -> Unit, modifier: Modifier = Modifier) {
-    LazyColumn(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 20.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        items(results, key = { it.id }) { city ->
-            CityResultItem(city = city, onClick = { onCitySelected(city) })
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.weather_search_results),
+            style = FacadeTypeVoice.label,
+            color = V2Palette.inkSecondary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        SoftCard(contentPadding = PaddingValues(vertical = 4.dp)) {
+            results.forEachIndexed { index, city ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = V2Palette.divider,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+                CityResultItem(city = city, onClick = { onCitySelected(city) })
+            }
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
 private fun CityResultItem(city: City, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = V2Corner.control,
-        color = V2Palette.cardSurface
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = city.name,
-                    style = FacadeTypeVoice.bodyStrong,
-                    color = V2Palette.inkPrimary
-                )
-                Text(
-                    text = listOfNotNull(city.region, city.country).joinToString(", "),
-                    style = FacadeTypeVoice.caption,
-                    color = V2Palette.inkSecondary
-                )
-            }
+        Icon(
+            painter = painterResource(R.drawable.ic_weather_pin),
+            contentDescription = null,
+            tint = V2Palette.inkSecondary,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = city.name,
+                style = FacadeTypeVoice.bodyStrong,
+                color = V2Palette.inkPrimary
+            )
+            Text(
+                text = listOfNotNull(city.region, city.country).joinToString(", "),
+                style = FacadeTypeVoice.caption,
+                color = V2Palette.inkSecondary
+            )
         }
     }
 }
 
+/**
+ * Estado «sin resultados» — EL MISMO composable para una búsqueda fallida y
+ * para un código incorrecto (RF-13): el ViewModel converge ambos caminos en
+ * `showNoResults`, así que aquí no existe (ni puede existir) una segunda rama.
+ */
 @Composable
 private fun NoResultsContent(modifier: Modifier = Modifier) {
     Column(

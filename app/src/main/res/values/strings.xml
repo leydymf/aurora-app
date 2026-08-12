@@ -2,6 +2,8 @@
     <string name="app_name">Aurora</string>
     <string name="weather_search_hint">Buscar ciudad…</string>
     <string name="weather_search_cancel">Cancelar</string>
+    <string name="weather_search_clear">Borrar texto</string>
+    <string name="weather_search_results">Resultados</string>
     <string name="weather_empty_message">Busca una ciudad para ver el clima</string>
     <string name="weather_no_results_title">No se encontraron resultados</string>
     <string name="weather_no_results_hint">Revisa la ortografía e inténtalo de nuevo.</string>
