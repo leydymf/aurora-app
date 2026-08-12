@@ -509,7 +509,7 @@ private fun WeatherScreenNoResultsPreview() {
     AuroraV2Theme(V2Voice.Facade) {
         WeatherScreen(
             state = WeatherUiState(
-                searchQuery = "amanecer26",
+                searchQuery = "Bucaramnga",
                 isSearchActive = true,
                 showNoResults = true
             ),
