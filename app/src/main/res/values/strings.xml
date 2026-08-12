@@ -140,6 +140,9 @@
     <string name="access_panel_title">Estoy aquí.</string>
     <string name="access_panel_subtitle">Tómate el tiempo que necesites.</string>
     <string name="access_panel_settings">Configuración</string>
+    <string name="access_tab_home">Inicio</string>
+    <string name="access_tab_guide">Guía</string>
+    <string name="access_tab_journal">Mi registro</string>
     <string name="access_panel_info_title">Entender lo que pasa</string>
     <string name="access_panel_info_body">Tipos, señales y rutas de atención en Santander.</string>
     <string name="access_panel_guide_title">Reconocer tu situación</string>

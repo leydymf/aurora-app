@@ -31,6 +31,13 @@ import com.auroraclima.app.R
 data class V2TabItem(@DrawableRes val iconRes: Int, val label: String)
 
 /**
+ * Altura nominal de [V2TabBar] SIN el inset de la barra de navegación del sistema
+ * (ese lo agrega el propio componente). La usa la navegación segura para elevar la
+ * nube de salida rápida por encima de la barra (mockup v2-10) sin medirla.
+ */
+val V2TabBarHeight = 68.dp
+
+/**
  * Barra de pestañas del sistema V2 (mockups v2-01/03 en la fachada; v2-10 y
  * siguientes en el espacio interno). Blanca, con la píldora [V2Palette.tabIndicator]
  * detrás del icono activo; la etiqueta acompaña siempre al icono (regla 3) y la

@@ -49,10 +49,14 @@ import com.auroraclima.app.core.ui.theme.Sky
 import com.auroraclima.app.core.ui.theme.Steel
 import com.auroraclima.app.core.ui.theme.SteelDeep
 
-/** Portada del módulo de información (RF-21, mockup P10 / alta-fidelidad-18). */
+/**
+ * Portada del módulo de información (RF-21, mockup P10 / alta-fidelidad-18).
+ * [onBack] nulo = modo pestaña «Guía» del hogar (v2-10): sin flecha de retorno,
+ * porque no hay una pantalla anterior a la cual volver.
+ */
 @Composable
 fun TopicsRoute(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onTopicSelected: (String) -> Unit,
     onOpenRoutes: () -> Unit,
     onOpenLines: () -> Unit
@@ -72,7 +76,7 @@ fun TopicsRoute(
 @Composable
 internal fun TopicsScreen(
     state: TopicsUiState,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onTopicSelected: (String) -> Unit,
     onOpenRoutes: () -> Unit,
     onOpenLines: () -> Unit,
@@ -85,11 +89,15 @@ internal fun TopicsScreen(
             .background(Mist)
             .systemBarsPadding()
     ) {
-        BackHeader(
-            tag = stringResource(R.string.content_info_tag),
-            onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        )
+        if (onBack != null) {
+            BackHeader(
+                tag = stringResource(R.string.content_info_tag),
+                onBack = onBack,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
         when {
             state.isLoading -> LoadingState()
             state.errorRes != null -> ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)

@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
@@ -63,11 +64,19 @@ fun NavGraphBuilder.secureGraph(route: String, startDestination: String, builder
     }
 }
 
-/** Ámbito de declaración de rutas dentro de [secureGraph]. */
+/**
+ * Ámbito de declaración de rutas dentro de [secureGraph].
+ *
+ * [cloudBottomInset] desplaza SOLO el anclaje de la nube de salida rápida: la ruta
+ * cuyo contenido termina en una barra de pestañas (v2-10) lo declara con la altura
+ * de esa barra para que la nube flote por encima y ningún destino táctil quede
+ * debajo. Es apariencia/posición — el botón, su gesto y `quickExit` no cambian
+ * (RF-16); el resto de rutas conserva el anclaje actual con el valor por defecto.
+ */
 class SecureGraphScope internal constructor(private val graph: NavGraphBuilder) {
-    fun screen(route: String, content: @Composable (NavBackStackEntry) -> Unit) {
+    fun screen(route: String, cloudBottomInset: Dp = 0.dp, content: @Composable (NavBackStackEntry) -> Unit) {
         graph.composable(route) { entry ->
-            SecureScreen { content(entry) }
+            SecureScreen(cloudBottomInset = cloudBottomInset) { content(entry) }
         }
     }
 }
@@ -80,7 +89,7 @@ class SecureGraphScope internal constructor(private val graph: NavGraphBuilder) 
  * directamente, solo [secureGraph].
  */
 @Composable
-private fun SecureScreen(content: @Composable () -> Unit) {
+private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) {
     val view = LocalView.current
     DisposableEffect(view) {
         val window = view.context.findActivity()?.window
@@ -128,6 +137,7 @@ private fun SecureScreen(content: @Composable () -> Unit) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .systemBarsPadding()
+                .padding(bottom = cloudBottomInset)
                 .padding(QUICK_EXIT_MARGIN)
         )
     }

@@ -57,7 +57,7 @@ import com.auroraclima.app.records.domain.model.JournalEntry
  * ruta reingresa y el registro recién guardado aparece de inmediato.
  */
 @Composable
-fun JournalListRoute(onBack: () -> Unit, onAddEntry: () -> Unit, onEntrySelected: (Long) -> Unit) {
+fun JournalListRoute(onBack: (() -> Unit)?, onAddEntry: () -> Unit, onEntrySelected: (Long) -> Unit) {
     val viewModel: JournalListViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     LaunchedEffect(Unit) {
@@ -76,7 +76,7 @@ fun JournalListRoute(onBack: () -> Unit, onAddEntry: () -> Unit, onEntrySelected
 @Composable
 internal fun JournalListScreen(
     state: JournalListUiState,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onAddEntry: () -> Unit,
     onEntrySelected: (Long) -> Unit,
     onRetry: () -> Unit,
@@ -89,11 +89,15 @@ internal fun JournalListScreen(
             .background(Mist)
             .systemBarsPadding()
     ) {
-        BackHeader(
-            tag = stringResource(R.string.journal_tag),
-            onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        )
+        if (onBack != null) {
+            BackHeader(
+                tag = stringResource(R.string.journal_tag),
+                onBack = onBack,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.height(12.dp))
+        }
         // Aviso de respaldo reiniciado (RF-39): genérico, cerrable y sin
         // tecnicismos — lo anterior no pudo recuperarse; lo nuevo sigue normal.
         if (state.showsBackupNotice) {

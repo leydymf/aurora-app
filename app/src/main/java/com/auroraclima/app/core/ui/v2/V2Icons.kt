@@ -56,6 +56,10 @@ object V2Icons {
     /** Auricular — llamar (líneas de atención, acceso rápido). */
     @DrawableRes val call = R.drawable.ic_phone_call
 
+    /** Casa — pestaña Inicio del espacio interno (v2-10; fuera de la lista del
+     * anexo v2-29, que omitió el icono que su propia barra de pestañas usa). */
+    @DrawableRes val home = R.drawable.ic_home_soft
+
     /** Libro abierto — pestaña y portada de la Guía. */
     @DrawableRes val guide = R.drawable.ic_book_open
 

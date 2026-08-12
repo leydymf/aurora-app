@@ -20,7 +20,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.ChangeCodeRoute
 import com.auroraclima.app.access.ui.CodeSetupRoute
-import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.access.ui.SettingsScreen
 import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ChangePasswordRoute
@@ -36,7 +35,6 @@ import com.auroraclima.app.content.ui.ROUTE_ID_ARG
 import com.auroraclima.app.content.ui.RoutesRoute
 import com.auroraclima.app.content.ui.TOPIC_ID_ARG
 import com.auroraclima.app.content.ui.TopicDetailRoute
-import com.auroraclima.app.content.ui.TopicsRoute
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SecureBackStackGuard
@@ -44,12 +42,12 @@ import com.auroraclima.app.core.security.SessionGuard
 import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
+import com.auroraclima.app.core.ui.v2.V2TabBarHeight
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
 import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
 import com.auroraclima.app.records.ui.JournalEditorRoute
-import com.auroraclima.app.records.ui.JournalListRoute
 import com.auroraclima.app.records.ui.JournalMediaRoute
 import com.auroraclima.app.records.ui.MEDIA_ID_ARG
 import com.auroraclima.app.weather.ui.ForecastRoute
@@ -165,14 +163,23 @@ fun AuroraApp(sessionManager: SessionManager) {
                         }
                     )
                 }
-                // Hogar del espacio interno (P09) y módulo de información
-                // (RF-21, RF-22): tipos → detalle → sectores → entidad.
-                screen(PANEL_ROUTE) {
-                    PanelScreen(
-                        onOpenInfo = { navController.navigate(TOPICS_ROUTE) },
+                // Hogar del espacio interno: pestañas Inicio · Guía · Mi registro
+                // (v2-10, D3) como estado local de esta única entrada — cambiar de
+                // pestaña no navega y el estado muere con el pop del grafo (RF-06).
+                // El inset eleva la nube por encima de la barra de pestañas (RF-16).
+                screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) {
+                    InnerTabsHost(
                         onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
-                        onOpenJournal = { navController.navigate(JOURNAL_ROUTE) },
-                        onOpenSettings = { navController.navigate(SETTINGS_ROUTE) }
+                        onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
+                        onTopicSelected = { topicId ->
+                            navController.navigate("$TOPICS_ROUTE/$topicId")
+                        },
+                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
+                        onOpenLines = { navController.navigate(LINES_ROUTE) },
+                        onAddJournalEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
+                        onOpenJournalEntry = { entryId ->
+                            navController.navigate("$JOURNAL_ROUTE/$entryId")
+                        }
                     )
                 }
                 // Configuración del espacio interno (P21): reabrir el tutorial
@@ -225,16 +232,8 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(PRIVACY_ROUTE) {
                     PrivacyScreen(onBack = { navController.popBackStack() })
                 }
-                // Historial personal (RF-34, P18): listado → detalle / creación.
-                screen(JOURNAL_ROUTE) {
-                    JournalListRoute(
-                        onBack = { navController.popBackStack() },
-                        onAddEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
-                        onEntrySelected = { entryId ->
-                            navController.navigate("$JOURNAL_ROUTE/$entryId")
-                        }
-                    )
-                }
+                // Historial personal (RF-34, P18): el listado es la pestaña
+                // «Mi registro» del hogar; aquí solo viven detalle y creación.
                 screen(JOURNAL_DETAIL_ROUTE) {
                     JournalDetailRoute(
                         onBack = { navController.popBackStack() },
@@ -284,16 +283,8 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onBack = { navController.popBackStack() }
                     )
                 }
-                screen(TOPICS_ROUTE) {
-                    TopicsRoute(
-                        onBack = { navController.popBackStack() },
-                        onTopicSelected = { topicId ->
-                            navController.navigate("$TOPICS_ROUTE/$topicId")
-                        },
-                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
-                        onOpenLines = { navController.navigate(LINES_ROUTE) }
-                    )
-                }
+                // Los tipos (RF-21) son la pestaña «Guía» del hogar; aquí solo
+                // viven el detalle y las rutas que cuelgan de él.
                 screen(TOPIC_DETAIL_ROUTE) {
                     TopicDetailRoute(
                         onBack = { navController.popBackStack() },
