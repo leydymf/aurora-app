@@ -170,7 +170,7 @@
     <string name="content_topic_examples">Cómo se ve en el día a día</string>
     <string name="content_topic_example_format">«%1$s»</string>
     <string name="content_topic_see_routes">Ver a dónde acudir</string>
-    <string name="content_routes_title">Rutas de atención.</string>
+    <string name="content_routes_title">Rutas de atención</string>
     <string name="content_routes_subtitle">Tres caminos según lo que necesites hoy. Puedes empezar por cualquiera.</string>
     <string name="content_agency_tag">RUTAS · %1$s</string>
     <string name="content_agency_role_label">QUÉ HACE</string>
