@@ -99,6 +99,7 @@
     <string name="account_password_change_offline">Necesitas conexión para cambiar la contraseña. Nada se ha modificado.</string>
     <string name="account_login_tag">INICIO DE SESIÓN</string>
     <string name="account_login_title">Hola de nuevo.</string>
+    <string name="account_login_subtitle">Tu espacio te esperaba tal como lo dejaste.</string>
     <string name="account_login_submit">Entrar</string>
     <string name="account_login_error">Los datos no coinciden. Revísalos e inténtalo con calma.</string>
     <string name="account_login_lock_title">Pausa temporal</string>
