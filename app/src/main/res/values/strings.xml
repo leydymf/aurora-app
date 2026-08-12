@@ -21,6 +21,10 @@
     <string name="weather_forecast_title">Pronóstico de 5 días</string>
     <string name="weather_forecast_today">Hoy</string>
     <string name="weather_forecast_back">Volver</string>
+    <string name="weather_rain_notice">%1$s de probabilidad</string>
+    <string name="weather_tab_today">Hoy</string>
+    <string name="weather_tab_forecast">5 días</string>
+    <string name="weather_tab_places">Lugares</string>
     <string name="access_setup_tag">PRIMER USO · PASO 2 DE 3</string>
     <string name="access_setup_title">Tu clave personal.</string>
     <string name="access_setup_body">Es tu llave. Elige algo fácil de recordar para ti, y sin significado para nadie más.</string>

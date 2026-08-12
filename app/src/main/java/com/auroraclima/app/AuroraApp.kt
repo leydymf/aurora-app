@@ -40,6 +40,8 @@ import com.auroraclima.app.core.security.SecureBackStackGuard
 import com.auroraclima.app.core.security.SessionGuard
 import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.security.secureGraph
+import com.auroraclima.app.core.ui.v2.AuroraV2Theme
+import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
 import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
@@ -350,13 +352,17 @@ private fun HomeRoute(navController: NavHostController) {
             }
         }
     }
-    WeatherScreen(
-        state = state,
-        onSearchQueryChange = viewModel::onSearchQueryChange,
-        onCitySelected = viewModel::onCitySelected,
-        onSearchCancel = viewModel::onSearchCancel,
-        onOpenForecast = { navController.navigate(FORECAST_ROUTE) }
-    )
+    // Voz de FACHADA del tema V2: paleta compartida, tipografía neutra del
+    // sistema — jamás Marcellus aquí (decisión F1, camuflaje RNF-05).
+    AuroraV2Theme(V2Voice.Facade) {
+        WeatherScreen(
+            state = state,
+            onSearchQueryChange = viewModel::onSearchQueryChange,
+            onCitySelected = viewModel::onCitySelected,
+            onSearchCancel = viewModel::onSearchCancel,
+            onOpenForecast = { navController.navigate(FORECAST_ROUTE) }
+        )
+    }
 }
 
 private const val HOME_ROUTE = "home"
