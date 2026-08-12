@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,14 +21,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.auroraclima.app.R
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.Sky
-import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.V2Corner
+import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.JournalAttachment
 
@@ -82,9 +77,9 @@ private fun AttachmentChip(
 ) {
     Box {
         Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = CloudWhite,
-            border = BorderStroke(1.dp, Sky)
+            shape = V2Corner.control,
+            color = V2Palette.cardSurface,
+            border = BorderStroke(1.dp, V2Palette.divider)
         ) {
             Box(
                 modifier = Modifier
@@ -101,7 +96,7 @@ private fun AttachmentChip(
                 Icon(
                     painter = painterResource(attachment.kind.iconRes()),
                     contentDescription = if (onOpen != null) stringResource(R.string.journal_media_open) else null,
-                    tint = SteelDeep
+                    tint = V2Palette.inkSecondary
                 )
             }
         }
@@ -109,7 +104,7 @@ private fun AttachmentChip(
             val removeLabel = stringResource(R.string.journal_media_remove)
             Surface(
                 shape = CircleShape,
-                color = Night,
+                color = V2Palette.inkPrimary,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .offset(x = 6.dp, y = (-6).dp)
@@ -120,9 +115,8 @@ private fun AttachmentChip(
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = "×",
-                        fontFamily = PlexSans,
-                        fontSize = 13.sp,
-                        color = Mist
+                        style = InteriorTypeVoice.label,
+                        color = V2Palette.cardSurface
                     )
                 }
             }

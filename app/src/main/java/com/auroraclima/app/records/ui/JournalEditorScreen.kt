@@ -6,30 +6,29 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,43 +36,41 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureDayPicker
-import com.auroraclima.app.core.ui.components.BackHeader
-import com.auroraclima.app.core.ui.components.ErrorState
-import com.auroraclima.app.core.ui.components.FieldLabel
-import com.auroraclima.app.core.ui.components.FieldMessage
-import com.auroraclima.app.core.ui.components.LoadingState
-import com.auroraclima.app.core.ui.components.ParagraphField
-import com.auroraclima.app.core.ui.components.PrimaryButton
-import com.auroraclima.app.core.ui.components.SectionTitle
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.Plum
-import com.auroraclima.app.core.ui.theme.Sky
-import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.core.ui.v2.AccentBadge
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.RowChevron
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2BackHeader
+import com.auroraclima.app.core.ui.v2.V2Corner
+import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2FieldLabel
+import com.auroraclima.app.core.ui.v2.V2FieldMessage
+import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2LoadingState
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2ParagraphField
+import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import java.time.LocalDate
 
 /**
- * Creación (RF-32) y edición (RF-35) de un registro; mockup P19 /
- * alta-fidelidad-29, ahora con la fila de adjuntos (RF-33) y su tercera vía
- * «Archivo» de la política ampliada (D0 §5.1.iii). Tipo con selección de radio
- * en un solo gesto (decisión F7) y validación en línea sin pérdida (criterio
- * 2). En modo edición la pantalla es la misma con el formulario prellenado;
- * solo cambian rótulo y título.
+ * Creación (RF-32) y edición (RF-35) de un registro; mockup P19 / v2-21, con
+ * la fila de adjuntos (RF-33) y su tercera vía «Archivo» de la política
+ * ampliada (D0 §5.1.iii). El tipo se elige en chips de color con el matiz fijo
+ * de cada tipo (espejo del mapeo D2) en un solo gesto (decisión F7); la
+ * validación sigue en línea y sin pérdida (criterio 2). En modo edición la
+ * pantalla es la misma con el formulario prellenado; solo cambia el rótulo.
  *
  * P-15: el campo de texto reporta cada tecla como interacción — el teclado es
  * una ventana propia que el observador de toques del grafo seguro no ve — y
@@ -172,17 +169,17 @@ internal fun JournalEditorScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
     ) {
-        BackHeader(
+        V2BackHeader(
             tag = stringResource(if (state.isEditing) R.string.journal_edit_tag else R.string.journal_new_tag),
             onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         when {
-            state.isLoading -> LoadingState()
-            state.loadErrorRes != null -> ErrorState(messageRes = state.loadErrorRes, onRetry = onRetryLoad)
+            state.isLoading -> V2LoadingState()
+            state.loadErrorRes != null -> V2ErrorState(messageRes = state.loadErrorRes, onRetry = onRetryLoad)
             else -> JournalEditorForm(
                 state = state,
                 onOpenDatePicker = onOpenDatePicker,
@@ -227,32 +224,25 @@ private fun JournalEditorForm(
             .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))
-        SectionTitle(
-            stringResource(if (state.isEditing) R.string.journal_edit_title else R.string.journal_new_title)
-        )
+        DayField(text = state.occurredOn.toLongDayText(), onClick = onOpenDatePicker)
         Spacer(modifier = Modifier.height(20.dp))
 
-        FieldLabel(stringResource(R.string.journal_date_label))
-        DayField(text = state.occurredOn.toLongDayText(), onClick = onOpenDatePicker)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        FieldLabel(stringResource(R.string.journal_kind_label))
-        KindSelector(
+        V2FieldLabel(stringResource(R.string.journal_kind_label))
+        KindChips(
             selected = state.kind,
-            isError = state.kindErrorRes != null,
             onKindSelected = onKindSelected
         )
-        FieldMessage(messageRes = state.kindErrorRes, fallbackRes = null)
+        V2FieldMessage(messageRes = state.kindErrorRes, fallbackRes = null)
         Spacer(modifier = Modifier.height(16.dp))
 
-        FieldLabel(stringResource(R.string.journal_detail_label))
-        ParagraphField(
+        V2FieldLabel(stringResource(R.string.journal_detail_label))
+        V2ParagraphField(
             value = state.detail,
             onValueChange = onDetailChange,
             placeholder = stringResource(R.string.journal_detail_placeholder),
             isError = state.detailErrorRes != null
         )
-        FieldMessage(messageRes = state.detailErrorRes, fallbackRes = null)
+        V2FieldMessage(messageRes = state.detailErrorRes, fallbackRes = null)
         Spacer(modifier = Modifier.height(16.dp))
 
         MediaSection(
@@ -264,17 +254,17 @@ private fun JournalEditorForm(
             onPickDocument = onPickDocument,
             onRemoveAttachment = onRemoveAttachment
         )
-        FieldMessage(messageRes = state.saveErrorRes, fallbackRes = null)
+        V2FieldMessage(messageRes = state.saveErrorRes, fallbackRes = null)
         Spacer(modifier = Modifier.height(24.dp))
 
-        PrimaryButton(
+        V2PrimaryButton(
             text = stringResource(R.string.journal_save),
             onClick = onSubmit,
             enabled = !state.isSaving,
             isLoading = state.isSaving
         )
         // Aire final para no chocar con el botón nube de salida rápida.
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(EDITOR_BOTTOM_CLEARANCE))
     }
 }
 
@@ -293,7 +283,7 @@ private fun MediaSection(
     onPickDocument: () -> Unit,
     onRemoveAttachment: (Long) -> Unit
 ) {
-    FieldLabel(stringResource(R.string.journal_media_label))
+    V2FieldLabel(stringResource(R.string.journal_media_label))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         MediaSourceButton(
             text = stringResource(R.string.journal_media_gallery),
@@ -325,14 +315,12 @@ private fun MediaSection(
             onRemove = { onRemoveAttachment(it.id) }
         )
     }
-    FieldMessage(messageRes = mediaErrorRes, fallbackRes = null)
+    V2FieldMessage(messageRes = mediaErrorRes, fallbackRes = null)
     Spacer(modifier = Modifier.height(8.dp))
     Text(
         text = stringResource(R.string.journal_media_note),
-        fontFamily = PlexSans,
-        fontSize = 12.sp,
-        lineHeight = 17.sp,
-        color = SteelDeep
+        style = InteriorTypeVoice.caption,
+        color = V2Palette.inkSecondary
     )
 }
 
@@ -349,101 +337,132 @@ private fun MediaSourceButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Sky),
+        shape = V2Corner.control,
+        border = BorderStroke(
+            width = 1.2.dp,
+            color = if (enabled) V2Palette.inkSecondary else V2Palette.divider
+        ),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
     ) {
         Icon(
             painter = painterResource(iconRes),
             contentDescription = null,
-            tint = if (enabled) SteelDeep else Sky,
+            tint = if (enabled) V2Palette.inkSecondary else V2Palette.divider,
             modifier = Modifier.width(18.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = text,
-            fontFamily = PlexSans,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp,
-            color = if (enabled) Night else SteelDeep
+            style = InteriorTypeVoice.label,
+            color = if (enabled) V2Palette.inkPrimary else V2Palette.inkSecondary
         )
     }
 }
 
-/** Campo de fecha de solo lectura: el valor se elige en el selector (P19). */
+/**
+ * Campo de fecha de solo lectura (v2-21): tarjeta con el calendario en verde de
+ * cuidado, el rótulo adentro y el valor elegido en el selector seguro (P19).
+ */
 @Composable
 private fun DayField(text: String, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = CloudWhite,
-        border = BorderStroke(1.dp, Sky)
-    ) {
+    SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
         Row(
             modifier = Modifier
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .fillMaxWidth()
+                .clickable(onClick = onClick, role = Role.Button),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = text,
-                fontFamily = PlexSans,
-                fontSize = 16.sp,
-                color = Night,
-                modifier = Modifier.weight(1f)
+            AccentBadge(
+                iconRes = V2Icons.date,
+                accent = V2Palette.accentCare,
+                contentDescription = stringResource(R.string.journal_date_pick)
             )
-            Icon(
-                imageVector = Icons.Outlined.DateRange,
-                contentDescription = stringResource(R.string.journal_date_pick),
-                tint = SteelDeep
-            )
-        }
-    }
-}
-
-/** Tipos con radio, un solo gesto y sin menús desplegables (decisión F7). */
-@Composable
-private fun KindSelector(selected: EntryKind?, isError: Boolean, onKindSelected: (EntryKind) -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = CloudWhite,
-        border = BorderStroke(1.dp, if (isError) Plum else Sky)
-    ) {
-        Column {
-            EntryKind.entries.forEachIndexed { index, kind ->
-                if (index > 0) HorizontalDivider(color = Mist, thickness = 1.dp)
-                KindRow(
-                    kind = kind,
-                    isSelected = kind == selected,
-                    onSelected = { onKindSelected(kind) }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.journal_date_label),
+                    style = InteriorTypeVoice.label,
+                    color = V2Palette.inkSecondary
+                )
+                Text(
+                    text = text,
+                    style = InteriorTypeVoice.bodyStrong,
+                    color = V2Palette.inkPrimary
                 )
             }
+            RowChevron()
+        }
+    }
+}
+
+/**
+ * Tipos como chips de color (v2-21): cada uno con el matiz fijo de su tipo —
+ * punto del tinte en reposo; tinte, borde y visto al elegirlo, siempre con la
+ * etiqueta (regla 3). Un solo gesto y sin menús (decisión F7). FlowRow porque
+ * las etiquetas varían de ancho y la V2 respeta la fuente del sistema (D5):
+ * una rejilla fija las cortaría; el opt-in experimental queda acotado a este
+ * selector.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun KindChips(selected: EntryKind?, onKindSelected: (EntryKind) -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        EntryKind.entries.forEach { kind ->
+            KindChip(
+                kind = kind,
+                isSelected = kind == selected,
+                onSelected = { onKindSelected(kind) }
+            )
         }
     }
 }
 
 @Composable
-private fun KindRow(kind: EntryKind, isSelected: Boolean, onSelected: () -> Unit) {
+private fun KindChip(kind: EntryKind, isSelected: Boolean, onSelected: () -> Unit) {
+    val accent = kind.visual().accent
     Row(
         modifier = Modifier
-            .fillMaxWidth()
+            .clip(V2Corner.pill)
+            .background(if (isSelected) accent.tint else V2Palette.cardSurface)
+            .then(
+                if (isSelected) {
+                    Modifier.border(width = 1.2.dp, color = accent.stroke, shape = V2Corner.pill)
+                } else {
+                    Modifier
+                }
+            )
             .selectable(selected = isSelected, role = Role.RadioButton, onClick = onSelected)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .heightIn(min = 44.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(
-            selected = isSelected,
-            onClick = null,
-            colors = RadioButtonDefaults.colors(selectedColor = Night, unselectedColor = SteelDeep)
-        )
+        if (isSelected) {
+            Icon(
+                painter = painterResource(V2Icons.synced),
+                contentDescription = null,
+                tint = accent.stroke,
+                modifier = Modifier.size(15.dp)
+            )
+        } else {
+            Spacer(
+                modifier = Modifier
+                    .size(15.dp)
+                    .clip(CircleShape)
+                    .background(accent.tint)
+                    .border(width = 1.dp, color = accent.stroke.copy(alpha = 0.35f), shape = CircleShape)
+            )
+        }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = stringResource(kind.labelRes()),
-            fontFamily = PlexSans,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            fontSize = 15.sp,
-            color = Night
+            style = if (isSelected) InteriorTypeVoice.label else InteriorTypeVoice.caption,
+            color = if (isSelected) accent.stroke else V2Palette.inkPrimary
         )
     }
 }
+
+/** Espacio final para que el botón no quede bajo la nube de la esquina (RF-16). */
+private val EDITOR_BOTTOM_CLEARANCE = 88.dp

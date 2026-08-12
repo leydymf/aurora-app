@@ -73,6 +73,47 @@ fun V2PlainField(
     )
 }
 
+/**
+ * Campo de párrafo (texto libre de una anotación, v2-21): tarjeta blanca con
+ * el placeholder en tinta secundaria, varias líneas y sin acción de teclado —
+ * el salto de línea es escribir.
+ */
+@Composable
+fun V2ParagraphField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        textStyle = InteriorTypeVoice.body.copy(color = V2Palette.inkPrimary),
+        minLines = 4,
+        isError = isError,
+        shape = V2Corner.control,
+        placeholder = {
+            Text(
+                text = placeholder,
+                style = InteriorTypeVoice.body,
+                color = V2Palette.inkSecondary
+            )
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = V2Palette.cardSurface,
+            unfocusedContainerColor = V2Palette.cardSurface,
+            errorContainerColor = V2Palette.cardSurface,
+            focusedBorderColor = V2Palette.inkSecondary,
+            unfocusedBorderColor = V2Palette.divider,
+            errorBorderColor = V2Palette.accentNotice.stroke,
+            cursorColor = V2Palette.inkPrimary,
+            errorCursorColor = V2Palette.accentNotice.stroke
+        )
+    )
+}
+
 /** Campo enmascarado con ojo de visibilidad (contraseñas y clave personal). */
 @Composable
 fun V2SecretField(
