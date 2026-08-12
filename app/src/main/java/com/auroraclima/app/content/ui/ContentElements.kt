@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.dp
 /** Espacio final para que el contenido no quede bajo el botón nube (RF-16). */
 internal val CONTENT_BOTTOM_CLEARANCE = 88.dp
 
+/** Ancho reservado para que la nube (52 dp + margen) no tape una acción fija (RF-16). */
+internal val CLOUD_CLEARANCE = 68.dp
+
 /**
  * Abre el marcador con el número puesto (RF-23, decisión F5): ACTION_DIAL no
  * exige permiso alguno (RNF-04), no marca por sí solo y la app no conserva

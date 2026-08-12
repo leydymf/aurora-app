@@ -168,6 +168,3 @@ private fun SignalRow(text: String, accent: AccentPair) {
         )
     }
 }
-
-/** Ancho reservado para que la nube (52 dp + margen) no tape la acción fija. */
-internal val CLOUD_CLEARANCE = 68.dp
