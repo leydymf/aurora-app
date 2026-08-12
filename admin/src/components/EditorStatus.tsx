@@ -29,7 +29,7 @@ export function EditorStatus({ selected, isDirty, issues }: EditorStatusProps) {
                 !isDirty &&
                 issues.length > 0 && (
                     <div className="issues">
-                        <p className="issues__title">Para publicar falta:</p>
+                        <p className="issues__title">Falta para publicar</p>
                         <ul>
                             {issues.map((issue, index) => (
                                 <li key={index}>{issue.message}</li>
