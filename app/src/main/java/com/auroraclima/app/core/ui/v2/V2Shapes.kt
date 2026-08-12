@@ -5,12 +5,15 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * Formas de esquina suave del V2. Tres formas con función fija; ninguna pantalla
+ * Formas de esquina suave del V2, cada una con función fija; ninguna pantalla
  * define radios propios (regla «tokens primero» de PLAN_UI_V2.md).
  */
 object V2Corner {
     /** Tarjetas y hojas: radio 28 (anexo v2-29). */
     val card = RoundedCornerShape(28.dp)
+
+    /** Hoja inferior (P20·b): el mismo radio 28, solo en las esquinas superiores. */
+    val sheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
     /** Controles: botones y campos de texto. */
     val control = RoundedCornerShape(14.dp)

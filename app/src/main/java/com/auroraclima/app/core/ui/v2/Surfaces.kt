@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -69,6 +74,65 @@ fun AccentBadge(
             contentDescription = contentDescription,
             tint = accent.stroke,
             modifier = Modifier.size(size * 21f / 46f)
+        )
+    }
+}
+
+/**
+ * Cuerpo visual de una hoja inferior (P20·b): tarjeta blanca de esquinas
+ * superiores 28 con el asa de arrastre decorativa del mockup. Solo apariencia:
+ * la ventana segura la pone `core/security/SecureSheet`, que recibe esto como
+ * contenido — mismo reparto que CloudReturnVisual con la salida rápida.
+ */
+@Composable
+fun V2SheetCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(V2Corner.sheet)
+            .background(V2Palette.cardSurface)
+            .navigationBarsPadding()
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 44.dp, height = 4.dp)
+                .clip(V2Corner.pill)
+                .background(V2Palette.divider)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        content()
+    }
+}
+
+/**
+ * Aviso en el rosa de avisos y cuidado (regla 1): tinte de fondo, icono de
+ * información y texto en el trazo del mismo acento (6.6:1, AA). Es el aviso de
+ * alcance del cuestionario (RF-30, v2-17/v2-19) y de toda advertencia serena.
+ */
+@Composable
+fun V2NoticeCard(text: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(V2Corner.control)
+            .background(V2Palette.accentNotice.tint)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Icon(
+            painter = painterResource(V2Icons.info),
+            contentDescription = null,
+            tint = V2Palette.accentNotice.stroke,
+            modifier = Modifier
+                .padding(top = 1.dp)
+                .size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.accentNotice.stroke
         )
     }
 }

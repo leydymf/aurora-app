@@ -102,6 +102,11 @@ object V2Icons {
     /** Pin de lugar — «dónde» acudir (v2-15/v2-11; misma omisión del anexo,
      * decisión S3 2026-08-12). */
     @DrawableRes val place = R.drawable.ic_pin_soft
+
+    /** Puerta con flecha — cerrar sesión (v2-23; misma omisión del anexo,
+     * criterio S4 2026-08-12: el mockup de Ajustes lo usa y la librería no
+     * tenía salida de sesión). */
+    @DrawableRes val signOut = R.drawable.ic_door_out
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFF3F1F7)
