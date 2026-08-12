@@ -79,7 +79,6 @@ class VisualSystemGuardTest {
         "java/com/auroraclima/app/content/ui/ContentElements.kt",
         "java/com/auroraclima/app/content/ui/AgencyDetailScreen.kt",
         "java/com/auroraclima/app/content/ui/LinesScreen.kt",
-        "java/com/auroraclima/app/content/ui/TopicDetailScreen.kt",
         "java/com/auroraclima/app/questionnaire/ui/GuidanceScreen.kt",
         "java/com/auroraclima/app/records/ui/JournalListScreen.kt",
         "java/com/auroraclima/app/records/ui/JournalEditorScreen.kt"

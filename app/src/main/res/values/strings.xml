@@ -165,11 +165,11 @@
     <string name="content_topics_title">Entender lo que pasa.</string>
     <string name="content_topics_subtitle">Lo que te pasa tiene nombre. Conocerlo es el primer paso.</string>
     <string name="content_topics_routes_button">Rutas de atención</string>
-    <string name="content_topic_tag">INFORMACIÓN · TIPOS</string>
-    <string name="content_topic_signals">SEÑALES</string>
-    <string name="content_topic_examples">EJEMPLOS</string>
+    <string name="content_topic_tag">Tipos</string>
+    <string name="content_topic_signals">Señales para reconocerla</string>
+    <string name="content_topic_examples">Cómo se ve en el día a día</string>
     <string name="content_topic_example_format">«%1$s»</string>
-    <string name="content_topic_see_routes">Ver rutas de atención</string>
+    <string name="content_topic_see_routes">Ver a dónde acudir</string>
     <string name="content_routes_title">Rutas de atención.</string>
     <string name="content_routes_subtitle">Tres caminos según lo que necesites hoy. Puedes empezar por cualquiera.</string>
     <string name="content_agency_tag">RUTAS · %1$s</string>

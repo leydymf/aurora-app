@@ -9,43 +9,34 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.content.domain.model.Topic
-import com.auroraclima.app.core.ui.components.BackHeader
-import com.auroraclima.app.core.ui.components.BulletRow
-import com.auroraclima.app.core.ui.components.ErrorState
-import com.auroraclima.app.core.ui.components.LoadingState
-import com.auroraclima.app.core.ui.components.SectionTag
-import com.auroraclima.app.core.ui.components.SectionTitle
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Marcellus
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.Sky
+import com.auroraclima.app.core.ui.v2.AccentBadge
+import com.auroraclima.app.core.ui.v2.AccentPair
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2BackHeader
+import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2LoadingState
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.topicVisual
 
-/** Detalle de un tipo (RF-21, mockup P11 / alta-fidelidad-19). */
+/** Detalle de un tipo (RF-21, mockup P11 / v2-13): señales con vistos, ejemplos y salida a rutas. */
 @Composable
 fun TopicDetailRoute(onBack: () -> Unit, onOpenRoutes: () -> Unit) {
     val viewModel: TopicDetailViewModel = hiltViewModel()
@@ -69,18 +60,18 @@ internal fun TopicDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
     ) {
-        BackHeader(
+        V2BackHeader(
             tag = stringResource(R.string.content_topic_tag),
             onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         when {
-            state.isLoading -> LoadingState()
+            state.isLoading -> V2LoadingState()
             state.errorRes != null || state.topic == null ->
-                ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
+                V2ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
             else -> TopicDetailContent(topic = state.topic, onOpenRoutes = onOpenRoutes)
         }
     }
@@ -88,95 +79,95 @@ internal fun TopicDetailScreen(
 
 @Composable
 private fun TopicDetailContent(topic: Topic, onOpenRoutes: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-        SectionTitle(topic.title)
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = topic.summary,
-            fontFamily = Marcellus,
-            fontSize = 17.sp,
-            lineHeight = 26.sp,
-            color = Night
-        )
-        if (topic.signals.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            SectionTag(stringResource(R.string.content_topic_signals))
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                topic.signals.forEach { signal -> BulletRow(signal) }
-            }
-        }
-        if (topic.examples.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            SectionTag(stringResource(R.string.content_topic_examples))
-            Spacer(modifier = Modifier.height(12.dp))
-            ExamplesCard(examples = topic.examples)
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        SeeRoutesButton(onClick = onOpenRoutes)
-        Spacer(modifier = Modifier.height(CONTENT_BOTTOM_CLEARANCE))
-    }
-}
-
-@Composable
-private fun ExamplesCard(examples: List<String>) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = CloudWhite
-    ) {
+    val visual = topicVisual(topic.id)
+    Column(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
         ) {
-            examples.forEach { example ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AccentBadge(iconRes = visual.iconRes, accent = visual.accent)
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = stringResource(R.string.content_topic_example_format, example),
-                    fontFamily = PlexSans,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    color = Night
+                    text = topic.title,
+                    style = InteriorTypeVoice.screenTitle,
+                    color = V2Palette.inkPrimary
                 )
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            SoftCard {
+                Text(text = topic.summary, style = InteriorTypeVoice.body, color = V2Palette.inkPrimary)
+            }
+            if (topic.signals.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                SectionLabel(stringResource(R.string.content_topic_signals))
+                Spacer(modifier = Modifier.height(10.dp))
+                SoftCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        topic.signals.forEach { signal ->
+                            SignalRow(text = signal, accent = visual.accent)
+                        }
+                    }
+                }
+            }
+            if (topic.examples.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                SectionLabel(stringResource(R.string.content_topic_examples))
+                Spacer(modifier = Modifier.height(10.dp))
+                SoftCard {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        topic.examples.forEach { example ->
+                            Text(
+                                text = stringResource(R.string.content_topic_example_format, example),
+                                style = InteriorTypeVoice.body,
+                                color = V2Palette.inkPrimary
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        // Conexión hacia las rutas (RF-22), fija abajo (v2-13). El único botón
+        // lleno de la pantalla (regla 2); el hueco derecho es de la nube (RF-16).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 16.dp)
+        ) {
+            V2PrimaryButton(
+                text = stringResource(R.string.content_topic_see_routes),
+                onClick = onOpenRoutes,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(CLOUD_CLEARANCE))
         }
     }
 }
 
-/** Conexión del mockup P11 hacia la triada de sectores (RF-22). */
+/** Etiqueta de sección del detalle (v2-13). */
 @Composable
-private fun SeeRoutesButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Sky,
-            contentColor = Night
+private fun SectionLabel(text: String) {
+    Text(text = text, style = InteriorTypeVoice.label, color = V2Palette.inkSecondary)
+}
+
+/** Señal con visto en el matiz del tipo (v2-13): el icono acompaña al texto, regla 3. */
+@Composable
+private fun SignalRow(text: String, accent: AccentPair) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AccentBadge(iconRes = V2Icons.synced, accent = accent, size = 28.dp)
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = text,
+            style = InteriorTypeVoice.body,
+            color = V2Palette.inkPrimary,
+            modifier = Modifier.weight(1f)
         )
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = stringResource(R.string.content_topic_see_routes),
-                fontFamily = PlexSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp)
-            )
-        }
     }
 }
+
+/** Ancho reservado para que la nube (52 dp + margen) no tape la acción fija. */
+internal val CLOUD_CLEARANCE = 68.dp
