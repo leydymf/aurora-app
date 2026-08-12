@@ -47,6 +47,11 @@
     <string name="access_guide_exit_body">En cualquier pantalla de Aurora verás esta nube en la esquina. Un toque y vuelves al clima al instante, sin animaciones.</string>
     <string name="access_guide_close_title">Vuelve sola al clima.</string>
     <string name="access_guide_close_body">Si dejas tu espacio quieto unos cinco minutos, o pasas a otra app, Aurora regresa sola al clima, como si nunca hubieras salido de él.</string>
+    <string name="access_guide_overview_title">Cómo funciona tu espacio.</string>
+    <string name="access_guide_overview_subtitle">Tres cosas y ya estás lista.</string>
+    <string name="access_guide_practice_card_title">Practiquemos ahora</string>
+    <string name="access_guide_practice_teaser">Vas a escribir tu clave y después tocar la nube, para que tus manos lo recuerden.</string>
+    <string name="access_guide_practice_cta">Practicar</string>
     <string name="access_guide_next">Siguiente</string>
     <string name="access_guide_back">Atrás</string>
     <string name="access_guide_practice_tag">TUTORIAL · PRÁCTICA</string>
