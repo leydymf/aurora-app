@@ -74,9 +74,7 @@ class VisualSystemGuardTest {
      * quedan fuera del barrido porque core/ui ES la fuente; mueren con el resto
      * del tema V1 en la Fase 4 de PLAN_UI_V2.md.
      */
-    private val legacyMaterialIconsFiles = setOf(
-        "java/com/auroraclima/app/access/ui/SettingsScreen.kt"
-    )
+    private val legacyMaterialIconsFiles = setOf<String>()
 
     @Test
     fun `las features no importan iconos por fuera de la libreria cerrada`() {

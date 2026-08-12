@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,6 +37,9 @@ fun IconListRow(
     // La insignia es decorativa por defecto (regla 3); una fila cuya ACCIÓN es
     // el icono (llamar, v2-19) lo anuncia aquí para el lector de pantalla.
     iconDescription: String? = null,
+    // Una acción irreversible tiñe su título con el trazo rosa de avisos
+    // (v2-23); el resto conserva la tinta principal.
+    titleColor: Color = V2Palette.inkPrimary,
     trailing: (@Composable () -> Unit)? = null
 ) {
     val clickModifier = if (onClick != null) {
@@ -55,7 +59,7 @@ fun IconListRow(
         AccentBadge(iconRes = iconRes, accent = accent, contentDescription = iconDescription)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = InteriorTypeVoice.bodyStrong, color = V2Palette.inkPrimary)
+            Text(text = title, style = InteriorTypeVoice.bodyStrong, color = titleColor)
             if (supportingText != null) {
                 Text(
                     text = supportingText,

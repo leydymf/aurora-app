@@ -1,33 +1,18 @@
 package com.auroraclima.app.access.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,38 +22,35 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.SecureDialog
-import com.auroraclima.app.core.ui.components.BackHeader
-import com.auroraclima.app.core.ui.components.SectionTag
-import com.auroraclima.app.core.ui.components.SectionTitle
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.Plum
-import com.auroraclima.app.core.ui.theme.Steel
-import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.core.ui.v2.IconListRow
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.RowChevron
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2BackButton
+import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 
 /**
- * Configuración del espacio interno (mockup P21 / alta-fidelidad-33): grupos de
- * filas con navegación. Menú estático sin ViewModel — mismo criterio que
- * PanelScreen (guía, 2026-07-10): el patrón UiState aplica a pantallas con
- * estado. Los destinos los decide la navegación raíz (guardia RF-06).
+ * Ajustes del espacio interno (mockup P21 / v2-23): tres grupos de filas con
+ * insignia — Tu llave de entrada, Tu privacidad y Tu cuenta — con la acción
+ * delicada (eliminar todo, RF-20) AL FINAL en el rosa de avisos. Menú estático
+ * sin ViewModel — mismo criterio que PanelScreen (guía, 2026-07-10): el patrón
+ * UiState aplica a pantallas con estado. Los destinos los decide la navegación
+ * raíz (guardia RF-06).
  *
- * Redacción de camuflaje sobre el mockup (mismo criterio que P-17/P-25):
- * «Cambiar código secreto» → «Cambiar tu clave personal» («secreto» está vedado
- * en recursos por CamouflageResourcesTest). La fila «Eliminar cuenta y datos»
- * llegará con RF-20.
+ * Matices por significado (regla 1, anexo v2-29 normativo por D7): llave lila
+ * para la clave de reconocerte, llave neutra para la contraseña de la cuenta
+ * (fila conservada por D6 aunque el mockup la omita), libro azul del tutorial,
+ * escudo AZUL de protección para «qué guardamos» (el anexo prima sobre el
+ * verdoso del mockup), puerta arena para cerrar sesión y papelera rosa para
+ * eliminar. «Cambiar código secreto» del mockup sigue vedado: «Cambiar tu
+ * clave personal» (CamouflageResourcesTest, criterio P-17/P-25).
  */
 @Composable
 fun SettingsScreen(
@@ -87,84 +69,97 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        BackHeader(tag = stringResource(R.string.access_settings_tag), onBack = onBack)
-        Spacer(modifier = Modifier.height(12.dp))
-        SectionTitle(stringResource(R.string.access_settings_title))
+        // Cabecera de v2-23: la flecha con el título de pantalla al lado.
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            V2BackButton(onBack = onBack)
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = stringResource(R.string.access_settings_title),
+                style = InteriorTypeVoice.screenTitle,
+                color = V2Palette.inkPrimary
+            )
+        }
         Spacer(modifier = Modifier.height(20.dp))
 
-        SectionTag(stringResource(R.string.access_settings_group_security))
-        Spacer(modifier = Modifier.height(10.dp))
-        SettingsGroup {
-            SettingsRow(
-                icon = rememberVectorPainter(Icons.Outlined.Lock),
+        SettingsGroupLabel(stringResource(R.string.access_settings_group_security))
+        SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)) {
+            IconListRow(
+                iconRes = V2Icons.code,
+                accent = V2Palette.accentRecognize,
                 title = stringResource(R.string.access_settings_change_code),
-                onClick = onChangeCode
+                onClick = onChangeCode,
+                trailing = { RowChevron() }
             )
-            SettingsRowDivider()
             // RF-39: la contraseña de la cuenta también se cambia desde aquí;
             // la pantalla es de accounts y la conexión, por navegación (§2).
-            SettingsRow(
-                icon = rememberVectorPainter(Icons.Outlined.Person),
+            // Misma llave en neutro: también abre tu espacio, pero no es la
+            // clave de reconocerte (fila conservada por D6).
+            IconListRow(
+                iconRes = V2Icons.code,
+                accent = V2Palette.accentGroup,
                 title = stringResource(R.string.access_settings_change_password),
-                onClick = onChangePassword
+                onClick = onChangePassword,
+                trailing = { RowChevron() }
             )
-            SettingsRowDivider()
-            SettingsRow(
-                icon = painterResource(R.drawable.ic_book),
+            IconListRow(
+                iconRes = V2Icons.guide,
+                accent = V2Palette.accentProtection,
                 title = stringResource(R.string.access_settings_guide),
-                onClick = onReopenGuide
+                onClick = onReopenGuide,
+                trailing = { RowChevron() }
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        SectionTag(stringResource(R.string.access_settings_group_privacy))
-        Spacer(modifier = Modifier.height(10.dp))
-        SettingsGroup {
-            SettingsRow(
-                icon = rememberVectorPainter(Icons.Outlined.Info),
+        SettingsGroupLabel(stringResource(R.string.access_settings_group_privacy))
+        SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)) {
+            IconListRow(
+                iconRes = V2Icons.protection,
+                accent = V2Palette.accentProtection,
                 title = stringResource(R.string.access_settings_privacy),
-                onClick = onOpenPrivacy
+                onClick = onOpenPrivacy,
+                trailing = { RowChevron() }
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        SectionTag(stringResource(R.string.access_settings_group_account))
-        Spacer(modifier = Modifier.height(10.dp))
-        SettingsGroup {
+        SettingsGroupLabel(stringResource(R.string.access_settings_group_account))
+        SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)) {
             // RF-19: la fila abre la confirmación aquí mismo.
-            SettingsRow(
-                icon = rememberVectorPainter(Icons.AutoMirrored.Outlined.ExitToApp),
+            IconListRow(
+                iconRes = V2Icons.signOut,
+                accent = V2Palette.accentJustice,
                 title = stringResource(R.string.access_settings_sign_out),
-                onClick = { showSignOutDialog = true },
-                showChevron = false
+                onClick = { showSignOutDialog = true }
             )
-            SettingsRowDivider()
-            // RF-20: la eliminación tiene pantalla propia (accounts) con su doble
-            // confirmación; en ciruela por irreversible, como su botón final.
-            SettingsRow(
-                icon = rememberVectorPainter(Icons.Outlined.Delete),
+            // RF-20: la eliminación tiene pantalla propia (accounts) con su
+            // doble confirmación; al final y en rosa por irreversible (v2-23).
+            IconListRow(
+                iconRes = V2Icons.delete,
+                accent = V2Palette.accentNotice,
                 title = stringResource(R.string.access_settings_delete_account),
+                supportingText = stringResource(R.string.access_settings_delete_support),
+                titleColor = V2Palette.accentNotice.stroke,
                 onClick = onDeleteAccount,
-                titleColor = Plum
+                trailing = { RowChevron() }
             )
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = stringResource(R.string.access_settings_footer),
-            fontFamily = PlexSans,
-            fontSize = 12.sp,
-            color = Steel,
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
         // Aire final para no chocar con el botón nube de la esquina.
-        Spacer(modifier = Modifier.height(64.dp))
+        Spacer(modifier = Modifier.height(88.dp))
     }
     if (showSignOutDialog) {
         SignOutConfirmDialog(
@@ -177,6 +172,17 @@ fun SettingsScreen(
     }
 }
 
+/** Rótulo de grupo de v2-23. */
+@Composable
+private fun SettingsGroupLabel(text: String) {
+    Text(
+        text = text,
+        style = InteriorTypeVoice.label,
+        color = V2Palette.inkSecondary,
+        modifier = Modifier.padding(bottom = 10.dp)
+    )
+}
+
 /**
  * Confirmación del cierre de sesión (RF-19 criterio 1 de uso consciente): en
  * SecureDialog porque un diálogo es ventana propia y el grafo seguro no lo
@@ -186,113 +192,34 @@ fun SettingsScreen(
 @Composable
 private fun SignOutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     SecureDialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(20.dp), color = CloudWhite) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
-                Text(
-                    text = stringResource(R.string.access_settings_sign_out_title),
-                    fontFamily = PlexSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 17.sp,
-                    color = Night
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = stringResource(R.string.access_settings_sign_out_body),
-                    fontFamily = PlexSans,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    color = SteelDeep
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text(
-                            text = stringResource(R.string.access_settings_sign_out_cancel),
-                            fontFamily = PlexSans,
-                            fontSize = 15.sp,
-                            color = SteelDeep
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = onConfirm,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Night,
-                            contentColor = CloudWhite
-                        )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.access_settings_sign_out_confirm),
-                            fontFamily = PlexSans,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** Tarjeta blanca que agrupa filas, con separadores suaves (mockup P21). */
-@Composable
-internal fun SettingsGroup(content: @Composable () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = CloudWhite
-    ) {
-        Column { content() }
-    }
-}
-
-@Composable
-internal fun SettingsRowDivider() {
-    HorizontalDivider(color = Mist, thickness = 1.dp)
-}
-
-/** Fila de configuración: ícono lineal, título y chevron de navegación. */
-@Composable
-internal fun SettingsRow(
-    icon: Painter,
-    title: String,
-    onClick: () -> Unit,
-    titleColor: Color = Night,
-    showChevron: Boolean = true
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = icon,
-            contentDescription = null,
-            tint = SteelDeep,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        Text(
-            text = title,
-            fontFamily = PlexSans,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp,
-            color = titleColor,
-            modifier = Modifier.weight(1f)
-        )
-        if (showChevron) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Steel
+        SoftCard {
+            Text(
+                text = stringResource(R.string.access_settings_sign_out_title),
+                style = InteriorTypeVoice.cardTitle,
+                color = V2Palette.inkPrimary
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.access_settings_sign_out_body),
+                style = InteriorTypeVoice.caption,
+                color = V2Palette.inkSecondary
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            V2PrimaryButton(
+                text = stringResource(R.string.access_settings_sign_out_confirm),
+                onClick = onConfirm
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    text = stringResource(R.string.access_settings_sign_out_cancel),
+                    style = InteriorTypeVoice.bodyStrong,
+                    color = V2Palette.inkSecondary
+                )
+            }
         }
     }
 }
