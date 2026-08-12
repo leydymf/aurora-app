@@ -60,6 +60,14 @@ object V2Icons {
      * anexo v2-29, que omitió el icono que su propia barra de pestañas usa). */
     @DrawableRes val home = R.drawable.ic_home_soft
 
+    /** Brújula — reconocer la situación (tarjeta del cuestionario en P09/P15);
+     * acompaña al acento lila. Redibujada en contorno 1.9 (v2-10). */
+    @DrawableRes val recognize = R.drawable.ic_compass_soft
+
+    /** Engranaje — abrir Configuración desde el Inicio (decisión D3: engranaje
+     * ya establecido, no el sol del mockup). */
+    @DrawableRes val settings = R.drawable.ic_gear_soft
+
     /** Libro abierto — pestaña y portada de la Guía. */
     @DrawableRes val guide = R.drawable.ic_book_open
 

@@ -72,11 +72,16 @@ fun InnerTabsHost(
                         )
                     }
                     else -> tabStateHolder.SaveableStateProvider(HOME_TAB) {
+                        // Accesos rápidos de P09 (v2-10): Llamar → líneas de
+                        // atención (RF-23), guardar → editor del registro
+                        // (RF-32/33), Informarme → pestaña Guía (RF-21). Todo
+                        // por rutas o estado local — sin imports entre features.
                         PanelScreen(
-                            onOpenInfo = { selectedTab = GUIDE_TAB },
-                            onOpenGuidance = onOpenGuidance,
-                            onOpenJournal = { selectedTab = JOURNAL_TAB },
-                            onOpenSettings = onOpenSettings
+                            onStartGuidance = onOpenGuidance,
+                            onOpenSettings = onOpenSettings,
+                            onCall = onOpenLines,
+                            onSaveNote = onAddJournalEntry,
+                            onLearn = { selectedTab = GUIDE_TAB }
                         )
                     }
                 }
