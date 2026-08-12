@@ -207,11 +207,13 @@
     <string name="guidance_call">Llamar</string>
     <string name="guidance_result_routes">Ver rutas de atención</string>
     <string name="guidance_result_finish">Terminar</string>
-    <string name="journal_tag">MI REGISTRO</string>
-    <string name="journal_title">Mi registro.</string>
+    <string name="journal_tag">Mi registro</string>
+    <string name="journal_title">Mi registro</string>
+    <string name="journal_subtitle">Lo que anotas queda solo para ti, protegido en tu espacio.</string>
+    <string name="journal_saved_chip">Todo guardado</string>
     <string name="journal_empty_title">Aún no hay nada aquí.</string>
     <string name="journal_empty_body">Lo que escribas queda protegido y solo tú podrás verlo.</string>
-    <string name="journal_add">Agregar un registro</string>
+    <string name="journal_add">Anotar algo</string>
     <string name="journal_backup_notice">No fue posible recuperar tu información anterior. Tus nuevos registros se guardarán con normalidad.</string>
     <string name="journal_backup_notice_dismiss">Entendido</string>
     <string name="journal_entry_section">QUÉ PASÓ</string>
@@ -252,7 +254,7 @@
     <string name="journal_media_audio_note">Los audios quedan guardados y protegidos; podrás reproducirlos en una próxima versión.</string>
     <string name="journal_media_tag">MI REGISTRO · ADJUNTO</string>
     <plurals name="journal_media_count">
-        <item quantity="one">1 ADJUNTO</item>
-        <item quantity="other">%d ADJUNTOS</item>
+        <item quantity="one">1 adjunto</item>
+        <item quantity="other">%d adjuntos</item>
     </plurals>
 </resources>
