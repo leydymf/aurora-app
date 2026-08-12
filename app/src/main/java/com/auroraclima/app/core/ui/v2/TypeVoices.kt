@@ -111,4 +111,35 @@ object FacadeTypeVoice {
         fontSize = 13.sp,
         lineHeight = 18.sp
     )
+
+    /** Temperatura protagonista de P01 (v2-01). */
+    val displayTemperature = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Light,
+        fontSize = 72.sp,
+        lineHeight = 80.sp
+    )
+
+    /** Cuerpo con énfasis: títulos de fila y de tarjeta de la fachada. */
+    val bodyStrong = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 24.sp
+    )
+
+    /** Valor de una tarjeta de dato (humedad, viento). */
+    val value = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 20.sp,
+        lineHeight = 26.sp
+    )
+
+    /** Texto de apoyo: máx/mín, hora de actualización, región de una ciudad. */
+    val caption = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontSize = 13.sp,
+        lineHeight = 18.sp
+    )
 }

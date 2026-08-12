@@ -201,6 +201,15 @@ texto normal, ≥ 3:1 para texto grande y elementos no textuales.
 | Neutro trazo `#4E4A5E` / tinte `#EDEBF3` | 7.21:1 | ✅ (anexo decía 6.9:1; el real es mejor) |
 | Rosa trazo `#7A3B4D` como texto de aviso / fondo `#F3F1F7` | 7.32:1 | ✅ |
 
+Tokens de la fachada (S1 de la Fase 2, 2026-08-11 — muestreados de v2-01/v2-03):
+
+| Par | Ratio | AA |
+|---|---|---|
+| Texto blanco / cielo arriba `#474061` | 9.66:1 | ✅ |
+| Texto blanco / cielo abajo `#676086` | 5.84:1 | ✅ |
+| Tinta principal `#1B2530` / píldora de pestaña `#E3E0EC` | 11.92:1 | ✅ |
+| Iconos sol `#A07F44` y lluvia `#897DA8` / tarjeta blanca | 3.74:1 / 3.78:1 | ✅ (no textual ≥ 3:1) |
+
 Dos hallazgos no textuales, resueltos por diseño en la Fase 1:
 
 - **Borde lavanda `#B5AECB` sobre blanco: 2.13:1** — insuficiente como borde único
@@ -209,6 +218,9 @@ Dos hallazgos no textuales, resueltos por diseño en la Fase 1:
 - **Relleno lavanda de la barra de progreso sobre su riel: < 3:1** — aceptado porque
   la regla 3 obliga a que el progreso vaya SIEMPRE acompañado de texto («Paso N
   de M», segmentos contados); la barra es refuerzo visual, nunca el único indicador.
+- **Barra de temperatura de P03 (`#A69FB7`→`#C5A36D`) sobre la tarjeta: < 3:1** —
+  aceptado por el mismo criterio: la barra va siempre flanqueada por las cifras de
+  mínima y máxima; es refuerzo visual, nunca el único indicador.
 
 ---
 

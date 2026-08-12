@@ -69,4 +69,34 @@ object V2Palette {
      * Trazo 7.2:1 sobre tinte.
      */
     val accentGroup = AccentPair(tint = Color(0xFFEDEBF3), stroke = Color(0xFF4E4A5E))
+
+    /**
+     * Píldora que marca la pestaña activa en [V2TabBar]. Comparte valor con el
+     * tinte lila pero su significado es propio y fijo: «estás aquí» (regla 1).
+     * Siempre acompaña a un icono y una etiqueta — nunca informa sola (regla 3).
+     */
+    val tabIndicator = Color(0xFFE3E0EC)
+
+    // ——— Fachada de clima (P01–P03, mockups v2-01..v2-03) ———
+    // La fachada comparte la paleta lila del V2 pero suma el cielo de su portada.
+    // Estos tokens son EXCLUSIVOS de weather/ui: identidad 100 % clima (RNF-05);
+    // el espacio interno no los usa. Ratios en docs/mockups-v2/README.md §3.6.
+
+    /** Tope del degradado del cielo de P01 — blanco encima: 9.7:1. */
+    val skyTop = Color(0xFF474061)
+
+    /** Base del degradado del cielo de P01 — blanco encima: 5.8:1. */
+    val skyBottom = Color(0xFF676086)
+
+    /** Texto e iconos sobre el cielo. */
+    val onSky = Color(0xFFFFFFFF)
+
+    /**
+     * Extremos frío y cálido de la barra de temperatura del pronóstico (P03).
+     * Por debajo de 3:1 sobre la tarjeta: la barra es refuerzo visual y va
+     * SIEMPRE flanqueada por las cifras de mínima y máxima (regla 3), el mismo
+     * criterio ya aceptado para la barra de progreso lavanda (§3.6).
+     */
+    val temperatureCold = Color(0xFFA69FB7)
+    val temperatureWarm = Color(0xFFC5A36D)
 }
