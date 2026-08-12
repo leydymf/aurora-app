@@ -2,6 +2,7 @@ package com.auroraclima.app.content.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -16,21 +17,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
-import com.auroraclima.app.core.ui.components.BackHeader
-import com.auroraclima.app.core.ui.components.ErrorState
-import com.auroraclima.app.core.ui.components.LoadingState
-import com.auroraclima.app.core.ui.components.SectionTitle
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.core.ui.v2.IconListRow
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.RowChevron
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2BackHeader
+import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2LoadingState
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.topicVisual
 
 /**
  * Tipos de la Guía (RF-21, mockup P10 / v2-12). Desde la S3 ya no es la portada:
  * la pestaña «Guía» abre [GuideHomeScreen] y esta pantalla vuelve a ser un
- * destino con retorno; los atajos a rutas y líneas viven en la portada.
+ * destino con retorno; los atajos a rutas y líneas viven en la portada. Cada
+ * tipo lleva el icono y matiz de la asignación fija por id ([topicVisual], D2).
  */
 @Composable
 fun TopicsRoute(onBack: () -> Unit, onTopicSelected: (String) -> Unit) {
@@ -55,21 +58,18 @@ internal fun TopicsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
     ) {
-        BackHeader(
+        V2BackHeader(
             tag = stringResource(R.string.content_info_tag),
             onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         when {
-            state.isLoading -> LoadingState()
-            state.errorRes != null -> ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
-            else -> TopicsContent(
-                state = state,
-                onTopicSelected = onTopicSelected
-            )
+            state.isLoading -> V2LoadingState()
+            state.errorRes != null -> V2ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
+            else -> TopicsContent(state = state, onTopicSelected = onTopicSelected)
         }
     }
 }
@@ -83,23 +83,32 @@ private fun TopicsContent(state: TopicsUiState, onTopicSelected: (String) -> Uni
             .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(8.dp))
-        SectionTitle(stringResource(R.string.content_topics_title))
+        Text(
+            text = stringResource(R.string.content_topics_title),
+            style = InteriorTypeVoice.screenTitle,
+            color = V2Palette.inkPrimary
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.content_topics_subtitle),
-            fontFamily = PlexSans,
-            fontSize = 15.sp,
-            lineHeight = 21.sp,
-            color = SteelDeep
+            style = InteriorTypeVoice.body,
+            color = V2Palette.inkSecondary
         )
         Spacer(modifier = Modifier.height(20.dp))
-        ContentRowGroup {
-            state.topics.forEachIndexed { index, topic ->
-                if (index > 0) ContentRowDivider()
-                ContentListRow(
+        // Una tarjeta por tipo (v2-12): el resumen viene de Firestore y se
+        // trunca a dos líneas — el texto completo vive en el detalle.
+        state.topics.forEachIndexed { index, topic ->
+            if (index > 0) Spacer(modifier = Modifier.height(14.dp))
+            val visual = topicVisual(topic.id)
+            SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)) {
+                IconListRow(
+                    iconRes = visual.iconRes,
+                    accent = visual.accent,
                     title = topic.title,
-                    summary = topic.summary,
-                    onClick = { onTopicSelected(topic.id) }
+                    supportingText = topic.summary,
+                    supportingMaxLines = 2,
+                    onClick = { onTopicSelected(topic.id) },
+                    trailing = { RowChevron() }
                 )
             }
         }
