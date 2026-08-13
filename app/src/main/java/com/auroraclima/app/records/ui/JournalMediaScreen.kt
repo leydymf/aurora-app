@@ -25,11 +25,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
-import com.auroraclima.app.core.ui.components.BackHeader
-import com.auroraclima.app.core.ui.components.ErrorState
-import com.auroraclima.app.core.ui.components.LoadingState
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Mist
+import com.auroraclima.app.core.ui.v2.V2BackHeader
+import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2LoadingState
+import com.auroraclima.app.core.ui.v2.V2Palette
 
 /**
  * Visor interno de adjuntos (RF-33 criterio 2: solo dentro de la app; la ruta
@@ -61,20 +60,20 @@ internal fun JournalMediaScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
     ) {
-        BackHeader(
+        V2BackHeader(
             tag = stringResource(R.string.journal_media_tag),
             onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         when {
-            state.isLoading -> LoadingState()
-            state.errorRes != null -> ErrorState(messageRes = state.errorRes, onRetry = onRetry)
+            state.isLoading -> V2LoadingState()
+            state.errorRes != null -> V2ErrorState(messageRes = state.errorRes, onRetry = onRetry)
             state.image != null -> ImageViewer(state.image)
             state.pageCount > 0 -> DocumentViewer(pageCount = state.pageCount, renderPage = renderPage)
-            else -> ErrorState(messageRes = R.string.common_error_generic, onRetry = onRetry)
+            else -> V2ErrorState(messageRes = R.string.common_error_generic, onRetry = onRetry)
         }
     }
 }
@@ -121,7 +120,7 @@ private fun DocumentPage(index: Int, renderPage: suspend (Int, Int) -> ImageBitm
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp),
-        color = CloudWhite
+        color = V2Palette.cardSurface
     ) {
         val rendered = page
         if (rendered == null) {

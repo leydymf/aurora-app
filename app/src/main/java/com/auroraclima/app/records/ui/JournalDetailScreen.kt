@@ -39,7 +39,6 @@ import com.auroraclima.app.core.ui.v2.V2Icons
 import com.auroraclima.app.core.ui.v2.V2LoadingState
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
-import com.auroraclima.app.core.ui.v2.V2SecondaryButton
 import com.auroraclima.app.core.ui.v2.V2SheetCard
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
@@ -197,7 +196,9 @@ private fun JournalDetailContent(
             )
         }
         Spacer(modifier = Modifier.height(28.dp))
-        V2SecondaryButton(text = stringResource(R.string.journal_detail_edit), onClick = onEdit)
+        // «Editar» es LA acción principal de la pantalla y va llena en lavanda
+        // (regla 2 del anexo); eliminar queda como texto en el rosa profundo.
+        V2PrimaryButton(text = stringResource(R.string.journal_detail_edit), onClick = onEdit)
         Spacer(modifier = Modifier.height(4.dp))
         // Eliminar en el rosa profundo de avisos (regla 1: irreversible se
         // anuncia con texto, sin rojo de alarma — decisión F2).

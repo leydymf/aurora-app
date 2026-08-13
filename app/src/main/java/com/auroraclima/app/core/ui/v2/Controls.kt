@@ -91,6 +91,46 @@ fun V2SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Mo
 }
 
 /**
+ * Acción destructiva e irreversible (eliminar la cuenta, RF-20): llena en el
+ * rosa profundo de avisos — la regla 1 anuncia lo delicado sin rojo de alarma
+ * (decisión F2) y el texto blanco da 7.3:1 (AA). Convive con la regla 2: en su
+ * pantalla ES la única acción llena y no hay botón lavanda.
+ */
+@Composable
+fun V2DestructiveButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    isLoading: Boolean = false
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isLoading,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = V2Corner.control,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = V2Palette.accentNotice.stroke,
+            contentColor = V2Palette.cardSurface,
+            disabledContainerColor = V2Palette.accentNotice.stroke.copy(alpha = 0.45f),
+            disabledContentColor = V2Palette.cardSurface.copy(alpha = 0.7f)
+        )
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = V2Palette.cardSurface,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(text = text, style = InteriorTypeVoice.bodyStrong)
+        }
+    }
+}
+
+/**
  * Chip de tipo o estado: tinte de fondo, texto (y opcional icono de contorno) en
  * el trazo del mismo acento. Siempre lleva texto: el color acompaña, nunca
  * informa solo (regla 3).
