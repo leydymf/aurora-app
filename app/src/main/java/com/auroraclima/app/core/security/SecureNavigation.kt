@@ -5,24 +5,17 @@ import android.view.Window
 import android.view.WindowManager
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -30,16 +23,13 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import com.auroraclima.app.R
-import com.auroraclima.app.core.ui.theme.CloudWhite
+import com.auroraclima.app.core.ui.v2.CloudReturnVisual
 
 /**
  * Acceso al [SessionManager] desde las pantallas del grafo seguro. Lo provee la
@@ -74,11 +64,19 @@ fun NavGraphBuilder.secureGraph(route: String, startDestination: String, builder
     }
 }
 
-/** Ámbito de declaración de rutas dentro de [secureGraph]. */
+/**
+ * Ámbito de declaración de rutas dentro de [secureGraph].
+ *
+ * [cloudBottomInset] desplaza SOLO el anclaje de la nube de salida rápida: la ruta
+ * cuyo contenido termina en una barra de pestañas (v2-10) lo declara con la altura
+ * de esa barra para que la nube flote por encima y ningún destino táctil quede
+ * debajo. Es apariencia/posición — el botón, su gesto y `quickExit` no cambian
+ * (RF-16); el resto de rutas conserva el anclaje actual con el valor por defecto.
+ */
 class SecureGraphScope internal constructor(private val graph: NavGraphBuilder) {
-    fun screen(route: String, content: @Composable (NavBackStackEntry) -> Unit) {
+    fun screen(route: String, cloudBottomInset: Dp = 0.dp, content: @Composable (NavBackStackEntry) -> Unit) {
         graph.composable(route) { entry ->
-            SecureScreen { content(entry) }
+            SecureScreen(cloudBottomInset = cloudBottomInset) { content(entry) }
         }
     }
 }
@@ -91,7 +89,7 @@ class SecureGraphScope internal constructor(private val graph: NavGraphBuilder) 
  * directamente, solo [secureGraph].
  */
 @Composable
-private fun SecureScreen(content: @Composable () -> Unit) {
+private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) {
     val view = LocalView.current
     DisposableEffect(view) {
         val window = view.context.findActivity()?.window
@@ -132,41 +130,19 @@ private fun SecureScreen(content: @Composable () -> Unit) {
             }
     ) {
         content()
-        QuickExitCloudButton(
+        // Salida rápida (RF-16): la posición al alcance del pulgar y el gesto son
+        // del mecanismo; la apariencia (nube violeta V2) se inyecta desde core/ui.
+        CloudReturnVisual(
             onClick = sessionManager::quickExit,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .systemBarsPadding()
+                .padding(bottom = cloudBottomInset)
                 .padding(QUICK_EXIT_MARGIN)
         )
     }
 }
 
-/**
- * Salida rápida (RF-16): botón flotante de 52 dp abajo a la derecha, con el mismo
- * ícono de nube de la fachada — para un tercero es un botón «del clima» (F2 de A2-6).
- */
-@Composable
-private fun QuickExitCloudButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .size(QUICK_EXIT_SIZE)
-            .shadow(elevation = 6.dp, shape = CircleShape)
-            .background(CloudWhite)
-            .clickable(onClick = onClick, role = Role.Button),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_weather_cloud),
-            contentDescription = stringResource(R.string.access_back_to_weather),
-            tint = Color.Unspecified,
-            modifier = Modifier.size(QUICK_EXIT_ICON_SIZE)
-        )
-    }
-}
-
-private val QUICK_EXIT_SIZE = 52.dp
-private val QUICK_EXIT_ICON_SIZE = 26.dp
 private val QUICK_EXIT_MARGIN = 20.dp
 
 /**

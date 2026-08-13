@@ -273,8 +273,10 @@ export function QuestionnairePage() {
                         >
                             <span className="list__title">
                                 {entry.data.title || entry.docId} · v{String(entry.data.version)}
-                                {entry.docId === vigenteId && ' · vigente en la app'}
                             </span>
+                            {entry.docId === vigenteId && (
+                                <span className="badge badge--publicado">Vigente en la app</span>
+                            )}
                             <StatusBadge status={entry.status} />
                         </button>
                     ))}

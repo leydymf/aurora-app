@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Iconografía meteorológica genérica: sol despejado -->
+<!-- Iconografía meteorológica de contorno (fachada V2): sol despejado -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:pathData="M12,7a5,5 0 1,0 0,10a5,5 0 1,0 0,-10z"
-        android:fillColor="#E8A23D" />
-    <path
-        android:pathData="M12,2.5L12,4.5M12,19.5L12,21.5M2.5,12L4.5,12M19.5,12L21.5,12M5,5L6.4,6.4M17.6,17.6L19,19M19,5L17.6,6.4M6.4,17.6L5,19"
-        android:strokeColor="#E8A23D"
-        android:strokeWidth="1.6"
+        android:pathData="M12,12 m-4,0 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0 M12,3.4L12,5.4 M12,18.6L12,20.6 M3.4,12L5.4,12 M18.6,12L20.6,12 M5.9,5.9L7.3,7.3 M16.7,16.7L18.1,18.1 M18.1,5.9L16.7,7.3 M7.3,16.7L5.9,18.1"
+        android:strokeColor="#A07F44"
+        android:strokeWidth="1.9"
         android:strokeLineCap="round"
+        android:strokeLineJoin="round"
         android:fillColor="#00000000" />
 </vector>

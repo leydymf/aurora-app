@@ -1,5 +1,11 @@
 // Botonera estándar del editor de un recurso: guardar borrador, publicar,
 // eliminar en dos pasos (o cancelar un alta nueva) y sus pistas de estado.
+//
+// Estilo V2: «Guardar borrador» es la acción principal en lavanda (regla 2 del
+// anexo: un solo botón lleno, como en v2-28); «Publicar» va en blanco con
+// borde, y el bloqueo de eliminación se muestra como aviso rosa (v2-26).
+import { V2Icon } from './icons'
+
 interface EditorActionsProps {
     readonly busy: boolean
     readonly isDirty: boolean
@@ -34,6 +40,7 @@ export function EditorActions({
                 </button>
                 <button
                     type="button"
+                    className="btn--outline"
                     disabled={busy || !canPublish}
                     title={isDirty ? 'Guarda el borrador antes de publicar.' : undefined}
                     onClick={onPublish}
@@ -60,7 +67,12 @@ export function EditorActions({
                     </button>
                 )}
             </div>
-            {deleteBlockedReason !== null && <p className="muted">{deleteBlockedReason}</p>}
+            {deleteBlockedReason !== null && (
+                <p className="alert">
+                    <V2Icon name="info" size={18} />
+                    <span>{deleteBlockedReason}</span>
+                </p>
+            )}
         </>
     )
 }

@@ -14,9 +14,9 @@ private val SPANISH = Locale.forLanguageTag("es")
 /** «6 de julio de 2026» — campo de fecha del editor (P19). */
 private val LONG_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("d 'de' MMMM 'de' uuuu", SPANISH)
 
-/** «2 JUL 2026» — filas del listado y encabezado del detalle (P18/P20). */
+/** «2 jul 2026» — filas del listado y encabezado del detalle (P18/P20, v2-20). */
 private val SHORT_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM uuuu", SPANISH)
 
 internal fun LocalDate.toLongDayText(): String = format(LONG_DAY)
 
-internal fun LocalDate.toShortDayText(): String = format(SHORT_DAY).replace(".", "").uppercase(SPANISH)
+internal fun LocalDate.toShortDayText(): String = format(SHORT_DAY).replace(".", "")

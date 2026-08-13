@@ -46,6 +46,16 @@ class TutorialViewModel @Inject constructor(
     }
 
     /**
+     * Salto directo a la práctica: la vista V2 (v2-08) muestra los tres momentos
+     * juntos y «Practicar» es su único avance. El orden de la máquina sigue
+     * siendo de este ViewModel — la UI no conoce las páginas intermedias
+     * (revisión de arquitectura S2, hallazgo M-1).
+     */
+    fun onStartPractice() {
+        _uiState.update { it.copy(step = TutorialStep.PRACTICE) }
+    }
+
+    /**
      * Evaluación en vivo, como la barra real: cada tecla cuenta y solo la última
      * importa. Una vez logrado el ingreso queda fijo (criterio 2 de RF-10): la
      * usuaria ya practicó, editar el texto no le quita el logro.

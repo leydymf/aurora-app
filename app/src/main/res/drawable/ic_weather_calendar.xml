@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Calendario del pronóstico (fachada V2); set propio de la fachada, aunque el
+     dibujo coincida con el del espacio interno. Trazo negro: se tiñe en el uso. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M6.5,5.5 L17.5,5.5 A2,2 0 0 1 19.5,7.5 L19.5,17.5 A2,2 0 0 1 17.5,19.5 L6.5,19.5 A2,2 0 0 1 4.5,17.5 L4.5,7.5 A2,2 0 0 1 6.5,5.5 Z M4.5,9.7 L19.5,9.7 M8.6,3.6 L8.6,7 M15.4,3.6 L15.4,7"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>

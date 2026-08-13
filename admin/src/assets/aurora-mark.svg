@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 44 44" role="img" aria-labelledby="t d">
+  <title id="t">Aurora — marca a color</title>
+  <desc id="d">Símbolo de Aurora: estrella destellante con halo cálido sobre fondo lavanda.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A89BC4"></stop>
+      <stop offset="60%" stop-color="#9486B5"></stop>
+      <stop offset="100%" stop-color="#7A6FA0"></stop>
+    </linearGradient>
+    <linearGradient id="bg-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3A4654"></stop>
+      <stop offset="100%" stop-color="#2D3A47"></stop>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#FFE4C4" stop-opacity="0.95"></stop>
+      <stop offset="35%" stop-color="#FFC89A" stop-opacity="0.65"></stop>
+      <stop offset="70%" stop-color="#F2A06D" stop-opacity="0.18"></stop>
+      <stop offset="100%" stop-color="#F2A06D" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF"></stop>
+      <stop offset="40%" stop-color="#FFF1DC"></stop>
+      <stop offset="100%" stop-color="#FFD9A8"></stop>
+    </radialGradient>
+  </defs>
+  <rect x="2" y="2" width="40" height="40" rx="10" ry="10" fill="url(#bg)"></rect>
+  
+  <circle cx="22" cy="22" r="20" fill="url(#halo)"></circle>
+  
+  <path d="M22 5 Q23.4 19.4 36.5 22 Q23.4 24.6 22 39 Q20.6 24.6 7.5 22 Q20.6 19.4 22 5 Z" fill="#F2A06D" opacity="0.55"></path>
+  
+  <path d="M22 6.5 Q23.1 19.7 35.5 22 Q23.1 24.3 22 37.5 Q20.9 24.3 8.5 22 Q20.9 19.7 22 6.5 Z" fill="url(#core)"></path>
+  
+  <path d="M22 13 Q22.7 21 30.5 22 Q22.7 23 22 31 Q21.3 23 13.5 22 Q21.3 21 22 13 Z" fill="#FFFFFF" opacity="0.85"></path>
+  
+  <path d="M33.5 9.5 Q33.9 12 36.2 12.4 Q33.9 12.8 33.5 15.3 Q33.1 12.8 30.8 12.4 Q33.1 12 33.5 9.5 Z" fill="#FFE9C9"></path>
+  
+  <path d="M10.5 31 Q10.85 32.85 12.7 33.2 Q10.85 33.55 10.5 35.4 Q10.15 33.55 8.3 33.2 Q10.15 32.85 10.5 31 Z" fill="#FFD0B0"></path>
+</svg>

@@ -7,17 +7,19 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.ChangeCodeRoute
 import com.auroraclima.app.access.ui.CodeSetupRoute
-import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.access.ui.SettingsScreen
 import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ChangePasswordRoute
@@ -40,11 +42,13 @@ import com.auroraclima.app.core.security.SecureBackStackGuard
 import com.auroraclima.app.core.security.SessionGuard
 import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.security.secureGraph
+import com.auroraclima.app.core.ui.v2.AuroraV2Theme
+import com.auroraclima.app.core.ui.v2.V2TabBarHeight
+import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
 import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
 import com.auroraclima.app.records.ui.JournalEditorRoute
-import com.auroraclima.app.records.ui.JournalListRoute
 import com.auroraclima.app.records.ui.JournalMediaRoute
 import com.auroraclima.app.records.ui.MEDIA_ID_ARG
 import com.auroraclima.app.weather.ui.ForecastRoute
@@ -66,11 +70,21 @@ fun AuroraApp(sessionManager: SessionManager) {
             navController = navController,
             startDestination = HOME_ROUTE
         ) {
-            composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) { HomeRoute(navController) }
+            composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) { entry ->
+                HomeRoute(navController = navController, entry = entry)
+            }
             // Pronóstico extendido (RF-04): pantalla de la fachada, fuera del
             // grafo seguro — refuerza la credibilidad de la app de clima (RNF-05).
             composable(FORECAST_ROUTE) {
-                ForecastRoute(onBack = { navController.popBackStack() })
+                ForecastRoute(
+                    onBack = { navController.popBackStack() },
+                    // «Lugares» (D4): volver a P01 y abrir la búsqueda; la señal
+                    // viaja por el savedStateHandle del destino de la fachada.
+                    onOpenPlaces = {
+                        navController.previousBackStackEntry?.savedStateHandle?.set(FOCUS_SEARCH_KEY, true)
+                        navController.popBackStack()
+                    }
+                )
             }
             // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y
             // de recientes, botón nube de salida rápida y reporte de interacción
@@ -150,14 +164,21 @@ fun AuroraApp(sessionManager: SessionManager) {
                         }
                     )
                 }
-                // Hogar del espacio interno (P09) y módulo de información
-                // (RF-21, RF-22): tipos → detalle → sectores → entidad.
-                screen(PANEL_ROUTE) {
-                    PanelScreen(
-                        onOpenInfo = { navController.navigate(TOPICS_ROUTE) },
+                // Hogar del espacio interno: pestañas Inicio · Guía · Mi registro
+                // (v2-10, D3) como estado local de esta única entrada — cambiar de
+                // pestaña no navega y el estado muere con el pop del grafo (RF-06).
+                // El inset eleva la nube por encima de la barra de pestañas (RF-16).
+                screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) {
+                    InnerTabsHost(
                         onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
-                        onOpenJournal = { navController.navigate(JOURNAL_ROUTE) },
-                        onOpenSettings = { navController.navigate(SETTINGS_ROUTE) }
+                        onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
+                        onOpenTopics = { navController.navigate(TOPICS_ROUTE) },
+                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
+                        onOpenLines = { navController.navigate(LINES_ROUTE) },
+                        onAddJournalEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
+                        onOpenJournalEntry = { entryId ->
+                            navController.navigate("$JOURNAL_ROUTE/$entryId")
+                        }
                     )
                 }
                 // Configuración del espacio interno (P21): reabrir el tutorial
@@ -210,16 +231,8 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(PRIVACY_ROUTE) {
                     PrivacyScreen(onBack = { navController.popBackStack() })
                 }
-                // Historial personal (RF-34, P18): listado → detalle / creación.
-                screen(JOURNAL_ROUTE) {
-                    JournalListRoute(
-                        onBack = { navController.popBackStack() },
-                        onAddEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
-                        onEntrySelected = { entryId ->
-                            navController.navigate("$JOURNAL_ROUTE/$entryId")
-                        }
-                    )
-                }
+                // Historial personal (RF-34, P18): el listado es la pestaña
+                // «Mi registro» del hogar; aquí solo viven detalle y creación.
                 screen(JOURNAL_DETAIL_ROUTE) {
                     JournalDetailRoute(
                         onBack = { navController.popBackStack() },
@@ -261,22 +274,23 @@ fun AuroraApp(sessionManager: SessionManager) {
                     )
                 }
                 // Creación de un registro del historial (RF-32, P19). El pop
-                // tras guardar regresa al listado (RF-34), que se refresca al
-                // volver a componerse.
+                // tras guardar regresa al hub en la pestaña donde estaba la
+                // usuaria (Mi registro se refresca al volver a componerse; desde
+                // «Guardar una nota» de P09, al Inicio).
                 screen(JOURNAL_NEW_ROUTE) {
                     JournalEditorRoute(
                         onSaved = { navController.popBackStack() },
                         onBack = { navController.popBackStack() }
                     )
                 }
+                // Sección «Entender lo que pasa» de la Guía (RF-21): la lista
+                // de tipos es un destino propio desde la portada (v2-11/v2-12).
                 screen(TOPICS_ROUTE) {
                     TopicsRoute(
                         onBack = { navController.popBackStack() },
                         onTopicSelected = { topicId ->
                             navController.navigate("$TOPICS_ROUTE/$topicId")
-                        },
-                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
-                        onOpenLines = { navController.navigate(LINES_ROUTE) }
+                        }
                     )
                 }
                 screen(TOPIC_DETAIL_ROUTE) {
@@ -326,9 +340,17 @@ fun AuroraApp(sessionManager: SessionManager) {
 
 /** Fachada de clima (RF-01..03) y puerta de búsqueda hacia el espacio interno (RF-12). */
 @Composable
-private fun HomeRoute(navController: NavHostController) {
+private fun HomeRoute(navController: NavHostController, entry: NavBackStackEntry) {
     val viewModel: WeatherViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
+    val searchFocus = remember { FocusRequester() }
+    // Señal de un solo uso de la pestaña «Lugares» del pronóstico (D4): al volver
+    // a la fachada se enfoca la barra — la misma puerta del código (RF-05/RF-12).
+    LaunchedEffect(entry) {
+        if (entry.savedStateHandle.remove<Boolean>(FOCUS_SEARCH_KEY) == true) {
+            searchFocus.requestFocus()
+        }
+    }
     // Mejor esfuerzo: limpiar la barra en ON_PAUSE para que la miniatura de
     // recientes no muestre un código a medio teclear (RF-14, auditoría M-03/M-04).
     // El snapshot lo toma el sistema del último frame visible, así que ON_STOP
@@ -350,16 +372,24 @@ private fun HomeRoute(navController: NavHostController) {
             }
         }
     }
-    WeatherScreen(
-        state = state,
-        onSearchQueryChange = viewModel::onSearchQueryChange,
-        onCitySelected = viewModel::onCitySelected,
-        onSearchCancel = viewModel::onSearchCancel,
-        onOpenForecast = { navController.navigate(FORECAST_ROUTE) }
-    )
+    // Voz de FACHADA del tema V2: paleta compartida, tipografía neutra del
+    // sistema — jamás Marcellus aquí (decisión F1, camuflaje RNF-05).
+    AuroraV2Theme(V2Voice.Facade) {
+        WeatherScreen(
+            state = state,
+            onSearchQueryChange = viewModel::onSearchQueryChange,
+            onCitySelected = viewModel::onCitySelected,
+            onSearchCancel = viewModel::onSearchCancel,
+            onOpenForecast = { navController.navigate(FORECAST_ROUTE) },
+            searchFocus = searchFocus
+        )
+    }
 }
 
 private const val HOME_ROUTE = "home"
+
+/** Señal de «Lugares» → fachada con la búsqueda abierta (D4); nombre neutro (RNF-05). */
+private const val FOCUS_SEARCH_KEY = "focus_search"
 private const val FORECAST_ROUTE = "forecast"
 private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"

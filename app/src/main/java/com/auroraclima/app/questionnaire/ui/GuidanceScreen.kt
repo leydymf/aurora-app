@@ -4,40 +4,28 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,32 +34,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.directory.DirectoryEntity
 import com.auroraclima.app.core.directory.DirectoryLine
-import com.auroraclima.app.core.ui.components.BulletRow
-import com.auroraclima.app.core.ui.components.ErrorState
-import com.auroraclima.app.core.ui.components.LoadingState
-import com.auroraclima.app.core.ui.components.PrimaryButton
-import com.auroraclima.app.core.ui.components.SectionTag
-import com.auroraclima.app.core.ui.components.SectionTitle
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Marcellus
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.Plum
-import com.auroraclima.app.core.ui.theme.Sky
-import com.auroraclima.app.core.ui.theme.Steel
-import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.core.ui.v2.AccentBadge
+import com.auroraclima.app.core.ui.v2.IconListRow
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.RowChevron
+import com.auroraclima.app.core.ui.v2.SegmentedProgressBar
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2BackButton
+import com.auroraclima.app.core.ui.v2.V2BackHeader
+import com.auroraclima.app.core.ui.v2.V2Corner
+import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2LoadingState
+import com.auroraclima.app.core.ui.v2.V2NoticeCard
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
 import com.auroraclima.app.questionnaire.domain.model.Municipality
 import com.auroraclima.app.questionnaire.domain.model.Question
@@ -85,6 +71,11 @@ import com.auroraclima.app.questionnaire.domain.model.Question
  * Los textos de preguntas, escala, bloques, aviso, reconocimiento y niveles
  * llegan del documento administrable y nunca van en el APK (RNF-05); los
  * estáticos usan claves neutras `guidance_*` vigiladas por CamouflageResourcesTest.
+ *
+ * V2 (S4 de PLAN_UI_V2.md; mockups v2-17/18/19): re-estilo puro sobre los tres
+ * estados existentes — el motor, el ViewModel y el descarte en memoria (RF-28)
+ * no cambian. «Guardar resultado» del mockup es RF-31, trabajo futuro: el
+ * resultado se descarta siempre al terminar, como hasta ahora.
  */
 @Composable
 fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
@@ -134,12 +125,12 @@ internal fun GuidanceScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
     ) {
         when {
-            state.isLoading -> LoadingState()
-            state.errorRes != null -> ErrorState(messageRes = R.string.common_error_generic, onRetry = onRetry)
+            state.isLoading -> V2LoadingState()
+            state.errorRes != null -> V2ErrorState(messageRes = state.errorRes, onRetry = onRetry)
             else -> when (state.phase) {
                 GuidancePhase.INTRO -> IntroContent(state = state, onStart = onStart, onDismiss = onDismiss)
                 GuidancePhase.QUESTION -> QuestionContent(
@@ -160,25 +151,22 @@ internal fun GuidanceScreen(
     }
 }
 
-/** Portada del cuestionario: título e introducción del documento, reglas y aviso. */
+/**
+ * Portada del cuestionario (P15, v2-17): título e introducción del documento,
+ * las tres garantías con icono y el aviso de alcance. Los matices de las
+ * garantías siguen el mockup y la regla 1: verde de cuidado para el ritmo
+ * propio, azul de protección para el descarte, arena de tiempo para la única
+ * vez; el aviso va en el rosa de avisos (RF-30 también en la portada).
+ */
 @Composable
 private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss: () -> Unit) {
     val questionnaire = state.questionnaire ?: return
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.guidance_back),
-                    tint = Night
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            SectionTag(stringResource(R.string.guidance_tag))
-        }
+        V2BackHeader(
+            tag = stringResource(R.string.guidance_tag),
+            onBack = onDismiss,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -186,51 +174,56 @@ private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss:
                 .padding(horizontal = 24.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
-            SectionTitle(questionnaire.title)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AccentBadge(iconRes = V2Icons.recognize, accent = V2Palette.accentRecognize)
+                Spacer(modifier = Modifier.width(14.dp))
+                Text(
+                    text = questionnaire.title,
+                    style = InteriorTypeVoice.screenTitle,
+                    color = V2Palette.inkPrimary
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = questionnaire.intro,
-                fontFamily = PlexSans,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-                color = SteelDeep
+                style = InteriorTypeVoice.body,
+                color = V2Palette.inkSecondary
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = CloudWhite
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    GuidanceBullet(stringResource(R.string.guidance_intro_point_pace))
-                    GuidanceBullet(stringResource(R.string.guidance_intro_point_discard))
-                    GuidanceBullet(stringResource(R.string.guidance_intro_point_once))
-                }
+            SoftCard {
+                IconListRow(
+                    iconRes = V2Icons.waiting,
+                    accent = V2Palette.accentCare,
+                    title = stringResource(R.string.guidance_intro_point_pace_title),
+                    supportingText = stringResource(R.string.guidance_intro_point_pace_body)
+                )
+                IconListRow(
+                    iconRes = V2Icons.delete,
+                    accent = V2Palette.accentProtection,
+                    title = stringResource(R.string.guidance_intro_point_discard_title),
+                    supportingText = stringResource(R.string.guidance_intro_point_discard_body)
+                )
+                IconListRow(
+                    iconRes = V2Icons.info,
+                    accent = V2Palette.accentJustice,
+                    title = stringResource(R.string.guidance_intro_point_once_title),
+                    supportingText = stringResource(R.string.guidance_intro_point_once_body)
+                )
             }
             Spacer(modifier = Modifier.height(14.dp))
-            NoticeCard(questionnaire.notice)
+            V2NoticeCard(questionnaire.notice)
             Spacer(modifier = Modifier.height(16.dp))
         }
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            PrimaryButton(
-                text = stringResource(R.string.guidance_start),
-                onClick = onStart,
-                enabled = true,
-                isLoading = false
-            )
+            V2PrimaryButton(text = stringResource(R.string.guidance_start), onClick = onStart)
             TextButton(
                 onClick = onDismiss,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(
                     text = stringResource(R.string.guidance_not_now),
-                    fontFamily = PlexSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    color = SteelDeep
+                    style = InteriorTypeVoice.bodyStrong,
+                    color = V2Palette.inkSecondary
                 )
             }
             Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
@@ -239,10 +232,12 @@ private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss:
 }
 
 /**
- * Una pregunta por pantalla, con el título de su bloque como encabezado (los
- * dos bloques del documento, §3): progreso, opciones de la escala de esa
- * pregunta y navegación. La pregunta de contexto P0 usa su escala de vínculo,
- * el resto la de frecuencia o la de percepción.
+ * Una pregunta por pantalla (P16, v2-18), con el título de su bloque como
+ * encabezado (los dos bloques del documento, §3): «Pregunta N de M» + «Salir»
+ * siempre visibles, progreso por segmentos SIEMPRE junto al texto que enuncia
+ * el avance (regla 3), opciones de la escala como tarjetas y navegación abajo.
+ * La pregunta de contexto P0 usa su escala de vínculo, el resto la de
+ * frecuencia o la de percepción.
  */
 @Composable
 private fun QuestionContent(
@@ -261,33 +256,22 @@ private fun QuestionContent(
     ) {
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            SectionTag(
-                stringResource(
+            Text(
+                text = stringResource(
                     R.string.guidance_question_tag,
                     state.questionIndex + 1,
                     questionnaire.questions.size
                 ),
+                style = InteriorTypeVoice.label,
+                color = V2Palette.inkSecondary,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = onAbandon) {
-                Text(
-                    text = stringResource(R.string.guidance_abandon),
-                    fontFamily = PlexSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = SteelDeep
-                )
-            }
+            ExitChip(onClick = onAbandon)
         }
-        Spacer(modifier = Modifier.height(10.dp))
-        LinearProgressIndicator(
-            progress = { (state.questionIndex + 1f) / questionnaire.questions.size },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp)),
-            color = SteelDeep,
-            trackColor = Sky
+        Spacer(modifier = Modifier.height(12.dp))
+        SegmentedProgressBar(
+            totalSegments = questionnaire.questions.size,
+            completedSegments = state.questionIndex + 1
         )
         Column(
             modifier = Modifier
@@ -295,13 +279,17 @@ private fun QuestionContent(
                 .verticalScroll(rememberScrollState())
         ) {
             state.currentBlock?.let { block ->
-                Spacer(modifier = Modifier.height(16.dp))
-                SectionTag(block.title)
+                Spacer(modifier = Modifier.height(18.dp))
+                Text(
+                    text = block.title,
+                    style = InteriorTypeVoice.label,
+                    color = V2Palette.inkSecondary
+                )
             }
             Spacer(modifier = Modifier.height(12.dp))
             QuestionText(question)
             Spacer(modifier = Modifier.height(20.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 state.currentOptions.forEach { option ->
                     ScaleOptionRow(
                         label = option.label,
@@ -310,61 +298,59 @@ private fun QuestionContent(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
-        QuestionNavigationRow(
-            isLastQuestion = state.isLastQuestion,
-            onPrevious = onPrevious,
-            onNext = onNext
-        )
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            V2BackButton(onBack = onPrevious)
+            Spacer(modifier = Modifier.width(12.dp))
+            V2PrimaryButton(
+                text = stringResource(
+                    if (state.isLastQuestion) R.string.guidance_see_result else R.string.guidance_next
+                ),
+                onClick = onNext,
+                modifier = Modifier.weight(1f)
+            )
+        }
         Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
     }
 }
 
-/** Fila inferior de navegación de la pregunta: atrás y siguiente/ver resultado (P-42b). */
+/** Chip «Salir» de P16 (RF-28): píldora blanca con la equis de mobiliario. */
 @Composable
-private fun QuestionNavigationRow(isLastQuestion: Boolean, onPrevious: () -> Unit, onNext: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        OutlinedButton(
-            onClick = onPrevious,
-            modifier = Modifier
-                .weight(1f)
-                .height(52.dp),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, Sky),
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = CloudWhite,
-                contentColor = SteelDeep
-            )
-        ) {
-            Text(
-                text = stringResource(R.string.guidance_previous),
-                fontFamily = PlexSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        PrimaryButton(
-            text = stringResource(
-                if (isLastQuestion) R.string.guidance_see_result else R.string.guidance_next
-            ),
-            onClick = onNext,
-            enabled = true,
-            isLoading = false,
-            modifier = Modifier.weight(1.6f)
+private fun ExitChip(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(V2Corner.pill)
+            .background(V2Palette.cardSurface)
+            .clickable(onClick = onClick, role = Role.Button)
+            .heightIn(min = 36.dp)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = painterResource(V2Icons.close),
+            contentDescription = null,
+            tint = V2Palette.inkPrimary,
+            modifier = Modifier.size(13.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = stringResource(R.string.guidance_abandon),
+            style = InteriorTypeVoice.label,
+            color = V2Palette.inkPrimary
         )
     }
 }
 
 /**
- * Resultado orientativo (RF-29, documento §6). El orden es el exigido: el aviso
- * de alcance (RF-30), la línea de reconocimiento de tipos y el nivel van en la
- * zona FIJA de la columna —fuera del área desplazable— para que el aviso sea
- * visible en todo resultado sin necesidad de scroll (RF-30 criterio 1); las
- * recomendaciones y los accesos por municipio se desplazan.
+ * Resultado orientativo (P17, v2-19; RF-29, documento §6). La tarjeta del nivel
+ * — nombre del nivel EN PALABRAS (decisión F6) con su frase y el aviso de
+ * alcance (RF-30) adentro — vive en la zona FIJA de la columna, fuera del área
+ * desplazable: el aviso es visible en todo resultado sin necesidad de scroll
+ * (RF-30 criterio 1). Reconocimiento, recomendaciones y accesos se desplazan.
  *
- * «Guardar resultado» no se pinta: RF-31 queda como trabajo futuro y el
- * resultado se descarta siempre al terminar.
+ * «Guardar resultado» del mockup no se pinta: RF-31 queda como trabajo futuro
+ * y el resultado se descarta siempre al terminar.
  */
 @Composable
 private fun ResultContent(
@@ -381,26 +367,26 @@ private fun ResultContent(
             .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(20.dp))
-        SectionTag(stringResource(R.string.guidance_result_tag))
+        Text(
+            text = stringResource(R.string.guidance_result_tag),
+            style = InteriorTypeVoice.label,
+            color = V2Palette.inkSecondary
+        )
         Spacer(modifier = Modifier.height(12.dp))
-        NoticeCard(questionnaire.notice)
-        state.recognitionText?.let { recognition ->
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = recognition,
-                fontFamily = PlexSans,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-                color = Night
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        LevelCard(level = result.level)
+        LevelCard(level = result.level, notice = questionnaire.notice)
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
+            state.recognitionText?.let { recognition ->
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = recognition,
+                    style = InteriorTypeVoice.body,
+                    color = V2Palette.inkPrimary
+                )
+            }
             if (result.answeredCount < result.questionCount) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
@@ -409,17 +395,19 @@ private fun ResultContent(
                         result.answeredCount,
                         result.questionCount
                     ),
-                    fontFamily = PlexSans,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    color = SteelDeep
+                    style = InteriorTypeVoice.caption,
+                    color = V2Palette.inkSecondary
                 )
             }
-            Spacer(modifier = Modifier.height(18.dp))
-            SectionTag(stringResource(R.string.guidance_result_actions))
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                result.level.advice.forEach { advice -> GuidanceBullet(advice) }
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = stringResource(R.string.guidance_result_actions),
+                style = InteriorTypeVoice.label,
+                color = V2Palette.inkSecondary
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            SoftCard {
+                result.level.advice.forEach { advice -> AdviceRow(advice) }
             }
             AccessSection(
                 state = state,
@@ -429,12 +417,7 @@ private fun ResultContent(
             RoutesLinkRow(onClick = onOpenRoutes)
             Spacer(modifier = Modifier.height(16.dp))
         }
-        PrimaryButton(
-            text = stringResource(R.string.guidance_result_finish),
-            onClick = onFinish,
-            enabled = true,
-            isLoading = false
-        )
+        V2PrimaryButton(text = stringResource(R.string.guidance_result_finish), onClick = onFinish)
         Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
     }
 }
@@ -453,8 +436,12 @@ private fun AccessSection(state: GuidanceUiState, onMunicipalitySelected: (Strin
     if (!hasAny) return
 
     Spacer(modifier = Modifier.height(18.dp))
-    SectionTag(stringResource(R.string.guidance_result_access))
-    Spacer(modifier = Modifier.height(12.dp))
+    Text(
+        text = stringResource(R.string.guidance_result_access),
+        style = InteriorTypeVoice.label,
+        color = V2Palette.inkSecondary
+    )
+    Spacer(modifier = Modifier.height(10.dp))
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         state.nationalLines.forEach { line -> LineRow(line) }
         state.fixedEntities.forEach { entity -> EntityRow(entity) }
@@ -463,10 +450,8 @@ private fun AccessSection(state: GuidanceUiState, onMunicipalitySelected: (Strin
         Spacer(modifier = Modifier.height(14.dp))
         Text(
             text = stringResource(R.string.guidance_result_municipality_prompt),
-            fontFamily = PlexSans,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            color = SteelDeep
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary
         )
         Spacer(modifier = Modifier.height(10.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -489,89 +474,53 @@ private fun AccessSection(state: GuidanceUiState, onMunicipalitySelected: (Strin
 }
 
 /**
- * Tarjeta del nivel: el nombre del nivel es el protagonista tipográfico y una
- * franja lateral lo acompaña con un acento POR NIVEL tomado solo de la paleta
- * serena de la marca — sin semáforos ni rojos de alarma (ajuste de la usuaria
- * 2026-07-13 sobre la decisión F6 de A2-6, anotado en P-41: F6 mantiene «el
- * nivel se dice con palabras», ratificado con el cuestionario 2026-07-21).
+ * Tarjeta del nivel con el aviso de alcance adentro (v2-19): el nombre del
+ * nivel es el protagonista tipográfico — «el nivel se dice con palabras»
+ * (decisión F6, ratificada en P-41) — con el lila fijo de reconocer (regla 1:
+ * un color por significado; nada de semáforos por severidad, que volverían a
+ * informar con color lo que las palabras ya dicen).
  */
 @Composable
-private fun LevelCard(level: GuidanceLevel) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = CloudWhite
-    ) {
-        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            Box(
-                modifier = Modifier
-                    .width(6.dp)
-                    .fillMaxHeight()
-                    .background(levelAccent(level.order))
-            )
-            Column(modifier = Modifier.padding(16.dp)) {
-                SectionTag(stringResource(R.string.guidance_result_level))
-                Spacer(modifier = Modifier.height(6.dp))
+private fun LevelCard(level: GuidanceLevel, notice: String) {
+    SoftCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AccentBadge(iconRes = V2Icons.recognize, accent = V2Palette.accentRecognize)
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = stringResource(R.string.guidance_result_level),
+                    style = InteriorTypeVoice.label,
+                    color = V2Palette.inkSecondary
+                )
                 Text(
                     text = level.title,
-                    fontFamily = Marcellus,
-                    fontSize = 30.sp,
-                    lineHeight = 38.sp,
-                    color = Night
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = level.summary,
-                    fontFamily = PlexSans,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    color = Night
+                    style = InteriorTypeVoice.screenTitle,
+                    color = V2Palette.inkPrimary
                 )
             }
         }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = level.summary,
+            style = InteriorTypeVoice.body,
+            color = V2Palette.inkPrimary
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        V2NoticeCard(notice)
     }
-}
-
-/**
- * Acento tonal por severidad, acotado a la paleta existente: el `order` del
- * nivel llega del documento administrable y puede crecer (RF-43), así que la
- * escala se satura en Ciruela para cualquier severidad por encima de la cuarta.
- */
-private fun levelAccent(order: Int): Color = when {
-    order <= 1 -> Sky
-    order == 2 -> Steel
-    order == 3 -> SteelDeep
-    else -> Plum
 }
 
 /** Acceso a las rutas de atención completas (RF-29 criterio 2): navegación, nunca import de content (§2). */
 @Composable
 private fun RoutesLinkRow(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = CloudWhite
-    ) {
-        Row(
-            modifier = Modifier
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.guidance_result_routes),
-                fontFamily = PlexSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                color = Night,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Steel
-            )
-        }
+    SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)) {
+        IconListRow(
+            iconRes = V2Icons.place,
+            accent = V2Palette.accentGroup,
+            title = stringResource(R.string.guidance_result_routes),
+            onClick = onClick,
+            trailing = { RowChevron() }
+        )
     }
 }
 
@@ -579,54 +528,63 @@ private fun RoutesLinkRow(onClick: () -> Unit) {
 private fun QuestionText(question: Question) {
     Text(
         text = question.text,
-        fontFamily = Marcellus,
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
-        color = Night
+        style = InteriorTypeVoice.screenTitle,
+        color = V2Palette.inkPrimary
     )
 }
 
-/** Opción de la escala como fila selectable: la tarjeta completa es el objetivo táctil. */
+/**
+ * Opción de la escala como tarjeta selectable (v2-18): la tarjeta completa es
+ * el objetivo táctil; la elegida lleva el borde y el visto en el trazo lila de
+ * reconocer — contorno, nunca relleno (regla 4) — y además el peso tipográfico:
+ * el color nunca informa solo (regla 3).
+ */
 @Composable
 private fun ScaleOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .border(
-                width = if (selected) 1.5.dp else 1.dp,
-                color = if (selected) SteelDeep else Sky,
-                shape = RoundedCornerShape(12.dp)
-            ),
-        shape = RoundedCornerShape(12.dp),
-        color = CloudWhite
-    ) {
-        Row(
-            modifier = Modifier
-                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RadioButton(
-                selected = selected,
-                onClick = null,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = SteelDeep,
-                    unselectedColor = Steel
-                )
+            .clip(V2Corner.card)
+            .background(V2Palette.cardSurface)
+            .then(
+                if (selected) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = V2Palette.accentRecognize.stroke,
+                        shape = V2Corner.card
+                    )
+                } else {
+                    Modifier
+                }
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = label,
-                fontFamily = PlexSans,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                fontSize = 15.sp,
-                color = Night
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (selected) {
+            Icon(
+                painter = painterResource(V2Icons.synced),
+                contentDescription = null,
+                tint = V2Palette.accentRecognize.stroke,
+                modifier = Modifier.size(24.dp)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .border(width = 1.5.dp, color = V2Palette.inkSecondary, shape = CircleShape)
             )
         }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = label,
+            style = if (selected) InteriorTypeVoice.bodyStrong else InteriorTypeVoice.body,
+            color = V2Palette.inkPrimary
+        )
     }
 }
 
-/** Selección de municipio para los accesos (§6): misma fila selectable que la escala. */
+/** Selección de municipio para los accesos (§6): misma tarjeta selectable que la escala. */
 @Composable
 private fun MunicipalityRow(municipality: Municipality, selected: Boolean, onClick: () -> Unit) {
     ScaleOptionRow(label = municipality.label, selected = selected, onClick = onClick)
@@ -658,70 +616,37 @@ private fun EntityRow(entity: DirectoryEntity) {
     )
 }
 
+/** Contacto llamable: insignia verde de llamar (regla 1) y la fila entera como destino. */
 @Composable
 private fun ContactCard(title: String, subtitle: String, onCall: (() -> Unit)?) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = CloudWhite
-    ) {
-        Row(
-            modifier = Modifier
-                .then(if (onCall != null) Modifier.clickable(onClick = onCall) else Modifier)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontFamily = PlexSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp,
-                    color = Night
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    fontFamily = PlexSans,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    color = SteelDeep
-                )
-            }
-            if (onCall != null) {
-                Spacer(modifier = Modifier.width(12.dp))
-                Icon(
-                    imageVector = Icons.Filled.Call,
-                    contentDescription = stringResource(R.string.guidance_call),
-                    tint = SteelDeep
-                )
-            }
-        }
+    SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)) {
+        IconListRow(
+            iconRes = V2Icons.call,
+            accent = V2Palette.accentCare,
+            title = title,
+            supportingText = subtitle,
+            onClick = onCall,
+            iconDescription = if (onCall != null) stringResource(R.string.guidance_call) else null
+        )
     }
 }
 
-/** Viñeta compartida (P-42a) con el cuerpo tipográfico propio del cuestionario. */
+/** Recomendación del nivel (§6): texto administrable con la marca de viñeta neutra. */
 @Composable
-private fun GuidanceBullet(text: String) {
-    BulletRow(text = text, fontSize = 14.sp, lineHeight = 20.sp)
-}
-
-/** Aviso destacado en ciruela serena (sin rojo de alarma, decisión F2/F6 de A2-6). */
-@Composable
-private fun NoticeCard(text: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Plum.copy(alpha = 0.12f)
-    ) {
+private fun AdviceRow(text: String) {
+    Row(modifier = Modifier.padding(vertical = 6.dp)) {
+        Box(
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(V2Palette.accentRecognize.stroke)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = text,
-            fontFamily = PlexSans,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            color = Night,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            style = InteriorTypeVoice.body,
+            color = V2Palette.inkPrimary
         )
     }
 }
@@ -738,9 +663,6 @@ private fun dialNumber(context: Context, number: String) {
         context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)))
     }
 }
-
-// Carga y error genérico con reintento: LoadingState/ErrorState de
-// core/ui/components desde P-42a (P-24, guía §3).
 
 /** Espacio final para que los botones no queden bajo la nube de la esquina (RF-16). */
 private val GUIDANCE_BOTTOM_CLEARANCE = 88.dp

@@ -34,6 +34,7 @@ class AgencyDetailViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("a02", state.agency?.id)
+        assertEquals("r01", state.routeId)
         assertEquals("Protección", state.routeTitle)
         assertNull(state.errorRes)
     }

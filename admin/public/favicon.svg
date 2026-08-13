@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 44 44" role="img" aria-labelledby="t d">
+  <title id="t">Aurora — favicon</title>
+  <desc id="d">Símbolo simplificado para tamaños pequeños (≤ 48 px).</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A89BC4"></stop>
+      <stop offset="60%" stop-color="#9486B5"></stop>
+      <stop offset="100%" stop-color="#7A6FA0"></stop>
+    </linearGradient>
+    <linearGradient id="bg-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3A4654"></stop>
+      <stop offset="100%" stop-color="#2D3A47"></stop>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#FFE4C4" stop-opacity="0.95"></stop>
+      <stop offset="35%" stop-color="#FFC89A" stop-opacity="0.65"></stop>
+      <stop offset="70%" stop-color="#F2A06D" stop-opacity="0.18"></stop>
+      <stop offset="100%" stop-color="#F2A06D" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF"></stop>
+      <stop offset="40%" stop-color="#FFF1DC"></stop>
+      <stop offset="100%" stop-color="#FFD9A8"></stop>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="44" height="44" rx="9" ry="9" fill="url(#bg)"></rect>
+  <path d="M22 7 Q23.2 19.5 35 22 Q23.2 24.5 22 37 Q20.8 24.5 9 22 Q20.8 19.5 22 7 Z" fill="#FFF1DC"></path>
+  <circle cx="22" cy="22" r="1.4" fill="#FFFFFF"></circle>
+</svg>

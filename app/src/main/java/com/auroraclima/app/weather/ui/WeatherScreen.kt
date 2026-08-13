@@ -1,5 +1,6 @@
 package com.auroraclima.app.weather.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,50 +13,50 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Button
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.auroraclima.app.R
-import com.auroraclima.app.core.ui.theme.AuroraTheme
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.Sky
-import com.auroraclima.app.core.ui.theme.Steel
+import com.auroraclima.app.core.ui.v2.AuroraV2Theme
+import com.auroraclima.app.core.ui.v2.FacadeTypeVoice
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2Corner
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.weather.domain.model.City
 import com.auroraclima.app.weather.domain.model.WeatherCondition
 
 /**
- * Pantalla principal de clima (mockups P01 y P02) — RF-01, RF-02, RF-03, RF-04.
- * Solo pinta estado y emite eventos; sin lógica.
+ * Pantalla principal de clima (mockups v2-01 y v2-02) — RF-01, RF-02, RF-03.
+ * Solo pinta estado y emite eventos; sin lógica. La pestaña «Lugares» enfoca la
+ * barra de búsqueda: es la misma puerta del código (decisión D4, RF-05/RF-12).
  */
 @Composable
 fun WeatherScreen(
@@ -64,38 +65,47 @@ fun WeatherScreen(
     onCitySelected: (City) -> Unit,
     onSearchCancel: () -> Unit,
     onOpenForecast: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    searchFocus: FocusRequester = remember { FocusRequester() }
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Mist, Sky)))
-            .systemBarsPadding()
-            .padding(horizontal = 20.dp)
+            .background(V2Palette.screenBackground)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        // La barra vive en UNA sola posición de la composición: si cambiara de rama
-        // al activarse la búsqueda, Compose recrearía el TextField y el foco (y el
-        // teclado) se perderían tras la primera letra tecleada.
-        if (!state.isSearchActive) {
-            WeatherHeader(headerDate = state.headerDate)
-            Spacer(modifier = Modifier.height(20.dp))
+        // El cielo degradado se ve solo con el clima; la búsqueda va sobre fondo
+        // plano (v2-02). Cambia el MODIFICADOR y no el árbol, para que la barra
+        // conserve identidad de composición (ver nota siguiente).
+        val skyBackground = if (state.isSearchActive) {
+            Modifier.background(V2Palette.screenBackground)
+        } else {
+            Modifier.background(Brush.verticalGradient(listOf(V2Palette.skyTop, V2Palette.skyBottom)))
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(skyBackground)
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(12.dp))
+            // La barra vive en UNA sola posición de la composición: si cambiara de rama
+            // al activarse la búsqueda, Compose recrearía el TextField y el foco (y el
+            // teclado) se perderían tras la primera letra tecleada.
             WeatherSearchBar(
                 query = state.searchQuery,
                 onQueryChange = onSearchQueryChange,
-                modifier = Modifier.weight(1f)
+                isActive = state.isSearchActive,
+                onBack = onSearchCancel,
+                onClear = { onSearchQueryChange("") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(searchFocus)
             )
-            if (state.isSearchActive) {
-                TextButton(onClick = onSearchCancel) {
-                    Text(
-                        text = stringResource(R.string.weather_search_cancel),
-                        color = Night.copy(alpha = 0.7f),
-                        fontSize = 14.sp
-                    )
-                }
+            if (!state.isSearchActive && state.weather != null) {
+                CurrentConditionsSummary(weather = state.weather)
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
         when {
             state.isSearchActive && state.searchResults.isNotEmpty() ->
@@ -109,56 +119,131 @@ fun WeatherScreen(
             state.isSearchActive ->
                 Spacer(modifier = Modifier.weight(1f))
             state.weather != null ->
-                WeatherCard(
-                    weather = state.weather,
-                    onOpenForecast = onOpenForecast,
-                    modifier = Modifier.weight(1f)
-                )
+                WeatherDetailsCards(weather = state.weather, modifier = Modifier.weight(1f))
             else ->
                 WeatherEmptyContent(modifier = Modifier.weight(1f))
+        }
+        if (!state.isSearchActive) {
+            FacadeTabBar(
+                selectedTab = FacadeTab.Today,
+                onOpenToday = {},
+                onOpenForecast = onOpenForecast,
+                onOpenPlaces = { searchFocus.requestFocus() }
+            )
         }
     }
 }
 
+/** Bloque protagonista de P01: ciudad, temperatura y condición en blanco sobre el cielo. */
 @Composable
-private fun WeatherHeader(headerDate: String, modifier: Modifier = Modifier) {
-    Row(
+private fun CurrentConditionsSummary(weather: WeatherCardUiState, modifier: Modifier = Modifier) {
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(28.dp))
         Text(
-            text = stringResource(R.string.app_name),
-            color = Night,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
+            text = weather.cityName,
+            style = FacadeTypeVoice.bodyStrong,
+            color = V2Palette.onSky
         )
         Text(
-            text = headerDate,
-            color = Night.copy(alpha = 0.7f),
-            fontSize = 14.sp
+            text = weather.temperature,
+            style = FacadeTypeVoice.displayTemperature,
+            color = V2Palette.onSky
+        )
+        Text(
+            text = stringResource(weather.condition.labelRes()),
+            style = FacadeTypeVoice.body,
+            color = V2Palette.onSky
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.weather_max_min, weather.maxTemperature, weather.minTemperature),
+            style = FacadeTypeVoice.caption,
+            color = V2Palette.onSky.copy(alpha = 0.8f)
+        )
+        // La hora de actualización no está en el mockup, pero RF-03.2 exige
+        // mostrarla cuando el dato viene de la caché sin conexión.
+        Text(
+            text = stringResource(R.string.weather_updated_at, weather.updatedAtTime),
+            style = FacadeTypeVoice.caption,
+            color = V2Palette.onSky.copy(alpha = 0.65f)
         )
     }
 }
 
+/**
+ * Barra de búsqueda de ciudades y, a la vez, puerta del código (RF-12). El cromo
+ * activo (flecha de regreso y borrar, v2-02) vive en los SLOTS del TextField:
+ * el campo nunca cambia de nodo, así que el foco y el teclado sobreviven a la
+ * activación de la búsqueda.
+ */
 @Composable
-private fun WeatherSearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun WeatherSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    isActive: Boolean,
+    onBack: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     TextField(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier,
+        textStyle = FacadeTypeVoice.body,
         placeholder = {
             Text(
                 text = stringResource(R.string.weather_search_hint),
-                color = Steel
+                style = FacadeTypeVoice.body,
+                color = V2Palette.inkSecondary
             )
         },
         leadingIcon = {
-            Icon(
-                imageVector = Icons.Outlined.Search,
-                contentDescription = null,
-                tint = Steel
-            )
+            if (isActive) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_weather_back),
+                        contentDescription = stringResource(R.string.weather_search_cancel),
+                        tint = V2Palette.inkPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_weather_search),
+                    contentDescription = null,
+                    tint = V2Palette.inkSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        },
+        trailingIcon = {
+            if (isActive) {
+                IconButton(onClick = onClear) {
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .background(V2Palette.divider, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_weather_close),
+                            contentDescription = stringResource(R.string.weather_search_clear),
+                            tint = V2Palette.inkSecondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                }
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_weather_pin),
+                    contentDescription = null,
+                    tint = V2Palette.inkSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         },
         singleLine = true,
         // Sin autocorrección: evita que el IME aprenda o sugiera lo tecleado aquí,
@@ -167,78 +252,102 @@ private fun WeatherSearchBar(query: String, onQueryChange: (String) -> Unit, mod
             autoCorrect = false,
             imeAction = ImeAction.Search
         ),
-        shape = RoundedCornerShape(28.dp),
+        shape = V2Corner.pill,
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surface,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedContainerColor = V2Palette.cardSurface,
+            unfocusedContainerColor = V2Palette.cardSurface,
+            focusedTextColor = V2Palette.inkPrimary,
+            unfocusedTextColor = V2Palette.inkPrimary,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = MaterialTheme.colorScheme.primary
+            cursorColor = V2Palette.inkPrimary
         )
     )
 }
 
+/** Resultados de la búsqueda (v2-02): una sola tarjeta con divisores finos. */
 @Composable
 private fun CitySearchResults(results: List<City>, onCitySelected: (City) -> Unit, modifier: Modifier = Modifier) {
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .verticalScroll(rememberScrollState())
     ) {
-        items(results, key = { it.id }) { city ->
-            CityResultItem(city = city, onClick = { onCitySelected(city) })
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.weather_search_results),
+            style = FacadeTypeVoice.label,
+            color = V2Palette.inkSecondary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        SoftCard(contentPadding = PaddingValues(vertical = 4.dp)) {
+            results.forEachIndexed { index, city ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = V2Palette.divider,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+                CityResultItem(city = city, onClick = { onCitySelected(city) })
+            }
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
 private fun CityResultItem(city: City, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = city.name,
-                    color = Night,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = listOfNotNull(city.region, city.country).joinToString(", "),
-                    color = Steel,
-                    fontSize = 13.sp
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Steel
+        Icon(
+            painter = painterResource(R.drawable.ic_weather_pin),
+            contentDescription = null,
+            tint = V2Palette.inkSecondary,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = city.name,
+                style = FacadeTypeVoice.bodyStrong,
+                color = V2Palette.inkPrimary
+            )
+            Text(
+                text = listOfNotNull(city.region, city.country).joinToString(", "),
+                style = FacadeTypeVoice.caption,
+                color = V2Palette.inkSecondary
             )
         }
     }
 }
 
+/**
+ * Estado «sin resultados» — EL MISMO composable para una búsqueda fallida y
+ * para un código incorrecto (RF-13): el ViewModel converge ambos caminos en
+ * `showNoResults`, así que aquí no existe (ni puede existir) una segunda rama.
+ */
 @Composable
 private fun NoResultsContent(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(48.dp))
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface) {
+        Surface(shape = CircleShape, color = V2Palette.cardSurface) {
             Box(modifier = Modifier.padding(12.dp)) {
                 Icon(
-                    imageVector = Icons.Outlined.Search,
+                    painter = painterResource(R.drawable.ic_weather_search),
                     contentDescription = null,
-                    tint = Steel,
+                    tint = V2Palette.inkSecondary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -246,124 +355,99 @@ private fun NoResultsContent(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.weather_no_results_title),
-            color = Night,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
+            style = FacadeTypeVoice.bodyStrong,
+            color = V2Palette.inkPrimary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.weather_no_results_hint),
-            color = Night.copy(alpha = 0.6f),
-            fontSize = 14.sp,
+            style = FacadeTypeVoice.caption,
+            color = V2Palette.inkSecondary,
             textAlign = TextAlign.Center
         )
     }
 }
 
+/** Tarjetas de datos de P01: humedad y viento lado a lado, y el aviso de lluvia. */
 @Composable
-private fun WeatherCard(weather: WeatherCardUiState, onOpenForecast: () -> Unit, modifier: Modifier = Modifier) {
+private fun WeatherDetailsCards(weather: WeatherCardUiState, modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
-        Image(
-            painter = painterResource(weather.condition.iconRes()),
-            contentDescription = null,
-            modifier = Modifier.size(96.dp)
-        )
-        Text(
-            text = weather.temperature,
-            color = Night,
-            fontSize = 72.sp,
-            fontWeight = FontWeight.Light
-        )
-        Text(
-            text = stringResource(weather.condition.labelRes()),
-            color = Night,
-            fontSize = 18.sp
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = weather.cityName,
-            color = Night,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-        Text(
-            text = stringResource(R.string.weather_max_min, weather.maxTemperature, weather.minTemperature),
-            color = Night.copy(alpha = 0.7f),
-            fontSize = 14.sp
-        )
-        Text(
-            text = stringResource(R.string.weather_updated_at, weather.updatedAtTime),
-            color = Night.copy(alpha = 0.55f),
-            fontSize = 12.sp
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            WeatherDetailChip(
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            WeatherDataCard(
+                iconRes = R.drawable.ic_weather_drop,
                 label = stringResource(R.string.weather_humidity_label),
                 value = weather.humidity,
                 modifier = Modifier.weight(1f)
             )
-            WeatherDetailChip(
+            WeatherDataCard(
+                iconRes = R.drawable.ic_weather_wind,
                 label = stringResource(R.string.weather_wind_label),
                 value = weather.wind,
                 modifier = Modifier.weight(1f)
             )
-            WeatherDetailChip(
-                label = stringResource(R.string.weather_rain_label),
-                value = weather.rainProbability,
-                modifier = Modifier.weight(1f)
-            )
         }
-        Spacer(modifier = Modifier.weight(1f))
-        ForecastButton(onClick = onOpenForecast)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+        RainNoticeCard(rainProbability = weather.rainProbability)
     }
 }
 
-/** Acceso al pronóstico extendido desde la vista de la ciudad (RF-04, mockup P01). */
 @Composable
-private fun ForecastButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(28.dp)
-    ) {
+private fun WeatherDataCard(@DrawableRes iconRes: Int, label: String, value: String, modifier: Modifier = Modifier) {
+    SoftCard(modifier = modifier, contentPadding = PaddingValues(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                tint = V2Palette.inkSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = FacadeTypeVoice.caption,
+                color = V2Palette.inkSecondary
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = stringResource(R.string.weather_forecast_title),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
+            text = value,
+            style = FacadeTypeVoice.value,
+            color = V2Palette.inkPrimary
         )
     }
 }
 
+/**
+ * Aviso de lluvia de P01. El mockup detalla la franja horaria («desde las
+ * 3 p. m.»), un dato que el UiState no tiene: se degrada a la probabilidad
+ * del día, que sí existe (decisión de alcance S1, 2026-08-11).
+ */
 @Composable
-private fun WeatherDetailChip(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Text(
-                text = label,
-                color = Steel,
-                fontSize = 12.sp
+private fun RainNoticeCard(rainProbability: String, modifier: Modifier = Modifier) {
+    SoftCard(modifier = modifier, contentPadding = PaddingValues(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(R.drawable.ic_weather_rain),
+                contentDescription = null,
+                modifier = Modifier.size(28.dp)
             )
-            Text(
-                text = value,
-                color = Night,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = stringResource(R.string.weather_rain_label),
+                    style = FacadeTypeVoice.bodyStrong,
+                    color = V2Palette.inkPrimary
+                )
+                Text(
+                    text = stringResource(R.string.weather_rain_notice, rainProbability),
+                    style = FacadeTypeVoice.caption,
+                    color = V2Palette.inkSecondary
+                )
+            }
         }
     }
 }
@@ -371,7 +455,9 @@ private fun WeatherDetailChip(label: String, value: String, modifier: Modifier =
 @Composable
 private fun WeatherEmptyContent(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -383,8 +469,8 @@ private fun WeatherEmptyContent(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.weather_empty_message),
-            color = Night.copy(alpha = 0.7f),
-            fontSize = 16.sp,
+            style = FacadeTypeVoice.body,
+            color = V2Palette.inkSecondary,
             textAlign = TextAlign.Center
         )
     }
@@ -393,7 +479,7 @@ private fun WeatherEmptyContent(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun WeatherScreenPreview() {
-    AuroraTheme {
+    AuroraV2Theme(V2Voice.Facade) {
         WeatherScreen(
             state = WeatherUiState(
                 headerDate = "lun 6 jul",
@@ -408,6 +494,24 @@ private fun WeatherScreenPreview() {
                     wind = "9 km/h",
                     rainProbability = "55 %"
                 )
+            ),
+            onSearchQueryChange = {},
+            onCitySelected = {},
+            onSearchCancel = {},
+            onOpenForecast = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun WeatherScreenNoResultsPreview() {
+    AuroraV2Theme(V2Voice.Facade) {
+        WeatherScreen(
+            state = WeatherUiState(
+                searchQuery = "Bucaramnga",
+                isSearchActive = true,
+                showNoResults = true
             ),
             onSearchQueryChange = {},
             onCitySelected = {},

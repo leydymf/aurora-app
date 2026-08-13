@@ -8,6 +8,8 @@ import { EditorActions } from '../../components/EditorActions'
 import { EditorStatus } from '../../components/EditorStatus'
 import { RowControls } from '../../components/RowControls'
 import { StatusBadge } from '../../components/StatusBadge'
+import { routeVisual } from '../../components/contentVisuals'
+import { IconBadge } from '../../components/icons'
 import { buildOrderIndex } from '../../lib/drafts'
 import { nextOpaqueId } from '../../lib/ids'
 import { useEntries } from '../../lib/useEntries'
@@ -132,27 +134,38 @@ export function RoutesTab() {
                     {routes.entries && sorted.length === 0 && !editor.isNew && (
                         <p className="muted">Sin rutas todavía.</p>
                     )}
-                    {sorted.map((entry) => (
-                        <button
-                            key={entry.docId}
-                            type="button"
-                            className={
-                                'list__item' +
-                                (entry.docId === selectedId && !editor.isNew
-                                    ? ' list__item--active'
-                                    : '')
-                            }
-                            onClick={() => {
-                                editor.select(entry)
-                            }}
-                        >
-                            <span className="list__title">{entry.data.title || entry.docId}</span>
-                            <StatusBadge status={entry.status} />
-                        </button>
-                    ))}
+                    {sorted.map((entry) => {
+                        const visual = routeVisual(entry.docId)
+                        return (
+                            <button
+                                key={entry.docId}
+                                type="button"
+                                className={
+                                    'list__item' +
+                                    (entry.docId === selectedId && !editor.isNew
+                                        ? ' list__item--active'
+                                        : '')
+                                }
+                                onClick={() => {
+                                    editor.select(entry)
+                                }}
+                            >
+                                <span className="list__lead">
+                                    <IconBadge name={visual.icon} accent={visual.accent} />
+                                    <span className="list__title">
+                                        {entry.data.title || entry.docId}
+                                    </span>
+                                </span>
+                                <StatusBadge status={entry.status} />
+                            </button>
+                        )
+                    })}
                     {editor.isNew && editing && (
                         <div className="list__item list__item--active">
-                            <span className="list__title">{editing.title || '(nueva)'}</span>
+                            <span className="list__lead">
+                                <IconBadge name="place" accent="group" />
+                                <span className="list__title">{editing.title || '(nueva)'}</span>
+                            </span>
                             <StatusBadge status="borrador" />
                         </div>
                     )}

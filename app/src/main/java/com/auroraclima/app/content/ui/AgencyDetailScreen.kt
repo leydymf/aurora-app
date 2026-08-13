@@ -1,5 +1,6 @@
 package com.auroraclima.app.content.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,44 +14,40 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.content.domain.model.Agency
-import com.auroraclima.app.core.ui.components.BackHeader
-import com.auroraclima.app.core.ui.components.ErrorState
-import com.auroraclima.app.core.ui.components.LoadingState
-import com.auroraclima.app.core.ui.components.SectionTag
-import com.auroraclima.app.core.ui.components.SectionTitle
-import com.auroraclima.app.core.ui.theme.CloudWhite
-import com.auroraclima.app.core.ui.theme.Mist
-import com.auroraclima.app.core.ui.theme.Night
-import com.auroraclima.app.core.ui.theme.PlexSans
-import com.auroraclima.app.core.ui.theme.SteelDeep
+import com.auroraclima.app.core.ui.v2.AccentBadge
+import com.auroraclima.app.core.ui.v2.AccentPair
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2BackHeader
+import com.auroraclima.app.core.ui.v2.V2Corner
+import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2LoadingState
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.V2SecondaryButton
+import com.auroraclima.app.core.ui.v2.routeVisual
 
 /**
- * Detalle de entidad (RF-22, mockup P13 / alta-fidelidad-21). El botón de llamada
- * abre el marcador del teléfono con ACTION_DIAL: no exige permiso alguno (RNF-04),
- * no marca por sí solo y la app no conserva rastro de la acción (decisión F5).
+ * Detalle de entidad (RF-22, mockup P13 / v2-15). El botón de llamada abre el
+ * marcador del teléfono con ACTION_DIAL: no exige permiso alguno (RNF-04), no
+ * marca por sí solo y la app no conserva rastro de la acción (decisión F5).
  */
 @Composable
 fun AgencyDetailRoute(onBack: () -> Unit) {
@@ -76,140 +73,145 @@ internal fun AgencyDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Mist)
+            .background(V2Palette.screenBackground)
             .systemBarsPadding()
     ) {
-        BackHeader(
-            tag = stringResource(R.string.content_agency_tag, state.routeTitle.uppercase()),
+        V2BackHeader(
+            tag = state.routeTitle,
             onBack = onBack,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         when {
-            state.isLoading -> LoadingState()
+            state.isLoading -> V2LoadingState()
             state.errorRes != null || state.agency == null ->
-                ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
-            else -> AgencyDetailContent(agency = state.agency, onCall = onCall)
+                V2ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
+            else -> AgencyDetailContent(routeId = state.routeId, agency = state.agency, onCall = onCall)
         }
     }
 }
 
 @Composable
-private fun AgencyDetailContent(agency: Agency, onCall: (String) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-        SectionTitle(agency.name)
-        Spacer(modifier = Modifier.height(20.dp))
-        SectionTag(stringResource(R.string.content_agency_role_label))
-        Spacer(modifier = Modifier.height(8.dp))
-        BodyParagraph(agency.role)
-        Spacer(modifier = Modifier.height(20.dp))
-        SectionTag(stringResource(R.string.content_agency_when_label))
-        Spacer(modifier = Modifier.height(8.dp))
-        BodyParagraph(agency.whenToUse)
-        if (agency.address != null || agency.hours != null) {
-            Spacer(modifier = Modifier.height(20.dp))
-            SectionTag(stringResource(R.string.content_agency_where_label))
-            Spacer(modifier = Modifier.height(10.dp))
-            WhereCard(address = agency.address, hours = agency.hours)
-        }
-        Spacer(modifier = Modifier.height(28.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            agency.phones.forEach { phone -> CallButton(phone = phone, onCall = onCall) }
-        }
-        if (agency.phones.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.content_agency_call_note),
-                fontFamily = PlexSans,
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
-                color = SteelDeep,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        Spacer(modifier = Modifier.height(CONTENT_BOTTOM_CLEARANCE))
-    }
-}
-
-@Composable
-private fun BodyParagraph(text: String) {
-    Text(
-        text = text,
-        fontFamily = PlexSans,
-        fontSize = 15.sp,
-        lineHeight = 22.sp,
-        color = Night
-    )
-}
-
-@Composable
-private fun WhereCard(address: String?, hours: String?) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = CloudWhite
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            if (address != null) {
+private fun AgencyDetailContent(routeId: String, agency: Agency, onCall: (String) -> Unit) {
+    val sectorVisual = routeVisual(routeId)
+    Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AccentBadge(iconRes = sectorVisual.iconRes, accent = sectorVisual.accent)
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = address,
-                    fontFamily = PlexSans,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    lineHeight = 21.sp,
-                    color = Night
+                    text = agency.name,
+                    style = InteriorTypeVoice.screenTitle,
+                    color = V2Palette.inkPrimary
                 )
             }
-            if (address != null && hours != null) {
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            // Las tres secciones en una tarjeta (v2-15): qué hace (información,
+            // neutro), cuándo acudir (reloj, arena de tiempo) y dónde (pin,
+            // verde de cuidado) — significados fijos de la regla 1.
+            SoftCard {
+                Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    AgencySection(
+                        iconRes = V2Icons.info,
+                        accent = V2Palette.accentGroup,
+                        label = stringResource(R.string.content_agency_role_label),
+                        text = agency.role
+                    )
+                    AgencySection(
+                        iconRes = V2Icons.waiting,
+                        accent = V2Palette.accentJustice,
+                        label = stringResource(R.string.content_agency_when_label),
+                        text = agency.whenToUse
+                    )
+                    if (agency.address != null || agency.hours != null) {
+                        AgencySection(
+                            iconRes = V2Icons.place,
+                            accent = V2Palette.accentCare,
+                            label = stringResource(R.string.content_agency_where_label),
+                            text = listOfNotNull(
+                                agency.address,
+                                agency.hours?.let { stringResource(R.string.content_agency_hours, it) }
+                            ).joinToString(separator = "\n")
+                        )
+                    }
+                }
             }
-            if (hours != null) {
-                Text(
-                    text = stringResource(R.string.content_agency_hours, hours),
-                    fontFamily = PlexSans,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    color = SteelDeep
+            Spacer(modifier = Modifier.height(16.dp))
+            if (agency.phones.isNotEmpty()) {
+                // Aviso rosa (v2-15): la llamada sale del camuflaje y la nota lo
+                // advierte antes del botón (D4 M-2).
+                CallNoticeCard(text = stringResource(R.string.content_agency_call_note))
+                // Números adicionales como acción secundaria (regla 2: un solo
+                // botón lleno por pantalla — el primero, fijo abajo).
+                agency.phones.drop(1).forEach { phone ->
+                    Spacer(modifier = Modifier.height(10.dp))
+                    V2SecondaryButton(
+                        text = stringResource(R.string.content_agency_call, phone),
+                        onClick = { onCall(phone) }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        agency.phones.firstOrNull()?.let { phone ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 16.dp)
+            ) {
+                V2PrimaryButton(
+                    text = stringResource(R.string.content_agency_call, phone),
+                    onClick = { onCall(phone) },
+                    modifier = Modifier.weight(1f)
                 )
+                Spacer(modifier = Modifier.width(CLOUD_CLEARANCE))
             }
         }
     }
 }
 
+/** Sección del detalle (v2-15): insignia + etiqueta + texto. */
 @Composable
-private fun CallButton(phone: String, onCall: (String) -> Unit) {
-    Button(
-        onClick = { onCall(phone) },
+private fun AgencySection(@DrawableRes iconRes: Int, accent: AccentPair, label: String, text: String) {
+    Row {
+        AccentBadge(iconRes = iconRes, accent = accent, size = 40.dp)
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, style = InteriorTypeVoice.bodyStrong, color = V2Palette.inkPrimary)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = text, style = InteriorTypeVoice.body, color = V2Palette.inkSecondary)
+        }
+    }
+}
+
+/** Aviso rosa de la llamada (v2-15): escudo y texto en el trazo del acento de aviso. */
+@Composable
+private fun CallNoticeCard(text: String) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Night,
-            contentColor = CloudWhite
-        )
+            .clip(V2Corner.card)
+            .background(V2Palette.accentNotice.tint)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Call,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = stringResource(R.string.content_agency_call, phone),
-                fontFamily = PlexSans,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp
-            )
-        }
+        Icon(
+            painter = painterResource(V2Icons.protection),
+            contentDescription = null,
+            tint = V2Palette.accentNotice.stroke,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = text,
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.accentNotice.stroke,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

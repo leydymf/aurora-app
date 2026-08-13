@@ -3,11 +3,18 @@
 // Listado + editor con vista previa fiel a las secciones que la app pinta en
 // TopicDetailScreen (título, resumen, SEÑALES, EJEMPLOS). Guardar escribe el
 // BORRADOR (colección drafts); la app solo cambia al publicar (RF-44).
+//
+// Estilo V2 (v2-25 y v2-28): cada tipo lleva el icono y matiz que la APP le
+// asigna (espejo de ContentVisual.kt, decisión D2) y la vista previa muestra
+// «como lo verá la usuaria». No hay selector de icono/color: el esquema no
+// trae ese campo; los tipos nuevos caen al neutro de la librería cerrada.
 import { useMemo } from 'react'
 import { EditorActions } from '../../components/EditorActions'
 import { EditorStatus } from '../../components/EditorStatus'
 import { StatusBadge } from '../../components/StatusBadge'
 import { StringListField } from '../../components/StringListField'
+import { topicVisual } from '../../components/contentVisuals'
+import { IconBadge, V2Icon } from '../../components/icons'
 import { buildOrderIndex } from '../../lib/drafts'
 import { nextOpaqueId } from '../../lib/ids'
 import { useEntries } from '../../lib/useEntries'
@@ -91,27 +98,38 @@ export function ContentPage() {
                     {topics.entries && sorted.length === 0 && !editor.isNew && (
                         <p className="muted">Sin contenido todavía.</p>
                     )}
-                    {sorted.map((entry) => (
-                        <button
-                            key={entry.docId}
-                            type="button"
-                            className={
-                                'list__item' +
-                                (entry.docId === selectedId && !editor.isNew
-                                    ? ' list__item--active'
-                                    : '')
-                            }
-                            onClick={() => {
-                                editor.select(entry)
-                            }}
-                        >
-                            <span className="list__title">{entry.data.title || entry.docId}</span>
-                            <StatusBadge status={entry.status} />
-                        </button>
-                    ))}
+                    {sorted.map((entry) => {
+                        const visual = topicVisual(entry.docId)
+                        return (
+                            <button
+                                key={entry.docId}
+                                type="button"
+                                className={
+                                    'list__item' +
+                                    (entry.docId === selectedId && !editor.isNew
+                                        ? ' list__item--active'
+                                        : '')
+                                }
+                                onClick={() => {
+                                    editor.select(entry)
+                                }}
+                            >
+                                <span className="list__lead">
+                                    <IconBadge name={visual.icon} accent={visual.accent} />
+                                    <span className="list__title">
+                                        {entry.data.title || entry.docId}
+                                    </span>
+                                </span>
+                                <StatusBadge status={entry.status} />
+                            </button>
+                        )
+                    })}
                     {editor.isNew && editing && (
                         <div className="list__item list__item--active">
-                            <span className="list__title">{editing.title || '(nuevo)'}</span>
+                            <span className="list__lead">
+                                <IconBadge name="guide" accent="group" />
+                                <span className="list__title">{editing.title || '(nuevo)'}</span>
+                            </span>
                             <StatusBadge status="borrador" />
                         </div>
                     )}
@@ -205,8 +223,15 @@ export function ContentPage() {
                         </div>
 
                         <aside className="panel preview">
-                            <p className="preview__tag">INFORMACIÓN · TIPOS</p>
-                            <h2 className="preview__title">{editing.title || 'Sin título'}</h2>
+                            <p className="preview__tag">COMO LO VERÁ LA USUARIA</p>
+                            <div className="preview__head">
+                                <IconBadge
+                                    name={topicVisual(selectedId ?? '').icon}
+                                    accent={topicVisual(selectedId ?? '').accent}
+                                    size={40}
+                                />
+                                <h2 className="preview__title">{editing.title || 'Sin título'}</h2>
+                            </div>
                             <p className="preview__body">{editing.summary}</p>
                             {editing.signals.length > 0 && (
                                 <>
@@ -231,6 +256,13 @@ export function ContentPage() {
                             <p className="preview__note">
                                 Vista previa aproximada del detalle en la app.
                             </p>
+                            <p className="preview__note">
+                                El icono y el color los asigna la app con su librería cerrada de
+                                significados; un tipo nuevo usa el neutro. No hay selector libre de
+                                color ni carga de imágenes: cada acento ya trae su par de contraste
+                                verificado, así el contenido nuevo nunca rompe la accesibilidad ni
+                                el significado de los colores.
+                            </p>
                         </aside>
                     </>
                 ) : (
@@ -239,6 +271,14 @@ export function ContentPage() {
                     </div>
                 )}
             </div>
+
+            <p className="note">
+                <V2Icon name="info" size={18} />
+                <span>
+                    Los cambios publicados llegan a la app en su siguiente actualización de
+                    contenido.
+                </span>
+            </p>
         </section>
     )
 }
