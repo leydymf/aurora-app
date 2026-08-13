@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2BackHeader
 import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2FieldLabel
@@ -101,44 +102,48 @@ internal fun ChangeCodeScreen(
         )
         Spacer(modifier = Modifier.height(20.dp))
 
-        V2FieldLabel(stringResource(R.string.access_change_current_label))
-        V2SecretField(
-            value = state.currentCode,
-            onValueChange = onCurrentCodeChange,
-            isVisible = state.isCurrentVisible,
-            onToggleVisibility = onToggleCurrentVisibility,
-            isError = state.currentErrorRes != null,
-            imeAction = ImeAction.Next,
-            keyboardActions = KeyboardActions(),
-            toggleDescription = stringResource(R.string.access_setup_toggle)
-        )
-        V2FieldMessage(messageRes = state.currentErrorRes, fallbackRes = null)
+        // El formulario vive en tarjeta blanca: el campo relleno en lila va
+        // SIEMPRE sobre tarjeta, nunca directo sobre el fondo (v2-07/v2-09).
+        SoftCard {
+            V2FieldLabel(stringResource(R.string.access_change_current_label))
+            V2SecretField(
+                value = state.currentCode,
+                onValueChange = onCurrentCodeChange,
+                isVisible = state.isCurrentVisible,
+                onToggleVisibility = onToggleCurrentVisibility,
+                isError = state.currentErrorRes != null,
+                imeAction = ImeAction.Next,
+                keyboardActions = KeyboardActions(),
+                toggleDescription = stringResource(R.string.access_setup_toggle)
+            )
+            V2FieldMessage(messageRes = state.currentErrorRes, fallbackRes = null)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            V2FieldLabel(stringResource(R.string.access_change_new_label))
+            V2SecretField(
+                value = state.newCode,
+                onValueChange = onNewCodeChange,
+                isVisible = state.isNewVisible,
+                onToggleVisibility = onToggleNewVisibility,
+                isError = false,
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                toggleDescription = stringResource(R.string.access_setup_toggle)
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Las mismas reglas en vivo de la creación (RF-09 criterio 2 → RF-08).
+            RuleRow(
+                text = stringResource(R.string.access_setup_rule_length),
+                satisfied = state.hasMinLength
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            RuleRow(
+                text = stringResource(R.string.access_setup_rule_city),
+                satisfied = state.cityRuleSatisfied
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
-
-        V2FieldLabel(stringResource(R.string.access_change_new_label))
-        V2SecretField(
-            value = state.newCode,
-            onValueChange = onNewCodeChange,
-            isVisible = state.isNewVisible,
-            onToggleVisibility = onToggleNewVisibility,
-            isError = false,
-            imeAction = ImeAction.Done,
-            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-            toggleDescription = stringResource(R.string.access_setup_toggle)
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Las mismas reglas en vivo de la creación (RF-09 criterio 2 → RF-08).
-        RuleRow(
-            text = stringResource(R.string.access_setup_rule_length),
-            satisfied = state.hasMinLength
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        RuleRow(
-            text = stringResource(R.string.access_setup_rule_city),
-            satisfied = state.cityRuleSatisfied
-        )
-        Spacer(modifier = Modifier.height(20.dp))
 
         // Aviso del mockup en el rosa de avisos (regla 1; F2: nada de alarma).
         Text(

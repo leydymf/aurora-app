@@ -24,6 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2BackHeader
 import com.auroraclima.app.core.ui.v2.V2FieldLabel
 import com.auroraclima.app.core.ui.v2.V2FieldMessage
@@ -104,49 +105,53 @@ internal fun ChangePasswordScreen(
         )
         Spacer(modifier = Modifier.height(20.dp))
 
-        V2FieldLabel(stringResource(R.string.account_password_change_current_label))
-        V2SecretField(
-            value = state.currentPassword,
-            onValueChange = onCurrentPasswordChange,
-            isVisible = state.isCurrentVisible,
-            onToggleVisibility = onToggleCurrentVisibility,
-            isError = state.currentErrorRes != null,
-            imeAction = ImeAction.Next,
-            keyboardActions = KeyboardActions(),
-            toggleDescription = stringResource(R.string.account_password_toggle)
-        )
-        V2FieldMessage(messageRes = state.currentErrorRes, fallbackRes = null)
-        Spacer(modifier = Modifier.height(16.dp))
+        // El formulario vive en tarjeta blanca: el campo relleno en lila va
+        // SIEMPRE sobre tarjeta, nunca directo sobre el fondo (v2-07/v2-09).
+        SoftCard {
+            V2FieldLabel(stringResource(R.string.account_password_change_current_label))
+            V2SecretField(
+                value = state.currentPassword,
+                onValueChange = onCurrentPasswordChange,
+                isVisible = state.isCurrentVisible,
+                onToggleVisibility = onToggleCurrentVisibility,
+                isError = state.currentErrorRes != null,
+                imeAction = ImeAction.Next,
+                keyboardActions = KeyboardActions(),
+                toggleDescription = stringResource(R.string.account_password_toggle)
+            )
+            V2FieldMessage(messageRes = state.currentErrorRes, fallbackRes = null)
+            Spacer(modifier = Modifier.height(16.dp))
 
-        V2FieldLabel(stringResource(R.string.account_password_change_new_label))
-        V2SecretField(
-            value = state.newPassword,
-            onValueChange = onNewPasswordChange,
-            isVisible = state.isNewVisible,
-            onToggleVisibility = onToggleNewVisibility,
-            isError = state.newErrorRes != null,
-            imeAction = ImeAction.Next,
-            keyboardActions = KeyboardActions(),
-            toggleDescription = stringResource(R.string.account_password_toggle)
-        )
-        V2FieldMessage(
-            messageRes = state.newErrorRes,
-            fallbackRes = R.string.account_register_password_hint
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+            V2FieldLabel(stringResource(R.string.account_password_change_new_label))
+            V2SecretField(
+                value = state.newPassword,
+                onValueChange = onNewPasswordChange,
+                isVisible = state.isNewVisible,
+                onToggleVisibility = onToggleNewVisibility,
+                isError = state.newErrorRes != null,
+                imeAction = ImeAction.Next,
+                keyboardActions = KeyboardActions(),
+                toggleDescription = stringResource(R.string.account_password_toggle)
+            )
+            V2FieldMessage(
+                messageRes = state.newErrorRes,
+                fallbackRes = R.string.account_register_password_hint
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        V2FieldLabel(stringResource(R.string.account_password_change_confirm_label))
-        V2SecretField(
-            value = state.confirmPassword,
-            onValueChange = onConfirmPasswordChange,
-            isVisible = state.isConfirmVisible,
-            onToggleVisibility = onToggleConfirmVisibility,
-            isError = state.confirmErrorRes != null,
-            imeAction = ImeAction.Done,
-            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
-            toggleDescription = stringResource(R.string.account_password_toggle)
-        )
-        V2FieldMessage(messageRes = state.confirmErrorRes, fallbackRes = null)
+            V2FieldLabel(stringResource(R.string.account_password_change_confirm_label))
+            V2SecretField(
+                value = state.confirmPassword,
+                onValueChange = onConfirmPasswordChange,
+                isVisible = state.isConfirmVisible,
+                onToggleVisibility = onToggleConfirmVisibility,
+                isError = state.confirmErrorRes != null,
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                toggleDescription = stringResource(R.string.account_password_toggle)
+            )
+            V2FieldMessage(messageRes = state.confirmErrorRes, fallbackRes = null)
+        }
         Spacer(modifier = Modifier.height(24.dp))
 
         V2PrimaryButton(
