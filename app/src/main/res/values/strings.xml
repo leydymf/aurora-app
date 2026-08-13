@@ -153,8 +153,6 @@
     <string name="access_tab_journal">Mi registro</string>
     <string name="access_panel_guide_title">Reconocer tu situación</string>
     <string name="access_panel_guide_body">Unas preguntas para orientarte, a tu ritmo.</string>
-    <string name="access_panel_journal_title">Mi registro</string>
-    <string name="access_panel_journal_body">Tus notas y archivos, protegidos y solo tuyos.</string>
     <string name="content_guide_title">Guía</string>
     <string name="content_guide_subtitle">Todo lo que necesitas saber y a quién acudir, en un solo lugar.</string>
     <string name="content_guide_topics_support">Los tipos, con señales y ejemplos</string>
