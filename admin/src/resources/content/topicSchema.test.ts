@@ -15,6 +15,8 @@ function validTopic(): TopicDoc {
         summary: 'Cualquier acción que ponga en riesgo tu cuerpo o tu salud.',
         signals: ['Golpes o empujones.'],
         examples: ['Te empuja durante una pelea.'],
+        icon: 'figure',
+        accent: 'blue',
     }
 }
 
@@ -50,7 +52,26 @@ describe('validateTopic (validación dura para publicar, RF-41)', () => {
     })
 
     it('bloquea un schemaVersion distinto del soportado (isSupportedSchema de la app)', () => {
-        expect(fields({ ...validTopic(), schemaVersion: 2 })).toContain('general')
+        expect(fields({ ...validTopic(), schemaVersion: 1 })).toContain('general')
+        expect(fields({ ...validTopic(), schemaVersion: 3 })).toContain('general')
+    })
+
+    it('rechaza icon o accent fuera de la biblioteca cerrada (esquema v2)', () => {
+        expect(fields({ ...validTopic(), icon: 'unicornio' })).toContain('icon')
+        expect(fields({ ...validTopic(), icon: '' })).toContain('icon')
+        expect(fields({ ...validTopic(), accent: 'fucsia' })).toContain('accent')
+        // El violeta de la nube no existe como id de dato: es exclusivo de la
+        // salida rápida de la app (anexo v2-29).
+        expect(fields({ ...validTopic(), accent: 'violet' })).toContain('accent')
+        expect(fields({ ...validTopic(), accent: 'cloud' })).toContain('accent')
+    })
+
+    it('acepta cualquier icono y acento de la biblioteca, sin pares fijos', () => {
+        // La elección es libre DENTRO de la biblioteca: no se exige la pareja
+        // del mapeo automático.
+        expect(
+            validateTopic({ ...validTopic(), icon: 'device', accent: 'lilac' }, noOrders),
+        ).toEqual([])
     })
 
     it('bloquea el marcador [POR CONFIRMAR] en cualquier campo (compuerta M-2)', () => {
@@ -71,19 +92,32 @@ describe('topicFromRaw (lectura tolerante, espejo de TopicDto)', () => {
             summary: '',
             signals: [],
             examples: [],
+            icon: '',
+            accent: '',
         })
     })
 
     it('conserva exactamente los campos del esquema', () => {
         const raw = {
-            schemaVersion: 1,
+            schemaVersion: 2,
             order: 2,
             title: 'Violencia psicológica',
             summary: 'Busca degradarte o controlarte.',
             signals: ['Te humilla.'],
             examples: ['Revisa tu celular.'],
+            icon: 'lobes',
+            accent: 'lilac',
         }
         expect(topicFromRaw(raw)).toEqual(raw)
+    })
+
+    it('un documento v1 conserva su versión y queda sin selección visual', () => {
+        // La lectura es tolerante (nunca inventa datos): el ascenso a v2
+        // ocurre al GUARDAR (normalizeTopic), no al leer.
+        const legacy = topicFromRaw({ schemaVersion: 1, order: 1, title: 'Física' })
+        expect(legacy.schemaVersion).toBe(1)
+        expect(legacy.icon).toBe('')
+        expect(legacy.accent).toBe('')
     })
 })
 
@@ -96,5 +130,10 @@ describe('normalizeTopic', () => {
         })
         expect(normalized.title).toBe('Violencia física')
         expect(normalized.signals).toEqual(['con espacios', ''])
+    })
+
+    it('sube un topic v1 al esquema vigente al guardar (la app soporta 1..2)', () => {
+        const normalized = normalizeTopic({ ...validTopic(), schemaVersion: 1 })
+        expect(normalized.schemaVersion).toBe(SCHEMA_VERSION)
     })
 })

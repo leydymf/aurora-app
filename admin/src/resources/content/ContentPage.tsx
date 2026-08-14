@@ -4,16 +4,18 @@
 // TopicDetailScreen (título, resumen, SEÑALES, EJEMPLOS). Guardar escribe el
 // BORRADOR (colección drafts); la app solo cambia al publicar (RF-44).
 //
-// Estilo V2 (v2-25 y v2-28): cada tipo lleva el icono y matiz que la APP le
-// asigna (espejo de ContentVisual.kt, decisión D2) y la vista previa muestra
-// «como lo verá la usuaria». No hay selector de icono/color: el esquema no
-// trae ese campo; los tipos nuevos caen al neutro de la librería cerrada.
+// Estilo V2 (v2-25 y v2-28): desde el esquema v2 (ADR 2026-08-14) cada tipo
+// trae `icon`/`accent` elegidos en el selector de la biblioteca cerrada
+// (VisualPicker); un documento sin selección pinta el mapeo automático por id
+// (espejo de ContentVisual.kt, decisión D2, hoy contrato de degradación) y la
+// vista previa muestra «como lo verá la usuaria».
 import { useMemo } from 'react'
 import { EditorActions } from '../../components/EditorActions'
 import { EditorStatus } from '../../components/EditorStatus'
 import { StatusBadge } from '../../components/StatusBadge'
 import { StringListField } from '../../components/StringListField'
-import { topicVisual } from '../../components/contentVisuals'
+import { VisualPicker } from '../../components/VisualPicker'
+import { topicVisual, topicVisualIds } from '../../components/contentVisuals'
 import { IconBadge, V2Icon } from '../../components/icons'
 import { buildOrderIndex } from '../../lib/drafts'
 import { nextOpaqueId } from '../../lib/ids'
@@ -99,7 +101,7 @@ export function ContentPage() {
                         <p className="muted">Sin contenido todavía.</p>
                     )}
                     {sorted.map((entry) => {
-                        const visual = topicVisual(entry.docId)
+                        const visual = topicVisual(entry.docId, entry.data.icon, entry.data.accent)
                         return (
                             <button
                                 key={entry.docId}
@@ -127,7 +129,10 @@ export function ContentPage() {
                     {editor.isNew && editing && (
                         <div className="list__item list__item--active">
                             <span className="list__lead">
-                                <IconBadge name="guide" accent="group" />
+                                <IconBadge
+                                    name={topicVisual('', editing.icon, editing.accent).icon}
+                                    accent={topicVisual('', editing.icon, editing.accent).accent}
+                                />
                                 <span className="list__title">{editing.title || '(nuevo)'}</span>
                             </span>
                             <StatusBadge status="borrador" />
@@ -158,6 +163,19 @@ export function ContentPage() {
                                     />
                                 </label>
                             </div>
+                            <VisualPicker
+                                effective={topicVisualIds(
+                                    selectedId ?? '',
+                                    editing.icon,
+                                    editing.accent,
+                                )}
+                                onSelectIcon={(id) => {
+                                    editor.setEditing({ ...editing, icon: id })
+                                }}
+                                onSelectAccent={(id) => {
+                                    editor.setEditing({ ...editing, accent: id })
+                                }}
+                            />
                             <label className="field">
                                 <span>Título</span>
                                 <input
@@ -226,8 +244,14 @@ export function ContentPage() {
                             <p className="preview__tag">COMO LO VERÁ LA USUARIA</p>
                             <div className="preview__head">
                                 <IconBadge
-                                    name={topicVisual(selectedId ?? '').icon}
-                                    accent={topicVisual(selectedId ?? '').accent}
+                                    name={
+                                        topicVisual(selectedId ?? '', editing.icon, editing.accent)
+                                            .icon
+                                    }
+                                    accent={
+                                        topicVisual(selectedId ?? '', editing.icon, editing.accent)
+                                            .accent
+                                    }
                                     size={40}
                                 />
                                 <h2 className="preview__title">{editing.title || 'Sin título'}</h2>
@@ -257,11 +281,10 @@ export function ContentPage() {
                                 Vista previa aproximada del detalle en la app.
                             </p>
                             <p className="preview__note">
-                                El icono y el color los asigna la app con su librería cerrada de
-                                significados; un tipo nuevo usa el neutro. No hay selector libre de
-                                color ni carga de imágenes: cada acento ya trae su par de contraste
-                                verificado, así el contenido nuevo nunca rompe la accesibilidad ni
-                                el significado de los colores.
+                                El icono y el acento se eligen solo dentro de la biblioteca cerrada
+                                de significados de la app. No hay color libre ni carga de imágenes:
+                                cada acento ya trae su par de contraste verificado, así el contenido
+                                nuevo nunca rompe la accesibilidad ni el significado de los colores.
                             </p>
                         </aside>
                     </>

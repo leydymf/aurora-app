@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
     emptyAgency,
     normalizeAgency,
+    normalizeRoute,
+    ROUTE_SCHEMA_VERSION,
     validateAgency,
     validateLine,
     validateRoute,
@@ -14,11 +16,13 @@ const noOrders = new Map<number, string>()
 
 function validRoute(): RouteDoc {
     return {
-        schemaVersion: 1,
+        schemaVersion: ROUTE_SCHEMA_VERSION,
         order: 1,
         title: 'Salud',
         summary: 'El sector salud te atiende de forma gratuita e inmediata.',
         agencyIds: ['a01'],
+        icon: 'cross',
+        accent: 'green',
     }
 }
 
@@ -72,6 +76,26 @@ describe('validateRoute (integridad referencial RF-42)', () => {
     it('una ruta sin entidades es válida (la app la pinta vacía): no bloquea', () => {
         const route = { ...validRoute(), agencyIds: [] }
         expect(validateRoute(route, noOrders, published, names)).toEqual([])
+    })
+
+    it('rechaza icon o accent fuera de la biblioteca cerrada (esquema v2)', () => {
+        const fieldsOf = (route: RouteDoc) =>
+            validateRoute(route, noOrders, published, names).map((issue) => issue.field)
+        expect(fieldsOf({ ...validRoute(), icon: 'unicornio' })).toContain('icon')
+        expect(fieldsOf({ ...validRoute(), icon: '' })).toContain('icon')
+        expect(fieldsOf({ ...validRoute(), accent: 'fucsia' })).toContain('accent')
+        // El violeta de la nube no existe como id de dato: es exclusivo de la
+        // salida rápida de la app (anexo v2-29).
+        expect(fieldsOf({ ...validRoute(), accent: 'violet' })).toContain('accent')
+        expect(fieldsOf({ ...validRoute(), accent: 'cloud' })).toContain('accent')
+    })
+
+    it('bloquea un schemaVersion distinto del soportado para rutas (v2)', () => {
+        expect(
+            validateRoute({ ...validRoute(), schemaVersion: 1 }, noOrders, published, names).map(
+                (issue) => issue.field,
+            ),
+        ).toContain('general')
     })
 
     it('exige título, resumen y orden único (espejo de ContentMappers.kt)', () => {
@@ -138,6 +162,13 @@ describe('validateLine', () => {
             noOrders,
         ).map((issue) => issue.field)
         expect(fields).toEqual(expect.arrayContaining(['name', 'number', 'description']))
+    })
+})
+
+describe('normalizeRoute', () => {
+    it('sube una ruta v1 al esquema vigente al guardar (la app soporta 1..2)', () => {
+        const normalized = normalizeRoute({ ...validRoute(), schemaVersion: 1 })
+        expect(normalized.schemaVersion).toBe(ROUTE_SCHEMA_VERSION)
     })
 })
 
