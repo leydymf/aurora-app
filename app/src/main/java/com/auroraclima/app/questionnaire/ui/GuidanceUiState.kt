@@ -33,7 +33,13 @@ data class GuidanceUiState(
     val answers: Map<String, String> = emptyMap(),
     val result: GuidanceResult? = null,
     val selectedMunicipalityId: String? = null,
-    val access: DirectoryAccess? = null
+    val access: DirectoryAccess? = null,
+    /** Hoja de confirmación del guardado (RF-31 criterio 2) visible. */
+    val isSaveSheetVisible: Boolean = false,
+    val isSaving: Boolean = false,
+    /** El resultado visible ya se guardó: el botón cede su lugar a la constancia. */
+    val isSaved: Boolean = false,
+    @StringRes val saveErrorRes: Int? = null
 ) {
     val currentQuestion: Question?
         get() = questionnaire?.questions?.getOrNull(questionIndex)

@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,12 +41,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.directory.DirectoryEntity
 import com.auroraclima.app.core.directory.DirectoryLine
+import com.auroraclima.app.core.security.SecureSheet
 import com.auroraclima.app.core.ui.v2.AccentBadge
+import com.auroraclima.app.core.ui.v2.AccentChip
 import com.auroraclima.app.core.ui.v2.IconListRow
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.RowChevron
@@ -55,11 +59,14 @@ import com.auroraclima.app.core.ui.v2.V2BackButton
 import com.auroraclima.app.core.ui.v2.V2BackHeader
 import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2ErrorState
+import com.auroraclima.app.core.ui.v2.V2FieldMessage
 import com.auroraclima.app.core.ui.v2.V2Icons
 import com.auroraclima.app.core.ui.v2.V2LoadingState
 import com.auroraclima.app.core.ui.v2.V2NoticeCard
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.V2SecondaryButton
+import com.auroraclima.app.core.ui.v2.V2SheetCard
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
 import com.auroraclima.app.questionnaire.domain.model.Municipality
 import com.auroraclima.app.questionnaire.domain.model.Question
@@ -76,8 +83,9 @@ import com.auroraclima.app.questionnaire.domain.model.Question
  *
  * V2 (S4 de PLAN_UI_V2.md; mockups v2-17/18/19): re-estilo puro sobre los tres
  * estados existentes — el motor, el ViewModel y el descarte en memoria (RF-28)
- * no cambian. «Guardar resultado» del mockup es RF-31, trabajo futuro: el
- * resultado se descarta siempre al terminar, como hasta ahora.
+ * no cambian. Desde el 2026-08-14 el resultado ofrece además el guardado
+ * opcional de RF-31: opt-in expreso vía hoja segura; sin tocarlo, terminar
+ * sigue descartando todo, como siempre.
  */
 @Composable
 fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
@@ -89,8 +97,9 @@ fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
     }
     // El botón atrás del sistema también retrocede pregunta a pregunta
     // (RF-27 criterio 1); en la portada sigue el pop normal hacia el panel y
-    // en el resultado equivale a «Terminar»: descartar y volver (RF-31 es
-    // trabajo futuro — no hay nada que conservar).
+    // en el resultado equivale a «Terminar»: descarta lo NO guardado (RF-31
+    // criterio 1) y vuelve. Con la hoja de guardado abierta, el back lo
+    // intercepta la propia hoja (SecureSheet) y solo la cierra.
     BackHandler(enabled = state.phase != GuidancePhase.INTRO) {
         when (state.phase) {
             GuidancePhase.QUESTION -> viewModel.onPrevious()
@@ -107,7 +116,10 @@ fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
         onPrevious = viewModel::onPrevious,
         onMunicipalitySelected = viewModel::onMunicipalitySelected,
         onOpenRoutes = onOpenRoutes,
-        onRetry = viewModel::onRetry
+        onRetry = viewModel::onRetry,
+        onSaveRequested = viewModel::onSaveRequested,
+        onSaveConfirmed = viewModel::onSaveConfirmed,
+        onSaveDismissed = viewModel::onSaveDismissed
     )
 }
 
@@ -122,6 +134,9 @@ internal fun GuidanceScreen(
     onMunicipalitySelected: (String) -> Unit,
     onOpenRoutes: () -> Unit,
     onRetry: () -> Unit,
+    onSaveRequested: () -> Unit,
+    onSaveConfirmed: () -> Unit,
+    onSaveDismissed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -146,10 +161,19 @@ internal fun GuidanceScreen(
                     state = state,
                     onMunicipalitySelected = onMunicipalitySelected,
                     onOpenRoutes = onOpenRoutes,
-                    onFinish = onDismiss
+                    onFinish = onDismiss,
+                    onSaveRequested = onSaveRequested
                 )
             }
         }
+    }
+    if (state.isSaveSheetVisible) {
+        SaveConfirmSheet(
+            isSaving = state.isSaving,
+            saveErrorRes = state.saveErrorRes,
+            onConfirm = onSaveConfirmed,
+            onDismiss = onSaveDismissed
+        )
     }
 }
 
@@ -354,15 +378,17 @@ private fun ExitChip(onClick: () -> Unit) {
  * desplazables, en este orden: frase del nivel, tipos detectados
  * (reconocimiento), recomendaciones y accesos por municipio.
  *
- * «Guardar resultado» del mockup no se pinta: RF-31 queda como trabajo futuro
- * y el resultado se descarta siempre al terminar.
+ * Al final del contenido va «Guardar este resultado» (RF-31): opt-in expreso
+ * que abre la hoja segura de confirmación. Sin tocarlo, nada persiste y
+ * «Terminar» — siempre fijo — descarta como hasta ahora (criterio 1).
  */
 @Composable
 private fun ResultContent(
     state: GuidanceUiState,
     onMunicipalitySelected: (String) -> Unit,
     onOpenRoutes: () -> Unit,
-    onFinish: () -> Unit
+    onFinish: () -> Unit,
+    onSaveRequested: () -> Unit
 ) {
     val questionnaire = state.questionnaire ?: return
     val result = state.result ?: return
@@ -428,10 +454,81 @@ private fun ResultContent(
             )
             Spacer(modifier = Modifier.height(18.dp))
             RoutesLinkRow(onClick = onOpenRoutes)
+            Spacer(modifier = Modifier.height(18.dp))
+            if (state.isSaved) {
+                AccentChip(
+                    text = stringResource(R.string.guidance_result_saved),
+                    accent = V2Palette.accentCare,
+                    iconRes = V2Icons.synced,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            } else {
+                V2SecondaryButton(
+                    text = stringResource(R.string.guidance_result_save),
+                    onClick = onSaveRequested
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
         V2PrimaryButton(text = stringResource(R.string.guidance_result_finish), onClick = onFinish)
         Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
+    }
+}
+
+/**
+ * Confirmación expresa del guardado (RF-31 criterio 2; mismo patrón de hoja
+ * segura que la eliminación del historial): enumera EXACTAMENTE lo que se
+ * guardará — fecha, nivel y tipos reconocidos, nunca las respuestas — antes de
+ * persistir nada. «Guardar» es la única acción llena (regla 2); cancelar o
+ * tocar afuera no deja rastro. La hoja es [SecureSheet], la variante de hoja
+ * de SecureDialog (RNF-02): las APIs con ventana propia solo se usan a través
+ * de los envoltorios de core/security.
+ */
+@Composable
+private fun SaveConfirmSheet(isSaving: Boolean, saveErrorRes: Int?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    SecureSheet(onDismissRequest = onDismiss) {
+        V2SheetCard {
+            AccentBadge(iconRes = V2Icons.synced, accent = V2Palette.accentCare)
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = stringResource(R.string.guidance_save_title),
+                style = InteriorTypeVoice.cardTitle,
+                color = V2Palette.inkPrimary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.guidance_save_body),
+                style = InteriorTypeVoice.caption,
+                color = V2Palette.inkSecondary,
+                textAlign = TextAlign.Center
+            )
+            V2FieldMessage(messageRes = saveErrorRes, fallbackRes = null)
+            Spacer(modifier = Modifier.height(18.dp))
+            if (isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(vertical = 10.dp)
+                        .size(22.dp),
+                    color = V2Palette.accentCare.stroke,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                V2PrimaryButton(
+                    text = stringResource(R.string.guidance_save_confirm),
+                    onClick = onConfirm
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text(
+                    text = stringResource(R.string.guidance_save_cancel),
+                    style = InteriorTypeVoice.bodyStrong,
+                    color = V2Palette.inkSecondary
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
 

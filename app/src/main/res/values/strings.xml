@@ -205,6 +205,12 @@
     <string name="guidance_call">Llamar</string>
     <string name="guidance_result_routes">Ver rutas de atención</string>
     <string name="guidance_result_finish">Terminar</string>
+    <string name="guidance_result_save">Guardar este resultado</string>
+    <string name="guidance_result_saved">Resultado guardado</string>
+    <string name="guidance_save_title">¿Guardar este resultado?</string>
+    <string name="guidance_save_body">Se guardará la fecha, el nivel y los tipos reconocidos — nunca tus respuestas. Queda protegido, solo se ve dentro de la app y puedes eliminarlo cuando quieras.</string>
+    <string name="guidance_save_confirm">Guardar</string>
+    <string name="guidance_save_cancel">Cancelar</string>
     <string name="journal_tag">Mi registro</string>
     <string name="journal_title">Mi registro</string>
     <string name="journal_subtitle">Lo que anotas queda solo para ti, protegido en tu espacio.</string>
