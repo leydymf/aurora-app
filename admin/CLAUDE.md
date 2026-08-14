@@ -73,10 +73,11 @@ src/
 La app lee las colecciones vivas completas y SIN filtros: un borrador jamás
 puede escribirse en ellas. Los borradores viven en `/drafts` (solo admin) y
 «Publicar» copia `data` LITERAL al documento vivo: ningún campo nuevo
-(`status`, fechas, etc.) cae en las colecciones que la app consume, y
-`schemaVersion` viaja tal como se editó, sin forzarse (hoy: 1 en el contenido
-—`topics`/`routes`/`agencies`/`lines`— y 2 en el cuestionario `forms`, que pasó
-al instrumento validado v2; ver ADR 2026-07-22 en `docs/ARQUITECTURA.md`). Todo
+(`status`, fechas, etc.) cae en las colecciones que la app consume. Versiones
+vigentes: 2 en `topics`/`routes` (`icon`/`accent` de la biblioteca cerrada;
+ADR 2026-08-14 — guardar un borrador viejo lo asciende vía `normalize*`), 1 en
+`agencies`/`lines`, y 2 en el cuestionario `forms` (instrumento validado v2;
+ADR 2026-07-22, ambos en `docs/ARQUITECTURA.md`). Todo
 esquema del panel es espejo exacto de los DTO de la app (`ContentDtos.kt`,
 `FormDtos.kt`); cambiar un campo es un cambio de esquema y exige decisión
 explícita del proyecto. Publicar pasa
