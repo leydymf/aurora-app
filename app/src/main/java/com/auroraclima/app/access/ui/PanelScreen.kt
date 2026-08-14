@@ -32,6 +32,7 @@ import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.AccentPair
 import com.auroraclima.app.core.ui.v2.IconListRow
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.RowChevron
 import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2Icons
@@ -50,6 +51,7 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 @Composable
 fun PanelScreen(
     onStartGuidance: () -> Unit,
+    onOpenHistory: () -> Unit,
     onOpenSettings: () -> Unit,
     onCall: () -> Unit,
     onSaveNote: () -> Unit,
@@ -115,6 +117,19 @@ fun PanelScreen(
             text = stringResource(R.string.access_home_start),
             onClick = onStartGuidance
         )
+        Spacer(modifier = Modifier.height(14.dp))
+        // Resultados guardados (RF-31): el listado vive junto al cuestionario
+        // que los produce; el destino lo decide la navegación raíz (RF-06, §2).
+        SoftCard {
+            IconListRow(
+                iconRes = V2Icons.date,
+                accent = V2Palette.accentRecognize,
+                title = stringResource(R.string.access_panel_history_title),
+                supportingText = stringResource(R.string.access_panel_history_body),
+                onClick = onOpenHistory,
+                trailing = { RowChevron() }
+            )
+        }
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = stringResource(R.string.access_home_section_quick),

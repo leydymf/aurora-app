@@ -43,6 +43,7 @@ import com.auroraclima.app.records.ui.JournalListRoute
 @Composable
 fun InnerTabsHost(
     onOpenGuidance: () -> Unit,
+    onOpenGuidanceHistory: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTopics: () -> Unit,
     onOpenRoutes: () -> Unit,
@@ -80,6 +81,7 @@ fun InnerTabsHost(
                         // por rutas o estado local — sin imports entre features.
                         PanelScreen(
                             onStartGuidance = onOpenGuidance,
+                            onOpenHistory = onOpenGuidanceHistory,
                             onOpenSettings = onOpenSettings,
                             onCall = onOpenLines,
                             onSaveNote = onAddJournalEntry,

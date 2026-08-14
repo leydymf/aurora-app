@@ -347,7 +347,7 @@ El sistema debe almacenar el resultado del cuestionario únicamente cuando la us
 1. Descartar o salir no deja registro alguno.
 2. Guardar exige confirmación expresa y el resultado queda protegido y consultable.
 
-*Notas:* La usuaria mantiene control total sobre su información.
+*Notas:* La usuaria mantiene control total sobre su información. **Implementado (2026-08-14, rama mejoras-v3; ADR y acta §3.2):** botón «Guardar este resultado» con hoja segura de confirmación (criterio 2); se persiste solo fecha + nivel + tipos reconocidos (RNF-04) en el almacén cifrado `guidance_store.db`, viaja sellado con la DEK de RF-39 (`/users/{uid}/outcomes`) y se restaura multi-dispositivo; listado consultable en Inicio con detalle y eliminación individual (doble confirmación, propagación remota como RF-36) y cascada RF-20. Descartar/salida rápida no dejan registro (criterio 1, regresión RF-28 probada).
 
 ## RF-32 — Registro de incidentes
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-15, RNF-01

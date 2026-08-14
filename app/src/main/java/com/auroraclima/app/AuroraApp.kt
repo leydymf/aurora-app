@@ -45,6 +45,7 @@ import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.V2TabBarHeight
 import com.auroraclima.app.core.ui.v2.V2Voice
+import com.auroraclima.app.questionnaire.ui.GuidanceHistoryRoute
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
 import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
@@ -190,6 +191,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) {
                     InnerTabsHost(
                         onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
+                        onOpenGuidanceHistory = { navController.navigate(GUIDANCE_HISTORY_ROUTE) },
                         onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
                         onOpenTopics = { navController.navigate(TOPICS_ROUTE) },
                         onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
@@ -291,6 +293,11 @@ fun AuroraApp(sessionManager: SessionManager) {
                         // hacia content por navegación, nunca por import (§2).
                         onOpenRoutes = { navController.navigate(ROUTES_ROUTE) }
                     )
+                }
+                // Resultados guardados del cuestionario (RF-31): listado con
+                // detalle en hoja segura y eliminación con doble confirmación.
+                screen(GUIDANCE_HISTORY_ROUTE) {
+                    GuidanceHistoryRoute(onBack = { navController.popBackStack() })
                 }
                 // Creación de un registro del historial (RF-32, P19). El pop
                 // tras guardar regresa al hub en la pestaña donde estaba la
@@ -425,6 +432,7 @@ private const val SETTINGS_CODE_ROUTE = "settings_code"
 private const val SETTINGS_PASSWORD_ROUTE = "settings_password"
 private const val SETTINGS_ACCOUNT_ROUTE = "settings_account"
 private const val GUIDANCE_ROUTE = "guidance"
+private const val GUIDANCE_HISTORY_ROUTE = "guidance_history"
 private const val JOURNAL_ROUTE = "journal"
 private const val JOURNAL_NEW_ROUTE = "journal_new"
 private const val JOURNAL_DETAIL_ROUTE = "$JOURNAL_ROUTE/{$ENTRY_ID_ARG}"
