@@ -211,6 +211,23 @@ umbrales + rutas). Tras el visto bueno, se retira la marca de borrador y se publ
 > datos verificados para cargarlos; la validación **ya no bloquea**: queda pendiente
 > **solo la carga**.  **Fecha:** 2026-07-21
 
+> **Decisión posterior — REVERSIÓN INFORMADA de la presentación de P-41:** la
+> directora aprueba usar **colores semafóricos representativos** en el resultado
+> (Variable→verde sereno, Moderado→ámbar, Grave→naranja, Extremo→rojo profundo),
+> sustituyendo la gradación sobria dentro de una sola paleta ratificada el
+> 2026-07-21. Se conserva todo lo demás de aquella decisión: el nombre del nivel
+> sigue siendo el protagonista **en palabras** (los textos validados no cambian),
+> el color solo refuerza y nunca informa solo, y los tintes mantienen la
+> suavidad de la paleta serena (sin rojos de alarma estridentes). En código, la
+> escala vive como cuatro tokens semánticos nuevos del tema V2 con nombres
+> neutros de avisos meteorológicos (`accentSeverity1..4`, contraste AA
+> verificado por test) y el mapeo es por el orden del nivel con degradación
+> tolerante. En la misma decisión se aprueba implementar **RF-31 (guardado
+> opcional del resultado)**, que deja de ser trabajo futuro: guardado opt-in
+> fechado de nivel + tipos detectados (sin respuestas individuales, RNF-04),
+> cifrado, sincronizado (RF-39) y con eliminación individual y cascada RF-20.
+> Ver ADR 2026-08-14 en `docs/ARQUITECTURA.md`. **Fecha:** 2026-08-14
+
 ---
 
 ## 4. Identidad y rastros

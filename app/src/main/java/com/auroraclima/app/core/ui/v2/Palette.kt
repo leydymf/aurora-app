@@ -77,6 +77,28 @@ object V2Palette {
      */
     val tabIndicator = Color(0xFFE3E0EC)
 
+    // ——— Escala de severidad del resultado orientativo (RF-29) ———
+    // Decisión directora 2026-08-14 (reversión informada de P-41, acta §3.2):
+    // el nivel del resultado se acompaña de un color semafórico representativo.
+    // Escala CERRADA de cuatro pares, ordenada de menor a mayor severidad, con
+    // los tintes en la suavidad del resto de la paleta y el nombre del nivel
+    // siempre en palabras encima (regla 3: el color nunca informa solo). Léxico
+    // de avisos meteorológicos (verde/ámbar/naranja/rojo), plausible en una app
+    // de clima (RNF-05). NO pertenecen a la biblioteca seleccionable del
+    // contenido (`ContentVisual`): solo los mapea el resultado por su orden.
+
+    /** Severidad 1 — verde sereno. Trazo 8.6:1 sobre tinte. */
+    val accentSeverity1 = AccentPair(tint = Color(0xFFDEEBE2), stroke = Color(0xFF1F4634))
+
+    /** Severidad 2 — ámbar. Trazo 7.4:1 sobre tinte. */
+    val accentSeverity2 = AccentPair(tint = Color(0xFFF3E8CD), stroke = Color(0xFF5E440D))
+
+    /** Severidad 3 — naranja. Trazo 7.3:1 sobre tinte. */
+    val accentSeverity3 = AccentPair(tint = Color(0xFFF5E1D3), stroke = Color(0xFF77330A))
+
+    /** Severidad 4 — rojo profundo. Trazo 8.5:1 sobre tinte. */
+    val accentSeverity4 = AccentPair(tint = Color(0xFFF3DCDC), stroke = Color(0xFF6E1F2A))
+
     // ——— Fachada de clima (P01–P03, mockups v2-01..v2-03) ———
     // La fachada comparte la paleta lila del V2 pero suma el cielo de su portada.
     // Estos tokens son EXCLUSIVOS de weather/ui: identidad 100 % clima (RNF-05);

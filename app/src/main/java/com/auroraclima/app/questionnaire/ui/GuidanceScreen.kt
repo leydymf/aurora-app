@@ -10,9 +10,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -343,11 +345,14 @@ private fun ExitChip(onClick: () -> Unit) {
 }
 
 /**
- * Resultado orientativo (P17, v2-19; RF-29, documento §6). La tarjeta del nivel
- * — nombre del nivel EN PALABRAS (decisión F6) con su frase y el aviso de
- * alcance (RF-30) adentro — vive en la zona FIJA de la columna, fuera del área
- * desplazable: el aviso es visible en todo resultado sin necesidad de scroll
- * (RF-30 criterio 1). Reconocimiento, recomendaciones y accesos se desplazan.
+ * Resultado orientativo (P17, v2-19; RF-29, documento §6). Jerarquía de la
+ * decisión directora 2026-08-14 (reversión informada de P-41, acta §3.2): la
+ * tarjeta del NIVEL es lo primero y lo dominante — nombre en palabras con su
+ * color semafórico — y en la zona FIJA de la columna, seguida del aviso de
+ * alcance (RF-30) también fijo, fuera del área desplazable: el aviso es visible
+ * en todo resultado sin necesidad de scroll (RF-30 criterio 1). Subordinados y
+ * desplazables, en este orden: frase del nivel, tipos detectados
+ * (reconocimiento), recomendaciones y accesos por municipio.
  *
  * «Guardar resultado» del mockup no se pinta: RF-31 queda como trabajo futuro
  * y el resultado se descarta siempre al terminar.
@@ -373,14 +378,22 @@ private fun ResultContent(
             color = V2Palette.inkSecondary
         )
         Spacer(modifier = Modifier.height(12.dp))
-        LevelCard(level = result.level, notice = questionnaire.notice)
+        LevelCard(level = result.level)
+        Spacer(modifier = Modifier.height(10.dp))
+        V2NoticeCard(questionnaire.notice)
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = result.level.summary,
+                style = InteriorTypeVoice.body,
+                color = V2Palette.inkPrimary
+            )
             state.recognitionText?.let { recognition ->
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = recognition,
                     style = InteriorTypeVoice.body,
@@ -474,39 +487,47 @@ private fun AccessSection(state: GuidanceUiState, onMunicipalitySelected: (Strin
 }
 
 /**
- * Tarjeta del nivel con el aviso de alcance adentro (v2-19): el nombre del
- * nivel es el protagonista tipográfico — «el nivel se dice con palabras»
- * (decisión F6, ratificada en P-41) — con el lila fijo de reconocer (regla 1:
- * un color por significado; nada de semáforos por severidad, que volverían a
- * informar con color lo que las palabras ya dicen).
+ * Tarjeta del nivel (v2-19 adaptado): el nombre del nivel sigue siendo el
+ * protagonista tipográfico — «el nivel se dice con palabras» (decisión F6) —
+ * y desde la decisión directora 2026-08-14 (reversión informada de P-41, acta
+ * §3.2) lo acompaña su color semafórico representativo: fondo en el tinte y
+ * texto en el trazo del par de severidad que corresponde al orden del nivel.
+ * El color refuerza pero nunca informa solo (regla 3): las palabras validadas
+ * siguen encima, y el par cumple AA (PaletteContrastTest).
  */
 @Composable
-private fun LevelCard(level: GuidanceLevel, notice: String) {
-    SoftCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            AccentBadge(iconRes = V2Icons.recognize, accent = V2Palette.accentRecognize)
-            Spacer(modifier = Modifier.width(14.dp))
-            Column {
-                Text(
-                    text = stringResource(R.string.guidance_result_level),
-                    style = InteriorTypeVoice.label,
-                    color = V2Palette.inkSecondary
-                )
-                Text(
-                    text = level.title,
-                    style = InteriorTypeVoice.screenTitle,
-                    color = V2Palette.inkPrimary
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = level.summary,
-            style = InteriorTypeVoice.body,
-            color = V2Palette.inkPrimary
+private fun LevelCard(level: GuidanceLevel) {
+    val accent = severityAccent(level.order)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .clip(V2Corner.card)
+            .background(accent.tint)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(4.dp)
+                .clip(V2Corner.pill)
+                .background(accent.stroke)
         )
-        Spacer(modifier = Modifier.height(12.dp))
-        V2NoticeCard(notice)
+        Spacer(modifier = Modifier.width(14.dp))
+        Column {
+            Text(
+                text = stringResource(R.string.guidance_result_level),
+                style = InteriorTypeVoice.label,
+                color = accent.stroke
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = level.title,
+                style = InteriorTypeVoice.screenTitle,
+                color = accent.stroke
+            )
+        }
     }
 }
 
