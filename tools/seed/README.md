@@ -50,9 +50,12 @@ npm run seed    # agrega -- --borrador SOLO en un entorno de prueba
   directora, editar el JSON y volver a ejecutar.
 - El script **no borra** documentos retirados de los JSON: si un contenido se
   retira, eliminar el documento a mano en la consola.
-- Todo documento lleva `schemaVersion` (hoy `1`): la app ignora versiones que
-  no conoce (ARQUITECTURA §6), así el futuro panel puede evolucionar el esquema
-  sin romper instalaciones viejas.
+- Todo documento lleva `schemaVersion` (hoy `2` en `topics`/`routes` —
+  `icon`/`accent` del ADR 2026-08-14 — y `1` en `agencies`/`lines`): la app
+  ignora versiones que no conoce (ARQUITECTURA §6), así el panel puede
+  evolucionar el esquema sin romper instalaciones viejas. Ojo: un APK anterior
+  al soporte v2 descarta los documentos v2 — actualizar la app antes de
+  re-sembrar.
 - Usar `npm ci` (no `npm install`): el `package-lock.json` versionado fija las
   versiones exactas en la máquina que custodia la llave administrativa
   (auditoría D4 M-3). Riesgo residual aceptado: `npm audit` reporta un aviso
@@ -64,8 +67,8 @@ npm run seed    # agrega -- --borrador SOLO en un entorno de prueba
 
 | Colección | Documento | Campos |
 |---|---|---|
-| `topics` | tipo de violencia | `schemaVersion, order, title, summary, signals[], examples[]` |
-| `routes` | sector de la ruta (Salud/Protección/Justicia) | `schemaVersion, order, title, summary, agencyIds[]` |
+| `topics` | tipo de violencia | `schemaVersion, order, icon, accent, title, summary, signals[], examples[]` |
+| `routes` | sector de la ruta (Salud/Protección/Justicia) | `schemaVersion, order, icon, accent, title, summary, agencyIds[]` |
 | `agencies` | entidad de atención | `schemaVersion, name, role, whenToUse, phones[], address?, hours?` |
 | `lines` | línea de atención | `schemaVersion, order, name, number, description, hours?` |
 | `forms` | configuración completa del cuestionario | `schemaVersion, version, title, intro, notice, scale[], questions[], levels[]` |

@@ -1,11 +1,13 @@
 {
-  "_comment": "Contenido VERIFICADO por la directora contra fuentes oficiales (julio 2026), fuente de verdad: tools/seed/source/contenido-verificado-2026-07.md §1. Tipos de violencia (RF-21), Ley 1257 de 2008, lenguaje literal y no revictimizante. El cierre 'Recuerda/Importante' de cada tipo se concatena al final de 'summary'. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
+  "_comment": "Contenido VERIFICADO por la directora contra fuentes oficiales (julio 2026), fuente de verdad: tools/seed/source/contenido-verificado-2026-07.md §1. Tipos de violencia (RF-21), Ley 1257 de 2008, lenguaje literal y no revictimizante. El cierre 'Recuerda/Importante' de cada tipo se concatena al final de 'summary'. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05). Esquema v2 (ADR 2026-08-14): 'icon'/'accent' explícitos, equivalentes al mapeo automático que la app usaba por id — nada cambia visualmente hasta que la administradora edite; los ids nombran dibujo/matiz, no significado (RNF-05).",
   "collection": "topics",
   "documents": [
     {
       "id": "t01",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "order": 1,
+      "icon": "figure",
+      "accent": "blue",
       "title": "Violencia física",
       "summary": "Es cualquier acción que cause daño o dolor a tu cuerpo, o que ponga en riesgo tu integridad física. Puede venir de tu pareja o expareja, de un familiar, de una persona conocida o de alguien desconocido. No necesita dejar marcas visibles para ser violencia, y no deja de serlo por ocurrir dentro de tu casa o tu familia.\n\nRecuerda: ninguna agresión física es aceptable ni es tu culpa, sin importar quién la cometa. Si tienes lesiones, acude a urgencias de cualquier hospital o clínica: la atención es gratuita y no necesitas haber denunciado antes.",
       "signals": [
@@ -24,8 +26,10 @@
     },
     {
       "id": "t02",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "order": 2,
+      "icon": "lobes",
+      "accent": "lilac",
       "title": "Violencia psicológica",
       "summary": "Son las acciones que buscan humillarte, asustarte, aislarte o controlar tus decisiones, tus creencias y tu forma de vivir. Puede ejercerla tu pareja o expareja, pero también un familiar, un jefe, un compañero de estudio o trabajo, o cualquier otra persona. Es una de las formas de violencia más frecuentes y más difíciles de identificar, porque suele confundirse con los \"celos\" o el \"carácter fuerte\".\n\nRecuerda: las heridas emocionales también son violencia y también dejan consecuencias. Mereces relaciones que te respeten. Puedes recibir orientación psicológica gratuita en las líneas y lugares de atención de esta aplicación.",
       "signals": [
@@ -45,8 +49,10 @@
     },
     {
       "id": "t03",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "order": 3,
+      "icon": "slash_circle",
+      "accent": "pink",
       "title": "Violencia sexual",
       "summary": "Es cualquier acto sexual, intento de acto sexual, tocamiento, comentario o insinuación de carácter sexual que ocurra sin tu consentimiento libre. La puede cometer cualquier persona: tu pareja o expareja (incluso dentro del matrimonio), un familiar, un conocido, un jefe o profesor, o un desconocido. También ocurre en medios digitales. Tu cuerpo es tuyo y nadie tiene derecho a él sin tu voluntad, sin importar el vínculo que tengan.\n\nImportante: si viviste una agresión sexual, acude lo antes posible a urgencias de cualquier hospital o clínica, idealmente dentro de las primeras 72 horas. Es una urgencia médica: la atención es gratuita, no necesitas denuncia previa y pueden protegerte de infecciones y de un embarazo no deseado. Lo que pasó no es tu culpa.",
       "signals": [
@@ -65,8 +71,10 @@
     },
     {
       "id": "t04",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "order": 4,
+      "icon": "card",
+      "accent": "sand",
       "title": "Violencia económica y patrimonial",
       "summary": "Son las acciones dirigidas a controlar tu dinero, tus bienes, tus documentos o tu capacidad de generar ingresos, para crear dependencia y limitar tu libertad. Puede ejercerla tu pareja o expareja, pero también familiares u otras personas que administren o retengan lo que te pertenece.\n\nRecuerda: tienes derecho a trabajar, a estudiar, a manejar tu dinero y a disponer de tus bienes. La ley colombiana (Ley 1257 de 2008) reconoce esta forma de violencia y puedes pedir orientación jurídica gratuita para protegerte.",
       "signals": [

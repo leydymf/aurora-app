@@ -1,11 +1,13 @@
 {
-  "_comment": "Ruta de atención de Santander en la triada Salud–Protección–Justicia (RF-22), fuente de verdad: tools/seed/source/contenido-verificado-2026-07.md §3. 'summary' = intro literal de cada puerta (§3.1/3.2/3.3). Los agencyIds referencian documentos de agencies.json; una referencia sin resolver simplemente no se muestra (RF-42) — así, a06 (ESE Piedecuesta) y a26 (Personerías), retenidas por la compuerta [POR CONFIRMAR], se encenderán solas al confirmarse. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05).",
+  "_comment": "Ruta de atención de Santander en la triada Salud–Protección–Justicia (RF-22), fuente de verdad: tools/seed/source/contenido-verificado-2026-07.md §3. 'summary' = intro literal de cada puerta (§3.1/3.2/3.3). Los agencyIds referencian documentos de agencies.json; una referencia sin resolver simplemente no se muestra (RF-42) — así, a06 (ESE Piedecuesta) y a26 (Personerías), retenidas por la compuerta [POR CONFIRMAR], se encenderán solas al confirmarse. IDs de documento opacos (auditoría D4 H-1): viajan en el tráfico y quedan en la caché local igual que los nombres de colección (RNF-05). Esquema v2 (ADR 2026-08-14): 'icon'/'accent' explícitos, equivalentes al mapeo automático que la app usaba por id — nada cambia visualmente hasta que la administradora edite; los ids nombran dibujo/matiz, no significado (RNF-05).",
   "collection": "routes",
   "documents": [
     {
       "id": "r01",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "order": 1,
+      "icon": "cross",
+      "accent": "green",
       "title": "Salud",
       "summary": "Acude a esta ruta si tienes lesiones, si sufriste violencia sexual o si tu salud emocional está afectada. La atención en urgencias es gratuita, no necesitas haber denunciado y no pueden negarte el servicio, tengas o no afiliación a una EPS. La historia clínica que se genera sirve además como evidencia si más adelante decides denunciar. En caso de violencia sexual, acude lo antes posible, idealmente dentro de las primeras 72 horas.",
       "agencyIds": [
@@ -19,8 +21,10 @@
     },
     {
       "id": "r02",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "order": 2,
+      "icon": "shield",
+      "accent": "blue",
       "title": "Protección",
       "summary": "Acude a esta ruta si necesitas medidas de protección: por ejemplo, que el agresor deba alejarse de ti, salir de la vivienda o dejar de contactarte. Las Comisarías de Familia otorgan estas medidas sin costo y no necesitas abogado. Si hay niñas, niños o adolescentes afectados, el ICBF también puede intervenir.",
       "agencyIds": [
@@ -38,8 +42,10 @@
     },
     {
       "id": "r03",
-      "schemaVersion": 1,
+      "schemaVersion": 2,
       "order": 3,
+      "icon": "scales",
+      "accent": "sand",
       "title": "Justicia",
       "summary": "Acude a esta ruta cuando decidas denunciar penalmente los hechos. La denuncia es gratuita, no necesitas abogado y puedes presentarla en cualquier momento, aunque haya pasado tiempo desde los hechos. Denunciar es tu derecho y tu decisión: nadie puede obligarte ni impedírtelo.",
       "agencyIds": [
