@@ -99,7 +99,7 @@ private fun TopicsContent(state: TopicsUiState, onTopicSelected: (String) -> Uni
         // trunca a dos líneas — el texto completo vive en el detalle.
         state.topics.forEachIndexed { index, topic ->
             if (index > 0) Spacer(modifier = Modifier.height(14.dp))
-            val visual = topicVisual(topic.id)
+            val visual = topicVisual(topic.id, topic.icon, topic.accent)
             SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)) {
                 IconListRow(
                     iconRes = visual.iconRes,

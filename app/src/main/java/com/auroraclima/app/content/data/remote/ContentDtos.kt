@@ -13,7 +13,11 @@ data class TopicDto(
     val title: String?,
     val summary: String?,
     val signals: List<String>,
-    val examples: List<String>
+    val examples: List<String>,
+    // Esquema v2: selección dentro de la biblioteca cerrada (ids por dibujo/matiz,
+    // RNF-05). Ausentes en documentos v1; la UI degrada al mapeo automático.
+    val icon: String? = null,
+    val accent: String? = null
 )
 
 data class RouteDto(
@@ -22,7 +26,9 @@ data class RouteDto(
     val order: Long?,
     val title: String?,
     val summary: String?,
-    val agencyIds: List<String>
+    val agencyIds: List<String>,
+    val icon: String? = null,
+    val accent: String? = null
 )
 
 data class AgencyDto(

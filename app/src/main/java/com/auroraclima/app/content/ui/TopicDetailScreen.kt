@@ -79,7 +79,7 @@ internal fun TopicDetailScreen(
 
 @Composable
 private fun TopicDetailContent(topic: Topic, onOpenRoutes: () -> Unit) {
-    val visual = topicVisual(topic.id)
+    val visual = topicVisual(topic.id, topic.icon, topic.accent)
     Column(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier

@@ -9,8 +9,12 @@ import com.auroraclima.app.content.domain.model.ContactLine
 import com.auroraclima.app.content.domain.model.Route
 import com.auroraclima.app.content.domain.model.Topic
 
-/** Versión de esquema más alta que esta app sabe interpretar (ARQUITECTURA §6). */
-internal const val SUPPORTED_SCHEMA_VERSION = 1L
+/**
+ * Versión de esquema más alta que esta app sabe interpretar (ARQUITECTURA §6).
+ * v2 (ADR 2026-08-14): topics y routes ganan `icon`/`accent` opcionales que
+ * seleccionan dentro de la biblioteca cerrada de presentación.
+ */
+internal const val SUPPORTED_SCHEMA_VERSION = 2L
 
 internal fun Long?.isSupportedSchema(): Boolean = this != null && this in 1..SUPPORTED_SCHEMA_VERSION
 
@@ -21,7 +25,7 @@ internal fun TopicDto.toDomain(): Topic? {
     val order = order?.toInt() ?: return null
     val title = title ?: return null
     val summary = summary ?: return null
-    return Topic(id, order, title, summary, signals, examples)
+    return Topic(id, order, title, summary, signals, examples, icon, accent)
 }
 
 internal fun RouteDto.toDomain(agenciesById: Map<String, Agency>): Route? {
@@ -31,7 +35,7 @@ internal fun RouteDto.toDomain(agenciesById: Map<String, Agency>): Route? {
     // Las referencias sin resolver se omiten: quitar una entidad desde el
     // futuro panel no rompe las rutas que la mencionaban (RF-42).
     val agencies = agencyIds.mapNotNull(agenciesById::get)
-    return Route(id, order, title, summary, agencies)
+    return Route(id, order, title, summary, agencies, icon, accent)
 }
 
 internal fun AgencyDto.toDomain(): Agency? {
