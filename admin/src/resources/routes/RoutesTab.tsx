@@ -9,7 +9,12 @@ import { EditorStatus } from '../../components/EditorStatus'
 import { RowControls } from '../../components/RowControls'
 import { StatusBadge } from '../../components/StatusBadge'
 import { VisualPicker } from '../../components/VisualPicker'
-import { routeVisual, routeVisualIds } from '../../components/contentVisuals'
+import {
+    isContentAccentId,
+    isContentIconId,
+    routeVisual,
+    routeVisualIds,
+} from '../../components/contentVisuals'
 import { IconBadge } from '../../components/icons'
 import { buildOrderIndex } from '../../lib/drafts'
 import { nextOpaqueId } from '../../lib/ids'
@@ -74,6 +79,9 @@ export function RoutesTab() {
         selected.status === 'borrador' &&
         !editor.isDirty &&
         publishIssues.length === 0
+
+    // Visual vigente de lo que se edita (explícito o degradado al automático).
+    const editingVisual = routeVisual(selectedId ?? '', editing?.icon ?? '', editing?.accent ?? '')
 
     // El cuestionario validado v2 ya no recomienda rutas por id (sus accesos
     // referencian líneas y entidades, no rutas): eliminar una ruta no deja
@@ -165,8 +173,8 @@ export function RoutesTab() {
                         <div className="list__item list__item--active">
                             <span className="list__lead">
                                 <IconBadge
-                                    name={routeVisual('', editing.icon, editing.accent).icon}
-                                    accent={routeVisual('', editing.icon, editing.accent).accent}
+                                    name={editingVisual.icon}
+                                    accent={editingVisual.accent}
                                 />
                                 <span className="list__title">{editing.title || '(nueva)'}</span>
                             </span>
@@ -203,6 +211,8 @@ export function RoutesTab() {
                                 editing.icon,
                                 editing.accent,
                             )}
+                            iconConfirmed={isContentIconId(editing.icon)}
+                            accentConfirmed={isContentAccentId(editing.accent)}
                             onSelectIcon={(id) => {
                                 editor.setEditing({ ...editing, icon: id })
                             }}

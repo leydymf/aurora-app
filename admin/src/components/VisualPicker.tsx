@@ -16,11 +16,19 @@ import { IconBadge } from './icons'
 
 export function VisualPicker({
     effective,
+    iconConfirmed,
+    accentConfirmed,
     onSelectIcon,
     onSelectAccent,
 }: {
     /** Selección vigente ya resuelta (explícita o degradada al automático). */
     readonly effective: ContentVisualIds
+    /**
+     * `false` = el documento aún no guarda el valor (borrador v1 legado): se
+     * muestra el automático y la validación pedirá confirmarlo al publicar.
+     */
+    readonly iconConfirmed: boolean
+    readonly accentConfirmed: boolean
     readonly onSelectIcon: (id: ContentIconId) => void
     readonly onSelectAccent: (id: ContentAccentId) => void
 }) {
@@ -55,7 +63,10 @@ export function VisualPicker({
                         )
                     })}
                 </div>
-                <p className="muted">{CONTENT_ICONS[effective.icon].label}</p>
+                <p className="muted">
+                    {CONTENT_ICONS[effective.icon].label}
+                    {!iconConfirmed && ' — automático heredado: toca la opción para confirmarla'}
+                </p>
             </div>
             <div className="field">
                 <span>Acento (biblioteca cerrada)</span>
@@ -86,7 +97,10 @@ export function VisualPicker({
                         )
                     })}
                 </div>
-                <p className="muted">{CONTENT_ACCENTS[effective.accent].label}</p>
+                <p className="muted">
+                    {CONTENT_ACCENTS[effective.accent].label}
+                    {!accentConfirmed && ' — automático heredado: toca la opción para confirmarla'}
+                </p>
             </div>
         </>
     )

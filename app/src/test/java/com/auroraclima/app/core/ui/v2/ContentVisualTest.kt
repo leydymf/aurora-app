@@ -1,6 +1,7 @@
 package com.auroraclima.app.core.ui.v2
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
@@ -59,6 +60,11 @@ class ContentVisualTest {
         // desde un documento degrada igual que cualquier valor desconocido.
         assertEquals(topicVisual("t01"), topicVisual("t01", accent = "violet"))
         assertEquals(topicVisual("t01"), topicVisual("t01", accent = "cloud"))
+        // Fijación ESTRUCTURAL (auditoría 2026-08-14): la exclusión no depende
+        // de adivinar ids — el par de la nube no existe en la biblioteca, con
+        // ningún nombre.
+        assertFalse(selectableAccents.containsValue(V2Palette.accentCloud))
+        assertFalse(selectableIcons.containsValue(V2Icons.cloud))
     }
 
     @Test

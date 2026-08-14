@@ -19,8 +19,9 @@ data class ContentVisual(@DrawableRes val iconRes: Int, val accent: AccentPair)
 // dato nombran el DIBUJO o el MATIZ, nunca el significado: estos literales
 // quedan en el DEX y deben ser tan inocuos como los nombres de drawable
 // (RNF-05). El violeta de la nube (accentCloud) queda fuera a propósito:
-// es exclusivo de la salida rápida (anexo v2-29).
-private val selectableIcons: Map<String, Int> = mapOf(
+// es exclusivo de la salida rápida (anexo v2-29). Visibilidad `internal`
+// SOLO para que ContentVisualTest fije esa exclusión estructuralmente.
+internal val selectableIcons: Map<String, Int> = mapOf(
     "figure" to V2Icons.figure,
     "lobes" to V2Icons.lobes,
     "slash_circle" to V2Icons.slashCircle,
@@ -33,7 +34,7 @@ private val selectableIcons: Map<String, Int> = mapOf(
     "pin" to V2Icons.place
 )
 
-private val selectableAccents: Map<String, AccentPair> = mapOf(
+internal val selectableAccents: Map<String, AccentPair> = mapOf(
     "blue" to V2Palette.accentProtection,
     "lilac" to V2Palette.accentRecognize,
     "pink" to V2Palette.accentNotice,

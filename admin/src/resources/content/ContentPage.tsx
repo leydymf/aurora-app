@@ -15,7 +15,12 @@ import { EditorStatus } from '../../components/EditorStatus'
 import { StatusBadge } from '../../components/StatusBadge'
 import { StringListField } from '../../components/StringListField'
 import { VisualPicker } from '../../components/VisualPicker'
-import { topicVisual, topicVisualIds } from '../../components/contentVisuals'
+import {
+    isContentAccentId,
+    isContentIconId,
+    topicVisual,
+    topicVisualIds,
+} from '../../components/contentVisuals'
 import { IconBadge, V2Icon } from '../../components/icons'
 import { buildOrderIndex } from '../../lib/drafts'
 import { nextOpaqueId } from '../../lib/ids'
@@ -57,6 +62,9 @@ export function ContentPage() {
         selected.status === 'borrador' &&
         !editor.isDirty &&
         publishIssues.length === 0
+
+    // Visual vigente de lo que se edita (explícito o degradado al automático).
+    const editingVisual = topicVisual(selectedId ?? '', editing?.icon ?? '', editing?.accent ?? '')
 
     function startNew() {
         if (!topics.entries) return
@@ -130,8 +138,8 @@ export function ContentPage() {
                         <div className="list__item list__item--active">
                             <span className="list__lead">
                                 <IconBadge
-                                    name={topicVisual('', editing.icon, editing.accent).icon}
-                                    accent={topicVisual('', editing.icon, editing.accent).accent}
+                                    name={editingVisual.icon}
+                                    accent={editingVisual.accent}
                                 />
                                 <span className="list__title">{editing.title || '(nuevo)'}</span>
                             </span>
@@ -169,6 +177,8 @@ export function ContentPage() {
                                     editing.icon,
                                     editing.accent,
                                 )}
+                                iconConfirmed={isContentIconId(editing.icon)}
+                                accentConfirmed={isContentAccentId(editing.accent)}
                                 onSelectIcon={(id) => {
                                     editor.setEditing({ ...editing, icon: id })
                                 }}
@@ -244,14 +254,8 @@ export function ContentPage() {
                             <p className="preview__tag">COMO LO VERÁ LA USUARIA</p>
                             <div className="preview__head">
                                 <IconBadge
-                                    name={
-                                        topicVisual(selectedId ?? '', editing.icon, editing.accent)
-                                            .icon
-                                    }
-                                    accent={
-                                        topicVisual(selectedId ?? '', editing.icon, editing.accent)
-                                            .accent
-                                    }
+                                    name={editingVisual.icon}
+                                    accent={editingVisual.accent}
                                     size={40}
                                 />
                                 <h2 className="preview__title">{editing.title || 'Sin título'}</h2>
