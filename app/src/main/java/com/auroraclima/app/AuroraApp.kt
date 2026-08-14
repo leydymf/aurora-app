@@ -144,13 +144,32 @@ fun AuroraApp(sessionManager: SessionManager) {
                     // onClose inalcanzable en primer uso: la primera página no
                     // muestra «Atrás» (showBack en TutorialScreen) y detrás ya
                     // no hay nada — el setup se sacó de la pila al navegar aquí.
-                    TutorialRoute(isReview = false, onClose = {})
+                    TutorialRoute(
+                        isReview = false,
+                        onClose = {},
+                        // Saltar por ahora (refinamiento RF-10, 2026-08): aterriza
+                        // donde termina el flujo completo — el panel (tras la
+                        // práctica, el reingreso con sesión vigente salta directo
+                        // allí). La sesión ya existe: la creó RF-07 o el login de
+                        // RF-39. El tutorial no queda en la pila, igual que el
+                        // reingreso normal (ENTRY → PANEL).
+                        onSkip = {
+                            navController.navigate(PANEL_ROUTE) {
+                                popUpTo(GUIDE_ROUTE) { inclusive = true }
+                            }
+                        }
+                    )
                 }
                 // Reapertura del tutorial (RF-11): mismo contenido en modo
                 // repaso; «Atrás» en la primera página regresa a donde estaba.
-                // La futura pantalla de configuración navegará a esta ruta.
+                // En repaso no se ofrece «Saltar» (showsSkip); si llegara a
+                // emitirse, converge con el mismo regreso que onClose.
                 screen(GUIDE_REVIEW_ROUTE) {
-                    TutorialRoute(isReview = true, onClose = { navController.popBackStack() })
+                    TutorialRoute(
+                        isReview = true,
+                        onClose = { navController.popBackStack() },
+                        onSkip = { navController.popBackStack() }
+                    )
                 }
                 // Reingreso (RF-12, RF-15): con sesión vigente salta directo al
                 // panel; sin sesión, inicio de sesión con bloqueo temporal.

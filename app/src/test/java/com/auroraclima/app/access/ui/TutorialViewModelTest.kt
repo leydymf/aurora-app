@@ -7,6 +7,10 @@ import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
 import com.auroraclima.app.access.domain.usecase.seed
 import com.auroraclima.app.core.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -24,6 +28,14 @@ class TutorialViewModelTest {
 
     private suspend fun seedUserCode(code: String = "amanecer26") {
         repository.seed(CodeSlot.USER, code, hasher)
+    }
+
+    private fun TestScope.collectSkipEvents(): List<Unit> {
+        val events = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.skipEvents.toList(events)
+        }
+        return events
     }
 
     @Test
@@ -57,6 +69,40 @@ class TutorialViewModelTest {
         viewModel.onStartPractice()
 
         assertEquals(TutorialStep.PRACTICE, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `saltar emite la navegacion sin tocar el estado del tutorial`() = runTest {
+        // Refinamiento RF-10 (2026-08): saltar es solo navegación — el estado de
+        // primera vez queda intacto, así que el repaso desde Ajustes (RF-11)
+        // arranca igual que siempre.
+        val events = collectSkipEvents()
+        val stateBefore = viewModel.uiState.value
+
+        viewModel.onSkip()
+        advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertEquals(stateBefore, viewModel.uiState.value)
+        assertEquals(TutorialStep.ENTER, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `saltar tambien navega desde la practica sin alterar lo tecleado`() = runTest {
+        // El botón vive en el resumen, pero si la usuaria retrocede desde la
+        // práctica su texto y su logro no deben perderse por saltar.
+        seedUserCode()
+        val events = collectSkipEvents()
+        viewModel.onStartPractice()
+        viewModel.onPracticeInputChange("amanecer26")
+        advanceUntilIdle()
+        val stateBefore = viewModel.uiState.value
+
+        viewModel.onSkip()
+        advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertEquals(stateBefore, viewModel.uiState.value)
     }
 
     @Test

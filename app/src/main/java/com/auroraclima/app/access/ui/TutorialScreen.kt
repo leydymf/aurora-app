@@ -22,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
@@ -45,6 +47,7 @@ import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2Icons
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.V2SecondaryButton
 import com.auroraclima.app.core.ui.v2.V2StepHeader
 import com.auroraclima.app.core.ui.v2.V2Voice
 
@@ -62,15 +65,21 @@ import com.auroraclima.app.core.ui.v2.V2Voice
  * «Atrás» regresa a donde estaba la usuaria.
  */
 @Composable
-fun TutorialRoute(isReview: Boolean, onClose: () -> Unit) {
+fun TutorialRoute(isReview: Boolean, onClose: () -> Unit, onSkip: () -> Unit) {
     val viewModel: TutorialViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     val sessionManager = LocalSessionManager.current
+    // Saltar (refinamiento RF-10, 2026-08): el destino lo decide el NavHost,
+    // como el resto del flujo del primer uso (guardia RF-06).
+    LaunchedEffect(viewModel) {
+        viewModel.skipEvents.collect { onSkip() }
+    }
     AuroraV2Theme(V2Voice.Interior) {
         TutorialScreen(
             state = state,
             isReview = isReview,
             onStartPractice = viewModel::onStartPractice,
+            onSkip = viewModel::onSkip,
             onBack = { if (state.isFirstStep) onClose() else viewModel.onBack() },
             onPracticeInputChange = {
                 // El teclado es una ventana propia: cada tecla debe contar como
@@ -87,6 +96,7 @@ internal fun TutorialScreen(
     state: TutorialUiState,
     isReview: Boolean,
     onStartPractice: () -> Unit,
+    onSkip: () -> Unit,
     onBack: () -> Unit,
     onPracticeInputChange: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -111,7 +121,9 @@ internal fun TutorialScreen(
             OverviewContent(
                 isReview = isReview,
                 showBack = state.showsBack(isReview),
+                showSkip = state.showsSkip(isReview),
                 onStartPractice = onStartPractice,
+                onSkip = onSkip,
                 onBack = onBack
             )
         }
@@ -152,7 +164,14 @@ private val MOMENTS = listOf(
 )
 
 @Composable
-private fun OverviewContent(isReview: Boolean, showBack: Boolean, onStartPractice: () -> Unit, onBack: () -> Unit) {
+private fun OverviewContent(
+    isReview: Boolean,
+    showBack: Boolean,
+    showSkip: Boolean,
+    onStartPractice: () -> Unit,
+    onSkip: () -> Unit,
+    onBack: () -> Unit
+) {
     if (isReview) {
         Text(
             text = stringResource(R.string.access_guide_tag_review),
@@ -192,6 +211,23 @@ private fun OverviewContent(isReview: Boolean, showBack: Boolean, onStartPractic
         text = stringResource(R.string.access_guide_practice_cta),
         onClick = onStartPractice
     )
+    if (showSkip) {
+        // Un solo lleno por pantalla (kit V2): saltar es la acción secundaria y
+        // la línea de abajo recuerda la reapertura desde Ajustes (RF-11).
+        Spacer(modifier = Modifier.height(10.dp))
+        V2SecondaryButton(
+            text = stringResource(R.string.access_guide_skip),
+            onClick = onSkip
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = stringResource(R.string.access_guide_skip_hint),
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
     if (showBack) {
         Spacer(modifier = Modifier.height(8.dp))
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

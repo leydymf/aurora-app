@@ -117,7 +117,7 @@ El sistema debe presentar, tras la creación del código, un tutorial del doble 
 1. Al finalizar la creación del código inicia el tutorial (ingreso, salida rápida y qué ve un tercero).
 2. La usuaria realiza al menos un ingreso de práctica con su código y una salida rápida antes de finalizar.
 
-*Notas:* Clave para la apropiación segura de la app (HU-08).
+*Notas:* Clave para la apropiación segura de la app (HU-08). **Refinamiento (2026-08, decisión de la usuaria):** el tutorial es **saltable** — «Saltar por ahora» (acción secundaria; el primario sigue siendo continuar con la práctica) aparece en sus dos flujos de aparición (tras crear el código en cuenta nueva, y tras restaurar en dispositivo nuevo por RF-39) y navega al panel, el mismo destino donde termina el flujo completo; una línea bajo el botón recuerda que puede volver a verse desde Ajustes (RF-11). Los criterios 1 y 2 describen el camino completo cuando la usuaria no salta; en modo repaso (RF-11) no se ofrece saltar.
 
 ## RF-11 — Reapertura del tutorial
 **Tipo:** Funcional · **Prioridad:** Baja · **Dependencias:** RF-10
