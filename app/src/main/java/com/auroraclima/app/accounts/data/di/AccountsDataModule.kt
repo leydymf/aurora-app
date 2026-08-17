@@ -4,9 +4,12 @@ import com.auroraclima.app.accounts.data.AuthService
 import com.auroraclima.app.accounts.data.AuthSessionCleaner
 import com.auroraclima.app.accounts.data.FirebaseAuthRepository
 import com.auroraclima.app.accounts.data.FirebaseAuthService
+import com.auroraclima.app.accounts.data.LocalCredentialStore
 import com.auroraclima.app.accounts.data.PrefsSignInAttemptStore
 import com.auroraclima.app.accounts.data.SignInAttemptsEraser
+import com.auroraclima.app.accounts.data.StoredCredentialsEraser
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
+import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.core.security.LocalAccountDataEraser
@@ -34,6 +37,15 @@ abstract class AccountsDataModule {
 
     @Binds
     abstract fun bindSignInAttemptStore(impl: PrefsSignInAttemptStore): SignInAttemptStore
+
+    /** Blob de credenciales del reingreso silencioso (P-31 opción C). */
+    @Binds
+    abstract fun bindCredentialStore(impl: LocalCredentialStore): CredentialStore
+
+    /** El blob de credenciales muere con la cuenta (RF-20). */
+    @Binds
+    @IntoSet
+    abstract fun bindStoredCredentialsEraser(impl: StoredCredentialsEraser): LocalAccountDataEraser
 
     /** El contador de intentos muere con la cuenta (RF-20). */
     @Binds
