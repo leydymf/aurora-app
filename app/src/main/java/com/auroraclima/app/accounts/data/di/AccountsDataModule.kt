@@ -7,6 +7,7 @@ import com.auroraclima.app.accounts.data.FirebaseAuthService
 import com.auroraclima.app.accounts.data.LocalCredentialStore
 import com.auroraclima.app.accounts.data.PrefsSignInAttemptStore
 import com.auroraclima.app.accounts.data.SignInAttemptsEraser
+import com.auroraclima.app.accounts.data.SilentSessionCoordinator
 import com.auroraclima.app.accounts.data.StoredCredentialsEraser
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.CredentialStore
@@ -20,6 +21,19 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
+import javax.inject.Qualifier
+import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+
+/**
+ * Ámbito del reingreso silencioso (P-31 opción C): sobrevive al pop de los
+ * ViewModels del grafo seguro; inyectable en tests con un TestScope.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class SilentSessionScope
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -52,6 +66,11 @@ abstract class AccountsDataModule {
     @IntoSet
     abstract fun bindSignInAttemptsEraser(impl: SignInAttemptsEraser): LocalAccountDataEraser
 
+    /** Toda salida del espacio interno cancela la confirmación en curso (P-31 C). */
+    @Binds
+    @IntoSet
+    abstract fun bindSilentSessionCleaner(impl: SilentSessionCoordinator): SensitiveStateCleaner
+
     companion object {
         // FirebaseAuth se provee en core/network/FirestoreModule: lo comparten
         // accounts y records (§2, RNF-06), como ya ocurre con Firestore.
@@ -59,5 +78,11 @@ abstract class AccountsDataModule {
         /** Reloj de pared del bloqueo de RF-15 (ver KDoc de [WallClock]). */
         @Provides
         fun provideWallClock(): WallClock = WallClock { System.currentTimeMillis() }
+
+        /** Main.immediate: el coordinador es main-confined, como SessionManager. */
+        @Provides
+        @Singleton
+        @SilentSessionScope
+        fun provideSilentSessionScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     }
 }

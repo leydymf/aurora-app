@@ -29,7 +29,7 @@ import javax.inject.Singleton
  * (degradación a login manual) en lugar de lanzar — divergencia deliberada del
  * criterio de `LocalDekStore`: allí regenerar escondería la pérdida del
  * respaldo; aquí el login manual ES la recuperación completa y un crash o un
- * error visible sería peor (RF-13: nada del doble fondo asoma fallos técnicos).
+ * error visible sería peor (RF-13: nada interno asoma fallos técnicos).
  *
  * Residual documentado (P-70, hermano de P-37b): quien tenga root e invoque la
  * llave del Keystore obtiene la contraseña en claro. Sigue siendo estrictamente

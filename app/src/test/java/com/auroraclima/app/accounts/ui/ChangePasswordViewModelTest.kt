@@ -4,6 +4,7 @@ import com.auroraclima.app.R
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.usecase.ChangePasswordUseCase
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
+import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,7 +30,7 @@ class ChangePasswordViewModelTest {
 
     private val repository = FakeAuthRepository()
     private val syncKeys = FakeSyncKeyManager()
-    private val viewModel = ChangePasswordViewModel(ChangePasswordUseCase(repository, syncKeys))
+    private val viewModel = ChangePasswordViewModel(ChangePasswordUseCase(repository, syncKeys, FakeCredentialStore()))
 
     private fun fillValidForm() {
         viewModel.onCurrentPasswordChange("clave-actual-1")

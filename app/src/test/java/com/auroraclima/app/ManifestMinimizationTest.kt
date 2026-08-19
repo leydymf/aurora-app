@@ -22,7 +22,13 @@ import org.w3c.dom.Element
  * El manifest FUSIONADO del APK (permisos que agregan las libs) se revisa aparte: P-06.
  */
 class ManifestMinimizationTest {
-    private val approvedPermissions = setOf("android.permission.INTERNET")
+    // INTERNET: consulta del clima. ACCESS_NETWORK_STATE: señal de conectividad
+    // del reingreso silencioso (P-31 opción C, acta 2026-08-15) — nivel normal,
+    // esperable en una app de clima (RNF-04/RNF-05).
+    private val approvedPermissions = setOf(
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+    )
 
     private val manifest: Element by lazy {
         val file = requireNotNull(

@@ -5,6 +5,7 @@ import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
+import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
 import com.auroraclima.app.accounts.domain.usecase.FakeSignInAttemptStore
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
 import com.auroraclima.app.core.MainDispatcherRule
@@ -38,7 +39,7 @@ class LoginViewModelTest {
     private fun TestScope.createViewModel(): LoginViewModel {
         val clock = WallClock { BASE_EPOCH_MS + testScheduler.currentTime }
         return LoginViewModel(
-            SignInUseCase(repository, store, clock, FakeSyncKeyManager(), emptySet()),
+            SignInUseCase(repository, store, clock, FakeSyncKeyManager(), emptySet(), FakeCredentialStore()),
             repository
         )
     }

@@ -2,6 +2,7 @@ package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
+import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.security.WallClock
@@ -30,13 +31,19 @@ import kotlinx.coroutines.CancellationException
  * restauradores de cada feature. Ambos pasos son de mejor esfuerzo y
  * silenciosos (§3): su fallo jamás degrada el acceso concedido ni asoma un
  * error revelador; el siguiente inicio de sesión reintenta.
+ *
+ * P-31 opción C: el mismo momento hace nacer el blob de credenciales
+ * ([CredentialStore.save]) que habilita el reingreso silencioso y el acceso
+ * local sin red. También de mejor esfuerzo: si el guardado falla, la usuaria
+ * simplemente vuelve al login manual la próxima vez.
  */
 class SignInUseCase @Inject constructor(
     private val repository: AuthRepository,
     private val attemptStore: SignInAttemptStore,
     private val clock: WallClock,
     private val syncKeys: SyncKeyManager,
-    private val restorers: Set<@JvmSuppressWildcards AccountDataRestorer>
+    private val restorers: Set<@JvmSuppressWildcards AccountDataRestorer>,
+    private val credentials: CredentialStore
 ) {
     /** Milisegundos restantes del bloqueo vigente, o 0 si no hay bloqueo. */
     suspend fun currentLockMillis(): Long {
@@ -49,11 +56,22 @@ class SignInUseCase @Inject constructor(
         return when (repository.signIn(email, password)) {
             SignInResult.Success -> {
                 attemptStore.clear()
+                saveCredentials(email, password)
                 establishBackupKeys(password)
                 SignInOutcome.Success
             }
             SignInResult.InvalidCredentials -> registerRejection()
             SignInResult.GenericFailure -> SignInOutcome.Failure
+        }
+    }
+
+    /** Nacimiento del blob del reingreso silencioso (P-31 C), mejor esfuerzo (§3). */
+    private fun saveCredentials(email: String, password: String) {
+        try {
+            credentials.save(email, password)
+        } catch (ignored: Exception) {
+            // Sin blob no hay reingreso silencioso, pero el acceso concedido no
+            // se degrada: el siguiente login manual reintenta el guardado.
         }
     }
 
