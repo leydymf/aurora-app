@@ -7,6 +7,7 @@ import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
 import com.auroraclima.app.accounts.domain.usecase.FakeSignInAttemptStore
+import com.auroraclima.app.accounts.domain.usecase.FakeSilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.security.FakeSyncKeyManager
@@ -33,14 +34,18 @@ class LoginViewModelTest {
 
     private val repository = FakeAuthRepository()
     private val store = FakeSignInAttemptStore()
+    private val credentials = FakeCredentialStore()
+    private val silentSession = FakeSilentSessionOrchestrator()
 
     /** Reloj de pared anclado al tiempo virtual del test: la cuenta regresiva
      *  se re-ancla al deadline persistido en cada tick y ambos deben avanzar juntos. */
     private fun TestScope.createViewModel(): LoginViewModel {
         val clock = WallClock { BASE_EPOCH_MS + testScheduler.currentTime }
         return LoginViewModel(
-            SignInUseCase(repository, store, clock, FakeSyncKeyManager(), emptySet(), FakeCredentialStore()),
-            repository
+            SignInUseCase(repository, store, clock, FakeSyncKeyManager(), emptySet(), credentials),
+            repository,
+            credentials,
+            silentSession
         )
     }
 
@@ -85,6 +90,36 @@ class LoginViewModelTest {
         // El formulario nunca llega a pintarse
         assertTrue(viewModel.uiState.value.isCheckingSession)
         assertEquals(0, repository.signInCalls)
+        // Con sesión viva no hay nada que confirmar en segundo plano
+        assertEquals(0, silentSession.startCalls)
+    }
+
+    @Test
+    fun `con blob y sin sesion abre siempre y arranca el silencioso`() = runTest {
+        // P-31 opción C: el código correcto abre con los datos locales; la
+        // sesión del proveedor se confirma en paralelo, sin formulario.
+        credentials.save("usuaria@correo.co", "clave-segura-1")
+        val viewModel = createViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(1, events.size)
+        assertTrue(viewModel.uiState.value.isCheckingSession)
+        assertEquals(1, silentSession.startCalls)
+        // El silencioso corre en el coordinador, no aquí: cero login directo.
+        assertEquals(0, repository.signInCalls)
+    }
+
+    @Test
+    fun `sin sesion y sin blob se muestra el formulario`() = runTest {
+        // Comportamiento previo a la opción C (también tras RF-19/RF-20/rechazo).
+        val viewModel = createViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isCheckingSession)
+        assertEquals(0, silentSession.startCalls)
     }
 
     @Test

@@ -3,18 +3,24 @@ package com.auroraclima.app
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.auroraclima.app.access.ui.PanelScreen
 import com.auroraclima.app.content.ui.GuideHomeScreen
+import com.auroraclima.app.core.ui.v2.AccentChip
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2TabBar
 import com.auroraclima.app.core.ui.v2.V2TabItem
 import com.auroraclima.app.core.ui.v2.V2Voice
@@ -42,6 +48,7 @@ import com.auroraclima.app.records.ui.JournalListRoute
  */
 @Composable
 fun InnerTabsHost(
+    isOffline: Boolean,
     onOpenGuidance: () -> Unit,
     onOpenGuidanceHistory: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -56,6 +63,22 @@ fun InnerTabsHost(
     val tabStateHolder = rememberSaveableStateHolder()
     AuroraV2Theme(V2Voice.Interior) {
         Column(modifier = modifier.fillMaxSize()) {
+            // Indicador sobrio del modo local (P-31 opción C): sin jerga técnica
+            // y con icono además del color (regla 3 — el color nunca informa solo).
+            if (isOffline) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AccentChip(
+                        text = stringResource(R.string.access_offline_chip),
+                        accent = V2Palette.accentGroup,
+                        iconRes = V2Icons.waiting
+                    )
+                }
+            }
             Box(modifier = Modifier.weight(1f)) {
                 when (selectedTab) {
                     GUIDE_TAB -> tabStateHolder.SaveableStateProvider(GUIDE_TAB) {

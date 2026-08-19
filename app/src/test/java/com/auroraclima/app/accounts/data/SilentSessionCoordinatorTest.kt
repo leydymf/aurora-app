@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.domain.model.SignInResult
+import com.auroraclima.app.accounts.domain.model.SilentSessionState
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
 import com.auroraclima.app.accounts.domain.usecase.SilentSignInUseCase

@@ -153,6 +153,8 @@
     <string name="access_home_learn">Informarme</string>
     <string name="access_tab_guide">Guía</string>
     <string name="access_tab_journal">Mi registro</string>
+    <!-- Modo local del reingreso silencioso (P-31 opción C): sobrio, sin jerga técnica. -->
+    <string name="access_offline_chip">Sin conexión</string>
     <string name="access_panel_guide_title">Reconocer tu situación</string>
     <string name="access_panel_guide_body">Unas preguntas para orientarte, a tu ritmo.</string>
     <string name="access_panel_history_title">Resultados guardados</string>

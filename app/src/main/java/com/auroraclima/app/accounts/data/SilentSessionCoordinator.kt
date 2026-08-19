@@ -1,6 +1,8 @@
 package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.data.di.SilentSessionScope
+import com.auroraclima.app.accounts.domain.model.SilentSessionState
+import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.usecase.SilentSignInOutcome
 import com.auroraclima.app.accounts.domain.usecase.SilentSignInUseCase
 import com.auroraclima.app.core.network.ConnectivityMonitor
@@ -41,21 +43,20 @@ class SilentSessionCoordinator @Inject constructor(
     private val silentSignIn: SilentSignInUseCase,
     private val connectivity: ConnectivityMonitor,
     @SilentSessionScope private val scope: CoroutineScope
-) : SensitiveStateCleaner {
+) : SilentSessionOrchestrator, SensitiveStateCleaner {
     private val _state = MutableStateFlow(SilentSessionState.Idle)
-    val state: StateFlow<SilentSessionState> = _state.asStateFlow()
+    override val state: StateFlow<SilentSessionState> = _state.asStateFlow()
 
     // Sin replay: una petición de login solo vale para la sesión interna que la
     // produjo — el cleaner corre antes del pop, así que nada queda pendiente.
     private val _loginRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /** El silencioso fue rechazado: interponer la pantalla de contraseña. */
-    val loginRequests: SharedFlow<Unit> = _loginRequests.asSharedFlow()
+    override val loginRequests: SharedFlow<Unit> = _loginRequests.asSharedFlow()
 
     private var job: Job? = null
 
-    /** Arranca la confirmación en segundo plano. Idempotente por sesión. */
-    fun start() {
+    override fun start() {
         if (job?.isActive == true) return
         _state.value = SilentSessionState.Checking
         job = scope.launch {
@@ -98,22 +99,4 @@ class SilentSessionCoordinator @Inject constructor(
         job = null
         _state.value = SilentSessionState.Idle
     }
-}
-
-/** Estado observable del reingreso silencioso dentro de la sesión interna. */
-enum class SilentSessionState {
-    /** Sin sesión interna, o aún sin arrancar. */
-    Idle,
-
-    /** Confirmación en curso. */
-    Checking,
-
-    /** Operando en local: sin red o servicio caído (chip «Sin conexión»). */
-    Offline,
-
-    /** Sesión del proveedor confirmada. */
-    SignedIn,
-
-    /** Rechazo definitivo: corresponde el login manual (blob ya destruido). */
-    LoginRequired
 }

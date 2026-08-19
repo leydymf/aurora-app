@@ -14,6 +14,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,6 +29,7 @@ import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.accounts.ui.DeleteAccountRoute
 import com.auroraclima.app.accounts.ui.LoginRoute
 import com.auroraclima.app.accounts.ui.PrivacyScreen
+import com.auroraclima.app.accounts.ui.SilentSessionViewModel
 import com.auroraclima.app.content.ui.AGENCY_ID_ARG
 import com.auroraclima.app.content.ui.AgencyDetailRoute
 import com.auroraclima.app.content.ui.LinesRoute
@@ -64,6 +66,9 @@ import com.auroraclima.app.weather.ui.WeatherViewModel
 @Composable
 fun AuroraApp(sessionManager: SessionManager) {
     val navController = rememberNavController()
+    // Observación del reingreso silencioso (P-31 opción C), scoped a la Activity:
+    // sobrevive a los destinos del grafo seguro para poder interponer el login.
+    val silentSession: SilentSessionViewModel = hiltViewModel()
     CompositionLocalProvider(LocalSessionManager provides sessionManager) {
         // popEnterTransition None: la fachada reaparece en el mismo frame del pop de
         // la salida rápida — «sin animaciones» (RF-16 criterio 2, decisión F2).
@@ -189,7 +194,9 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // pestaña no navega y el estado muere con el pop del grafo (RF-06).
                 // El inset eleva la nube por encima de la barra de pestañas (RF-16).
                 screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) {
+                    val isOffline by silentSession.isOffline.collectAsState()
                     InnerTabsHost(
+                        isOffline = isOffline,
                         onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
                         onOpenGuidanceHistory = { navController.navigate(GUIDANCE_HISTORY_ROUTE) },
                         onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
@@ -338,6 +345,25 @@ fun AuroraApp(sessionManager: SessionManager) {
                 }
                 screen(LINES_ROUTE) {
                     LinesRoute(onBack = { navController.popBackStack() })
+                }
+            }
+        }
+    }
+    // Rechazo definitivo del reingreso silencioso (P-31 opción C): se interpone
+    // la pantalla de contraseña SOLO si se sigue dentro del grafo seguro (desde
+    // la fachada jamás debe abrirse sola — RNF-05; además el cleaner cancela el
+    // coordinador antes del pop, así que este caso es cinturón y tirantes). Si
+    // el login ya está a la vista (rechazo antes de llegar al panel), no se
+    // apila otro: el estado queda en LoginRequired y el siguiente reingreso
+    // pide credenciales porque el blob ya fue destruido.
+    LaunchedEffect(silentSession, navController) {
+        silentSession.loginRequests.collect {
+            val destination = navController.currentBackStackEntry?.destination ?: return@collect
+            val insideSecureGraph = destination.hierarchy.any { it.route == INNER_ROUTE }
+            val atLogin = destination.route == ENTRY_ROUTE || destination.route == ENTRY_SETUP_ROUTE
+            if (insideSecureGraph && !atLogin) {
+                navController.navigate(ENTRY_ROUTE) {
+                    popUpTo(PANEL_ROUTE) { inclusive = true }
                 }
             }
         }

@@ -4,15 +4,21 @@ import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
+import com.auroraclima.app.accounts.domain.model.SilentSessionState
 import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
+import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.repository.StoredCredentials
 import com.auroraclima.app.accounts.domain.security.WallClock
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /** Fakes compartidos por los tests de accounts (creación de cuenta e inicio de sesión). */
 
@@ -98,6 +104,22 @@ internal class FakeSignInAttemptStore : SignInAttemptStore {
 /** Reloj de pared simulado, movible a mano. */
 internal class MutableWallClock(var nowMs: Long = 1_700_000_000_000L) : WallClock {
     override fun nowEpochMs(): Long = nowMs
+}
+
+/** Orquestador del reingreso silencioso simulado (P-31 opción C). */
+internal class FakeSilentSessionOrchestrator : SilentSessionOrchestrator {
+    val mutableState = MutableStateFlow(SilentSessionState.Idle)
+    override val state: StateFlow<SilentSessionState> = mutableState
+
+    val mutableLoginRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    override val loginRequests: SharedFlow<Unit> = mutableLoginRequests
+
+    var startCalls = 0
+        private set
+
+    override fun start() {
+        startCalls++
+    }
 }
 
 /** Blob de credenciales en memoria (P-31 opción C), con fallos simulables. */

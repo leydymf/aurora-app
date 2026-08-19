@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
+import com.auroraclima.app.accounts.domain.repository.CredentialStore
+import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.usecase.SignInOutcome
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,16 +22,25 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Inicio de sesión (RF-15). Con sesión vigente del proveedor salta directo a la
- * pantalla principal (RF-12 criterio 1); en la práctica, tras una salida del
- * espacio interno casi siempre habrá que iniciar sesión porque AuthSessionCleaner
- * cierra la del proveedor (D3 H-3) — el salto cubre muerte de proceso sin cierre
- * limpio. La contraseña vive solo en este estado y se limpia al usarse.
+ * Inicio de sesión (RF-15). El orden de decisión al entrar (RF-12 criterio 1 +
+ * P-31 opción C):
+ *
+ * 1. Sesión vigente del proveedor → salta directo a la pantalla principal
+ *    (cubre muerte de proceso sin cierre limpio).
+ * 2. Sin sesión pero con blob de credenciales → abre SIEMPRE (con los datos
+ *    locales) y arranca la confirmación en segundo plano; el formulario solo
+ *    reaparece si esa confirmación es rechazada (la navegación lo interpone).
+ * 3. Sin blob → formulario de login manual (comportamiento previo a la opción
+ *    C; también el estado tras RF-19, RF-20 o un rechazo definitivo).
+ *
+ * La contraseña vive solo en este estado y se limpia al usarse.
  */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val signIn: SignInUseCase,
-    private val repository: AuthRepository
+    private val repository: AuthRepository,
+    private val credentials: CredentialStore,
+    private val silentSession: SilentSessionOrchestrator
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -45,13 +56,21 @@ class LoginViewModel @Inject constructor(
     private var countdownJob: Job? = null
 
     init {
-        if (repository.hasActiveSession()) {
-            // isCheckingSession queda true: la pantalla no llega a pintar el formulario.
-            _openEvents.tryEmit(Unit)
-        } else {
-            _uiState.update { it.copy(isCheckingSession = false) }
-            // Un bloqueo vigente de una visita anterior se retoma donde iba.
-            viewModelScope.launch { startLockCountdown(signIn.currentLockMillis()) }
+        when {
+            repository.hasActiveSession() ->
+                // isCheckingSession queda true: la pantalla no llega a pintar el formulario.
+                _openEvents.tryEmit(Unit)
+            credentials.exists() -> {
+                // P-31 C: el código correcto abre siempre; la sesión del
+                // proveedor se confirma en paralelo (sin red se opera en local).
+                silentSession.start()
+                _openEvents.tryEmit(Unit)
+            }
+            else -> {
+                _uiState.update { it.copy(isCheckingSession = false) }
+                // Un bloqueo vigente de una visita anterior se retoma donde iba.
+                viewModelScope.launch { startLockCountdown(signIn.currentLockMillis()) }
+            }
         }
     }
 

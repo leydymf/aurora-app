@@ -12,6 +12,7 @@ import com.auroraclima.app.accounts.data.StoredCredentialsEraser
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
+import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.SensitiveStateCleaner
@@ -70,6 +71,10 @@ abstract class AccountsDataModule {
     @Binds
     @IntoSet
     abstract fun bindSilentSessionCleaner(impl: SilentSessionCoordinator): SensitiveStateCleaner
+
+    /** Contrato del reingreso silencioso hacia la UI (§2). */
+    @Binds
+    abstract fun bindSilentSessionOrchestrator(impl: SilentSessionCoordinator): SilentSessionOrchestrator
 
     companion object {
         // FirebaseAuth se provee en core/network/FirestoreModule: lo comparten
