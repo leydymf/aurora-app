@@ -138,7 +138,7 @@ El sistema debe abrir el acceso a Aurora cuando el texto de la barra de búsqued
 1. El código exacto abre Aurora (inicio de sesión, o pantalla principal si hay sesión activa).
 2. Cualquier variación del código se trata como búsqueda normal.
 
-*Notas:* Puerta única de entrada al doble fondo.
+*Notas:* Puerta única de entrada al doble fondo. **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el criterio 1 se amplía — el código correcto abre la pantalla principal también cuando existe la credencial local cifrada (reingreso silencioso): el espacio interno se abre SIEMPRE con los datos locales y la sesión de la cuenta se confirma en segundo plano; el inicio de sesión manual solo aparece sin credencial local o si la confirmación es rechazada. Ver ADR 2026-08-19 en `docs/ARQUITECTURA.md`.
 
 ## RF-13 — Respuesta indistinguible de búsqueda
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-02, RF-12
@@ -172,7 +172,7 @@ El sistema debe permitir iniciar sesión con correo y contraseña, mostrando err
 2. Credenciales incorrectas muestran un error genérico que no indica cuál campo falló.
 3. Tras 5 intentos fallidos consecutivos se aplica un bloqueo temporal.
 
-*Notas:* -
+*Notas:* **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el inicio de sesión puede ser SILENCIOSO — con la credencial local cifrada, la sesión se confirma en segundo plano sin formulario. El silencioso NO cuenta para el bloqueo del criterio 3 (no es superficie de adivinación; su rechazo destruye la credencial local y fuerza el login manual, que sí cuenta). Los criterios 1–3 aplican intactos al formulario manual. Ver ADR 2026-08-19.
 
 ## RF-16 — Salida rápida
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12

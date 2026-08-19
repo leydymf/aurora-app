@@ -15,7 +15,8 @@
 > madurez TRL 4, trabajo de grado) puede resolver, y se documenta para el informe.
 >
 > **Estado:** ACTA — decisiones tomadas en la reunión con la directora del **2026-07-21**.
-> Cada bloque registra la decisión adoptada. Última actualización: 2026-07-21.
+> Cada bloque registra la decisión adoptada. Última actualización: 2026-08-15
+> (adopción de la opción C en §2).
 
 ---
 
@@ -135,6 +136,25 @@ dejar **C como la evolución natural** para después del prototipo.
 > **Decisión (a / b / c):** **A** para el piloto (ingreso completo en cada entrada,
 > midiendo el costo real de uso). El **reingreso silencioso (C)** queda como **trabajo
 > futuro priorizado**. **P-31 cerrado** con esta decisión.  **Fecha:** 2026-07-21
+
+> **Decisión posterior — se ADOPTA la opción C (reingreso silencioso y acceso local
+> sin red):** medido el costo real de la opción A, la directora aprueba adelantar el
+> reingreso silencioso, con un alcance que además resuelve un problema detectado en el
+> uso: hoy el inicio de sesión necesita internet, así que **sin red no se podía entrar
+> ni a los datos guardados en el propio teléfono** — inaceptable para el perfil de
+> usuaria (RNF-08). Con la opción C: el **código correcto abre siempre** el espacio
+> interno con los datos locales; si hay red, la sesión de la cuenta se confirma **en
+> segundo plano sin preguntar nada**; la pantalla de contraseña solo aparece si esa
+> confirmación es **rechazada** (contraseña cambiada o credencial revocada) — y sin
+> red no aparece: se opera en local con un indicador sobrio de «sin conexión». Las
+> credenciales viven **cifradas en un blob neutro** bajo una llave del Keystore del
+> dispositivo (nunca en claro; el riesgo H-3 —tokens del SDK en claro— sigue mitigado
+> porque `AuthSessionCleaner` conserva el cierre de sesión del proveedor en cada
+> salida). El **cierre de sesión explícito (RF-19)** y la **eliminación (RF-20)**
+> destruyen el blob y regresan al ingreso completo actual; **restaurar en un
+> dispositivo nuevo sigue exigiendo login manual la primera vez** (RF-39 — ahí nace el
+> blob). **P-31 se reabre como trabajo comprometido**; el diseño detallado y su ADR
+> quedan en `docs/ARQUITECTURA.md`. **Fecha:** 2026-08-15
 
 ---
 
