@@ -29,6 +29,7 @@ import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.accounts.ui.DeleteAccountRoute
 import com.auroraclima.app.accounts.ui.LoginRoute
 import com.auroraclima.app.accounts.ui.PrivacyScreen
+import com.auroraclima.app.accounts.ui.SignOutViewModel
 import com.auroraclima.app.accounts.ui.SilentSessionViewModel
 import com.auroraclima.app.content.ui.AGENCY_ID_ARG
 import com.auroraclima.app.content.ui.AgencyDetailRoute
@@ -212,6 +213,16 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // Configuración del espacio interno (P21): reabrir el tutorial
                 // (RF-11) reutiliza la ruta de repaso ya prevista.
                 screen(SETTINGS_ROUTE) {
+                    // RF-19 con la opción C de P-31: el cierre explícito destruye
+                    // primero el blob del reingreso silencioso (SignOutViewModel)
+                    // y después converge en la rutina única de cierre (quickExit):
+                    // AuthSessionCleaner cierra la sesión del proveedor —el
+                    // siguiente acceso exige código + credenciales, criterio 1— y
+                    // SessionGuard hace el pop a la fachada (criterio 2).
+                    val signOutViewModel: SignOutViewModel = hiltViewModel()
+                    LaunchedEffect(signOutViewModel) {
+                        signOutViewModel.doneEvents.collect { sessionManager.quickExit() }
+                    }
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
                         onChangeCode = { navController.navigate(SETTINGS_CODE_ROUTE) },
@@ -220,11 +231,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onChangePassword = { navController.navigate(SETTINGS_PASSWORD_ROUTE) },
                         onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) },
                         onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) },
-                        // RF-19: el cierre explícito converge en la rutina única de
-                        // cierre (closeSession vía quickExit): AuthSessionCleaner
-                        // cierra la sesión del proveedor —el siguiente acceso exige
-                        // credenciales— y SessionGuard hace el pop a la fachada.
-                        onSignOut = sessionManager::quickExit,
+                        onSignOut = signOutViewModel::onSignOut,
                         onDeleteAccount = { navController.navigate(SETTINGS_ACCOUNT_ROUTE) }
                     )
                 }
