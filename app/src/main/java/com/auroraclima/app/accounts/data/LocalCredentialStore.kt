@@ -157,8 +157,12 @@ class LocalCredentialStore @Inject constructor(
         const val IV_KEY = "a0"
         const val BLOB_KEY = "a1"
 
-        /** Versión del contenido del blob, autenticada por el tag GCM. */
-        const val SCHEMA_VERSION: Byte = 1
+        /**
+         * Versión del contenido del blob, autenticada por el tag GCM. v2 desde
+         * el relleno B-1 (longitud explícita de la contraseña + bloque fijo);
+         * un blob v1 solo pudo existir en desarrollo y degrada a login manual.
+         */
+        const val SCHEMA_VERSION: Byte = 2
 
         /**
          * Tamaño de bloque del relleno (B-1). 512 cubre cualquier correo (≤254)
