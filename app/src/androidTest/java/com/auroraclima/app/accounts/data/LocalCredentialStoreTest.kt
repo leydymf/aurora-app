@@ -104,6 +104,37 @@ class LocalCredentialStoreTest {
     }
 
     @Test
+    fun halfPresentBlobIsDestroyedDefensively() {
+        // B-2: mitad presente por manipulación externa — exists() no debe
+        // seguir prometiendo un blob que jamás abrirá.
+        store.save("usuaria@correo.co", "clave-segura-1")
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(IV_KEY)
+            .commit()
+
+        assertNull(store.load())
+        assertFalse(store.exists())
+    }
+
+    @Test
+    fun blobLengthDoesNotRevealCredentialLength() {
+        // B-1: relleno a bloque fijo — credenciales de longitudes distintas
+        // producen blobs del mismo tamaño en el XML.
+        store.save("a@b.co", "corta-123")
+        val shortBlob = storedBlobLength()
+
+        store.save("usuaria.con.correo.largo@dominio-extenso.example.com", "una-contraseña-mucho-más-larga-9")
+        val longBlob = storedBlobLength()
+
+        assertEquals(shortBlob, longBlob)
+    }
+
+    private fun storedBlobLength(): Int = requireNotNull(
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(BLOB_KEY, null)
+    ).length
+
+    @Test
     fun unparseableIvDegradesToAbsenceWithoutCrash() {
         store.save("usuaria@correo.co", "clave-segura-1")
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

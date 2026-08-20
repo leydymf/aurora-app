@@ -17,6 +17,14 @@ interface AuthRepository {
     /** True si el proveedor conserva una sesión iniciada (RF-12 criterio 1). */
     fun hasActiveSession(): Boolean
 
+    /**
+     * Cierra la sesión persistida del proveedor. Idempotente. Existe en el
+     * contrato para que el reingreso silencioso (P-31 C) pueda DESHACER un
+     * login que culminó después de cerrarse la sesión interna — sin él, el
+     * rastro del SDK (H-3) sobreviviría hasta el siguiente ciclo.
+     */
+    fun signOut()
+
     /** Revalida la contraseña de la sesión vigente. Nunca lanza (RF-20 paso 1). */
     suspend fun reauthenticate(password: String): ReauthenticateResult
 

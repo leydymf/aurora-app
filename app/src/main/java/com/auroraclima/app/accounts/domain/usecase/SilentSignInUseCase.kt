@@ -6,7 +6,11 @@ import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.SyncKeyManager
 import javax.inject.Inject
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 
 /**
  * Reingreso silencioso (P-31 opción C): confirma la sesión del proveedor con
@@ -37,7 +41,23 @@ class SilentSignInUseCase @Inject constructor(
     suspend operator fun invoke(): SilentSignInOutcome {
         // Un blob ilegible ya fue destruido por load(): degrada a login manual.
         val stored = credentials.load() ?: return SilentSignInOutcome.NoCredentials
-        return when (repository.signIn(stored.email, stored.password)) {
+        // El Task del SDK no se aborta con la cancelación de la corrutina: se
+        // espera su desenlace bajo NonCancellable y, si la sesión interna se
+        // cerró mientras el proveedor respondía (salida rápida en plena
+        // confirmación), se DESHACE lo que acaba de persistir antes de propagar
+        // la cancelación — sin esto, el signOut de AuthSessionCleaner quedaría
+        // burlado por un login que culmina después de la limpieza (H-3,
+        // auditoría P-31 C A-1).
+        val result = withContext(NonCancellable) { repository.signIn(stored.email, stored.password) }
+        if (!coroutineContext.isActive) {
+            when (result) {
+                SignInResult.Success -> runCatching { repository.signOut() }
+                SignInResult.InvalidCredentials -> credentials.erase()
+                SignInResult.GenericFailure -> Unit
+            }
+            throw CancellationException()
+        }
+        return when (result) {
             SignInResult.Success -> {
                 establishBackupKeys(stored.password)
                 SilentSignInOutcome.Success

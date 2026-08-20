@@ -3,6 +3,11 @@ package com.auroraclima.app.accounts.domain.usecase
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.FakeSyncKeyManager
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -14,6 +19,7 @@ import org.junit.Test
  * tocar el contador de RF-15; el rechazo definitivo destruye el blob y los
  * fallos transitorios lo conservan.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class SilentSignInUseCaseTest {
     private val repository = FakeAuthRepository()
     private val credentials = FakeCredentialStore()
@@ -92,5 +98,45 @@ class SilentSignInUseCaseTest {
 
         assertEquals(SilentSignInOutcome.Success, useCase())
         assertEquals(0, restoreCalls)
+    }
+
+    @Test
+    fun `un login que culmina tras el cierre de sesion se deshace con signOut`() = runTest {
+        // Auditoría A-1 (H-3): el Task del SDK no se aborta con la cancelación;
+        // si la salida rápida llega mientras el proveedor responde, la sesión
+        // recién persistida se cierra para no dejar el rastro tras la limpieza.
+        givenStoredCredentials()
+        repository.gate = CompletableDeferred()
+        val job = launch { useCase() }
+        runCurrent()
+
+        job.cancel()
+        repository.gate?.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(1, repository.signOutCalls)
+        // Nada más corre tras la cancelación: ni llaves ni restauradores.
+        assertEquals(0, syncKeys.establishedPasswords.size)
+        assertEquals(0, restoreCalls)
+        // El blob se conserva: el siguiente reingreso confirma de nuevo.
+        assertNotNull(credentials.stored)
+    }
+
+    @Test
+    fun `un rechazo que culmina tras el cierre de sesion destruye el blob igual`() = runTest {
+        // La credencial demostró ser inválida: no debe sobrevivir aunque la
+        // sesión interna ya se haya cerrado.
+        givenStoredCredentials()
+        repository.nextSignInResult = SignInResult.InvalidCredentials
+        repository.gate = CompletableDeferred()
+        val job = launch { useCase() }
+        runCurrent()
+
+        job.cancel()
+        repository.gate?.complete(Unit)
+        advanceUntilIdle()
+
+        assertNull(credentials.stored)
+        assertEquals(0, repository.signOutCalls)
     }
 }

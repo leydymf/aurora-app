@@ -53,6 +53,14 @@ internal class FakeAuthRepository : AuthRepository {
 
     override fun hasActiveSession(): Boolean = activeSession
 
+    var signOutCalls = 0
+        private set
+
+    override fun signOut() {
+        signOutCalls++
+        activeSession = false
+    }
+
     var nextReauthenticateResult: ReauthenticateResult = ReauthenticateResult.Success
     var nextDeleteResult: DeleteUserResult = DeleteUserResult.Success
     var reauthenticateCalls = 0

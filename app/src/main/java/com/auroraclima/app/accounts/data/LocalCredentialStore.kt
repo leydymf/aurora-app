@@ -54,13 +54,20 @@ class LocalCredentialStore @Inject constructor(
             .commit()
         // Quien llama decide si el guardado es de mejor esfuerzo; aquí un fallo
         // silencioso dejaría un blob a medias que el siguiente load destruiría.
-        if (!written) throw IOException()
+        if (!written) throw IOException("write failed")
     }
 
     @Synchronized
     override fun load(): StoredCredentials? {
-        val iv = preferences.getString(IV_KEY, null) ?: return null
-        val blob = preferences.getString(BLOB_KEY, null) ?: return null
+        val iv = preferences.getString(IV_KEY, null)
+        val blob = preferences.getString(BLOB_KEY, null)
+        if (iv == null || blob == null) {
+            // Mitad presente (solo posible por manipulación externa; el commit
+            // único de save es atómico): se destruye para que exists() no siga
+            // prometiendo un blob que jamás abrirá (auditoría P-31 C B-2).
+            if (iv != null || blob != null) erase()
+            return null
+        }
         return try {
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, obtainWrappingKey(), GCMParameterSpec(TAG_SIZE_BITS, decode(iv)))
@@ -89,13 +96,23 @@ class LocalCredentialStore @Inject constructor(
         preferences.edit().clear().commit()
     }
 
+    /**
+     * Relleno a tamaño fijo antes de cifrar: GCM no oculta la longitud y, a
+     * diferencia de los blobs hermanos (`store_meta`/`backup_meta`, de tamaño
+     * constante), este variaría por usuaria — el relleno evita que el XML
+     * revele la longitud combinada de correo y contraseña (auditoría P-31 C
+     * B-1). Los ceros del relleno quedan autenticados por el tag.
+     */
     private fun serialize(email: String, password: String): ByteArray {
         val emailBytes = email.toByteArray(Charsets.UTF_8)
         val passwordBytes = password.toByteArray(Charsets.UTF_8)
-        return ByteBuffer.allocate(1 + Int.SIZE_BYTES + emailBytes.size + passwordBytes.size)
+        val bodySize = 1 + Int.SIZE_BYTES + emailBytes.size + Int.SIZE_BYTES + passwordBytes.size
+        val paddedSize = ((bodySize + PADDED_BLOCK_BYTES - 1) / PADDED_BLOCK_BYTES) * PADDED_BLOCK_BYTES
+        return ByteBuffer.allocate(paddedSize)
             .put(SCHEMA_VERSION)
             .putInt(emailBytes.size)
             .put(emailBytes)
+            .putInt(passwordBytes.size)
             .put(passwordBytes)
             .array()
     }
@@ -104,7 +121,7 @@ class LocalCredentialStore @Inject constructor(
         val buffer = ByteBuffer.wrap(plain)
         check(buffer.get() == SCHEMA_VERSION)
         val emailBytes = ByteArray(buffer.int).also { buffer.get(it) }
-        val passwordBytes = ByteArray(buffer.remaining()).also { buffer.get(it) }
+        val passwordBytes = ByteArray(buffer.int).also { buffer.get(it) }
         return StoredCredentials(
             email = String(emailBytes, Charsets.UTF_8),
             password = String(passwordBytes, Charsets.UTF_8)
@@ -142,6 +159,13 @@ class LocalCredentialStore @Inject constructor(
 
         /** Versión del contenido del blob, autenticada por el tag GCM. */
         const val SCHEMA_VERSION: Byte = 1
+
+        /**
+         * Tamaño de bloque del relleno (B-1). 512 cubre cualquier correo (≤254)
+         * más una contraseña larga en un solo bloque: en la práctica todos los
+         * blobs miden lo mismo.
+         */
+        const val PADDED_BLOCK_BYTES = 512
 
         const val WRAPPING_KEY_SIZE_BITS = 256
         const val TAG_SIZE_BITS = 128

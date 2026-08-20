@@ -46,6 +46,10 @@ class FirebaseAuthRepository @Inject constructor(
 
     override fun hasActiveSession(): Boolean = service.hasActiveSession()
 
+    override fun signOut() {
+        service.signOut()
+    }
+
     override suspend fun reauthenticate(password: String): ReauthenticateResult = withContext(Dispatchers.IO) {
         try {
             service.reauthenticate(password)
