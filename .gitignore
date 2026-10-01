@@ -39,3 +39,8 @@ admin/.env.*.local
 /.claude/projects/
 /.claude/settings.local.json
 /.claude/scheduled_tasks.lock
+
+# Archivos temporales de editores (swap de Vim, respaldos)
+*.swp
+*.swo
+*~

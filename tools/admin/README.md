@@ -54,3 +54,18 @@ Sign-in method. (La app Android ya usa Auth, así que normalmente ya lo está.)
 node -e "import('firebase-admin/app').then(async m=>{m.initializeApp({credential:m.applicationDefault()});const {getAuth}=await import('firebase-admin/auth');const u=await getAuth().getUserByEmail('admin@ejemplo.org');console.log(u.customClaims)})"
 # Debe imprimir: { admin: true }
 ```
+
+## Eliminar una cuenta de prueba (P-30)
+
+`delete-test-account.mjs` inspecciona una cuenta de Auth y, solo con `--delete`,
+purga `users/{uid}` en Firestore (recursivo: `entries`, `media`, `mediaparts`,
+`meta`, `outcomes`) y después elimina la cuenta. Eliminar el usuario de Auth **no**
+borra sus documentos, por eso la purga va primero. Nunca lee ni imprime el
+contenido de los documentos: solo los cuenta. Misma llave y misma barrera B-1.
+
+```bash
+cd tools/admin
+export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/aurora-seed/service-account.json"
+node delete-test-account.mjs --email cuenta@ejemplo.org            # solo inspección
+node delete-test-account.mjs --email cuenta@ejemplo.org --delete   # purga + elimina + verifica
+```

@@ -2,9 +2,10 @@
   "name": "aurora-admin-tools",
   "private": true,
   "type": "module",
-  "description": "Alta de la cuenta de administradora del panel (RF-40) con custom claim admin. Uso exclusivamente local: nunca en CI ni con la llave dentro del repo.",
+  "description": "Alta de la cuenta de administradora del panel (RF-40) con custom claim admin y eliminación de cuentas de prueba con sus datos (P-30). Uso exclusivamente local: nunca en CI ni con la llave dentro del repo.",
   "scripts": {
-    "create-admin": "node create-admin.mjs"
+    "create-admin": "node create-admin.mjs",
+    "delete-test-account": "node delete-test-account.mjs"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0"
