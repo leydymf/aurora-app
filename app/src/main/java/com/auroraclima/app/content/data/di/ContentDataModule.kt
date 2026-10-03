@@ -1,10 +1,12 @@
 package com.auroraclima.app.content.data.di
 
+import com.auroraclima.app.content.data.CategoryContentProvider
 import com.auroraclima.app.content.data.DirectoryContentProvider
 import com.auroraclima.app.content.data.FirestoreContentRepository
 import com.auroraclima.app.content.data.remote.ContentRemoteSource
 import com.auroraclima.app.content.data.remote.FirestoreContentRemoteSource
 import com.auroraclima.app.content.domain.repository.ContentRepository
+import com.auroraclima.app.core.catalog.CategoryCatalog
 import com.auroraclima.app.core.directory.DirectoryProvider
 import dagger.Binds
 import dagger.Module
@@ -24,4 +26,9 @@ abstract class ContentDataModule {
     // referencias de líneas y entidades a través del contrato de core (§2).
     @Binds
     abstract fun bindDirectoryProvider(impl: DirectoryContentProvider): DirectoryProvider
+
+    // Catálogo de categorías del registro (RF-32 refinado, cierre P-68): los
+    // temas publicados de la Guía, expuestos por el contrato de core (§2).
+    @Binds
+    abstract fun bindCategoryCatalog(impl: CategoryContentProvider): CategoryCatalog
 }
