@@ -21,9 +21,11 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * RF-37 + RF-39: la sync lee la fila local, la sella con la DEK recuperable y
- * sube SOLO blobs (payload v2, con `at` para que la restauración conserve el
- * orden); el éxito deja constancia de la generación en la fila. Bajo Robolectric
- * por `org.json` y Room en memoria (SQLCipher no carga en la JVM del host).
+ * sube SOLO blobs (payload v3: `at` para que la restauración conserve el orden,
+ * `kind` como id de tema y `label` como último nombre conocido — P-68); el
+ * éxito deja constancia de la generación en la fila. La restauración sigue
+ * leyendo los v2 de un dispositivo anterior. Bajo Robolectric por `org.json` y
+ * Room en memoria (SQLCipher no carga en la JVM del host).
  */
 @RunWith(RobolectricTestRunner::class)
 class FirestoreJournalSyncRepositoryTest {
@@ -44,7 +46,7 @@ class FirestoreJournalSyncRepositoryTest {
         detail: String = "tomó el dinero del mercado",
         createdAt: Long = 1_750_000_000_000
     ): Long = database.journalDao().insert(
-        JournalEntryRow(day = 20_632, kind = "economic", detail = detail, createdAt = createdAt)
+        JournalEntryRow(day = 20_632, kind = "t04", label = "Cuarta", detail = detail, createdAt = createdAt)
     )
 
     @Test
@@ -62,12 +64,14 @@ class FirestoreJournalSyncRepositoryTest {
         val cleartext = "tomó el dinero del mercado"
         assertFalse(dto.ciphertext.contains(cleartext))
         assertFalse(Base64.getDecoder().decode(dto.ciphertext).toString(Charsets.UTF_8).contains(cleartext))
-        assertEquals(2L, dto.schemaVersion)
+        assertFalse(Base64.getDecoder().decode(dto.ciphertext).toString(Charsets.UTF_8).contains("Cuarta"))
+        assertEquals(3L, dto.schemaVersion)
 
-        // Round-trip: el payload v2 conserva día, tipo, relato y created_at (RF-39).
+        // Round-trip: el payload v3 conserva día, id del tema, su nombre, relato y created_at (RF-39, P-68).
         val json = JSONObject(openPayload(dto.ciphertext, dto.iv))
         assertEquals(20_632L, json.getLong("day"))
-        assertEquals("economic", json.getString("kind"))
+        assertEquals("t04", json.getString("kind"))
+        assertEquals("Cuarta", json.getString("label"))
         assertEquals(cleartext, json.getString("detail"))
         assertEquals(1_750_000_000_000L, json.getLong("at"))
     }
@@ -118,7 +122,7 @@ class FirestoreJournalSyncRepositoryTest {
         // RF-35 criterio 1: mismo docId, payload nuevo.
         val id = seedRow()
         repository.push(id)
-        database.journalDao().update(id, day = 20_633, kind = "economic", detail = "el relato corregido")
+        database.journalDao().update(id, day = 20_633, kind = "t04", label = "Cuarta", detail = "el relato corregido")
 
         val result = repository.push(id)
 
@@ -160,12 +164,20 @@ class FirestoreJournalSyncRepositoryTest {
 
     // ---- Restauración multi-dispositivo (RF-39 criterio 1) ----
 
-    private fun sealedDto(day: Long, detail: String, createdAt: Long, schemaVersion: Long = 2L): EncryptedEntryDto {
+    private fun sealedDto(
+        day: Long,
+        detail: String,
+        createdAt: Long,
+        schemaVersion: Long = 3L,
+        kind: String = "t04",
+        label: String? = "Cuarta"
+    ): EncryptedEntryDto {
         val json = JSONObject()
             .put("day", day)
-            .put("kind", "economic")
+            .put("kind", kind)
             .put("detail", detail)
             .put("at", createdAt)
+        if (label != null) json.put("label", label)
         val sealed = cipher.seal(json.toString().toByteArray(Charsets.UTF_8))
         return EncryptedEntryDto(
             ciphertext = Base64.getEncoder().encodeToString(sealed.ciphertext),
@@ -176,7 +188,7 @@ class FirestoreJournalSyncRepositoryTest {
 
     @Test
     fun `sobre un historial vacio repone los registros con sus ids y su orden`() = runTest {
-        // «Dispositivo B»: BD local vacía; en la nube hay dos registros v2.
+        // «Dispositivo B»: BD local vacía; en la nube hay dos registros v3.
         remote.remoteDocs += "3" to sealedDto(day = 20_632, detail = "el más reciente", createdAt = 200)
         remote.remoteDocs += "1" to sealedDto(day = 20_632, detail = "el más antiguo", createdAt = 100)
 
@@ -187,8 +199,41 @@ class FirestoreJournalSyncRepositoryTest {
         // Mismo día: el created_at restaurado del payload preserva el desempate (RF-34).
         assertEquals(listOf(3L, 1L), rows.map { it.id })
         assertEquals(listOf("el más reciente", "el más antiguo"), rows.map { it.detail })
+        // El tipo y su último nombre conocido se reponen tal cual (P-68).
+        assertTrue(rows.all { it.kind == "t04" && it.label == "Cuarta" })
         // Lo restaurado ya está en la nube: queda con constancia, no se re-sube.
         assertTrue(rows.all { it.syncedGeneration == 4L })
+    }
+
+    @Test
+    fun `un payload v2 de un dispositivo anterior se repone traduciendo el codigo legado`() = runTest {
+        // Dispositivo A sin actualizar subió v2 con el catálogo fijo; B (esta
+        // versión) debe leerlo: código legado → id de tema, sin instantánea.
+        remote.remoteDocs += "1" to sealedDto(
+            day = 20_632, detail = "viejo", createdAt = 100, schemaVersion = 2L, kind = "psychological", label = null
+        )
+        remote.remoteDocs += "2" to sealedDto(
+            day = 20_632, detail = "raro", createdAt = 50, schemaVersion = 2L, kind = "otro", label = null
+        )
+
+        val result = repository.restore()
+
+        assertTrue(result.isSuccess)
+        val rows = database.journalDao().entries().associateBy { it.id }
+        assertEquals("t02", rows.getValue(1L).kind)
+        assertEquals("", rows.getValue(1L).label)
+        // Un código que no está en el mapa se conserva: se mostrará neutro, no se pierde.
+        assertEquals("otro", rows.getValue(2L).kind)
+        assertTrue(rows.values.all { it.syncedGeneration == 4L })
+    }
+
+    @Test
+    fun `un payload v3 sin label se repone con instantanea vacia`() = runTest {
+        remote.remoteDocs += "1" to sealedDto(day = 20_632, detail = "x", createdAt = 100, label = null)
+
+        repository.restore()
+
+        assertEquals("", database.journalDao().entryById(1)?.label)
     }
 
     @Test
@@ -197,7 +242,7 @@ class FirestoreJournalSyncRepositoryTest {
         repository.restore()
 
         val newId = database.journalDao().insert(
-            JournalEntryRow(day = 20_640, kind = "physical", detail = "nuevo", createdAt = 300)
+            JournalEntryRow(day = 20_640, kind = "t01", detail = "nuevo", createdAt = 300)
         )
 
         // AUTOINCREMENT continúa por encima del máximo restaurado: el docId
@@ -226,8 +271,9 @@ class FirestoreJournalSyncRepositoryTest {
         remote.remoteDocs += "3" to EncryptedEntryDto(
             ciphertext = Base64.getEncoder().encodeToString(byteArrayOf(1, 2, 3)),
             iv = Base64.getEncoder().encodeToString(ByteArray(12)),
-            schemaVersion = 2L
+            schemaVersion = 3L
         )
+        remote.remoteDocs += "4" to sealedDto(day = 20_632, detail = "futuro", createdAt = 60, schemaVersion = 4L)
 
         val result = repository.restore()
 

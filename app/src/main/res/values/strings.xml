@@ -242,10 +242,8 @@
     <string name="journal_date_confirm">Listo</string>
     <string name="journal_date_cancel">Cancelar</string>
     <string name="journal_kind_label">Qué tipo fue</string>
-    <string name="journal_kind_psychological">Psicológica</string>
-    <string name="journal_kind_physical">Física</string>
-    <string name="journal_kind_sexual">Sexual</string>
-    <string name="journal_kind_economic">Económica y patrimonial</string>
+    <string name="journal_kind_none">Sin tipo</string>
+    <string name="journal_kind_unavailable">No se pudieron cargar los tipos. Puedes guardar ahora y elegirlo después.</string>
     <string name="journal_kind_missing">Elige un tipo para poder guardar.</string>
     <string name="journal_detail_label">Qué pasó</string>
     <string name="journal_detail_placeholder">Escribe con tus palabras. Solo tú lo leerás.</string>

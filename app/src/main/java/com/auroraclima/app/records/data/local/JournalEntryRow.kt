@@ -17,6 +17,10 @@ import androidx.room.PrimaryKey
  * la generación vigente marca el registro para la re-subida del reconciliador
  * — así la migración al sobre nuevo, sus interrupciones y los push perdidos
  * convergen en un único mecanismo. Nombre de columna neutro, como el resto.
+ *
+ * `kind` (v5, ADR 2026-10-03) guarda el id opaco del tema publicado (`""` =
+ * sin tipo) y `label` la instantánea de su nombre al guardar: si el tema deja
+ * de publicarse, el registro conserva su último nombre conocido.
  */
 @Entity(tableName = "entries")
 data class JournalEntryRow(
@@ -25,5 +29,6 @@ data class JournalEntryRow(
     val kind: String,
     val detail: String,
     @ColumnInfo(name = "created_at") val createdAt: Long,
-    @ColumnInfo(name = "synced_gen", defaultValue = "0") val syncedGeneration: Long = 0
+    @ColumnInfo(name = "synced_gen", defaultValue = "0") val syncedGeneration: Long = 0,
+    @ColumnInfo(defaultValue = "") val label: String = ""
 )

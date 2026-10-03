@@ -50,7 +50,7 @@ class JournalSyncReconcilerTest {
         database.journalDao().insert(
             JournalEntryRow(
                 day = 20_600L + index,
-                kind = "economic",
+                kind = "t04",
                 detail = "registro $index",
                 createdAt = index.toLong()
             )
@@ -66,7 +66,7 @@ class JournalSyncReconcilerTest {
         reconciler.restore()
 
         assertEquals(ids.map { it.toString() }, remote.uploaded.map { it.first })
-        assertTrue(remote.uploaded.all { it.second.schemaVersion == 2L })
+        assertTrue(remote.uploaded.all { it.second.schemaVersion == 3L })
         ids.forEach { id ->
             assertEquals(1L, database.journalDao().entryById(id)?.syncedGeneration)
         }
@@ -125,8 +125,9 @@ class JournalSyncReconcilerTest {
     @Test
     fun `en un dispositivo nuevo repone desde la nube y no re-sube lo repuesto`() = runTest {
         // RF-39 criterio 1, punta a punta en la reconciliación: BD vacía +
-        // documentos v2 en el servidor → registros repuestos con constancia,
-        // sin re-subir nada (ya están en la nube con esta DEK).
+        // documentos v2 (dispositivo anterior, código legado) en el servidor →
+        // registros repuestos con su id de tema y constancia, sin re-subir nada
+        // (ya están en la nube con esta DEK).
         val cipher = ReversiblePayloadCipher()
         val payload = org.json.JSONObject()
             .put("day", 20_632L)
@@ -144,6 +145,7 @@ class JournalSyncReconcilerTest {
 
         assertEquals(listOf(7L), database.journalDao().entries().map { it.id })
         assertEquals("registro remoto", database.journalDao().entryById(7)?.detail)
+        assertEquals("t04", database.journalDao().entryById(7)?.kind)
         assertEquals(1L, database.journalDao().entryById(7)?.syncedGeneration)
         assertTrue(remote.uploaded.isEmpty())
     }

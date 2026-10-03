@@ -43,11 +43,13 @@ import com.auroraclima.app.core.ui.v2.V2LoadingState
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.records.domain.model.JournalEntry
+import com.auroraclima.app.records.domain.model.ResolvedKind
 
 /**
  * Listado del historial (RF-34; mockup P18 / v2-20), hoy pestaña «Mi registro»
- * del hogar interno. Cada fila lleva la insignia de su tipo (espejo del mapeo
- * D2 de la Guía) y su contador de adjuntos (RF-33). Botón de agregar a ancho
+ * del hogar interno. Cada fila lleva la insignia de su tipo — el visual del
+ * tema publicado, o el neutro si fue retirado (P-68) — y su contador de
+ * adjuntos (RF-33). Botón de agregar a ancho
  * casi completo con la esquina reservada a la salida rápida (decisión F7).
  *
  * El chip «Todo guardado» (v2-20) se muestra cuando la lista cargó sin error:
@@ -144,8 +146,7 @@ internal fun JournalListScreen(
                 state.isLoading -> V2LoadingState()
                 state.errorRes != null -> V2ErrorState(messageRes = state.errorRes, onRetry = onRetry)
                 else -> JournalListContent(
-                    entries = state.entries,
-                    attachmentCounts = state.attachmentCounts,
+                    state = state,
                     onEntrySelected = onEntrySelected
                 )
             }
@@ -162,11 +163,8 @@ internal fun JournalListScreen(
 }
 
 @Composable
-private fun JournalListContent(
-    entries: List<JournalEntry>,
-    attachmentCounts: Map<Long, Int>,
-    onEntrySelected: (Long) -> Unit
-) {
+private fun JournalListContent(state: JournalListUiState, onEntrySelected: (Long) -> Unit) {
+    val entries = state.entries
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
@@ -178,7 +176,8 @@ private fun JournalListContent(
             Column(modifier = Modifier.padding(horizontal = 24.dp)) {
                 EntryCard(
                     entry = entry,
-                    attachmentCount = attachmentCounts[entry.id] ?: 0,
+                    kind = state.kindOf(entry),
+                    attachmentCount = state.attachmentCounts[entry.id] ?: 0,
                     onClick = { onEntrySelected(entry.id) }
                 )
                 if (index < entries.lastIndex) Spacer(modifier = Modifier.height(12.dp))
@@ -194,8 +193,8 @@ private fun JournalListContent(
  * porque lleva más líneas que el par título/apoyo de IconListRow.
  */
 @Composable
-private fun EntryCard(entry: JournalEntry, attachmentCount: Int, onClick: () -> Unit) {
-    val visual = entry.kind.visual()
+private fun EntryCard(entry: JournalEntry, kind: ResolvedKind, attachmentCount: Int, onClick: () -> Unit) {
+    val visual = kind.visual()
     SoftCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
         Row(
             modifier = Modifier
@@ -207,7 +206,7 @@ private fun EntryCard(entry: JournalEntry, attachmentCount: Int, onClick: () -> 
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = entry.occurredOn.toShortDayText() + " · " + stringResource(entry.kind.labelRes()),
+                    text = entry.occurredOn.toShortDayText() + " · " + kind.labelText(),
                     style = InteriorTypeVoice.label,
                     color = V2Palette.inkSecondary
                 )

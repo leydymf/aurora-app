@@ -1,7 +1,6 @@
 package com.auroraclima.app.records.data
 
 import com.auroraclima.app.records.data.local.JournalEntryRow
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.model.NewJournalEntry
 import com.auroraclima.app.records.domain.repository.JournalRepository
@@ -14,6 +13,11 @@ import javax.inject.Singleton
  *
  * El contrato P-36 (apertura perezosa + traducción a Result) vive en
  * [JournalStoreAccess], compartido con los adjuntos de RF-33.
+ *
+ * El tipo se persiste como id del tema publicado más la instantánea de su
+ * nombre (ADR 2026-10-03): aquí no se valida contra ningún catálogo — un id
+ * que ya no está publicado sigue siendo un registro legible, y la resolución
+ * de su nombre y visual es de presentación.
  */
 @Singleton
 class LocalJournalRepository @Inject constructor(
@@ -23,7 +27,8 @@ class LocalJournalRepository @Inject constructor(
         db.journalDao().insert(
             JournalEntryRow(
                 day = entry.occurredOn.toEpochDay(),
-                kind = entry.kind.storageCode,
+                kind = entry.kindId,
+                label = entry.kindLabel,
                 detail = entry.detail,
                 createdAt = System.currentTimeMillis()
             )
@@ -31,7 +36,7 @@ class LocalJournalRepository @Inject constructor(
     }
 
     override suspend fun entries(): Result<List<JournalEntry>> = storeAccess.withDatabase { db ->
-        db.journalDao().entries().mapNotNull { it.toDomain() }
+        db.journalDao().entries().map { it.toDomain() }
     }
 
     override suspend fun entry(id: Long): Result<JournalEntry?> = storeAccess.withDatabase { db ->
@@ -42,7 +47,8 @@ class LocalJournalRepository @Inject constructor(
         db.journalDao().update(
             id = entry.id,
             day = entry.occurredOn.toEpochDay(),
-            kind = entry.kind.storageCode,
+            kind = entry.kindId,
+            label = entry.kindLabel,
             detail = entry.detail
         )
     }
@@ -51,14 +57,11 @@ class LocalJournalRepository @Inject constructor(
         db.journalDao().deleteById(id)
     }
 
-    /** Un código de tipo desconocido (esquema futuro) se omite en vez de romper la lista. */
-    private fun JournalEntryRow.toDomain(): JournalEntry? {
-        val kind = EntryKind.fromStorageCode(kind) ?: return null
-        return JournalEntry(
-            id = id,
-            occurredOn = LocalDate.ofEpochDay(day),
-            kind = kind,
-            detail = detail
-        )
-    }
+    private fun JournalEntryRow.toDomain(): JournalEntry = JournalEntry(
+        id = id,
+        occurredOn = LocalDate.ofEpochDay(day),
+        kindId = kind,
+        kindLabel = label,
+        detail = detail
+    )
 }

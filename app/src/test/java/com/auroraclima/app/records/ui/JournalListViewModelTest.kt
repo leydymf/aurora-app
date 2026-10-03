@@ -2,9 +2,10 @@ package com.auroraclima.app.records.ui
 
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.catalog.FakeCategoryCatalog
 import com.auroraclima.app.core.security.FakeSyncKeyManager
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalEntry
+import com.auroraclima.app.records.domain.usecase.LoadEntryKindsUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -29,8 +30,9 @@ class JournalListViewModelTest {
     private val repository = FakeJournalRepository()
     private val attachments = FakeJournalAttachmentRepository()
     private val keyManager = FakeSyncKeyManager()
+    private val catalog = FakeCategoryCatalog()
 
-    private fun viewModel() = JournalListViewModel(repository, attachments, keyManager)
+    private fun viewModel() = JournalListViewModel(repository, attachments, LoadEntryKindsUseCase(catalog), keyManager)
 
     @Test
     fun `expone los registros en el orden del repositorio`() = runTest {
@@ -123,10 +125,55 @@ class JournalListViewModelTest {
         assertFalse(viewModel().uiState.value.showsBackupNotice)
     }
 
-    private fun entry(id: Long, detail: String) = JournalEntry(
+    @Test
+    fun `resuelve el tipo de cada fila con el catalogo publicado`() = runTest {
+        // P-68: nombre y visual vivos para los publicados; último nombre
+        // conocido y sin visual para un tema retirado; neutro sin instantánea.
+        repository.entriesResult = Result.success(
+            listOf(
+                entry(1, "a"),
+                entry(2, "b", kindId = "t09", kindLabel = "Retirado"),
+                entry(3, "c", kindId = "", kindLabel = "")
+            )
+        )
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        val published = state.kindOf(state.entries[0])
+        assertTrue(published.isPublished)
+        assertEquals("Segunda", published.label)
+        assertEquals("lobes", published.icon)
+        val retired = state.kindOf(state.entries[1])
+        assertFalse(retired.isPublished)
+        assertEquals("Retirado", retired.label)
+        assertNull(state.kindOf(state.entries[2]).label)
+    }
+
+    @Test
+    fun `un fallo del catalogo no rompe el listado y las filas caen a su instantanea`() = runTest {
+        catalog.result = Result.failure(IllegalStateException("sin red"))
+        repository.entriesResult = Result.success(listOf(entry(1, "a", kindLabel = "Segunda (guardada)")))
+        val viewModel = viewModel()
+
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.errorRes)
+        assertEquals(1, state.entries.size)
+        val kind = state.kindOf(state.entries[0])
+        assertFalse(kind.isPublished)
+        assertEquals("Segunda (guardada)", kind.label)
+    }
+
+    private fun entry(id: Long, detail: String, kindId: String = "t02", kindLabel: String = "Segunda") = JournalEntry(
         id = id,
         occurredOn = LocalDate.of(2026, 7, 2),
-        kind = EntryKind.PSYCHOLOGICAL,
+        kindId = kindId,
+        kindLabel = kindLabel,
         detail = detail
     )
 }

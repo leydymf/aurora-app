@@ -1,6 +1,5 @@
 package com.auroraclima.app.records.domain.usecase
 
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.ui.FakeJournalRepository
 import com.auroraclima.app.records.ui.FakeJournalSyncRepository
@@ -23,7 +22,8 @@ class UpdateJournalEntryUseCaseTest {
     private val edited = JournalEntry(
         id = 7,
         occurredOn = LocalDate.of(2026, 6, 29),
-        kind = EntryKind.PSYCHOLOGICAL,
+        kindId = "t02",
+        kindLabel = "Segunda",
         detail = "el relato corregido"
     )
 

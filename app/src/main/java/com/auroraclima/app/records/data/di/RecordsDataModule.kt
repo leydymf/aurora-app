@@ -89,8 +89,8 @@ abstract class RecordsDataModule {
          * Solo captura la fábrica: NO construye la BD aquí (P-36) — la apertura
          * hace I/O y puede lanzar, y eso ocurre recién dentro del repositorio,
          * en su dispatcher de I/O y traducido a Result. Las migraciones v1→v2
-         * (adjuntos, RF-33) y v2→v3 (constancia de sync, RF-39) conservan el
-         * historial ya guardado.
+         * (adjuntos, RF-33), v2→v3 y v3→v4 (constancia de sync, RF-39) y v4→v5
+         * (tipos por id de tema, P-68) conservan el historial ya guardado.
          */
         @Provides
         fun provideJournalDatabaseSource(factory: EncryptedDatabaseFactory): JournalDatabaseSource =
@@ -100,7 +100,8 @@ abstract class RecordsDataModule {
                     JournalDatabase.NAME,
                     JournalDatabase.MIGRATION_1_2,
                     JournalDatabase.MIGRATION_2_3,
-                    JournalDatabase.MIGRATION_3_4
+                    JournalDatabase.MIGRATION_3_4,
+                    JournalDatabase.MIGRATION_4_5
                 )
             }
     }

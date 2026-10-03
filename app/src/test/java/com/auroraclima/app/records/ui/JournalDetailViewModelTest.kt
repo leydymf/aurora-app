@@ -3,11 +3,12 @@ package com.auroraclima.app.records.ui
 import androidx.lifecycle.SavedStateHandle
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.catalog.FakeCategoryCatalog
 import com.auroraclima.app.records.domain.model.AttachmentKind
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.usecase.DeleteJournalEntryUseCase
+import com.auroraclima.app.records.domain.usecase.LoadEntryKindsUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -33,18 +34,21 @@ class JournalDetailViewModelTest {
     private val repository = FakeJournalRepository()
     private val attachments = FakeJournalAttachmentRepository()
     private val sync = FakeJournalSyncRepository()
+    private val catalog = FakeCategoryCatalog()
 
     private fun viewModel(id: Long = 7) = JournalDetailViewModel(
         SavedStateHandle(mapOf(ENTRY_ID_ARG to id.toString())),
         repository,
         attachments,
-        DeleteJournalEntryUseCase(repository, attachments, sync)
+        DeleteJournalEntryUseCase(repository, attachments, sync),
+        LoadEntryKindsUseCase(catalog)
     )
 
     private val entry = JournalEntry(
         id = 7,
         occurredOn = LocalDate.of(2026, 6, 28),
-        kind = EntryKind.ECONOMIC,
+        kindId = "t04",
+        kindLabel = "Cuarta",
         detail = "tomó el dinero del mercado"
     )
 
@@ -59,6 +63,25 @@ class JournalDetailViewModelTest {
         val state = viewModel.uiState.value
         assertNull(state.errorRes)
         assertEquals(entry, state.entry)
+        // P-68: el tipo se resuelve contra el catálogo publicado.
+        assertTrue(state.kind?.isPublished == true)
+        assertEquals("Cuarta", state.kind?.label)
+        assertEquals("card", state.kind?.icon)
+    }
+
+    @Test
+    fun `un tipo retirado se muestra con su ultimo nombre y un fallo del catalogo no rompe el detalle`() = runTest {
+        catalog.result = Result.failure(IllegalStateException("sin red"))
+        repository.entryResult = Result.success(entry.copy(kindId = "t09", kindLabel = "Retirado"))
+
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.errorRes)
+        assertFalse(state.kind?.isPublished == true)
+        assertEquals("Retirado", state.kind?.label)
     }
 
     @Test
@@ -128,7 +151,7 @@ class JournalDetailViewModelTest {
         advanceUntilIdle()
 
         repository.entryResult = Result.success(
-            JournalEntry(7, LocalDate.of(2026, 6, 28), EntryKind.PHYSICAL, "x")
+            JournalEntry(7, LocalDate.of(2026, 6, 28), "t01", "Primera", "x")
         )
         viewModel.refresh()
         advanceUntilIdle()
@@ -145,7 +168,8 @@ class JournalDetailViewModelTest {
             SavedStateHandle(mapOf(ENTRY_ID_ARG to "no-numerico")),
             repository,
             attachments,
-            DeleteJournalEntryUseCase(repository, attachments, sync)
+            DeleteJournalEntryUseCase(repository, attachments, sync),
+            LoadEntryKindsUseCase(catalog)
         )
         viewModel.refresh()
         advanceUntilIdle()

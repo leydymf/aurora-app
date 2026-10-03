@@ -21,8 +21,10 @@ interface JournalDao {
      * cambia. `synced_gen` vuelve a 0 (RF-39): la copia subida quedó desfasada y
      * si la re-subida inmediata fallara, el reconciliador la retoma.
      */
-    @Query("UPDATE entries SET day = :day, kind = :kind, detail = :detail, synced_gen = 0 WHERE id = :id")
-    suspend fun update(id: Long, day: Long, kind: String, detail: String)
+    @Query(
+        "UPDATE entries SET day = :day, kind = :kind, label = :label, detail = :detail, synced_gen = 0 WHERE id = :id"
+    )
+    suspend fun update(id: Long, day: Long, kind: String, label: String, detail: String)
 
     @Query("DELETE FROM entries WHERE id = :id")
     suspend fun deleteById(id: Long)

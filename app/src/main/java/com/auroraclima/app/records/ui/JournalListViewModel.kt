@@ -6,6 +6,7 @@ import com.auroraclima.app.R
 import com.auroraclima.app.core.security.SyncKeyManager
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
+import com.auroraclima.app.records.domain.usecase.LoadEntryKindsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,13 +19,15 @@ import kotlinx.coroutines.launch
  * Listado del historial (RF-34). [refresh] se invoca en cada entrada en
  * composición de la pantalla: al volver del editor (RF-32) la ruta reingresa
  * a composición y el registro nuevo aparece sin plomería adicional. Los
- * contadores de adjuntos (RF-33, P18) no son críticos: si fallan, las filas
- * se pintan sin contador y sin error propio.
+ * contadores de adjuntos (RF-33, P18) y el catálogo de tipos (P-68) no son
+ * críticos: si fallan, las filas se pintan sin contador o con la instantánea
+ * del nombre y el visual neutro, sin error propio.
  */
 @HiltViewModel
 class JournalListViewModel @Inject constructor(
     private val repository: JournalRepository,
     private val attachmentRepository: JournalAttachmentRepository,
+    private val loadEntryKinds: LoadEntryKindsUseCase,
     keyManager: SyncKeyManager
 ) : ViewModel() {
     // El aviso de respaldo reiniciado (RF-39) se consume UNA vez y vive en el
@@ -51,6 +54,12 @@ class JournalListViewModel @Inject constructor(
                 }
             attachmentRepository.counts()
                 .onSuccess { counts -> _uiState.update { it.copy(attachmentCounts = counts) } }
+        }
+        viewModelScope.launch {
+            // El catálogo llega por su lado (puede esperar a la red): la lista
+            // no lo espera y se re-pinta cuando aparece.
+            loadEntryKinds()
+                .onSuccess { kinds -> _uiState.update { it.copy(kinds = kinds) } }
         }
     }
 }

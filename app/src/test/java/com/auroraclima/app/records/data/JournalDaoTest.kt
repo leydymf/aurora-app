@@ -69,11 +69,12 @@ class JournalDaoTest {
         // RF-35: `created_at` se preserva para que el orden del listado no cambie.
         val id = dao.insert(row(day = 100, createdAt = 5, detail = "original"))
 
-        dao.update(id = id, day = 120, kind = "economic", detail = "corregido")
+        dao.update(id = id, day = 120, kind = "t04", label = "Cuarta", detail = "corregido")
 
         val edited = requireNotNull(dao.entryById(id))
         assertEquals(120L, edited.day)
-        assertEquals("economic", edited.kind)
+        assertEquals("t04", edited.kind)
+        assertEquals("Cuarta", edited.label)
         assertEquals("corregido", edited.detail)
         assertEquals(5L, edited.createdAt)
     }
@@ -91,7 +92,7 @@ class JournalDaoTest {
 
     private fun row(day: Long, createdAt: Long, detail: String) = JournalEntryRow(
         day = day,
-        kind = "physical",
+        kind = "t01",
         detail = detail,
         createdAt = createdAt
     )
