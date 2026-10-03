@@ -5,8 +5,10 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Lo que va DENTRO del PDF exportado (RF-45 criterio 3): por cada registro
- * elegido, fecha del hecho, tipo y relato, y sus imágenes solo si la usuaria
- * pidió incluirlas. Modelo puro: la capa data lo convierte en páginas.
+ * elegido, fecha del hecho, tipo y relato, y sus adjuntos solo si la usuaria
+ * pidió incluirlos — imágenes y documentos PDF como páginas, audios como
+ * archivos incrustados en el propio PDF. Modelo puro: la capa data lo
+ * convierte en páginas.
  *
  * [ExportEntry.kindLabel] es el nombre VIVO del tema publicado (cierre P-68),
  * la instantánea guardada si el tema fue retirado, o null si no hay nada —
@@ -15,43 +17,36 @@ import java.time.format.DateTimeFormatter
 data class ExportDocument(
     val createdOn: LocalDate,
     val entries: List<ExportEntry>,
-    val includesImages: Boolean
+    val includesAttachments: Boolean
 )
 
 data class ExportEntry(
     val occurredOn: LocalDate,
     val kindLabel: String?,
     val detail: String,
-    /** JPEG saneados y descifrados; vacío cuando no se incluyen imágenes. */
-    val images: List<ByteArray>,
-    /** Adjuntos que se citan sin incrustarse: documentos y audios, y las imágenes omitidas. */
+    /** Adjuntos descifrados que se incluyen (bytes + MIME); vacío cuando no se incluyen. */
+    val attachments: List<AttachmentBytes>,
+    /** Familias de los adjuntos que se citan sin incluirse (interruptor apagado). */
     val omittedAttachments: List<AttachmentKind>
-) {
-    override fun equals(other: Any?): Boolean = this === other ||
-        (
-            other is ExportEntry &&
-                occurredOn == other.occurredOn &&
-                kindLabel == other.kindLabel &&
-                detail == other.detail &&
-                images.size == other.images.size &&
-                images.zip(other.images).all { (a, b) -> a.contentEquals(b) } &&
-                omittedAttachments == other.omittedAttachments
-            )
-
-    override fun hashCode(): Int = listOf(occurredOn, kindLabel, detail, images.size, omittedAttachments).hashCode()
-}
+)
 
 /**
  * Resumen previo a exportar (RF-45 criterio 2): cuántos registros, cuáles y
- * cuántas imágenes podrían incluirse. No descifra nada: se arma con la lista
+ * cuántos adjuntos podrían incluirse. No descifra nada: se arma con la lista
  * de adjuntos, no con su contenido.
  */
 data class ExportSummary(
     val rows: List<ExportSummaryRow>,
-    val imageCount: Int
+    val attachmentCount: Int,
+    /** Suma de tamaños de los adjuntos elegidos; decide si caben en un solo archivo. */
+    val attachmentBytes: Long = 0
 ) {
     val entryCount: Int
         get() = rows.size
+
+    /** Con adjuntos demasiado pesados el interruptor no se ofrece: habría que exportar menos registros a la vez. */
+    val canIncludeAttachments: Boolean
+        get() = attachmentCount > 0 && ExportPolicy.fitsInOneFile(attachmentBytes)
 }
 
 data class ExportSummaryRow(
@@ -83,8 +78,39 @@ object ExportPolicy {
     /** MIME del archivo exportado. */
     const val MIME_TYPE: String = "application/pdf"
 
+    /**
+     * Tope de bytes de adjuntos por exportación (auditoría RF-45 A-1): los
+     * adjuntos se descifran a memoria y el PDF se arma en memoria principal;
+     * en gama baja el proceso tiene 128–256 MB de heap. Por encima, la app
+     * pide exportar menos registros a la vez en lugar de arriesgar la caída.
+     */
+    const val MAX_TOTAL_ATTACHMENT_BYTES: Long = 32L * 1024 * 1024
+
+    /** ¿La suma de adjuntos cabe en una sola exportación? */
+    fun fitsInOneFile(totalBytes: Long): Boolean = totalBytes <= MAX_TOTAL_ATTACHMENT_BYTES
+
     /** ¿La contraseña cumple el largo mínimo? */
     fun isPasswordLongEnough(password: String): Boolean = password.length >= MIN_PASSWORD_LENGTH
+
+    /**
+     * Nombre del archivo incrustado en el PDF para un audio: numerado a nivel
+     * de DOCUMENTO (no por registro) para que dos registros con audio no
+     * colisionen, y con la extensión que corresponde al MIME de la lista
+     * blanca de [AttachmentPolicy.allowedDocumentTypes].
+     */
+    fun embeddedFileName(mime: String, index: Int): String = "audio_$index." + extensionFor(mime)
+
+    private fun extensionFor(mime: String): String = when (mime) {
+        "audio/mpeg" -> "mp3"
+        "audio/mp4" -> "m4a"
+        "audio/aac" -> "aac"
+        "audio/ogg" -> "ogg"
+        "audio/wav", "audio/x-wav" -> "wav"
+        "audio/flac" -> "flac"
+        "audio/amr" -> "amr"
+        "audio/3gpp" -> "3gp"
+        else -> "bin"
+    }
 
     /**
      * Nombre neutro del archivo (criterio 4): nada en él sugiere su contenido;

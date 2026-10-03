@@ -269,10 +269,10 @@
     <string name="journal_media_audio_note">Los audios quedan guardados y protegidos; podrás reproducirlos en una próxima versión.</string>
     <string name="journal_media_tag">MI REGISTRO · ADJUNTO</string>
     <!-- Exportación selectiva (RF-45): selección en el listado y pantalla de exportación -->
-    <string name="journal_select">Seleccionar</string>
+    <string name="journal_select">Exportar</string>
     <string name="journal_select_cancel">Cancelar</string>
-    <string name="journal_select_hint">Toca los registros que quieras incluir en el archivo.</string>
-    <string name="journal_select_continue">Continuar</string>
+    <string name="journal_select_hint">Marca los registros que quieras exportar a un archivo PDF.</string>
+    <string name="journal_select_continue">Exportar seleccionados</string>
     <string name="journal_select_marked">Marcado</string>
     <string name="journal_select_unmarked">Sin marcar</string>
     <plurals name="journal_selected_count">
@@ -285,12 +285,13 @@
         <item quantity="one">%d registro</item>
         <item quantity="other">%d registros</item>
     </plurals>
-    <plurals name="journal_export_images_count">
-        <item quantity="one">%d imagen adjunta</item>
-        <item quantity="other">%d imágenes adjuntas</item>
+    <plurals name="journal_export_attachments_count">
+        <item quantity="one">%d adjunto</item>
+        <item quantity="other">%d adjuntos</item>
     </plurals>
-    <string name="journal_export_include_images">Incluir imágenes adjuntas</string>
-    <string name="journal_export_include_note">Los documentos y audios adjuntos se mencionan, pero no se incluyen.</string>
+    <string name="journal_export_include_attachments">Incluir adjuntos</string>
+    <string name="journal_export_include_note">Las imágenes y los documentos PDF se agregan como páginas; los audios van como archivos dentro del mismo PDF (panel de adjuntos del lector). Si lo apagas, solo se mencionan.</string>
+    <string name="journal_export_too_large">Los adjuntos de esta selección pesan demasiado para un solo archivo. Exporta menos registros a la vez para incluirlos.</string>
     <string name="journal_export_notice">El archivo quedará fuera de tu espacio protegido. Quien tenga el archivo y la contraseña podrá leerlo: guárdalo o compártelo solo con quien confíes.</string>
     <string name="journal_export_password_label">Contraseña del archivo</string>
     <string name="journal_export_password_confirm">Repite la contraseña</string>
@@ -311,10 +312,14 @@
     <string name="journal_export_pdf_kind">Tipo</string>
     <string name="journal_export_pdf_detail">Relato</string>
     <string name="journal_export_pdf_attachments">Adjuntos</string>
-    <string name="journal_export_pdf_images_omitted">Las imágenes adjuntas no se incluyeron en este archivo.</string>
     <string name="journal_export_pdf_image_n">Imagen adjunta %1$d</string>
-    <string name="journal_export_pdf_document_n">Documento adjunto %1$d (no incluido)</string>
-    <string name="journal_export_pdf_audio_n">Audio adjunto %1$d (no incluido)</string>
+    <string name="journal_export_pdf_document_n">Documento adjunto %1$d: sus %2$d páginas van a continuación.</string>
+    <string name="journal_export_pdf_document_failed">Documento adjunto %1$d: no se pudo incluir (archivo dañado o protegido).</string>
+    <string name="journal_export_pdf_audio_n">Audio adjunto %1$d: incluido como archivo «%2$s» dentro de este PDF. Ábrelo desde el panel de adjuntos del lector.</string>
+    <string name="journal_export_pdf_image_omitted">Imagen adjunta %1$d (no incluida)</string>
+    <string name="journal_export_pdf_document_omitted">Documento adjunto %1$d (no incluido)</string>
+    <string name="journal_export_pdf_audio_omitted">Audio adjunto %1$d (no incluido)</string>
+    <string name="journal_export_pdf_omitted">Los adjuntos no se incluyeron en este archivo.</string>
     <string name="journal_export_pdf_page">Página %1$d de %2$d</string>
     <plurals name="journal_media_count">
         <item quantity="one">1 adjunto</item>

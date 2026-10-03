@@ -55,7 +55,7 @@ import com.auroraclima.app.records.domain.model.ResolvedKind
 /**
  * Exportación selectiva (RF-45; pantalla sin mockup propio, extensión del
  * sistema V2 por la decisión D6): resumen de lo elegido, interruptor de
- * imágenes apagado de entrada, aviso de que el archivo sale del espacio
+ * adjuntos apagado de entrada, aviso de que el archivo sale del espacio
  * protegido, contraseña con confirmación y dos salidas por el selector del
  * sistema — «crear documento» (guardar) o el selector de apps (compartir) —
  * sin permisos nuevos (RNF-04). Vive en el grafo seguro: captura bloqueada y
@@ -91,7 +91,7 @@ fun JournalExportRoute(onBack: () -> Unit) {
         state = state,
         onBack = onBack,
         onRetry = viewModel::load,
-        onIncludeImagesChanged = viewModel::onIncludeImagesChanged,
+        onIncludeAttachmentsChanged = viewModel::onIncludeAttachmentsChanged,
         onPasswordChanged = {
             sessionManager.registerInteraction()
             viewModel.onPasswordChanged(it)
@@ -121,7 +121,7 @@ internal fun JournalExportScreen(
     state: JournalExportUiState,
     onBack: () -> Unit,
     onRetry: () -> Unit,
-    onIncludeImagesChanged: (Boolean) -> Unit,
+    onIncludeAttachmentsChanged: (Boolean) -> Unit,
     onPasswordChanged: (String) -> Unit,
     onConfirmationChanged: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
@@ -150,7 +150,7 @@ internal fun JournalExportScreen(
                 state = state,
                 summary = state.summary,
                 onBack = onBack,
-                onIncludeImagesChanged = onIncludeImagesChanged,
+                onIncludeAttachmentsChanged = onIncludeAttachmentsChanged,
                 onPasswordChanged = onPasswordChanged,
                 onConfirmationChanged = onConfirmationChanged,
                 onTogglePasswordVisibility = onTogglePasswordVisibility,
@@ -166,7 +166,7 @@ private fun ExportForm(
     state: JournalExportUiState,
     summary: ExportSummary,
     onBack: () -> Unit,
-    onIncludeImagesChanged: (Boolean) -> Unit,
+    onIncludeAttachmentsChanged: (Boolean) -> Unit,
     onPasswordChanged: (String) -> Unit,
     onConfirmationChanged: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
@@ -194,10 +194,11 @@ private fun ExportForm(
         Spacer(modifier = Modifier.height(16.dp))
         SummaryCard(summary = summary, kindOf = state::kindOf)
         Spacer(modifier = Modifier.height(12.dp))
-        IncludeImagesRow(
-            checked = state.includeImages,
-            enabled = state.canExport,
-            onCheckedChange = onIncludeImagesChanged
+        IncludeAttachmentsRow(
+            checked = state.includeAttachments,
+            enabled = state.canExport && summary.canIncludeAttachments,
+            tooLarge = summary.attachmentCount > 0 && !summary.canIncludeAttachments,
+            onCheckedChange = onIncludeAttachmentsChanged
         )
         Spacer(modifier = Modifier.height(12.dp))
         V2NoticeCard(text = stringResource(R.string.journal_export_notice))
@@ -219,7 +220,7 @@ private fun ExportForm(
     }
 }
 
-/** Resumen (criterio 2): cuántos registros, cuáles (fecha · tipo vivo) y cuántas imágenes podrían ir. */
+/** Resumen (criterio 2): cuántos registros, cuáles (fecha · tipo vivo) y cuántos adjuntos podrían ir. */
 @Composable
 private fun SummaryCard(summary: ExportSummary, kindOf: (ExportSummaryRow) -> ResolvedKind) {
     SoftCard {
@@ -242,13 +243,13 @@ private fun SummaryCard(summary: ExportSummary, kindOf: (ExportSummaryRow) -> Re
                 )
             }
         }
-        if (summary.imageCount > 0) {
+        if (summary.attachmentCount > 0) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = pluralStringResource(
-                    R.plurals.journal_export_images_count,
-                    summary.imageCount,
-                    summary.imageCount
+                    R.plurals.journal_export_attachments_count,
+                    summary.attachmentCount,
+                    summary.attachmentCount
                 ),
                 style = InteriorTypeVoice.label,
                 color = V2Palette.inkSecondary
@@ -257,13 +258,18 @@ private fun SummaryCard(summary: ExportSummary, kindOf: (ExportSummaryRow) -> Re
     }
 }
 
-/** Interruptor de imágenes (criterio 3): apagado por defecto; documentos y audios nunca se incrustan. */
+/** Interruptor de adjuntos (criterio 3): apagado por defecto; encendido, todo va dentro del mismo PDF. */
 @Composable
-private fun IncludeImagesRow(checked: Boolean, enabled: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun IncludeAttachmentsRow(
+    checked: Boolean,
+    enabled: Boolean,
+    tooLarge: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     SoftCard {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(R.string.journal_export_include_images),
+                text = stringResource(R.string.journal_export_include_attachments),
                 style = InteriorTypeVoice.bodyStrong,
                 color = V2Palette.inkPrimary,
                 modifier = Modifier.weight(1f)
@@ -283,9 +289,11 @@ private fun IncludeImagesRow(checked: Boolean, enabled: Boolean, onCheckedChange
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = stringResource(R.string.journal_export_include_note),
+            text = stringResource(
+                if (tooLarge) R.string.journal_export_too_large else R.string.journal_export_include_note
+            ),
             style = InteriorTypeVoice.caption,
-            color = V2Palette.inkSecondary
+            color = if (tooLarge) V2Palette.accentNotice.stroke else V2Palette.inkSecondary
         )
     }
 }

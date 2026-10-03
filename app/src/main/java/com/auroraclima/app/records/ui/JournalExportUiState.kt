@@ -10,7 +10,7 @@ import com.auroraclima.app.records.domain.model.ResolvedKind
 import com.auroraclima.app.records.domain.model.resolveKind
 
 /**
- * Estado de la pantalla de exportación (RF-45). El interruptor de imágenes
+ * Estado de la pantalla de exportación (RF-45). El interruptor de adjuntos
  * nace APAGADO (criterio 3) y la contraseña se valida en línea (criterio 4:
  * largo mínimo y confirmación). [isSaved] solo se enciende tras «Guardar»;
  * al compartir la app no sabe si el envío ocurrió y no afirma nada.
@@ -20,7 +20,7 @@ data class JournalExportUiState(
     val isLoading: Boolean = true,
     val summary: ExportSummary? = null,
     val kinds: List<EntryKind> = emptyList(),
-    val includeImages: Boolean = false,
+    val includeAttachments: Boolean = false,
     val password: String = "",
     val confirmation: String = "",
     val isPasswordVisible: Boolean = false,
@@ -48,9 +48,10 @@ data class JournalExportUiState(
     fun kindOf(row: ExportSummaryRow): ResolvedKind = resolveKind(row.kindId, row.kindLabel, kinds)
 
     /** La contraseña jamás sale en una representación de texto del estado (auditoría I-2). */
-    override fun toString(): String =
-        "JournalExportUiState(isLoading=$isLoading, entries=${summary?.entryCount}, includeImages=$includeImages, " +
-            "isExporting=$isExporting, isSaved=$isSaved, errorRes=$errorRes)"
+    override fun toString(): String {
+        val flags = "includeAttachments=$includeAttachments, isExporting=$isExporting, isSaved=$isSaved"
+        return "JournalExportUiState(isLoading=$isLoading, entries=${summary?.entryCount}, $flags, errorRes=$errorRes)"
+    }
 }
 
 /** Lanzamientos al sistema de consumo único (RF-45 criterio 5). */

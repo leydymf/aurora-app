@@ -209,6 +209,22 @@ class LocalJournalAttachmentRepositoryTest {
     }
 
     @Test
+    fun `exportable entrega los bytes descifrados con su MIME sin dejar copia temporal`() = runTest {
+        stageCapture()
+        val attachment = repository.importCapture(7).getOrThrow()
+
+        val exportable = repository.exportable(attachment.id).getOrThrow()!!
+
+        assertEquals(AttachmentKind.IMAGE, exportable.kind)
+        assertEquals(AttachmentPolicy.IMPORTED_IMAGE_MIME, exportable.mime)
+        // Son los mismos bytes que el visor obtiene por `content`, pero sin tocar `media_view/`.
+        val viewed = repository.content(attachment.id).getOrThrow() as AttachmentContent.Image
+        assertTrue(exportable.bytes.contentEquals(viewed.bytes))
+        assertFalse(File(context.cacheDir, "media_view").exists())
+        assertNull(repository.exportable(999).getOrThrow())
+    }
+
+    @Test
     fun `una BD que lanza se traduce a failure en todas las operaciones`() = runTest {
         // Mismo contrato P-36 que el repositorio de registros.
         val broken = LocalJournalAttachmentRepository(
@@ -223,6 +239,7 @@ class LocalJournalAttachmentRepositoryTest {
 
         assertTrue(broken.importCapture(1).isFailure)
         assertTrue(broken.attachments(1).isFailure)
+        assertTrue(broken.exportable(1).isFailure)
         assertTrue(broken.counts().isFailure)
         assertTrue(broken.content(1).isFailure)
         assertTrue(broken.claim(listOf(1), 1).isFailure)

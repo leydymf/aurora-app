@@ -59,6 +59,9 @@ class AttachmentStore @Inject constructor(
         File(directory, ref).delete()
     }
 
+    /** Tamaño en disco del archivo cifrado (0 si no existe); el sello GCM suma solo unos bytes. */
+    fun sizeOf(ref: String): Long = File(directory, ref).length()
+
     /**
      * Copia temporal descifrada para el visor de PDF (PdfRenderer exige un
      * descriptor posicionable; ver `AttachmentContent.Document`). Quien abre el

@@ -15,7 +15,7 @@ import com.auroraclima.app.records.domain.model.resolveKind
  * de su nombre y al visual neutro — el listado nunca falla por el catálogo.
  *
  * Modo de selección (RF-45 criterio 1): [isSelecting] convierte cada fila en
- * una casilla y el botón inferior en «Continuar»; [selectedIds] nace VACÍO —
+ * una casilla y el botón inferior en «Exportar seleccionados»; [selectedIds] nace VACÍO —
  * nada viene marcado por defecto — y solo guarda ids, nunca contenido.
  */
 data class JournalListUiState(
@@ -33,11 +33,11 @@ data class JournalListUiState(
     val isSelecting: Boolean = false,
     val selectedIds: Set<Long> = emptySet()
 ) {
-    /** «Continuar» solo con al menos un registro marcado (RF-45 criterio 1). */
+    /** «Exportar seleccionados» solo con al menos un registro marcado (RF-45 criterio 1). */
     val canContinue: Boolean
         get() = selectedIds.isNotEmpty()
 
-    /** «Seleccionar» solo tiene sentido con registros cargados y sin error. */
+    /** «Exportar» solo tiene sentido con registros cargados y sin error. */
     val canSelect: Boolean
         get() = !isLoading && errorRes == null && entries.isNotEmpty()
 

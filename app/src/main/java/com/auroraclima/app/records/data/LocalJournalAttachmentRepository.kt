@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import com.auroraclima.app.records.data.local.AttachmentRow
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.remote.JournalMediaRemoteSource
+import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentContent
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
@@ -113,6 +114,12 @@ class LocalJournalAttachmentRepository @Inject constructor(
             // El audio no tiene visor en el MVP (decisión de sesión, ADR RF-33).
             else -> null
         }
+    }
+
+    override suspend fun exportable(id: Long): Result<AttachmentBytes?> = storeAccess.withDatabase { db ->
+        val row = db.attachmentDao().byId(id) ?: return@withDatabase null
+        val kind = AttachmentKind.fromMime(row.kind) ?: return@withDatabase null
+        AttachmentBytes(kind, row.kind, store.read(row.ref) { it.readBytes() })
     }
 
     override suspend fun claim(ids: List<Long>, owner: Long): Result<Unit> = storeAccess.withDatabase { db ->
@@ -229,7 +236,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
     }.getOrNull()
 
     private fun AttachmentRow.toDomain(): JournalAttachment? =
-        AttachmentKind.fromMime(kind)?.let { JournalAttachment(id = id, kind = it) }
+        AttachmentKind.fromMime(kind)?.let { JournalAttachment(id = id, kind = it, sizeBytes = store.sizeOf(ref)) }
 
     private companion object {
         const val COPY_BUFFER_BYTES = 8 * 1024

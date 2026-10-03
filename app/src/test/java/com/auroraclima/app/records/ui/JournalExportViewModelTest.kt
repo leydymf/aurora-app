@@ -4,9 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.catalog.FakeCategoryCatalog
-import com.auroraclima.app.records.domain.model.AttachmentContent
+import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.DayProvider
+import com.auroraclima.app.records.domain.model.ExportPolicy
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.usecase.BuildExportDocumentUseCase
@@ -70,7 +71,7 @@ class JournalExportViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertEquals(listOf(2L, 1L), state.summary?.rows?.map { it.id })
-        assertFalse(state.includeImages)
+        assertFalse(state.includeAttachments)
         assertEquals("Segunda", state.kindOf(state.summary!!.rows.first()).label)
         // Al abrir se barre cualquier temporal de una exportación anterior.
         assertEquals(1, exportRepository.clearCalls)
@@ -150,24 +151,57 @@ class JournalExportViewModelTest {
     }
 
     @Test
-    fun `incluir imagenes descifra solo las imagenes y lo refleja en el documento`() = runTest {
+    fun `incluir adjuntos los lee todos y lo refleja en el documento`() = runTest {
         attachments.attachmentsResult = Result.success(
             listOf(JournalAttachment(1, AttachmentKind.IMAGE), JournalAttachment(2, AttachmentKind.DOCUMENT))
         )
-        attachments.contentResult = Result.success(AttachmentContent.Image(byteArrayOf(9)))
+        attachments.exportableById[1] = AttachmentBytes(AttachmentKind.IMAGE, "image/jpeg", byteArrayOf(9))
+        attachments.exportableById[2] = AttachmentBytes(AttachmentKind.DOCUMENT, "application/pdf", byteArrayOf(8))
         val viewModel = readyViewModel("1")
-        assertEquals(1, viewModel.uiState.value.summary?.imageCount)
+        assertEquals(2, viewModel.uiState.value.summary?.attachmentCount)
 
-        viewModel.onIncludeImagesChanged(true)
+        viewModel.onIncludeAttachmentsChanged(true)
         viewModel.onPasswordChanged("clave-segura-1")
         viewModel.onConfirmationChanged("clave-segura-1")
         viewModel.onSaveTarget("content://docs/tree/2")
         advanceUntilIdle()
 
         val document = exportRepository.exported.single().second
-        assertTrue(document.includesImages)
-        assertEquals(1, document.entries.single().images.size)
-        assertEquals(listOf(AttachmentKind.DOCUMENT), document.entries.single().omittedAttachments)
+        assertTrue(document.includesAttachments)
+        assertEquals(
+            listOf(AttachmentKind.IMAGE, AttachmentKind.DOCUMENT),
+            document.entries.single().attachments.map { it.kind }
+        )
+        assertTrue(document.entries.single().omittedAttachments.isEmpty())
+    }
+
+    @Test
+    fun `con adjuntos demasiado pesados el interruptor no se enciende`() = runTest {
+        attachments.attachmentsResult = Result.success(
+            listOf(JournalAttachment(1, AttachmentKind.DOCUMENT, ExportPolicy.MAX_TOTAL_ATTACHMENT_BYTES + 1))
+        )
+        val viewModel = readyViewModel("1")
+        assertFalse(viewModel.uiState.value.summary!!.canIncludeAttachments)
+
+        viewModel.onIncludeAttachmentsChanged(true)
+
+        assertFalse(viewModel.uiState.value.includeAttachments)
+    }
+
+    @Test
+    fun `un error de memoria al exportar termina en el mensaje generico y no en una caida`() = runTest {
+        exportRepository.throwOnExport = OutOfMemoryError("sin memoria")
+        val viewModel = readyViewModel()
+        viewModel.onPasswordChanged("clave-segura-1")
+        viewModel.onConfirmationChanged("clave-segura-1")
+
+        viewModel.onSaveTarget("content://docs/tree/4")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(R.string.common_error_generic, state.errorRes)
+        assertFalse(state.isExporting)
+        assertFalse(state.isSaved)
     }
 
     @Test

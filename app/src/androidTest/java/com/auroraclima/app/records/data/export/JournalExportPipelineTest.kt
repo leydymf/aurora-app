@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.auroraclima.app.core.security.KeystoreMediaCipher
 import com.auroraclima.app.records.data.AttachmentStore
+import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.ExportDocument
 import com.auroraclima.app.records.domain.model.ExportEntry
@@ -77,7 +78,12 @@ class JournalExportPipelineTest {
     fun sealedImageTravelsIntoThePasswordProtectedPdf() = runBlocking {
         val sealedRef = sealImage()
         val image = store.read(sealedRef) { it.readBytes() }
-        val document = document(images = listOf(image), omitted = listOf(AttachmentKind.DOCUMENT))
+        val document = document(
+            attachments = listOf(
+                AttachmentBytes(AttachmentKind.IMAGE, "image/jpeg", image),
+                AttachmentBytes(AttachmentKind.AUDIO, "audio/wav", ByteArray(512) { it.toByte() })
+            )
+        )
 
         val result = repository.exportTo(Uri.fromFile(savedFile).toString(), document, "clave-de-prueba")
 
@@ -88,9 +94,10 @@ class JournalExportPipelineTest {
             assertTrue(text.contains("2 de julio de 2026"))
             assertTrue(text.contains("Segunda"))
             assertTrue(text.contains("relato de prueba con tilde y ñ"))
-            assertTrue(text.contains("Documento adjunto 1 (no incluido)"))
+            assertTrue(text.contains("Audio adjunto 1: incluido como archivo «audio_1.wav»"))
             val images = pdf.pages.sumOf { p -> p.resources.xObjectNames.count { p.resources.isImageXObject(it) } }
             assertEquals(1, images)
+            assertEquals(setOf("audio_1.wav"), pdf.documentCatalog.names.embeddedFiles.names.keys)
         }
         assertThrows(InvalidPasswordException::class.java) { PDDocument.load(savedFile).close() }
         assertThrows(InvalidPasswordException::class.java) { PDDocument.load(savedFile, "otra").close() }
@@ -128,20 +135,19 @@ class JournalExportPipelineTest {
         return ref
     }
 
-    private fun document(images: List<ByteArray> = emptyList(), omitted: List<AttachmentKind> = emptyList()) =
-        ExportDocument(
-            createdOn = LocalDate.of(2026, 10, 3),
-            entries = listOf(
-                ExportEntry(
-                    occurredOn = LocalDate.of(2026, 7, 2),
-                    kindLabel = "Segunda",
-                    detail = "relato de prueba con tilde y ñ",
-                    images = images,
-                    omittedAttachments = omitted
-                )
-            ),
-            includesImages = images.isNotEmpty()
-        )
+    private fun document(attachments: List<AttachmentBytes> = emptyList()) = ExportDocument(
+        createdOn = LocalDate.of(2026, 10, 3),
+        entries = listOf(
+            ExportEntry(
+                occurredOn = LocalDate.of(2026, 7, 2),
+                kindLabel = "Segunda",
+                detail = "relato de prueba con tilde y ñ",
+                attachments = attachments,
+                omittedAttachments = emptyList()
+            )
+        ),
+        includesAttachments = attachments.isNotEmpty()
+    )
 
     private companion object {
         const val STARTUP_SWEEP_GRACE_MS = 1_500L

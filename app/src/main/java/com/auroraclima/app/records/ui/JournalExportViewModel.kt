@@ -13,6 +13,7 @@ import com.auroraclima.app.records.domain.usecase.LoadEntryKindsUseCase
 import com.auroraclima.app.records.domain.usecase.LoadExportSummaryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,8 +77,11 @@ class JournalExportViewModel @Inject constructor(
         }
     }
 
-    fun onIncludeImagesChanged(include: Boolean) {
-        _uiState.update { it.copy(includeImages = include) }
+    fun onIncludeAttachmentsChanged(include: Boolean) {
+        _uiState.update { state ->
+            val allowed = state.summary?.canIncludeAttachments == true
+            state.copy(includeAttachments = include && allowed)
+        }
     }
 
     fun onPasswordChanged(value: String) {
@@ -156,8 +160,17 @@ class JournalExportViewModel @Inject constructor(
     private suspend fun export(deliver: suspend (ExportDocument, String) -> Result<Unit>): Boolean {
         val state = _uiState.value
         _uiState.update { it.copy(isExporting = true, errorRes = null) }
-        val outcome = buildDocument(entryIds, state.includeImages, dayProvider.today())
-            .fold(onSuccess = { document -> deliver(document, state.password) }, onFailure = { Result.failure(it) })
+        // Los adjuntos se descifran a memoria: un OutOfMemoryError (Error, no
+        // Exception) en gama baja debe terminar en el mensaje genérico, jamás
+        // en la caída del proceso dentro del espacio interno (auditoría A-1).
+        val outcome = try {
+            buildDocument(entryIds, state.includeAttachments, dayProvider.today())
+                .fold(onSuccess = { document -> deliver(document, state.password) }, onFailure = { Result.failure(it) })
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Throwable) {
+            Result.failure(error)
+        }
         _uiState.update {
             it.copy(isExporting = false, errorRes = if (outcome.isSuccess) null else R.string.common_error_generic)
         }

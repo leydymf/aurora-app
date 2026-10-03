@@ -27,4 +27,19 @@ class ExportPolicyTest {
         assertFalse(ExportPolicy.isPasswordLongEnough("123456789"))
         assertTrue(ExportPolicy.isPasswordLongEnough("1234567890"))
     }
+
+    @Test
+    fun `el archivo incrustado se numera por documento y toma la extension del MIME`() {
+        assertEquals("audio_1.mp3", ExportPolicy.embeddedFileName("audio/mpeg", 1))
+        assertEquals("audio_2.wav", ExportPolicy.embeddedFileName("audio/x-wav", 2))
+        assertEquals("audio_3.m4a", ExportPolicy.embeddedFileName("audio/mp4", 3))
+        assertEquals("audio_4.bin", ExportPolicy.embeddedFileName("audio/desconocido", 4))
+    }
+
+    @Test
+    fun `los adjuntos caben en un solo archivo hasta el tope`() {
+        assertTrue(ExportPolicy.fitsInOneFile(0))
+        assertTrue(ExportPolicy.fitsInOneFile(ExportPolicy.MAX_TOTAL_ATTACHMENT_BYTES))
+        assertFalse(ExportPolicy.fitsInOneFile(ExportPolicy.MAX_TOTAL_ATTACHMENT_BYTES + 1))
+    }
 }

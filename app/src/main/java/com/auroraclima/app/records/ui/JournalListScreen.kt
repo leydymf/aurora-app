@@ -66,9 +66,9 @@ import com.auroraclima.app.records.domain.model.ResolvedKind
  * refresh() corre en cada entrada en composición: al volver del editor la
  * ruta reingresa y el registro recién guardado aparece de inmediato.
  *
- * Modo de selección (RF-45 criterio 1): «Seleccionar» convierte las filas en
+ * Modo de selección (RF-45 criterio 1): «Exportar» convierte las filas en
  * casillas — ninguna marcada de entrada —, la cabecera cuenta lo marcado y el
- * botón inferior pasa a «Continuar», que entrega los ids a la pantalla de
+ * botón inferior pasa a «Exportar seleccionados», que entrega los ids a la pantalla de
  * exportación por la ruta. Mientras se selecciona, tocar una fila alterna la
  * marca en vez de abrir el detalle.
  */
@@ -184,7 +184,7 @@ internal fun JournalListScreen(
     }
 }
 
-/** Título, chip «Todo guardado», subtítulo y la acción «Seleccionar» (RF-45). */
+/** Título, chip «Todo guardado», subtítulo y la acción «Exportar» (RF-45). */
 @Composable
 private fun ListHeader(state: JournalListUiState, onEnterSelection: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {

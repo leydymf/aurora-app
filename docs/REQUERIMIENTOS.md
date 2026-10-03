@@ -491,17 +491,17 @@ Los cambios publicados desde el panel deben reflejarse en la app tras la siguien
 ## RF-45 — Exportación selectiva de registros
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-32, RF-33, RF-34
 
-El sistema debe permitir a la usuaria seleccionar uno o varios registros de incidentes y exportarlos en un único archivo PDF protegido con contraseña, con la opción de incluir o no las imágenes adjuntas, sin exportar el historial completo por defecto.
+El sistema debe permitir a la usuaria seleccionar uno o varios registros de incidentes y exportarlos en un único archivo PDF protegido con contraseña, con la opción de incluir o no sus adjuntos (imágenes, documentos y audios), sin exportar el historial completo por defecto.
 
 **Criterios de aceptación:**
 1. Desde «Mi registro» la usuaria puede marcar uno o varios registros; ninguno viene marcado por defecto.
 2. Antes de exportar se muestra un resumen de lo seleccionado y un aviso de que el archivo quedará fuera del espacio protegido.
-3. Por cada registro, el PDF contiene fecha del hecho, tipo y relato, y las imágenes adjuntas solo si la usuaria eligió incluirlas.
+3. Por cada registro, el PDF contiene fecha del hecho, tipo y relato, y sus adjuntos solo si la usuaria eligió incluirlos: las imágenes y los documentos PDF como páginas del mismo archivo y los audios como archivos incrustados en él.
 4. El PDF se protege con una contraseña que la usuaria define al exportar y tiene un nombre neutro, sin términos que delaten su contenido.
 5. La usuaria elige guardar o compartir el archivo mediante el selector del sistema, sin que la app pida permisos nuevos ni conserve copias temporales.
 6. Las pantallas de selección y exportación bloquean capturas de pantalla.
 
-*Notas:* Surge de la consulta con el comité de género: los casos se demoran por falta de fechas y pruebas. El archivo exportado sale del cifrado de Aurora; se mitiga con contraseña, nombre neutro y aviso previo (HU-35). Agregado el 2026-10-02.
+*Notas:* Surge de la consulta con el comité de género: los casos se demoran por falta de fechas y pruebas. El archivo exportado sale del cifrado de Aurora; se mitiga con contraseña, nombre neutro y aviso previo (HU-35). Agregado el 2026-10-02; el 2026-10-03 la usuaria amplió el criterio 3 de «imágenes» a todos los adjuntos tras la revisión en emulador: un documento adjunto que solo se menciona no sirve como prueba.
 
 ## RNF-01 — Cifrado de datos
 **Tipo:** No Funcional · **Prioridad:** Alta · **Dependencias:** -

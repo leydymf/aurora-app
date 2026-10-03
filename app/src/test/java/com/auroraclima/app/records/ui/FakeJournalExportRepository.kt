@@ -12,9 +12,13 @@ class FakeJournalExportRepository : JournalExportRepository {
         private set
 
     var exportResult: Result<Unit> = Result.success(Unit)
+
+    /** Simula un Error (no Exception) a mitad de la escritura, p. ej. OutOfMemoryError. */
+    var throwOnExport: Throwable? = null
     var stageResult: Result<String> = Result.success("content://com.auroraclima.app.files/d/documento_2026-10-03.pdf")
 
     override suspend fun exportTo(targetUri: String, document: ExportDocument, password: String): Result<Unit> {
+        throwOnExport?.let { throw it }
         exportResult.onSuccess { exported += Triple(targetUri, document, password) }
         return exportResult
     }

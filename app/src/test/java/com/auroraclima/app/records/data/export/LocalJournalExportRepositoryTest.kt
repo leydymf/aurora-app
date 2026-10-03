@@ -37,7 +37,7 @@ class LocalJournalExportRepositoryTest {
     private val document = ExportDocument(
         createdOn = LocalDate.of(2026, 10, 3),
         entries = listOf(ExportEntry(LocalDate.of(2026, 7, 2), "Segunda", "relato", emptyList(), emptyList())),
-        includesImages = false
+        includesAttachments = false
     )
 
     private val writer = ExportDocumentWriter { _, password, out -> out.write("pdf:$password".toByteArray()) }
