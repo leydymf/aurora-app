@@ -64,7 +64,37 @@ Un familiar vende o se apropia de bienes que te pertenecen sin consultarte.
 Alguien retiene tu cédula u otros documentos para que no puedas hacer trámites.
 Te excluyen de decisiones sobre bienes comunes o te despojan de lo que ganaste.
 Recuerda: tienes derecho a trabajar, a estudiar, a manejar tu dinero y a disponer de tus bienes. La ley colombiana (Ley 1257 de 2008) reconoce esta forma de violencia y puedes pedir orientación jurídica gratuita para protegerte.
-1.5 Un mensaje para ti
+1.5 Violencia digital
+PENDIENTE DE VALIDACIÓN por la directora (agregado el 2026-10-03). Fuente: Resolución 020310 de 2026 del Ministerio de Educación y Ley 2365 de 2024.
+¿Qué es? Son las agresiones que ocurren a través del celular, las redes sociales, el correo o cualquier medio digital: acoso, amenazas, vigilancia, suplantación de identidad o difusión de fotos, videos o datos íntimos sin tu consentimiento. Puede ejercerla tu pareja o expareja, alguien conocido o una persona desconocida, y sus efectos son tan reales como los de cualquier otra forma de violencia.
+Señales para reconocerla:
+Revisan tu celular, tus chats o tus redes sin tu permiso, o te exigen tus contraseñas.
+Te envían mensajes insistentes, amenazas o insultos por chat, redes o correo.
+Publican o amenazan con publicar fotos, videos o conversaciones íntimas tuyas.
+Alguien creó perfiles falsos con tu nombre o tus fotos.
+Sabe dónde estás sin que se lo hayas dicho, o instaló aplicaciones para vigilarte.
+Recibes imágenes o mensajes sexuales que no pediste.
+Ejemplos:
+Tu expareja comparte en un grupo una foto íntima que le enviaste en confianza.
+Tu pareja te pide la ubicación en tiempo real y se enoja si la desactivas.
+Un compañero de clase crea una cuenta falsa con tu foto para burlarse de ti.
+Alguien te escribe una y otra vez después de que lo bloqueaste.
+Recuerda: que alguien comparta una imagen íntima tuya sin tu permiso nunca es tu culpa. Antes de borrar mensajes o publicaciones, guarda capturas con la fecha: te sirven para pedir orientación o denunciar.
+1.6 Acoso sexual
+PENDIENTE DE VALIDACIÓN por la directora (agregado el 2026-10-03). Fuente: Ley 2365 de 2024 y Resolución 020310 de 2026 del Ministerio de Educación.
+¿Qué es? Es cualquier conducta de persecución, hostigamiento o asedio de carácter sexual que no deseas, por parte de alguien que tiene poder sobre ti o que comparte tu mismo entorno: un jefe, un profesor, un compañero de trabajo o de estudio, o un cliente. No necesita contacto físico para ser acoso.
+Señales para reconocerla:
+Recibes comentarios, chistes o insinuaciones sexuales que te incomodan, aunque hayas pedido que paren.
+Alguien con poder sobre ti te ofrece beneficios a cambio de algo sexual o te amenaza si no aceptas.
+Te tocan, se acercan demasiado o buscan estar a solas contigo sin que lo quieras.
+Te envían mensajes, fotos o invitaciones de tipo sexual que no pediste.
+Evitas lugares, clases o turnos para no encontrarte con esa persona.
+Ejemplos:
+Un profesor insinúa que tu nota depende de que aceptes salir con él.
+Tu jefe hace comentarios sobre tu cuerpo y se ríe cuando le pides que pare.
+Un compañero te escribe de noche con mensajes sexuales después de que le dijiste que no.
+Recuerda: no tienes que demostrar que te negaste ni que reaccionaste de cierta forma. Si ocurre en tu trabajo o en tu universidad, la institución debe tener una ruta de atención y protegerte sin represalias (Ley 2365 de 2024; Resolución 020310 de 2026).
+1.7 Un mensaje para ti
 Ninguna forma de violencia es tu culpa y ninguna es "normal". Las violencias suelen presentarse combinadas y tienden a aumentar con el tiempo si no se interrumpen. Pueden venir de cualquier persona: de quien amas, de tu familia, de tu entorno de estudio o trabajo, o de desconocidos. Identificarlas es el primer paso para protegerte. En las secciones de Líneas de atención y Rutas de atención de esta aplicación encuentras a dónde acudir: no estás sola.
 2. Líneas de atención (RF-23)
 Todas estas líneas son gratuitas y puedes llamar desde cualquier operador de telefonía. Si estás en peligro en este momento, marca 123.

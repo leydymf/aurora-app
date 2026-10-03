@@ -84,7 +84,9 @@ export function ContentPage() {
             </header>
             <p className="resource__desc">
                 Tipos de violencia que la app muestra en «Información». Los cambios se guardan como
-                borrador y solo llegan a la app al publicar (RF-44).
+                borrador y solo llegan a la app al publicar (RF-44). Los tipos publicados son también las
+                opciones de «Qué tipo fue» en el registro de la usuaria, en este mismo orden y con este
+                visual; retirar uno no rompe sus registros (conservan el último nombre publicado).
             </p>
 
             {topics.error !== null && (

@@ -67,7 +67,7 @@ npm run seed    # agrega -- --borrador SOLO en un entorno de prueba
 
 | Colección | Documento | Campos |
 |---|---|---|
-| `topics` | tipo de violencia | `schemaVersion, order, icon, accent, title, summary, signals[], examples[]` |
+| `topics` | tipo de violencia (también las opciones de tipo del registro de la usuaria desde el cierre de P-68; t05/t06 pendientes de validación) | `schemaVersion, order, icon, accent, title, summary, signals[], examples[]` |
 | `routes` | sector de la ruta (Salud/Protección/Justicia) | `schemaVersion, order, icon, accent, title, summary, agencyIds[]` |
 | `agencies` | entidad de atención | `schemaVersion, name, role, whenToUse, phones[], address?, hours?` |
 | `lines` | línea de atención | `schemaVersion, order, name, number, description, hours?` |
