@@ -99,6 +99,24 @@ con la misma toolchain):
 | `ui-v2` (cierre) | 23 261 848 |
 | **Delta** | **+24 733 B (+0,1 %)** |
 
+**Actualización RF-45 (2026-10-03, misma toolchain, ambos release firmados con debug):**
+
+| APK | Bytes |
+|---|---|
+| Base `26aaac1` (antes de RF-45) | 23 303 904 |
+| RF-45 (PdfBox-Android sin BouncyCastle, sin CMaps) | 23 879 250 |
+| **Delta** | **+575 346 B (+2,5 %)** |
+
+Sin la exclusión de BouncyCastle el grafo habría sumado ≈11 MB de JAR; sin
+`ignoreAssetsPatterns("<dir>cmap")` el release pesaba 25 105 994 B (los CMaps
+CJK, ~2,4 MB, solo sirven para leer fuentes compuestas). Lo que queda de la
+librería en el release: 363 clases en `com.tom_roush` (R8 elimina parser y
+render no usados) y los assets necesarios para escribir con las 14 fuentes
+estándar (AFM ≈ 250 KB, fuente de respaldo ≈ 420 KB, listas de glifos).
+`apkanalyzer manifest permissions` del release: **idéntico** (sin permisos
+nuevos, RNF-04). Detalle y comparación de alternativas en el ADR 2026-10-03
+(RF-45) de `docs/ARQUITECTURA.md`.
+
 La V2 no engorda el APK de forma significativa: los ~42 drawables vectoriales
 nuevos (iconografía de contorno) y los tokens son XML/código minúsculos, el
 resource shrinker retira los recursos V1 que quedaron sin uso y las tipografías
@@ -152,6 +170,7 @@ emulador (✅ si la usuaria ya la corrió; si no, es **bloqueante del tag
 | CP-35 | RNF-09 | NO APLICA | Evaluación heurística formal de usabilidad (posterior). |
 | CP-36 | RNF-10 | MANUAL (§8-C) | API 26 — **incluido en la pasada única** (§8-C2): la V2 introdujo componentes Compose nuevos que deben verse correctos en minSdk. |
 | CP-37 | RNF-11 | PASA | Pasada final de `revisora-arquitectura` sobre el diff completo V2 (§9). |
+| CP-38 | RF-45 | PASA + MANUAL (P-72 → §8-A10) | Auto (2026-10-03): `JournalListViewModelTest` (selección, 6), `ExportPolicyTest` (3), `BuildExportDocumentUseCaseTest` (7), `LoadExportSummaryUseCaseTest` (2), `JournalExportViewModelTest` (11), `LocalJournalExportRepositoryTest` (8, incluida la cancelación a mitad de escritura), `PdfBoxExportWriterTest` (6, escritor real: abre solo con la contraseña), `ManifestMinimizationTest` (+1: dos `cache-path`), `CamouflageResourcesTest`; instrumentada `JournalExportPipelineTest` (2: Keystore → PDF → FileProvider → barrido). Selector de documentos y de apps = UI del sistema: **manual bloqueante** (§8-A10). |
 
 ### Cobertura resumida (v0.3.0)
 
@@ -226,6 +245,7 @@ visitada, C al final en sus emuladores propios.
 | A7 | **P-61** (CP-24, RF-39) | DOS instalaciones + Firebase real: A crea 3 registros (+1 adjunto) y sube; B restaura tras login + código nuevo; edición cruzada; borrado remoto en cascada; contraseña restablecida por correo → emulador limpio; volver a A; cambio de contraseña | B restaura ÍNTEGRO (contenido, orden y adjunto); mismo docId; tras el reset, B queda vacío + aviso de una sola vez y `g` incrementada; A re-sube solo su historial; el cambio de contraseña NO re-escribe `entries` (solo `r` del sobre) |
 | A8 | **P-14 + P-11** (CP-07) | Teclear el código a medias y pulsar Home (mirar la miniatura de recientes); teclear la clave completa varias veces y revisar las sugerencias de Gboard (barra de fachada Y barra de práctica del tutorial) | La miniatura NO muestra el código a medio teclear; Gboard NO sugiere la clave después |
 | A9 | **P-26 + P-27** (CP-09/14) | Desde una entidad: «Llamar» → marcador → atrás; mirar recientes del marcador | Se aterriza en la FACHADA (pop en ON_STOP); recientes no muestra la pantalla de líneas; anotar si el número queda visible en el marcador (si sí: ampliar `content_agency_call_note`) y documentar el costo UX del reingreso |
+| A10 | **P-72 / CP-38** (RF-45) | Con 3 registros (uno con 2 fotos, otro con PDF + audio, otro sin adjuntos): «Seleccionar» → marcar 2 → «Continuar»; revisar resumen (fechas · tipos con el nombre de la Guía, «2 imágenes adjuntas»); contraseña corta y luego dos distintas; contraseña válida → «Guardar en el teléfono» → elegir Descargas → abrir el PDF desde Archivos (pide contraseña; probar una errónea); repetir con «Incluir imágenes adjuntas» y «Compartir» → selector de apps → enviar a un destino real (Gmail/Drive/WhatsApp) y confirmar que el adjunto llega íntegro y abre con la contraseña; repetir y cancelar; Device Explorer `cache/doc_out/` vacío y sin `.pdfbox.cache`; captura de pantalla en la lista en modo selección y en la pantalla de exportar; nube a mitad de la contraseña; esperar 5 min en el formulario; `apkanalyzer manifest permissions` del release | Nada marcado al entrar; «Continuar» inactivo hasta marcar; resumen correcto; interruptor apagado de entrada; errores de contraseña en línea; el PDF abre SOLO con la contraseña, trae fecha, tipo y relato, sin imágenes la primera vez y con las 2 imágenes la segunda, el PDF y el audio citados «(no incluido)»; nombre `documento_AAAA-MM-DD.pdf`; al volver del selector se aterriza en la pantalla de exportar (no en la fachada); `doc_out/` vacío tras compartir; capturas bloqueadas; la nube y los 5 min llevan a la fachada y `doc_out/` queda vacío; sin permisos nuevos |
 
 ### Bloque B — Verificación visual de la UI V2 contra mockups (pantalla por pantalla)
 
