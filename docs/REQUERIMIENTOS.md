@@ -240,7 +240,7 @@ El sistema debe presentar los tipos de violencia de género con descripción, se
 1. Se presentan los tipos física, psicológica, sexual y económica/patrimonial.
 2. Cada tipo incluye descripción, señales y ejemplos en lenguaje claro.
 
-*Notas:* Contenido gestionado desde el panel de administración.
+*Notas:* Contenido gestionado desde el panel de administración. **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** los tipos publicados son también el catálogo con el que la usuaria clasifica sus registros (RF-32): mismo orden, icono y acento, sin versión nueva de la app. Se agregan al contenido «Violencia digital» (t05) y «Acoso sexual» (t06), PENDIENTES DE VALIDACIÓN por la directora (Resolución 020310 de 2026 del Ministerio de Educación; Ley 2365 de 2024); el criterio 1 sigue exigiendo los cuatro tipos de la Ley 1257 como mínimo.
 
 ## RF-22 — Consulta de rutas de atención
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12, RF-24
@@ -358,7 +358,7 @@ El sistema debe permitir registrar incidentes con fecha, tipo de violencia y des
 1. Con los campos obligatorios completos, el incidente se guarda protegido.
 2. Si falta un campo obligatorio, se indica sin perder lo ya escrito.
 
-*Notas:* -
+*Notas:* **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** el «tipo de violencia» se elige entre los tipos publicados en la Guía (RF-21), que son la única fuente — mismo orden, icono y acento; un tipo nuevo o editado desde el panel aparece en el registro en la siguiente actualización de contenido. Si el catálogo no está disponible (sin conexión y sin caché de contenido), registrar sigue siendo posible con la opción neutra «Sin tipo», y el tipo se elige después al editar (RF-35); el criterio 2 se mantiene: sin tipo elegido no se guarda. Un registro cuyo tipo dejó de publicarse se muestra con su último nombre conocido (o «Sin tipo») y el visual neutro, nunca se pierde. Los registros anteriores migran su tipo al id del tema equivalente (local, nube y restauración en otro dispositivo, RF-37/RF-39); su instantánea de nombre nace vacía, así que sin catálogo disponible se ven como «Sin tipo» hasta que haya contenido o se editen.
 
 ## RF-33 — Evidencias adjuntas
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-32
