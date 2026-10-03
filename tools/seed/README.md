@@ -63,11 +63,35 @@ npm run seed    # agrega -- --borrador SOLO en un entorno de prueba
   degrada firebase-admin a la serie 10; no aplica a este uso local sin
   entradas de terceros. Revisar al actualizar firebase-admin.
 
+## Publicar solo t05 y t06 (`publish-topics.mjs`)
+
+Los dos tipos agregados en octubre de 2026 («Violencia digital» y «Acoso
+sexual», validados por la directora) se publican con un comando aparte que
+escribe ÚNICAMENTE esos documentos en `topics`, sin tocar t01–t04 ni ninguna
+otra colección. Por defecto corre **en modo de prueba**: lee `content/topics.json`,
+muestra qué escribiría y termina sin conectarse a Firestore.
+
+```bash
+cd tools/seed
+export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/aurora-seed/service-account.json"
+npm run publicar-tipos                 # modo de prueba: solo muestra t05 y t06
+npm run publicar-tipos -- --publicar   # escribe t05 y t06 en topics (pide confirmación)
+```
+
+- Requisito previo (ADR 2026-10-03): el APK con soporte de BD v5 / payload v3
+  debe estar instalado ANTES de publicar — un APK anterior sí mostraría los
+  temas en la Guía, pero su registro no los conocería.
+- Mismas barreras que `seed.mjs`: la llave fuera del repo (B-1) y la
+  confirmación de reglas publicadas (M-1 o `AURORA_RULES_PUBLISHED=1`). La
+  compuerta M-2 también aplica: un documento con `[POR CONFIRMAR` se rechaza.
+- Idempotente (`set` con `merge`): se puede repetir tras una corrección.
+- Para publicar otros ids: `--ids t05,t06` (lista explícita; nunca «todos»).
+
 ## Modelo de datos
 
 | Colección | Documento | Campos |
 |---|---|---|
-| `topics` | tipo de violencia (también las opciones de tipo del registro de la usuaria desde el cierre de P-68; t05/t06 pendientes de validación) | `schemaVersion, order, icon, accent, title, summary, signals[], examples[]` |
+| `topics` | tipo de violencia (también las opciones de tipo del registro de la usuaria desde el cierre de P-68; t05/t06 validados por la directora en octubre de 2026) | `schemaVersion, order, icon, accent, title, summary, signals[], examples[]` |
 | `routes` | sector de la ruta (Salud/Protección/Justicia) | `schemaVersion, order, icon, accent, title, summary, agencyIds[]` |
 | `agencies` | entidad de atención | `schemaVersion, name, role, whenToUse, phones[], address?, hours?` |
 | `lines` | línea de atención | `schemaVersion, order, name, number, description, hours?` |

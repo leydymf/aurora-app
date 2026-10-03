@@ -65,7 +65,7 @@ Alguien retiene tu cédula u otros documentos para que no puedas hacer trámites
 Te excluyen de decisiones sobre bienes comunes o te despojan de lo que ganaste.
 Recuerda: tienes derecho a trabajar, a estudiar, a manejar tu dinero y a disponer de tus bienes. La ley colombiana (Ley 1257 de 2008) reconoce esta forma de violencia y puedes pedir orientación jurídica gratuita para protegerte.
 1.5 Violencia digital
-PENDIENTE DE VALIDACIÓN por la directora (agregado el 2026-10-03). Fuente: Resolución 020310 de 2026 del Ministerio de Educación y Ley 2365 de 2024.
+Agregado el 2026-10-03 y VALIDADO por la directora en octubre de 2026. Fuente: Resolución 020310 de 2026 del Ministerio de Educación y Ley 2365 de 2024.
 ¿Qué es? Son las agresiones que ocurren a través del celular, las redes sociales, el correo o cualquier medio digital: acoso, amenazas, vigilancia, suplantación de identidad o difusión de fotos, videos o datos íntimos sin tu consentimiento. Puede ejercerla tu pareja o expareja, alguien conocido o una persona desconocida, y sus efectos son tan reales como los de cualquier otra forma de violencia.
 Señales para reconocerla:
 Revisan tu celular, tus chats o tus redes sin tu permiso, o te exigen tus contraseñas.
@@ -81,7 +81,7 @@ Un compañero de clase crea una cuenta falsa con tu foto para burlarse de ti.
 Alguien te escribe una y otra vez después de que lo bloqueaste.
 Recuerda: que alguien comparta una imagen íntima tuya sin tu permiso nunca es tu culpa. Antes de borrar mensajes o publicaciones, guarda capturas con la fecha: te sirven para pedir orientación o denunciar.
 1.6 Acoso sexual
-PENDIENTE DE VALIDACIÓN por la directora (agregado el 2026-10-03). Fuente: Ley 2365 de 2024 y Resolución 020310 de 2026 del Ministerio de Educación.
+Agregado el 2026-10-03 y VALIDADO por la directora en octubre de 2026. Fuente: Ley 2365 de 2024 y Resolución 020310 de 2026 del Ministerio de Educación.
 ¿Qué es? Es cualquier conducta de persecución, hostigamiento o asedio de carácter sexual que no deseas, por parte de alguien que tiene poder sobre ti o que comparte tu mismo entorno: un jefe, un profesor, un compañero de trabajo o de estudio, o un cliente. No necesita contacto físico para ser acoso.
 Señales para reconocerla:
 Recibes comentarios, chistes o insinuaciones sexuales que te incomodan, aunque hayas pedido que paren.

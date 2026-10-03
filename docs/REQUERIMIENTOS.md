@@ -240,7 +240,7 @@ El sistema debe presentar los tipos de violencia de género con descripción, se
 1. Se presentan los tipos física, psicológica, sexual y económica/patrimonial.
 2. Cada tipo incluye descripción, señales y ejemplos en lenguaje claro.
 
-*Notas:* Contenido gestionado desde el panel de administración. **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** los tipos publicados son también el catálogo con el que la usuaria clasifica sus registros (RF-32): mismo orden, icono y acento, sin versión nueva de la app. Se agregan al contenido «Violencia digital» (t05) y «Acoso sexual» (t06), PENDIENTES DE VALIDACIÓN por la directora (Resolución 020310 de 2026 del Ministerio de Educación; Ley 2365 de 2024); el criterio 1 sigue exigiendo los cuatro tipos de la Ley 1257 como mínimo.
+*Notas:* Contenido gestionado desde el panel de administración. **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** los tipos publicados son también el catálogo con el que la usuaria clasifica sus registros (RF-32): mismo orden, icono y acento, sin versión nueva de la app. Se agregan al contenido «Violencia digital» (t05) y «Acoso sexual» (t06), validados por la directora en octubre de 2026 (fuentes: Resolución 020310 de 2026 del Ministerio de Educación; Ley 2365 de 2024); el criterio 1 sigue exigiendo los cuatro tipos de la Ley 1257 como mínimo.
 
 ## RF-22 — Consulta de rutas de atención
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12, RF-24
