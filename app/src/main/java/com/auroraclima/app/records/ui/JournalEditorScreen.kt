@@ -47,6 +47,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureDayPicker
+import com.auroraclima.app.core.security.rememberSystemLauncher
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.RowChevron
@@ -103,16 +104,9 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
     LaunchedEffect(viewModel) {
         viewModel.savedEvents.collect { onSaved() }
     }
-    // Plomería única de lanzamiento hacia una pantalla del sistema: armar la
-    // ida-y-vuelta y, si el lanzamiento falla, desarmarla — extraída para que
-    // ninguna vía (ni una futura) pueda olvidar el cancelSystemReturn.
-    val launchExternal: (() -> Unit) -> Unit = { launch ->
-        sessionManager.expectSystemReturn()
-        runCatching(launch).onFailure {
-            sessionManager.cancelSystemReturn()
-            viewModel.onLaunchFailed()
-        }
-    }
+    // Ida-y-vuelta hacia una pantalla del sistema (core/security): armada
+    // antes de cada lanzamiento y desarmada si falla.
+    val launchExternal = rememberSystemLauncher(onLaunchFailed = viewModel::onLaunchFailed)
     LaunchedEffect(viewModel) {
         viewModel.captureEvents.collect { uri ->
             launchExternal { takePicture.launch(Uri.parse(uri)) }

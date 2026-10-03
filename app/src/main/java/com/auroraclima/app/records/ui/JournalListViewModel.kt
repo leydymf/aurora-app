@@ -22,6 +22,10 @@ import kotlinx.coroutines.launch
  * contadores de adjuntos (RF-33, P18) y el catálogo de tipos (P-68) no son
  * críticos: si fallan, las filas se pintan sin contador o con la instantánea
  * del nombre y el visual neutro, sin error propio.
+ *
+ * RF-45: el modo de selección vive aquí (la pestaña sobrevive al cambio de
+ * pestaña, el grafo seguro lo mata con el pop). [refresh] conserva las marcas
+ * pero poda los ids que ya no existen (un registro borrado en el detalle).
  */
 @HiltViewModel
 class JournalListViewModel @Inject constructor(
@@ -42,12 +46,41 @@ class JournalListViewModel @Inject constructor(
         _uiState.update { it.copy(showsBackupNotice = false) }
     }
 
+    fun enterSelection() {
+        _uiState.update { it.copy(isSelecting = true, selectedIds = emptySet()) }
+    }
+
+    fun toggleSelected(entryId: Long) {
+        _uiState.update { state ->
+            val ids = if (entryId in state.selectedIds) state.selectedIds - entryId else state.selectedIds + entryId
+            state.copy(selectedIds = ids)
+        }
+    }
+
+    fun cancelSelection() {
+        _uiState.update { it.copy(isSelecting = false, selectedIds = emptySet()) }
+    }
+
+    /**
+     * Ids marcados en el orden del listado (los más recientes primero) y salida
+     * del modo: la pantalla de exportación recibe solo ids por la ruta.
+     */
+    fun continueSelection(): List<Long> {
+        val state = _uiState.value
+        val ordered = state.entries.map { it.id }.filter { it in state.selectedIds }
+        _uiState.update { it.copy(isSelecting = false, selectedIds = emptySet()) }
+        return ordered
+    }
+
     fun refresh() {
         _uiState.update { it.copy(isLoading = true, errorRes = null) }
         viewModelScope.launch {
             repository.entries()
                 .onSuccess { entries ->
-                    _uiState.update { it.copy(isLoading = false, entries = entries) }
+                    val surviving = entries.map { it.id }.toSet()
+                    _uiState.update {
+                        it.copy(isLoading = false, entries = entries, selectedIds = it.selectedIds intersect surviving)
+                    }
                 }
                 .onFailure {
                     _uiState.update { it.copy(isLoading = false, errorRes = R.string.common_error_generic) }

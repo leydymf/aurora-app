@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-    Única ruta compartible por el FileProvider no exportado: el búfer temporal
-    de captura de la cámara del sistema (RF-33). Nada más del almacenamiento
-    privado es alcanzable por URI; el almacén cifrado queda fuera a propósito.
+    Rutas compartibles por el FileProvider no exportado — solo dos temporales
+    de la caché privada: el búfer de captura de la cámara del sistema (RF-33)
+    y el PDF cifrado que la usuaria decide compartir (RF-45). Nada más del
+    almacenamiento privado es alcanzable por URI; el almacén cifrado queda
+    fuera a propósito. ManifestMinimizationTest fija exactamente estas dos.
 -->
 <paths>
     <cache-path
         name="m"
         path="media_pending/" />
+    <cache-path
+        name="d"
+        path="doc_out/" />
 </paths>

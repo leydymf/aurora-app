@@ -80,7 +80,7 @@ class ManifestMinimizationTest {
             .flatMap { elements(it) }
 
         assertEquals("Debe existir exactamente un activity", 1, activities.size)
-        assertEquals("Debe existir exactamente un provider (el de captura, RF-33)", 1, providers.size)
+        assertEquals("Debe existir exactamente un provider (captura RF-33 y PDF RF-45)", 1, providers.size)
         assertTrue(
             "No debe haber services, receivers ni aliases propios (RF-06)",
             others.isEmpty()
@@ -105,6 +105,33 @@ class ManifestMinimizationTest {
         val paths = metadata.item(0) as Element
         assertEquals("android.support.FILE_PROVIDER_PATHS", paths.androidAttr("name"))
         assertEquals("@xml/file_paths", paths.androidAttr("resource"))
+    }
+
+    @Test
+    fun `el FileProvider expone exactamente los dos temporales de la cache privada`() {
+        // RF-33 (captura de cámara) y RF-45 (PDF cifrado para compartir): nada
+        // más del almacenamiento privado es alcanzable por URI — en particular
+        // el almacén cifrado de adjuntos y la BD quedan fuera por construcción.
+        val file = requireNotNull(
+            sequenceOf(
+                File("src/main/res/xml/file_paths.xml"),
+                File("app/src/main/res/xml/file_paths.xml")
+            ).firstOrNull { it.exists() }
+        ) { "No se encontró file_paths.xml" }
+        val paths = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).documentElement
+        val children = (0 until paths.childNodes.length)
+            .map { paths.childNodes.item(it) }
+            .filterIsInstance<Element>()
+
+        assertEquals(
+            "Solo rutas de la caché privada",
+            setOf("cache-path"),
+            children.map { it.tagName }.toSet()
+        )
+        assertEquals(
+            mapOf("m" to "media_pending/", "d" to "doc_out/"),
+            children.associate { it.getAttribute("name") to it.getAttribute("path") }
+        )
     }
 
     @Test

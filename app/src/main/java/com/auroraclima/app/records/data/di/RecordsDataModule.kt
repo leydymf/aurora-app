@@ -1,10 +1,13 @@
 package com.auroraclima.app.records.data.di
 
+import android.content.Context
+import android.net.Uri
 import com.auroraclima.app.core.database.EncryptedDatabaseFactory
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.RemoteAccountDataEraser
 import com.auroraclima.app.core.security.SensitiveStateCleaner
+import com.auroraclima.app.core.startup.AppInitializer
 import com.auroraclima.app.records.data.FirestoreJournalMediaSyncRepository
 import com.auroraclima.app.records.data.FirestoreJournalSyncRepository
 import com.auroraclima.app.records.data.JournalDatabaseSource
@@ -15,6 +18,12 @@ import com.auroraclima.app.records.data.JournalStoreEraser
 import com.auroraclima.app.records.data.JournalSyncReconciler
 import com.auroraclima.app.records.data.LocalJournalAttachmentRepository
 import com.auroraclima.app.records.data.LocalJournalRepository
+import com.auroraclima.app.records.data.export.ExportStagingSweeper
+import com.auroraclima.app.records.data.export.FileProviderShareUriResolver
+import com.auroraclima.app.records.data.export.LocalJournalExportRepository
+import com.auroraclima.app.records.data.export.OutputStreamOpener
+import com.auroraclima.app.records.data.export.PdfBoxExportWriter
+import com.auroraclima.app.records.data.export.ShareUriResolver
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.remote.FirestoreJournalMediaRemoteSource
 import com.auroraclima.app.records.data.remote.FirestoreJournalPurgeRemoteSource
@@ -22,7 +31,10 @@ import com.auroraclima.app.records.data.remote.FirestoreJournalSyncRemoteSource
 import com.auroraclima.app.records.data.remote.JournalMediaRemoteSource
 import com.auroraclima.app.records.data.remote.JournalPurgeRemoteSource
 import com.auroraclima.app.records.data.remote.JournalSyncRemoteSource
+import com.auroraclima.app.records.domain.model.DayProvider
+import com.auroraclima.app.records.domain.repository.ExportDocumentWriter
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
+import com.auroraclima.app.records.domain.repository.JournalExportRepository
 import com.auroraclima.app.records.domain.repository.JournalMediaSyncRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.repository.JournalSyncRepository
@@ -30,8 +42,10 @@ import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
+import java.time.LocalDate
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -42,6 +56,22 @@ abstract class RecordsDataModule {
     /** Adjuntos protegidos (RF-33): misma BD cifrada + almacén de archivos cifrados. */
     @Binds
     abstract fun bindJournalAttachmentRepository(impl: LocalJournalAttachmentRepository): JournalAttachmentRepository
+
+    /** RF-45: PDF cifrado hacia el selector del sistema (guardar) o un temporal (compartir). */
+    @Binds
+    abstract fun bindJournalExportRepository(impl: LocalJournalExportRepository): JournalExportRepository
+
+    /** La librería de PDF (ADR RF-45) queda detrás del contrato de dominio. */
+    @Binds
+    abstract fun bindExportDocumentWriter(impl: PdfBoxExportWriter): ExportDocumentWriter
+
+    @Binds
+    abstract fun bindShareUriResolver(impl: FileProviderShareUriResolver): ShareUriResolver
+
+    /** RF-45: al arrancar el proceso no queda ningún PDF temporal de una sesión interrumpida. */
+    @Binds
+    @IntoSet
+    abstract fun bindExportStagingSweeper(impl: ExportStagingSweeper): AppInitializer
 
     @Binds
     abstract fun bindJournalSyncRepository(impl: FirestoreJournalSyncRepository): JournalSyncRepository
@@ -85,6 +115,15 @@ abstract class RecordsDataModule {
     abstract fun bindJournalSyncReconciler(impl: JournalSyncReconciler): AccountDataRestorer
 
     companion object {
+        /** Fecha civil del dispositivo para nombrar y fechar la exportación (RF-45). */
+        @Provides
+        fun provideDayProvider(): DayProvider = DayProvider { LocalDate.now() }
+
+        /** El destino de «Guardar» (RF-45) lo abre el ContentResolver con el URI que devolvió el selector. */
+        @Provides
+        fun provideOutputStreamOpener(@ApplicationContext context: Context): OutputStreamOpener =
+            OutputStreamOpener { uri -> context.contentResolver.openOutputStream(Uri.parse(uri), "wt") }
+
         /**
          * Solo captura la fábrica: NO construye la BD aquí (P-36) — la apertura
          * hace I/O y puede lanzar, y eso ocurre recién dentro del repositorio,

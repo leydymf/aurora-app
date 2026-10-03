@@ -169,6 +169,109 @@ class JournalListViewModelTest {
         assertEquals("Segunda (guardada)", kind.label)
     }
 
+    // ── Modo de selección (RF-45 criterio 1) ──────────────────────────────
+
+    @Test
+    fun `al entrar en seleccion ningun registro viene marcado`() = runTest {
+        repository.entriesResult = Result.success(listOf(entry(1, "a"), entry(2, "b")))
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        viewModel.enterSelection()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isSelecting)
+        assertTrue(state.selectedIds.isEmpty())
+        assertFalse(state.canContinue)
+    }
+
+    @Test
+    fun `marcar y desmarcar alterna cada id y habilita continuar solo con algo marcado`() = runTest {
+        repository.entriesResult = Result.success(listOf(entry(1, "a"), entry(2, "b")))
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+        viewModel.enterSelection()
+
+        viewModel.toggleSelected(2)
+        assertEquals(setOf(2L), viewModel.uiState.value.selectedIds)
+        assertTrue(viewModel.uiState.value.canContinue)
+
+        viewModel.toggleSelected(1)
+        viewModel.toggleSelected(2)
+        assertEquals(setOf(1L), viewModel.uiState.value.selectedIds)
+
+        viewModel.toggleSelected(1)
+        assertFalse(viewModel.uiState.value.canContinue)
+    }
+
+    @Test
+    fun `continuar entrega los ids en el orden del listado y sale del modo`() = runTest {
+        repository.entriesResult = Result.success(listOf(entry(3, "c"), entry(2, "b"), entry(1, "a")))
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+        viewModel.enterSelection()
+        viewModel.toggleSelected(1)
+        viewModel.toggleSelected(3)
+
+        val ids = viewModel.continueSelection()
+
+        assertEquals(listOf(3L, 1L), ids)
+        assertFalse(viewModel.uiState.value.isSelecting)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
+    @Test
+    fun `cancelar limpia las marcas y sale del modo`() = runTest {
+        repository.entriesResult = Result.success(listOf(entry(1, "a")))
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+        viewModel.enterSelection()
+        viewModel.toggleSelected(1)
+
+        viewModel.cancelSelection()
+
+        assertFalse(viewModel.uiState.value.isSelecting)
+        assertTrue(viewModel.uiState.value.selectedIds.isEmpty())
+    }
+
+    @Test
+    fun `refrescar conserva las marcas pero poda los ids que ya no existen`() = runTest {
+        repository.entriesResult = Result.success(listOf(entry(1, "a"), entry(2, "b")))
+        val viewModel = viewModel()
+        viewModel.refresh()
+        advanceUntilIdle()
+        viewModel.enterSelection()
+        viewModel.toggleSelected(1)
+        viewModel.toggleSelected(2)
+
+        repository.entriesResult = Result.success(listOf(entry(2, "b")))
+        viewModel.refresh()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isSelecting)
+        assertEquals(setOf(2L), viewModel.uiState.value.selectedIds)
+    }
+
+    @Test
+    fun `seleccionar solo se ofrece con registros cargados sin error`() = runTest {
+        val viewModel = viewModel()
+        assertFalse(viewModel.uiState.value.canSelect)
+
+        repository.entriesResult = Result.success(emptyList())
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.canSelect)
+
+        repository.entriesResult = Result.success(listOf(entry(1, "a")))
+        viewModel.refresh()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.canSelect)
+    }
+
     private fun entry(id: Long, detail: String, kindId: String = "t02", kindLabel: String = "Segunda") = JournalEntry(
         id = id,
         occurredOn = LocalDate.of(2026, 7, 2),

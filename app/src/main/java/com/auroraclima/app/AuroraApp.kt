@@ -50,9 +50,11 @@ import com.auroraclima.app.core.ui.v2.V2TabBarHeight
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.questionnaire.ui.GuidanceHistoryRoute
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
+import com.auroraclima.app.records.ui.ENTRY_IDS_ARG
 import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
 import com.auroraclima.app.records.ui.JournalEditorRoute
+import com.auroraclima.app.records.ui.JournalExportRoute
 import com.auroraclima.app.records.ui.JournalMediaRoute
 import com.auroraclima.app.records.ui.MEDIA_ID_ARG
 import com.auroraclima.app.weather.ui.ForecastRoute
@@ -207,6 +209,11 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onAddJournalEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
                         onOpenJournalEntry = { entryId ->
                             navController.navigate("$JOURNAL_ROUTE/$entryId")
+                        },
+                        // Exportación selectiva (RF-45): solo ids opacos viajan
+                        // por la ruta; la pantalla vuelve a leer todo lo demás.
+                        onExportJournalEntries = { ids ->
+                            navController.navigate("$JOURNAL_EXPORT_BASE/${ids.joinToString(",")}")
                         }
                     )
                 }
@@ -288,6 +295,12 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // sin salir jamás del grafo seguro (RNF-02).
                 screen(JOURNAL_MEDIA_ROUTE) {
                     JournalMediaRoute(onBack = { navController.popBackStack() })
+                }
+                // Exportación a PDF con contraseña (RF-45): resumen, aviso,
+                // contraseña y salida por el selector del sistema. Dentro del
+                // grafo seguro: captura bloqueada y nube por construcción.
+                screen(JOURNAL_EXPORT_ROUTE) {
+                    JournalExportRoute(onBack = { navController.popBackStack() })
                 }
                 // Edición de un registro (RF-35, P19). El pop tras guardar
                 // regresa al detalle, que se refresca al volver a componerse.
@@ -473,6 +486,8 @@ private const val JOURNAL_EDIT_BASE = "journal_edit"
 private const val JOURNAL_EDIT_ROUTE = "$JOURNAL_EDIT_BASE/{$ENTRY_ID_ARG}"
 private const val JOURNAL_MEDIA_BASE = "journal_media"
 private const val JOURNAL_MEDIA_ROUTE = "$JOURNAL_MEDIA_BASE/{$MEDIA_ID_ARG}"
+private const val JOURNAL_EXPORT_BASE = "journal_export"
+private const val JOURNAL_EXPORT_ROUTE = "$JOURNAL_EXPORT_BASE/{$ENTRY_IDS_ARG}"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"

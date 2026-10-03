@@ -57,6 +57,7 @@ fun InnerTabsHost(
     onOpenLines: () -> Unit,
     onAddJournalEntry: () -> Unit,
     onOpenJournalEntry: (Long) -> Unit,
+    onExportJournalEntries: (List<Long>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(HOME_TAB) }
@@ -94,7 +95,8 @@ fun InnerTabsHost(
                         JournalListRoute(
                             onBack = null,
                             onAddEntry = onAddJournalEntry,
-                            onEntrySelected = onOpenJournalEntry
+                            onEntrySelected = onOpenJournalEntry,
+                            onExportSelected = onExportJournalEntries
                         )
                     }
                     else -> tabStateHolder.SaveableStateProvider(HOME_TAB) {

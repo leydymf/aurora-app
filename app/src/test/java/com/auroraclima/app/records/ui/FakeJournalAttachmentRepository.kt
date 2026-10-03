@@ -6,7 +6,7 @@ import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 
 /** Fake de adjuntos (RF-33) para ViewModels y casos de uso (guía §5). */
-class FakeJournalAttachmentRepository : JournalAttachmentRepository {
+open class FakeJournalAttachmentRepository : JournalAttachmentRepository {
     val imported = mutableListOf<Pair<String, Long>>()
     val capturesImported = mutableListOf<Long>()
     val claimed = mutableListOf<Pair<List<Long>, Long>>()
@@ -55,7 +55,7 @@ class FakeJournalAttachmentRepository : JournalAttachmentRepository {
 
     override suspend fun counts(): Result<Map<Long, Int>> = countsResult
 
-    override suspend fun content(id: Long): Result<AttachmentContent?> = contentResult
+    open override suspend fun content(id: Long): Result<AttachmentContent?> = contentResult
 
     override suspend fun claim(ids: List<Long>, owner: Long): Result<Unit> {
         claimResult.onSuccess { claimed += ids to owner }
