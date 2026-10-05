@@ -27,9 +27,9 @@ class NoTracesGuardTest {
         "pushDynamicShortcut",
         "AppWidgetProvider",
         "GlanceAppWidget",
-        "TileService",
-        // Permitido solo con decisión registrada (ver P-14 en docs/PENDIENTES.md).
-        "setRecentsScreenshotEnabled"
+        "TileService"
+        // setRecentsScreenshotEnabled dejó esta lista el 2026-10-05 (P-14 cerrado):
+        // vive SOLO en core/security/RecentsThumbnailGuard, ver el test de abajo.
     )
 
     private val mainDir = requireNotNull(
@@ -90,6 +90,27 @@ class NoTracesGuardTest {
 
         assertTrue(
             "FLAG_SECURE fuera del componente central de core/security (RNF-02):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    /**
+     * La miniatura de recientes solo se oculta mientras se teclea en la barra (P-14,
+     * ADR 2026-10-05) y desde un único componente: fuera de core/security sería un
+     * distinguidor (una app de clima sin miniatura) o un rastro mal acotado.
+     */
+    @Test
+    fun `setRecentsScreenshotEnabled solo existe en core security`() {
+        val allowedFile = File(mainDir, "java/com/auroraclima/app/core/security/RecentsThumbnailGuard.kt")
+        val violations = mainFiles("kt", "xml")
+            .filter { "setRecentsScreenshotEnabled" in it.readText() }
+            .filterNot { it == allowedFile }
+            .map { "${it.relativeTo(mainDir)}" }
+            .toList()
+
+        assertTrue(
+            "setRecentsScreenshotEnabled fuera de RecentsThumbnailGuard (RF-14/P-14):\n" +
                 violations.joinToString("\n"),
             violations.isEmpty()
         )

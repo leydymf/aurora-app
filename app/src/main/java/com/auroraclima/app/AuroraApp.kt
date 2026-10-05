@@ -40,6 +40,7 @@ import com.auroraclima.app.content.ui.TOPIC_ID_ARG
 import com.auroraclima.app.content.ui.TopicDetailRoute
 import com.auroraclima.app.content.ui.TopicsRoute
 import com.auroraclima.app.core.security.LocalSessionManager
+import com.auroraclima.app.core.security.RecentsThumbnailGuard
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SecureBackStackGuard
 import com.auroraclima.app.core.security.SessionGuard
@@ -423,10 +424,10 @@ private fun HomeRoute(navController: NavHostController, entry: NavBackStackEntry
             searchFocus.requestFocus()
         }
     }
-    // Mejor esfuerzo: limpiar la barra en ON_PAUSE para que la miniatura de
-    // recientes no muestre un código a medio teclear (RF-14, auditoría M-03/M-04).
-    // El snapshot lo toma el sistema del último frame visible, así que ON_STOP
-    // llegaría tarde; la verificación en emulador queda en P-14 de PENDIENTES.md.
+    // Miniatura de recientes sin la barra mientras se busca (RF-14, ADR 2026-10-05).
+    RecentsThumbnailGuard(hidden = state.isSearchActive)
+    // Mejor esfuerzo complementario (y único recurso en API < 33): limpiar la
+    // barra en ON_PAUSE (RF-14, auditoría M-03/M-04).
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->

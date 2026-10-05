@@ -48,7 +48,7 @@ ampliada → `@Test` totales hoy):
 | RF-10 tutorial saltable | — | `TutorialViewModelTest` 10, `TutorialUiStateTest` 5 |
 | Esquema v2 icono/acento (RF-21/22) | `ContentVisualTest` 8 | `FirestoreContentRepositoryTest` 14, `ContentDocumentParsingTest` 9, `AgencyDetailViewModelTest` 5 |
 | Semafóricos + RF-31 | `GuidanceSeverityTest` 2, `GuidanceHistoryViewModelTest` 7, `LocalSavedOutcomeRepositoryTest` 5, `FirestoreOutcomeSyncRepositoryTest` 4, `OutcomeSyncReconcilerTest` 2, `OutcomeErasersTest` 2, `DeleteSavedOutcomeUseCaseTest` 3 | `GuidanceViewModelTest` 24 (guardado opt-in y descarte sin rastro) |
-| Reingreso silencioso (P-31 C) | `SilentSessionCoordinatorTest` 8, `SilentSignInUseCaseTest` 9, `SilentSessionViewModelTest` 2, `SignOutViewModelTest` 2, `StoredCredentialsTest` 2 (§9, M-1) | `LoginViewModelTest` 11, `SignInUseCaseTest` 16, `CreateAccountUseCaseTest` 11, `ChangePasswordUseCaseTest` 10 |
+| Reingreso silencioso (P-31 C) | `SilentSessionCoordinatorTest` 10, `SilentSignInUseCaseTest` 9, `SilentSessionViewModelTest` 2, `SignOutViewModelTest` 2, `StoredCredentialsTest` 2 (§9, M-1) | `LoginViewModelTest` 11, `SignInUseCaseTest` 16, `CreateAccountUseCaseTest` 11, `ChangePasswordUseCaseTest` 10 |
 | Tipos dinámicos (P-68) | `CategoryContentProviderTest` 3, `ResolvedKindTest` 5, `LoadEntryKindsUseCaseTest` 2, `JournalDatabaseMigrationTest` 6 | `JournalEditorViewModelTest` 33, `JournalDetailViewModelTest` 12, `FirestoreJournalSyncRepositoryTest` 15 (payload v3), `JournalSyncReconcilerTest` 9, `LocalJournalRepositoryTest` 6 |
 | RF-45 exportación | `ExportPolicyTest` 5, `BuildExportDocumentUseCaseTest` 9, `LoadExportSummaryUseCaseTest` 3, `JournalExportViewModelTest` 13, `LocalJournalExportRepositoryTest` 8, `PdfBoxExportWriterTest` 16 | `JournalListViewModelTest` 15, `ManifestMinimizationTest` 7 |
 | Contraste WCAG 1.4.11 | `PaletteContrastTest` 7 | — |
@@ -153,14 +153,14 @@ respecto de v0.3.0 en **negrita**.
 
 | CP | RF/RNF | Estado | Evidencia automatizada / manual |
 |---|---|---|---|
-| CP-01 | RF-01 | PASA + MANUAL (§8-A1) | Auto: `CamouflageResourcesTest` (2 — barre también los ~60 strings nuevos de exportación, resultados guardados, chip sin conexión y tutorial), `ManifestMinimizationTest` (7), `NoTracesGuardTest` (7). Visual de camuflaje en §8-A1. |
+| CP-01 | RF-01 | PASA + MANUAL (§8-A1) | Auto: `CamouflageResourcesTest` (2 — barre también los ~60 strings nuevos de exportación, resultados guardados, chip sin conexión y tutorial), `ManifestMinimizationTest` (7), `NoTracesGuardTest` (8). Visual de camuflaje en §8-A1. |
 | CP-02 | RF-02, RF-03, RF-04 | PASA + MANUAL (§8-A1) | Auto: `WeatherViewModelTest` (16), `WeatherRepositoryImplTest` (12), `ForecastMapperTest`, `ForecastViewModelTest` (5). Manual v1 ✅ (2026-07-21); re-estilo V2 en §8-A1. |
 | CP-03 | RF-05, RF-06 | PASA + MANUAL (§8-A1/A2) | Auto: `ValidateSecretCodeUseCaseTest` (10) + guardianes. |
 | CP-04 | RF-07 | PASA + MANUAL (§8-A2) | Auto: `CreateAccountViewModelTest` (10), `CreateAccountUseCaseTest` (**11 — al crear la cuenta se guardan las credenciales cifradas para el reingreso silencioso**), `FirebaseAuthRepositoryTest` (15). |
 | CP-05 | RF-08, RF-09 | PASA + MANUAL ✅/parcial (§8-A3) | Auto: como v0.2.0. P-53 ✅; resta Device Explorer (P-28), **ahora junto a `account_meta.xml`** (§8-A3). |
 | CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ + **§8-A2** | Auto: `TutorialViewModelTest` (**10 — «Saltar por ahora»: el salto fija el logro sin práctica y la práctica sigue disponible desde Ajustes**), `TutorialUiStateTest` (5). P-34/P-53 ✅ (tutorial completo); **el salto se verifica en §8-A2**. |
 | CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (§8-A1) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4). P-11/P-14 bloqueantes (§8-A1). **El reingreso silencioso no toca la barra: el código sigue siendo la única puerta (RF-12).** |
-| CP-08 | RF-15 | PASA + MANUAL (§8-A4/A5) | Auto: `SignInUseCaseTest` (16), `LoginViewModelTest` (11), **`SilentSignInUseCaseTest` (9 — éxito, rechazo definitivo destruye el blob, deshacer bajo `NonCancellable` tras la salida), `SilentSessionCoordinatorTest` (8 — local-first, confirmación en segundo plano, monitor de red), `SilentSessionViewModelTest` (2); instrumentada `LocalCredentialStoreTest` (11)**. Manual: P-29 (login manual) y **P-71 (reingreso silencioso)** en §8-A4/A5. |
+| CP-08 | RF-15 | PASA + MANUAL (§8-A4/A5) | Auto: `SignInUseCaseTest` (16), `LoginViewModelTest` (11), **`SilentSignInUseCaseTest` (9 — éxito, rechazo definitivo destruye el blob, deshacer bajo `NonCancellable` tras la salida), `SilentSessionCoordinatorTest` (10 — local-first, confirmación en segundo plano, monitor de red, reintento acotado con espera creciente P-81), `SilentSessionViewModelTest` (2); instrumentada `LocalCredentialStoreTest` (11)**. Manual: P-29 (login manual) y **P-71 (reingreso silencioso)** en §8-A4/A5. |
 | CP-09 | RF-16 | PASA + MANUAL (§8-A4, A11) | Auto: `SessionManagerTest` (20), `SecureFlagLedgerTest` (5), **`SilentSignInUseCaseTest` (la salida rápida con el silencioso en vuelo deshace el login)**. Manual: P-27 (§8-A11) y **P-71(7)** (§8-A4). |
 | CP-10 | RF-17, RF-18 | PASA + MANUAL ✅ | Auto: `ConsentViewModelTest` (2). P-53 ✅; visual V2 en §8-A2. |
 | CP-11 | RF-19 | PASA + MANUAL ✅ + **§8-A5** | Auto: **`SignOutViewModelTest` (2 — cerrar sesión destruye el blob de credenciales y converge en `quickExit`)**, `SignOutSessionCleanupTest`. P-53 ✅; **P-71(4): tras cerrar sesión el reingreso exige código + credenciales** (§8-A5). |
@@ -183,7 +183,7 @@ respecto de v0.3.0 en **negrita**.
 | CP-28 | RNF-01 | PASA + MANUAL parcial (§8-A3/A7/A8) | Auto: cifrado como v0.2.0 + **`LocalCredentialStoreTest` (11, instrumentada — `account_meta` AES-GCM con llave Keystore y relleno fijo), `LocalSavedOutcomeRepositoryTest` (`guidance_store.db` por `EncryptedDatabaseFactory`), `JournalDatabaseMigrationTest`**. Device Explorer en §8-A3/A7/A8/A10. |
 | CP-29 | RNF-02 | PASA + MANUAL (§8-A/B) | Auto: `SecureFlagLedgerTest` (5), `NoTracesGuardTest`. **Pantallas nuevas bajo `secureGraph`: exportación (lista en selección + formulario), resultados guardados (listado + detalle + hoja de borrado), hoja de confirmación de guardado** — capturas en §8-A9/A10. |
 | CP-30 | RNF-03 | PASA + MANUAL ✅ + §8-A10 | Auto: `SessionManagerTest` (20), `InteractionThrottleTest` (4). **Campos nuevos (dos contraseñas de exportación) registran interacción (regla P-15)**; «5 min en el formulario de exportar» en §8-A10. |
-| CP-31 | RNF-04 | PASA + MANUAL parcial | Auto: `NoTracesGuardTest` (7), `ManifestMinimizationTest` (7) + §3 (permisos idénticos hoy). **RF-31 persiste solo fecha + nivel + tipos; el PDF exportado solo lleva lo que la usuaria marcó.** |
+| CP-31 | RNF-04 | PASA + MANUAL parcial | Auto: `NoTracesGuardTest` (8), `ManifestMinimizationTest` (7) + §3 (permisos idénticos hoy). **RF-31 persiste solo fecha + nivel + tipos; el PDF exportado solo lleva lo que la usuaria marcó.** |
 | CP-32 | RNF-05 | PASA + MANUAL (§8-A1) | Auto: `CamouflageResourcesTest` + DEX §2 (**hoy: 0 símbolos nuevos legibles; `GuidanceDatabase` neutro como `JournalDatabase`**). **El permiso `ACCESS_NETWORK_STATE`, ahora declarado por la app, es de nivel normal y plausible en una app de clima** (§3). Residual P-78 (plantillas `toString` en el DEX). |
 | CP-33 | RNF-06 | PASA ✅ | `firestore.rules` **sin cambios en el diff**: `outcomes` y `account_meta` (local) no exigen regla nueva — `/users/{uid}/**` ya cubre `outcomes`. Playground 10/10 ✅ (2026-07-15/17). |
 | CP-34 | RNF-07 | MANUAL (§8-C1) | Gama media: arranque ≤ 3 s, interacción ≤ 2 s. **Añadir la generación de un PDF con adjuntos (RF-45) y la primera entrada sin red al cronómetro.** |
@@ -277,10 +277,10 @@ al buscar, la del tutorial siempre.
 | Paso | Estado | Nota |
 |---|---|---|
 | 0 | ✅ 42/42 | Tras corregir `WeatherSearchBarFocusTest` (buscaba un texto que la UI V2 convirtió en icono; commit `e3c74e7`) |
-| A1 | ✅ / ⚠️ P-14 | RF-13 idéntico píxel a píxel bajo la barra; **la miniatura de recientes sí muestra el código a medias** (P-14, mitigación pendiente de decisión) |
+| A1 | ✅ / 🔁 P-14 | RF-13 idéntico píxel a píxel bajo la barra; **la miniatura de recientes sí mostraba el código a medias** → mitigación aplicada (`RecentsThumbnailGuard`, API 33+). **Repetido con el APK nuevo (18:43): ✅** la miniatura es una tarjeta neutra mientras se busca y vuelve a ser la fachada normal al salir de la búsqueda |
 | A2 | ✅ | Consentimiento, cuenta nueva, reglas de la clave en vivo, «Saltar por ahora» → Inicio. Resta el repaso del tutorial desde Ajustes (RF-11) |
 | A3 | ✅ | Reingreso cae en Inicio (P-67); prefs solo Base64 (`search_index`, `account_meta`, `backup_meta`); consola `profile g=1` |
-| A4 | ✅ / ❌ paso 2 | Entrada sin red con chip, Guía y 6 tipos desde caché, validaciones y guardado sin red, nube + reentrada. **Al volver la red el chip no desapareció ni subió el registro** (P-81); subió en el siguiente login confirmado |
+| A4 | ✅ / 🔁 paso 2 | Entrada sin red con chip, Guía y 6 tipos desde caché, validaciones y guardado sin red, nube + reentrada. **Al volver la red el chip no desapareció ni subió el registro** (P-81, resuelto con reintento acotado). **Repetido con el APK nuevo (18:45): ✅** el chip desapareció solo 12 s después de devolver la red (primer reintento a los 5 s) |
 | A5 | ✅ | Cerrar sesión destruye el blob; login manual; P-29 completo (mensaje único, pausa 5:00 que se retoma tras forzar detención, acceso normal al expirar); blob renace |
 | A6 | ✅ parcial | t05/t06 ya publicados en producción con esquema v2; 6 tipos en la Guía; fidelidad visual pendiente (capturas negras por FLAG_SECURE) |
 | A7 | ✅ | P-46 completo salvo FLAG_SECURE del selector (no verificable por adb): fecha con selector (en inglés por la locale del emulador), orden, detalle, edición (mismo doc), edición y borrado sin red con propagación, doble confirmación, nube a mitad (borrador no persiste), >5 min tecleando sin expirar |
@@ -337,7 +337,7 @@ y P-80. Texto de la portada del cuestionario alineado con RF-31.
 
 | # | Qué correr | Pasos (resumen) | Resultado esperado |
 |---|---|---|---|
-| A14 | **RF-20 con todas las cascadas** — P-54 regresión · P-71 (5) · P-59 (7) · RF-31 · CP-12 · Device Explorer #5 | En A: Ajustes → «Eliminar tu cuenta y tus datos» → dos confirmaciones → contraseña (probar primero sin red y con contraseña incorrecta) → éxito. Device Explorer completo. Reabrir la app | Sin red / incorrecta: «Nada se ha eliminado todavía» y consola intacta; con éxito: consola sin `entries`/`media`/`mediaparts`/`outcomes`/`meta` y sin la cuenta en Auth; **`account_meta.xml` inexistente**, `media_store`/`media_view`/`media_pending`/`doc_out` inexistentes, `journal_store.db` y **`guidance_store.db`** ausentes; la app vuelve a ser solo clima (en debug el código de activación se resiembra; en release exigiría reinstalar — P-55) |
+| A14 | **RF-20 con todas las cascadas** — P-54 regresión · P-71 (5) · P-59 (8) · RF-31 · CP-12 · Device Explorer #5 | En A: Ajustes → «Eliminar tu cuenta y tus datos» → dos confirmaciones → contraseña (probar primero sin red y con contraseña incorrecta) → éxito. Device Explorer completo. Reabrir la app | Sin red / incorrecta: «Nada se ha eliminado todavía» y consola intacta; con éxito: consola sin `entries`/`media`/`mediaparts`/`outcomes`/`meta` y sin la cuenta en Auth; **`account_meta.xml` inexistente**, `media_store`/`media_view`/`media_pending`/`doc_out` inexistentes, `journal_store.db` y **`guidance_store.db`** ausentes; la app vuelve a ser solo clima (en debug el código de activación se resiembra; en release exigiría reinstalar — P-55) |
 
 ### Bloque C — Plataforma (recomendadas antes del tag, no encadenadas)
 
@@ -394,7 +394,7 @@ de cierre) y la suite completa se re-ejecutó después en verde (§1).
   `EncryptedDatabaseFactory`, `outcomes` sellados con la DEK, `label` del payload
   v3 DENTRO del cifrado, PDF AES-256 R6 con `javax.crypto` sin metadatos de
   autor; (6) manifest fusionado sin permisos ni componentes nuevos (único
-  provider `FileProvider` no exportado con exactamente dos `cache-path`); (7)
+  provider `FileProvider` no exportado con exactamente dos `cache-path`); (8)
   camuflaje — strings nuevos neutros, se RETIRARON `journal_kind_*` de
   `strings.xml`, `resources.arsc` sin términos prohibidos, nombres de BD/
   colecciones/archivos neutros, ids de icono/acento nombran dibujo y matiz, assets

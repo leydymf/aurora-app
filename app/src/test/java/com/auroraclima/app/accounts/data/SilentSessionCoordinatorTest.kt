@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -22,7 +23,8 @@ import org.junit.Test
 
 /**
  * Coordinador del reingreso silencioso (P-31 opción C): confirma en segundo
- * plano, reintenta solo al regresar la red y se limpia con la sesión interna.
+ * plano, reintenta al regresar la red (o con espera creciente acotada, P-81) y
+ * se limpia con la sesión interna.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SilentSessionCoordinatorTest {
@@ -104,8 +106,10 @@ class SilentSessionCoordinatorTest {
     }
 
     @Test
-    fun `un fallo con red viva no reintenta en caliente`() = runTest {
-        // Servicio caído: exige ver la red caer y volver antes de reintentar.
+    fun `un fallo con red viva reintenta con espera creciente y luego solo al volver la red`() = runTest {
+        // Red «disponible» pero el servicio falla (p. ej. DNS aún no listo tras
+        // reconectar, P-81): tres reintentos a 5 s, 15 s y 45 s; después, solo
+        // el regreso de la red vuelve a intentar — sin martillear un servicio caído.
         credentials.save("usuaria@correo.co", "clave-segura-1")
         repository.nextSignInResult = SignInResult.GenericFailure
         val coordinator = createCoordinator()
@@ -115,11 +119,72 @@ class SilentSessionCoordinatorTest {
         assertEquals(SilentSessionState.Offline, coordinator.state.value)
         assertEquals(1, repository.signInCalls)
 
+        advanceTimeBy(4_999)
+        runCurrent()
+        assertEquals(1, repository.signInCalls)
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(2, repository.signInCalls)
+        advanceTimeBy(15_000)
+        runCurrent()
+        assertEquals(3, repository.signInCalls)
+        advanceTimeBy(45_000)
+        runCurrent()
+        assertEquals(4, repository.signInCalls)
+        assertEquals(SilentSessionState.Offline, coordinator.state.value)
+
+        // Esperas agotadas: el tiempo ya no reintenta.
+        advanceTimeBy(600_000)
+        runCurrent()
+        assertEquals(4, repository.signInCalls)
+
         repository.nextSignInResult = SignInResult.Success
         connectivity.online.value = false
         runCurrent()
+        assertEquals(4, repository.signInCalls)
+        connectivity.online.value = true
+        runCurrent()
+        assertEquals(SilentSessionState.SignedIn, coordinator.state.value)
+        assertEquals(5, repository.signInCalls)
+    }
+
+    @Test
+    fun `tras agotar las esperas un regreso de red rearma las esperas`() = runTest {
+        credentials.save("usuaria@correo.co", "clave-segura-1")
+        repository.nextSignInResult = SignInResult.GenericFailure
+        val coordinator = createCoordinator()
+
+        coordinator.start()
+        runCurrent()
+        advanceTimeBy(65_000)
+        runCurrent()
+        assertEquals(4, repository.signInCalls)
+
+        // La red vuelve de verdad: un intento inmediato (falla: DNS aún no listo)…
+        connectivity.online.value = false
+        runCurrent()
+        connectivity.online.value = true
+        runCurrent()
+        assertEquals(5, repository.signInCalls)
+        // …y las esperas vuelven a contar desde 5 s.
+        advanceTimeBy(5_000)
+        runCurrent()
+        assertEquals(6, repository.signInCalls)
+    }
+
+    @Test
+    fun `si la red regresa durante la espera el reintento es inmediato`() = runTest {
+        credentials.save("usuaria@correo.co", "clave-segura-1")
+        repository.nextSignInResult = SignInResult.GenericFailure
+        val coordinator = createCoordinator()
+
+        coordinator.start()
+        runCurrent()
         assertEquals(1, repository.signInCalls)
 
+        repository.nextSignInResult = SignInResult.Success
+        connectivity.online.value = false
+        runCurrent()
         connectivity.online.value = true
         runCurrent()
         assertEquals(SilentSessionState.SignedIn, coordinator.state.value)

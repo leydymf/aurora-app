@@ -160,7 +160,7 @@ El sistema debe limpiar la barra de búsqueda al salir del doble fondo y no regi
 1. Al regresar al clima la barra está vacía.
 2. El código no aparece en historial ni en sugerencias de autocompletado.
 
-*Notas:* -
+*Notas:* **Refinamiento 2026-10-05 (cierre de P-14):** el criterio 2 cubre también la miniatura de recientes — mientras hay texto en la barra la miniatura se oculta (`RecentsThumbnailGuard` en core/security, `setRecentsScreenshotEnabled`, API 33+; el sistema muestra una tarjeta neutra) y se restaura al vaciarla o salir del modo búsqueda; con la búsqueda inactiva la fachada se fotografía normal (no es distinguidor, RF-13/RNF-05). En API < 33 solo queda la limpieza en ON_PAUSE (mejor esfuerzo). ADR 2026-10-05.
 
 ## RF-15 — Inicio de sesión
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-07
