@@ -543,7 +543,7 @@ Solo deben recolectarse los datos definidos en el inventario aprobado (correo, c
 **Criterios de aceptación:**
 1. La auditoría del almacenamiento local y en nube no encuentra datos fuera del inventario aprobado.
 
-*Notas:* Principio de minimización, Ley 1581 de 2012. Inventario de datos como anexo.
+*Notas:* Principio de minimización, Ley 1581 de 2012. Inventario de datos como anexo. *Ampliación 2026-10-05 (P-31 opción C, P-70a):* el inventario LOCAL incluye además las credenciales de la cuenta (correo y contraseña) cifradas en reposo bajo `account_meta` para el reingreso silencioso; no se recolecta ningún dato nuevo de la usuaria, solo se conserva cifrado uno que ya aportaba en cada ingreso.
 
 ## RNF-05 — Camuflaje integral
 **Tipo:** No Funcional · **Prioridad:** Alta · **Dependencias:** RF-01, RF-06

@@ -85,7 +85,7 @@ internal class PdfPageLayout(private val pdf: PDDocument) {
             LABEL_SIZE,
             INK_MUTED,
             MARGIN + BOX_PADDING,
-            cursorY + BAND_HEIGHT - 16f
+            cursorY + BAND_LABEL_BASELINE
         )
         showText(
             target,
@@ -94,7 +94,7 @@ internal class PdfPageLayout(private val pdf: PDDocument) {
             HEADLINE_SIZE,
             INK,
             MARGIN + BOX_PADDING,
-            cursorY + 11f
+            cursorY + BAND_HEADLINE_BASELINE
         )
         cursorY -= LINE_GAP * 2
     }

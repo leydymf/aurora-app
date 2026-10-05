@@ -36,4 +36,11 @@ interface CredentialStore {
 }
 
 /** Par correo/contraseña recién descifrado; vive solo en memoria (P-35/P-47b). */
-data class StoredCredentials(val email: String, val password: String)
+data class StoredCredentials(val email: String, val password: String) {
+    /**
+     * Nunca imprime sus campos: la plantilla del `toString` generado sobrevive a R8 y
+     * un `"$credentials"`, un mensaje de excepción o el depurador filtrarían la
+     * contraseña (auditoría 2026-10-05 M-1; mismo criterio que `JournalExportUiState`).
+     */
+    override fun toString(): String = "StoredCredentials(…)"
+}
