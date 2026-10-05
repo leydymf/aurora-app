@@ -7,7 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -53,10 +53,11 @@ class WeatherSearchBarFocusTest {
         searchBar.performTextInput("B")
         composeRule.waitForIdle()
 
-        // El modo búsqueda quedó activo (apareció el botón de cancelar)…
+        // El modo búsqueda quedó activo (apareció el icono de cancelar; desde la UI V2
+        // es un botón de icono con descripción, no un texto)…
         val cancelLabel = InstrumentationRegistry.getInstrumentation()
             .targetContext.getString(R.string.weather_search_cancel)
-        composeRule.onNodeWithText(cancelLabel).assertExists()
+        composeRule.onNodeWithContentDescription(cancelLabel).assertExists()
         // …y la misma barra conserva el foco, lista para la segunda letra.
         composeRule.onNode(hasSetTextAction()).assertIsFocused()
 
