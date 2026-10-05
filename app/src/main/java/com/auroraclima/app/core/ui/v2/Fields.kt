@@ -29,15 +29,19 @@ import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
 
 /**
- * Kit de formulario del sistema V2 (mockups v2-06/07/09): campo relleno en el
- * lila del separador sobre tarjeta o fondo, esquina de control, error en el rosa
- * de avisos (regla 1: el rosa siempre es aviso). Los campos del mockup llevan un
- * icono decorativo inicial (sobre, candado); se omite a propósito: el candado lo
- * veda la regla 4 y la librería cerrada no tiene sobre — el campo informa por su
- * etiqueta, no por el dibujo (regla 3).
+ * Kit de formulario del sistema V2 (mockups v2-06/07/09): campo blanco con
+ * contorno gris en reposo y tinta principal con foco, esquina de control, error
+ * en el rosa de avisos (regla 1: el rosa siempre es aviso). El relleno es blanco
+ * SIEMPRE, vaya sobre tarjeta o sobre el fondo lila, y el borde en reposo es
+ * `controlOutline` (≥ 3:1 contra ambas superficies, WCAG §1.4.11): el relleno
+ * en el lila del separador se perdía sobre el fondo (1.03:1, hallazgo 2026-10-05
+ * en la confirmación de la clave y las contraseñas de exportación). Los campos
+ * del mockup llevan un icono decorativo inicial (sobre, candado); se omite a
+ * propósito: el candado lo veda la regla 4 y la librería cerrada no tiene sobre
+ * — el campo informa por su etiqueta, no por el dibujo (regla 3).
  *
- * Mismo criterio de ubicación que el kit V1 (FormElements): vive en core porque
- * accounts y access no se importan entre sí (§2 de ARQUITECTURA.md).
+ * Vive en core porque accounts y access no se importan entre sí (§2 de
+ * ARQUITECTURA.md).
  */
 @Composable
 fun V2FieldLabel(text: String, modifier: Modifier = Modifier) {
@@ -74,9 +78,9 @@ fun V2PlainField(
 }
 
 /**
- * Campo de párrafo (texto libre de una anotación, v2-21): tarjeta blanca con
- * el placeholder en tinta secundaria, varias líneas y sin acción de teclado —
- * el salto de línea es escribir.
+ * Campo de párrafo (texto libre de una anotación, v2-21): mismos colores que el
+ * resto del kit, placeholder en tinta secundaria, varias líneas y sin acción de
+ * teclado — el salto de línea es escribir.
  */
 @Composable
 fun V2ParagraphField(
@@ -101,16 +105,7 @@ fun V2ParagraphField(
                 color = V2Palette.inkSecondary
             )
         },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = V2Palette.cardSurface,
-            unfocusedContainerColor = V2Palette.cardSurface,
-            errorContainerColor = V2Palette.cardSurface,
-            focusedBorderColor = V2Palette.inkSecondary,
-            unfocusedBorderColor = V2Palette.divider,
-            errorBorderColor = V2Palette.accentNotice.stroke,
-            cursorColor = V2Palette.inkPrimary,
-            errorCursorColor = V2Palette.accentNotice.stroke
-        )
+        colors = v2FieldColors()
     )
 }
 
@@ -201,13 +196,18 @@ fun V2StepHeader(step: Int, totalSteps: Int, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Colores únicos de los tres campos del kit. Relleno blanco en todo estado; borde
+ * `controlOutline` en reposo (1 dp) y `inkPrimary` con foco (2 dp, grosor que
+ * `OutlinedTextField` ya da por defecto al enfocar); error en el rosa de avisos.
+ */
 @Composable
 private fun v2FieldColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = V2Palette.divider,
-    unfocusedContainerColor = V2Palette.divider,
+    focusedContainerColor = V2Palette.cardSurface,
+    unfocusedContainerColor = V2Palette.cardSurface,
     errorContainerColor = V2Palette.cardSurface,
-    focusedBorderColor = V2Palette.inkSecondary,
-    unfocusedBorderColor = V2Palette.divider,
+    focusedBorderColor = V2Palette.inkPrimary,
+    unfocusedBorderColor = V2Palette.controlOutline,
     errorBorderColor = V2Palette.accentNotice.stroke,
     cursorColor = V2Palette.inkPrimary,
     errorCursorColor = V2Palette.accentNotice.stroke

@@ -24,7 +24,10 @@ private val V2ColorScheme = lightColorScheme(
     onSurface = V2Palette.inkPrimary,
     surfaceVariant = V2Palette.accentGroup.tint,
     onSurfaceVariant = V2Palette.accentGroup.stroke,
-    outline = V2Palette.divider,
+    // Todo componente Material que no sobrescriba `colors` hereda un contorno
+    // ≥ 3:1 (WCAG §1.4.11); el separador fino queda para `HorizontalDivider`.
+    outline = V2Palette.controlOutline,
+    outlineVariant = V2Palette.divider,
     // Errores sin rojo de alarma (decisión F2): el rosa profundo de avisos.
     error = V2Palette.accentNotice.stroke,
     onError = V2Palette.cardSurface

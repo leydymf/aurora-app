@@ -341,13 +341,18 @@ private fun QuestionContent(
     }
 }
 
-/** Chip «Salir» de P16 (RF-28): píldora blanca con la equis de mobiliario. */
+/**
+ * Chip «Salir» de P16 (RF-28): píldora blanca con la equis de mobiliario y el
+ * contorno gris de control, porque va directo sobre el fondo lila (sin borde,
+ * 1.12:1; WCAG §1.4.11 pide ≥ 3:1).
+ */
 @Composable
 private fun ExitChip(onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clip(V2Corner.pill)
             .background(V2Palette.cardSurface)
+            .border(width = 1.dp, color = V2Palette.controlOutline, shape = V2Corner.pill)
             .clickable(onClick = onClick, role = Role.Button)
             .heightIn(min = 36.dp)
             .padding(horizontal = 14.dp, vertical = 8.dp),

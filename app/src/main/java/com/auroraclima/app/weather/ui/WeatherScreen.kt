@@ -3,6 +3,7 @@ package com.auroraclima.app.weather.ui
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -177,7 +178,10 @@ private fun CurrentConditionsSummary(weather: WeatherCardUiState, modifier: Modi
  * Barra de búsqueda de ciudades y, a la vez, puerta del código (RF-12). El cromo
  * activo (flecha de regreso y borrar, v2-02) vive en los SLOTS del TextField:
  * el campo nunca cambia de nodo, así que el foco y el teclado sobreviven a la
- * activación de la búsqueda.
+ * activación de la búsqueda. Sobre el cielo la píldora blanca se recorta sola
+ * (9.7:1); sobre el fondo plano de la búsqueda activa daba 1.12:1, así que en ese
+ * estado lleva un contorno gris neutro de 1 dp (WCAG §1.4.11, ≥ 3:1). Solo el
+ * MODIFICADOR cambia; el nodo es el mismo.
  */
 @Composable
 private fun WeatherSearchBar(
@@ -188,10 +192,15 @@ private fun WeatherSearchBar(
     onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val outline = if (isActive) {
+        Modifier.border(width = 1.dp, color = V2Palette.controlOutline, shape = V2Corner.pill)
+    } else {
+        Modifier
+    }
     TextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = modifier,
+        modifier = modifier.then(outline),
         textStyle = FacadeTypeVoice.body,
         placeholder = {
             Text(

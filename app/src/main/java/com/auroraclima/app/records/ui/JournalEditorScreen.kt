@@ -451,11 +451,12 @@ private fun KindsUnavailableNote(onRetry: () -> Unit, enabled: Boolean) {
 
 /**
  * Tipos como chips de color (v2-21): cada uno con el matiz de su tema —
- * punto del tinte en reposo; tinte, borde y visto al elegirlo, siempre con la
- * etiqueta (regla 3). Un solo gesto y sin menús (decisión F7). FlowRow porque
- * las etiquetas varían de ancho y la V2 respeta la fuente del sistema (D5):
- * una rejilla fija las cortaría; el opt-in experimental queda acotado a este
- * selector.
+ * punto del tinte y contorno gris de control en reposo (la píldora blanca sola
+ * daba 1.12:1 sobre el fondo, bajo el 3:1 de WCAG §1.4.11); tinte, borde y
+ * visto al elegirlo, siempre con la etiqueta (regla 3). Un solo gesto y sin
+ * menús (decisión F7). FlowRow porque las etiquetas varían de ancho y la V2
+ * respeta la fuente del sistema (D5): una rejilla fija las cortaría; el opt-in
+ * experimental queda acotado a este selector.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -481,12 +482,10 @@ private fun KindChip(kind: ResolvedKind, isSelected: Boolean, onSelected: () -> 
         modifier = Modifier
             .clip(V2Corner.pill)
             .background(if (isSelected) accent.tint else V2Palette.cardSurface)
-            .then(
-                if (isSelected) {
-                    Modifier.border(width = 1.2.dp, color = accent.stroke, shape = V2Corner.pill)
-                } else {
-                    Modifier
-                }
+            .border(
+                width = if (isSelected) 1.2.dp else 1.dp,
+                color = if (isSelected) accent.stroke else V2Palette.controlOutline,
+                shape = V2Corner.pill
             )
             .selectable(selected = isSelected, role = Role.RadioButton, onClick = onSelected)
             .heightIn(min = 44.dp)
