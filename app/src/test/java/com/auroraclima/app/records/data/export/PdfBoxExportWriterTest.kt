@@ -113,9 +113,9 @@ class PdfBoxExportWriterTest {
 
         val text = textOf(pdf, "clave-1234")
         assertTrue(text.contains("Sin tipo"))
-        assertTrue(text.contains("Documento adjunto 1 (no incluido)"))
-        assertTrue(text.contains("Audio adjunto 1 (no incluido)"))
-        assertTrue(text.contains("Imagen adjunta 1 (no incluida)"))
+        assertTrue(text.contains("Documento adjunto 1 · no incluido"))
+        assertTrue(text.contains("Audio adjunto 1 · no incluido"))
+        assertTrue(text.contains("Imagen adjunta 1 · no incluida"))
         assertTrue(text.contains("Los adjuntos no se incluyeron"))
         assertEquals(0, imageCount(pdf, "clave-1234"))
     }
@@ -126,7 +126,7 @@ class PdfBoxExportWriterTest {
         val pdf = write(document(entry, includesAttachments = true), "clave-1234")
 
         assertEquals(2, imageCount(pdf, "clave-1234"))
-        assertTrue(textOf(pdf, "clave-1234").contains("Imagen adjunta 2"))
+        assertTrue(textOf(pdf, "clave-1234").contains("Imagen 2 · Registro 1"))
     }
 
     @Test
@@ -140,10 +140,12 @@ class PdfBoxExportWriterTest {
         PDDocument.load(pdf, "clave-1234").use { doc ->
             // Portada con el registro + 2 páginas anexadas, sin hoja vacía al final.
             assertEquals(3, doc.numberOfPages)
+            assertTrue(doc.getPage(0).cosObject.containsKey(COSName.CONTENTS))
             assertTrue(doc.isEncrypted)
         }
         val text = textOf(pdf, "clave-1234")
-        assertTrue(text.contains("Documento adjunto 1: sus 2 páginas van a continuación."))
+        assertTrue(text.contains("Documento adjunto 1 · sus 2 páginas van a continuación"))
+        assertTrue(text.contains("Registro 1 · Documento adjunto 1 · página 2 de 2"))
         assertTrue(text.contains("Contenido ajeno pagina 1"))
         assertTrue(text.contains("Contenido ajeno pagina 2"))
         assertTrue(text.contains("Página 3 de 3"))
@@ -218,6 +220,59 @@ class PdfBoxExportWriterTest {
     }
 
     @Test
+    fun `una pagina anexada rotada y recortada conserva su cabecera y su pie`() {
+        val rotated = PDDocument().use { doc ->
+            val page = PDPage(PDRectangle.LETTER).also { doc.addPage(it) }
+            page.rotation = 90
+            page.cropBox = PDRectangle(30f, 40f, 500f, 700f)
+            PDPageContentStream(doc, page).use { stream ->
+                stream.beginText()
+                stream.setFont(PDType1Font.HELVETICA, 14f)
+                stream.newLineAtOffset(60f, 600f)
+                stream.showText("Escaneo de lado")
+                stream.endText()
+            }
+            ByteArrayOutputStream().also { doc.save(it) }.toByteArray()
+        }
+        val entry = entry(attachments = listOf(AttachmentBytes(AttachmentKind.DOCUMENT, "application/pdf", rotated)))
+        val pdf = write(document(entry, includesAttachments = true), "clave-1234")
+
+        PDDocument.load(pdf, "clave-1234").use { doc ->
+            val appended = doc.getPage(1)
+            assertEquals(90, appended.rotation)
+            val text = PDFTextStripper().apply {
+                startPage = 2
+                endPage = 2
+            }.getText(doc)
+            assertEquals(PDRectangle(30f, 40f, 500f, 700f).toString(), appended.cropBox.toString())
+            assertTrue(text.contains("Registro 1 · Documento adjunto 1 · página 1 de 1"))
+            assertTrue(text.contains("Página 2 de 2"))
+        }
+    }
+
+    @Test
+    fun `lo que sigue a un PDF anexado retoma con la banda de continuacion del registro`() {
+        val entry = entry(
+            attachments = listOf(
+                AttachmentBytes(AttachmentKind.DOCUMENT, "application/pdf", foreignPdf(1)),
+                AttachmentBytes(AttachmentKind.DOCUMENT, "application/pdf", foreignPdf(1))
+            )
+        )
+        val pdf = write(document(entry, includesAttachments = true), "clave-1234")
+
+        PDDocument.load(pdf, "clave-1234").use { doc ->
+            // registro + anexo 1 + página de continuación con la caja del documento 2 + anexo 2
+            assertEquals(4, doc.numberOfPages)
+            val resumed = PDFTextStripper().apply {
+                startPage = 3
+                endPage = 3
+            }.getText(doc)
+            assertTrue(resumed.contains("REGISTRO 1 DE 1 · CONTINUACIÓN"))
+            assertTrue(resumed.contains("Documento adjunto 2"))
+        }
+    }
+
+    @Test
     fun `un PDF cuyo arbol de paginas apunta a objetos inexistentes se cita como no incluido`() {
         val broken = """%PDF-1.4
 1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
@@ -227,7 +282,7 @@ trailer<</Root 1 0 R>>
         val entry = entry(attachments = listOf(AttachmentBytes(AttachmentKind.DOCUMENT, "application/pdf", broken)))
         val pdf = write(document(entry, includesAttachments = true), "clave-1234")
 
-        assertTrue(textOf(pdf, "clave-1234").contains("Documento adjunto 1: no se pudo incluir"))
+        assertTrue(textOf(pdf, "clave-1234").contains("Documento adjunto 1 · no se pudo incluir"))
         PDDocument.load(pdf, "clave-1234").use { assertEquals(1, it.numberOfPages) }
     }
 
@@ -241,7 +296,7 @@ trailer<</Root 1 0 R>>
         val pdf = write(document(entry, includesAttachments = true), "clave-1234")
 
         val text = textOf(pdf, "clave-1234")
-        assertTrue(text.contains("Documento adjunto 1: no se pudo incluir"))
+        assertTrue(text.contains("Documento adjunto 1 · no se pudo incluir"))
         PDDocument.load(pdf, "clave-1234").use { assertEquals(1, it.numberOfPages) }
     }
 
@@ -259,7 +314,7 @@ trailer<</Root 1 0 R>>
             assertArrayEquals(audio, spec.embeddedFile.toByteArray())
             assertEquals(PageMode.USE_ATTACHMENTS, doc.documentCatalog.pageMode)
         }
-        assertTrue(textOf(pdf, "clave-1234").contains("Audio adjunto 1: incluido como archivo «audio_1.wav»"))
+        assertTrue(textOf(pdf, "clave-1234").contains("Audio adjunto 1 · archivo «audio_1.wav»"))
         // Incrustado Y cifrado: los bytes del audio no aparecen en claro en el archivo.
         assertFalse(String(pdf, Charsets.ISO_8859_1).contains(String(audio.copyOfRange(0, 64), Charsets.ISO_8859_1)))
     }
@@ -286,8 +341,8 @@ trailer<</Root 1 0 R>>
         }
         val text = textOf(pdf, "clave-1234")
         // El rótulo visible numera por registro; el nombre del archivo, por documento.
-        assertTrue(text.contains("Audio adjunto 1: incluido como archivo «audio_1.mp3»"))
-        assertTrue(text.contains("Audio adjunto 1: incluido como archivo «audio_2.wav»"))
+        assertTrue(text.contains("Audio adjunto 1 · archivo «audio_1.mp3»"))
+        assertTrue(text.contains("Audio adjunto 1 · archivo «audio_2.wav»"))
     }
 
     @Test

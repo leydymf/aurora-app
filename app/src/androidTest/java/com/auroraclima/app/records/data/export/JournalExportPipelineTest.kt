@@ -94,7 +94,7 @@ class JournalExportPipelineTest {
             assertTrue(text.contains("2 de julio de 2026"))
             assertTrue(text.contains("Segunda"))
             assertTrue(text.contains("relato de prueba con tilde y ñ"))
-            assertTrue(text.contains("Audio adjunto 1: incluido como archivo «audio_1.wav»"))
+            assertTrue(text.contains("Audio adjunto 1 · archivo «audio_1.wav»"))
             val images = pdf.pages.sumOf { p -> p.resources.xObjectNames.count { p.resources.isImageXObject(it) } }
             assertEquals(1, images)
             assertEquals(setOf("audio_1.wav"), pdf.documentCatalog.names.embeddedFiles.names.keys)
