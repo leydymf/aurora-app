@@ -192,8 +192,8 @@
     <string name="guidance_intro_point_pace_body">Puedes devolverte, dejar preguntas sin responder o salir cuando quieras.</string>
     <string name="guidance_intro_point_discard_title">Si sales, se borra</string>
     <string name="guidance_intro_point_discard_body">Tus respuestas se descartan por completo.</string>
-    <string name="guidance_intro_point_once_title">Una sola vez</string>
-    <string name="guidance_intro_point_once_body">El resultado se muestra al terminar y no se guarda.</string>
+    <string name="guidance_intro_point_choice_title">Tú decides</string>
+    <string name="guidance_intro_point_choice_body">El resultado se muestra al terminar y solo se guarda si tú lo eliges.</string>
     <string name="guidance_start">Comenzar cuando estés lista</string>
     <string name="guidance_not_now">Ahora no</string>
     <string name="guidance_question_tag">Pregunta %1$d de %2$d</string>

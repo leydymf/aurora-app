@@ -272,6 +272,27 @@ y se engrosa con foco, error en rosa, chips de tipo sin elegir con contorno
 gris; la barra de la fachada NO cambia sobre el cielo y muestra el contorno solo
 al buscar, la del tutorial siempre.
 
+### Avance de la corrida (2026-10-05, ejecutada por adb desde Claude Code; detalle en `docs/PENDIENTES.md` P-80..P-82)
+
+| Paso | Estado | Nota |
+|---|---|---|
+| 0 | ✅ 42/42 | Tras corregir `WeatherSearchBarFocusTest` (buscaba un texto que la UI V2 convirtió en icono; commit `e3c74e7`) |
+| A1 | ✅ / ⚠️ P-14 | RF-13 idéntico píxel a píxel bajo la barra; **la miniatura de recientes sí muestra el código a medias** (P-14, mitigación pendiente de decisión) |
+| A2 | ✅ | Consentimiento, cuenta nueva, reglas de la clave en vivo, «Saltar por ahora» → Inicio. Resta el repaso del tutorial desde Ajustes (RF-11) |
+| A3 | ✅ | Reingreso cae en Inicio (P-67); prefs solo Base64 (`search_index`, `account_meta`, `backup_meta`); consola `profile g=1` |
+| A4 | ✅ / ❌ paso 2 | Entrada sin red con chip, Guía y 6 tipos desde caché, validaciones y guardado sin red, nube + reentrada. **Al volver la red el chip no desapareció ni subió el registro** (P-81); subió en el siguiente login confirmado |
+| A5 | ✅ | Cerrar sesión destruye el blob; login manual; P-29 completo (mensaje único, pausa 5:00 que se retoma tras forzar detención, acceso normal al expirar); blob renace |
+| A6 | ✅ parcial | t05/t06 ya publicados en producción con esquema v2; 6 tipos en la Guía; fidelidad visual pendiente (capturas negras por FLAG_SECURE) |
+| A7 | ✅ | P-46 completo salvo FLAG_SECURE del selector (no verificable por adb): fecha con selector (en inglés por la locale del emulador), orden, detalle, edición (mismo doc), edición y borrado sin red con propagación, doble confirmación, nube a mitad (borrador no persiste), >5 min tecleando sin expirar |
+| A8 | ✅ parcial | Photo Picker sin permisos, ida y vuelta directa, dos fotos adjuntas y guardadas; con el selector de documentos abierto >5 min, al volver se aterriza en la fachada (esperado). **Resta:** registro con PDF + audio, cámara, visor, Device Explorer de `media_store`, «×», tope de 10 |
+| A9–A14, B, P, C | ⏳ | Pendientes: el emulador (1 núcleo / 2 GB) se saturó repetidamente — ver P-82 |
+| Nuevos por el ADR 2026-10-05 | ⏳ | (1) **CP-34 / C1 (RNF-07):** instalar el APK nuevo, `adb shell am force-stop com.auroraclima.app` y arrancar en frío 3 veces: sin «failed to complete startup» y fachada en ≤ 3 s. (2) **Regresión H-1 (RF-20):** con sesión abierta y datos apagados, «Eliminar todo y salir» con la doble confirmación (la parte remota falla y la marca queda izada) → cerrar la app → datos encendidos → reabrir: al reingresar no queda ningún registro/resultado/adjunto local y la marca baja en el siguiente arranque |
+
+Hallazgo de código corregido en esta corrida: Aurora dejó de completar el arranque
+(«failed to complete startup») porque el grafo de Hilt construía Firestore y
+FirebaseAuth en el hilo principal durante `Application.onCreate` — ADR 2026-10-05
+y P-80. Texto de la portada del cuestionario alineado con RF-31.
+
 ### Paso 0 — Instrumentadas (una vez, emulador A arriba, antes de instalar)
 
 | # | Qué correr | Resultado esperado |

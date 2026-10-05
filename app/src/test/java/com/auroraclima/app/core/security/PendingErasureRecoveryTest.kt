@@ -1,5 +1,6 @@
 package com.auroraclima.app.core.security
 
+import javax.inject.Provider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,9 +39,18 @@ class PendingErasureRecoveryTest {
     @Test
     fun `sin marca izada el arranque no borra nada`() = runTest {
         val eraser = CountingEraser()
-        PendingErasureRecovery(FakeFlag(raised = false), setOf(eraser)).initialize()
+        var resolved = false
+        PendingErasureRecovery(
+            FakeFlag(raised = false),
+            Provider {
+                resolved = true
+                setOf(eraser)
+            }
+        ).initialize()
 
         assertEquals(0, eraser.calls)
+        // Con la marca abajo el conjunto ni siquiera se construye (ADR 2026-10-05).
+        assertFalse(resolved)
     }
 
     @Test
@@ -49,7 +59,7 @@ class PendingErasureRecoveryTest {
         val first = CountingEraser()
         val second = CountingEraser()
 
-        PendingErasureRecovery(flag, linkedSetOf(first, second)).initialize()
+        PendingErasureRecovery(flag, Provider { linkedSetOf(first, second) }).initialize()
 
         assertEquals(1, first.calls)
         assertEquals(1, second.calls)
@@ -62,7 +72,7 @@ class PendingErasureRecoveryTest {
         val failing = CountingEraser(failure = IllegalStateException())
         val healthy = CountingEraser()
 
-        PendingErasureRecovery(flag, linkedSetOf(failing, healthy)).initialize()
+        PendingErasureRecovery(flag, Provider { linkedSetOf(failing, healthy) }).initialize()
 
         assertEquals(1, failing.calls)
         assertEquals(1, healthy.calls)

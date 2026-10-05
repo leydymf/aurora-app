@@ -232,8 +232,8 @@ private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss:
                 IconListRow(
                     iconRes = V2Icons.info,
                     accent = V2Palette.accentJustice,
-                    title = stringResource(R.string.guidance_intro_point_once_title),
-                    supportingText = stringResource(R.string.guidance_intro_point_once_body)
+                    title = stringResource(R.string.guidance_intro_point_choice_title),
+                    supportingText = stringResource(R.string.guidance_intro_point_choice_body)
                 )
             }
             Spacer(modifier = Modifier.height(14.dp))

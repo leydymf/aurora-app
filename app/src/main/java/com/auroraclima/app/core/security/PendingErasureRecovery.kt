@@ -2,6 +2,7 @@ package com.auroraclima.app.core.security
 
 import com.auroraclima.app.core.startup.AppInitializer
 import javax.inject.Inject
+import javax.inject.Provider
 
 /**
  * Tarea de arranque (RF-20, auditoría H-1): si quedó izada la marca de borrado
@@ -12,11 +13,13 @@ import javax.inject.Inject
  */
 class PendingErasureRecovery @Inject constructor(
     private val pendingErasure: PendingErasureFlag,
-    private val localErasers: Set<@JvmSuppressWildcards LocalAccountDataEraser>
+    // Provider y no Set: el conjunto arrastra Firestore/FirebaseAuth y solo se
+    // construye si la marca está izada (ADR 2026-10-05, RNF-07).
+    private val localErasers: Provider<Set<@JvmSuppressWildcards LocalAccountDataEraser>>
 ) : AppInitializer {
     override suspend fun initialize() {
         if (!pendingErasure.isRaised()) return
-        val allErased = localErasers.fold(true) { allSoFar, eraser ->
+        val allErased = localErasers.get().fold(true) { allSoFar, eraser ->
             runCatching { eraser.erase() }.isSuccess && allSoFar
         }
         // Si algo volvió a fallar, la marca queda izada y el siguiente arranque
