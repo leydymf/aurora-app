@@ -1,31 +1,37 @@
 # Aurora — Resultados de pruebas (cierre de `mejoras-v3` + tipos dinámicos + RF-45 · previo a la corrida manual final)
 
 > Evidencia para el informe. Corrida del **2026-10-05** sobre el árbol completo
-> (app + panel), rama `feat/tipos-dinamicos-y-exportacion` (29 commits sobre
+> (app + panel), rama `feat/tipos-dinamicos-y-exportacion` (34 commits sobre
 > `main`; los 18 primeros son la rama `mejoras-v3`), previa a las corridas
 > manuales finales, al merge a `main` y al tag que la usuaria decida crear
-> después. Alcance funcional del diff `main..HEAD` (207 archivos,
-> +10 644/−800): tutorial saltable (RF-10), esquema v2 de contenido con
+> después. Alcance funcional del diff `main..HEAD` (214 archivos,
+> +11 225/−1 054): tutorial saltable (RF-10), esquema v2 de contenido con
 > icono/acento elegibles desde el panel (RF-21/22/41/42), resultado del
 > cuestionario con colores semafóricos (RF-29/30, reversión informada de P-41)
 > y **guardado opcional del resultado (RF-31)**, **reingreso silencioso (P-31
 > opción C)** con entrada local sin red (RF-12/15/19/20, RNF-08), **tipos del
 > registro conectados a la Guía (P-68: Room v5, payload v3)**, **exportación
 > selectiva a PDF con contraseña (RF-45)** y el contraste de campos y controles
-> (WCAG 1.4.11). La línea base de comparación es la corrida v0.3.0 · UI V2
+> (WCAG 1.4.11), más los tres ajustes que dejó la corrida manual por adb del
+> mismo día: arranque sin Firebase en el hilo principal (RNF-07, P-80),
+> miniatura de recientes sin la barra al buscar (RF-14, P-14) y reintento
+> acotado del reingreso silencioso (P-81); y las dos correcciones que pidió la
+> auditoría final de seguridad (latch de la miniatura contra el ciclo de vida y
+> contención de fallos en el arranque, §9.2). La línea base de comparación es la corrida v0.3.0 · UI V2
 > (2026-08-12, rama `ui-v2`, hoy fusionada en `main`).
 
-## 1. Resumen de la corrida automatizada (2026-10-05)
+## 1. Resumen de la corrida automatizada (2026-10-05, corrida final de cierre)
 
 Comandos: `./gradlew cleanTestDebugUnitTest cleanTestReleaseUnitTest test
-ktlintCheck lint assembleDebug assembleRelease` → **BUILD SUCCESSFUL** (1 min
-16 s, 137 tareas); en `admin/`: `npm run test`, `npm run lint`, `npm run build`
+ktlintCheck lint assembleDebug assembleRelease` → **BUILD SUCCESSFUL** (28 s,
+137 tareas — solo las de pruebas se re-ejecutaron por el `clean…` explícito;
+compilación, lint y los dos APK ya estaban al día de este mismo `HEAD`); en `admin/`: `npm run test`, `npm run lint`, `npm run build`
 → todo en verde. Los tests unitarios se re-ejecutaron forzando la limpieza
 previa (mismo criterio anti-caché de las corridas v0.2.0 y v0.3.0).
 
 | Métrica | v0.3.0 · V2 (2026-08-12) | Hoy (2026-10-05) |
 |---|---|---|
-| Pruebas unitarias JVM | 529 por variante (75 clases) | **707 por variante — debug y release, 1 414 ejecuciones, 0 fallos, 0 errores, 0 omitidas (98 clases)** |
+| Pruebas unitarias JVM | 529 por variante (75 clases) | **720 por variante — debug y release, 1 440 ejecuciones, 0 fallos, 0 errores, 0 omitidas (100 clases)** |
 | ktlint | Sin violaciones | **Sin violaciones** |
 | Lint | 0 errores · 56 warnings | **0 errores · 58 warnings** (+2 explicados abajo, ninguno nuevo de fondo) |
 | `assembleDebug` / `assembleRelease` (R8 + shrink) | OK | **OK** (§2, §3) |
@@ -37,10 +43,14 @@ Prettier por el texto de ayuda de `ContentPage.tsx` (párrafo que explica que lo
 tipos publicados son también las opciones del registro); se reformateó sin
 cambiar una letra y la segunda pasada quedó limpia. Es parte de este commit.
 
-La suite corrió dos veces: la primera (705 × 2, 97 clases) sobre `HEAD`; la
-segunda, con los mismos resultados en lint/ktlint/APK, tras aplicar las dos
-correcciones de los agentes (§9) y sumar `StoredCredentialsTest` (2). Los
-**+178 tests / +23 clases** se reparten por feature (clase nueva o
+La suite corrió tres veces el 2026-10-05, siempre con los mismos resultados en
+lint/ktlint/APK: 705 × 2 (97 clases) sobre el cierre de RF-45; 707 × 2 tras las
+dos correcciones de la pasada intermedia de agentes (§9.1, `StoredCredentialsTest`);
+710 × 2 tras los tres commits que dejó la corrida manual por adb (`d5e1dc2`,
+`429f283`, `e3c74e7`); y **720 × 2 en la corrida final**, tras las dos
+correcciones que pidió la auditoría final y la segunda vuelta de la primera de
+ellas (§9.2: `RecentsThumbnailGuardTest` 6, `AppStartupTest` 3 y un cuarto caso
+de `PendingErasureRecoveryTest`). Los **+191 tests / +25 clases** se reparten por feature (clase nueva o
 ampliada → `@Test` totales hoy):
 
 | Feature | Clases nuevas | Ampliadas |
@@ -52,6 +62,8 @@ ampliada → `@Test` totales hoy):
 | Tipos dinámicos (P-68) | `CategoryContentProviderTest` 3, `ResolvedKindTest` 5, `LoadEntryKindsUseCaseTest` 2, `JournalDatabaseMigrationTest` 6 | `JournalEditorViewModelTest` 33, `JournalDetailViewModelTest` 12, `FirestoreJournalSyncRepositoryTest` 15 (payload v3), `JournalSyncReconcilerTest` 9, `LocalJournalRepositoryTest` 6 |
 | RF-45 exportación | `ExportPolicyTest` 5, `BuildExportDocumentUseCaseTest` 9, `LoadExportSummaryUseCaseTest` 3, `JournalExportViewModelTest` 13, `LocalJournalExportRepositoryTest` 8, `PdfBoxExportWriterTest` 16 | `JournalListViewModelTest` 15, `ManifestMinimizationTest` 7 |
 | Contraste WCAG 1.4.11 | `PaletteContrastTest` 7 | — |
+| Corrida manual por adb (RNF-07 · P-14 · P-81) | — | `PendingErasureRecoveryTest` **4** (la cascada de RF-20 solo se resuelve con la marca izada; y si el conjunto ni se puede construir, la marca sigue izada), `NoTracesGuardTest` 8 (+1: `RecentsThumbnailGuard` acotado a ese único archivo), `SilentSessionCoordinatorTest` 10 (+2: esperas 5/15/45 s y rearme por regreso de red, tiempo virtual) |
+| Correcciones de la auditoría final (§9.2) | `RecentsThumbnailGuardTest` 6 (la decisión del latch como lógica pura: no restaurar la miniatura con la fachada en segundo plano, y restaurarla siempre al dejarla), `AppStartupTest` 3 (una tarea que lanza no impide las siguientes ni propaga; un conjunto que no se puede construir tampoco) | — |
 | Panel (`admin/`) | `contentVisuals.test.ts` 5 | `topicSchema.test.ts` 14, `schemas.test.ts` 18 (icono/acento v2) |
 
 **Guarda del sistema visual en verde sobre TODO el código**:
@@ -77,20 +89,22 @@ clases / 42 `@Test`** (v0.3.0: 8 / ~29). Nuevas: `LocalCredentialStoreTest`
 (11 — ida y vuelta, adulteración, mitad presente, relleno fijo B-1) y
 `JournalExportPipelineTest` (2 — Keystore → PDF → FileProvider → barrido);
 `EncryptedDatabaseFactoryTest` (3) ganó el centinela en `label` de la migración
-Room v5. Se ejecutan con `./gradlew connectedDebugAndroidTest` en la pasada
-bloqueante de emulador (§8, paso 0).
+Room v5; `WeatherSearchBarFocusTest` se ajustó a la UI V2 (`e3c74e7`). Se
+ejecutan con `./gradlew connectedDebugAndroidTest`: **42/42 en verde en el
+emulador el 2026-10-05** (§8, paso 0 ✅).
 
 ## 2. R8 — Ofuscación del release con los símbolos nuevos (RNF-05)
 
 `assembleRelease` con `isMinifyEnabled = true` + `isShrinkResources = true`.
 Verificación de hoy sobre `app-release.apk` con `apkanalyzer dex packages
---defined-only` (8 457 clases en el DEX):
+--defined-only` (8 462 clases en el DEX):
 
 | Nombre buscado en clases propias (`com.auroraclima`) | Coincidencias |
 |---|---|
 | Sets históricos v0.1.0–v0.3.0 (`SessionManager`, `Secure*`, `Secret*`, `Dek*`, `*Media*`, `*Erasure*`, `V2*`, `InnerTabsHost`, `SecureSheet`, …) | **0** (sin regresión) |
 | **Nuevos mejoras-v3**: `Silent*`, `*Credential*`, `Connectivity*`, `*Outcome*`, `GuidanceSeverity`, `GuidanceHistory*`, `*Saved*` | **0** |
 | **Nuevos tipos dinámicos / RF-45**: `*Catalog*`, `ResolvedKind`, `LegacyKindCodes`, `*Export*`, `PdfBox*`, `ExportStaging*`, `ShareUriResolver`, `SystemLauncher`, `DayProvider` | **0** |
+| **Nuevos tras la corrida manual y las correcciones**: `*Recents*`, `*Thumbnail*`, `*Trigger*`, `SearchChanged`, `*Decision*`, `*Startup*`, `AppInitializer`, `PendingErasure*` | **0** (las únicas coincidencias son tres `Initializer` de AndroidX). Repetido sobre el APK final, a pedido de la auditoría, porque los nombres de un `enum` pueden sobrevivir a R8 |
 
 Clases propias con nombre legible: **las cuatro de siempre más una del mismo
 tipo** — `AuroraApplication` y `MainActivity` (manifest / identidad de clima),
@@ -104,7 +118,13 @@ legible; quedan 23 clases `a`…`l` bajo tres paquetes `documentinterchange`
 (nombres de paquete genéricos de la librería, sin término propio). Ningún
 `com.tom_roush.*` con nombre de clase original.
 
-**Estado (2026-10-05): VERIFICADO — ningún símbolo nuevo legible en el DEX.**
+**Estado (2026-10-05, APK final de la rama, con las correcciones de §9.2):
+VERIFICADO — ningún símbolo nuevo legible en el DEX.** Residual **A-4 → P-78**:
+el `keep` de reflexión de Room conserva la RUTA del paquete, de modo que
+`com/auroraclima/app/questionnaire/data/local/GuidanceDatabase` deja legible el
+segmento `questionnaire` — término que `CamouflageResourcesTest` sí veda en
+recursos. El rename `questionnaire`→`form` lo resuelve junto con las plantillas
+de `toString` de P-78, antes del piloto.
 
 ## 3. Manifest fusionado y tamaño del APK release
 
@@ -132,8 +152,10 @@ almacenamiento.
 | `ui-v2` cierre (2026-08-12) | 23 261 848 |
 | Base `26aaac1` (mejoras-v3 + tipos dinámicos, antes de RF-45) | 23 303 904 |
 | RF-45 (2026-10-03) | 23 915 494 |
-| **Hoy (2026-10-05, con contraste)** | **23 915 494** |
-| **Delta total sobre v0.3.0** | **+653 646 B (+2,8 %)** |
+| Contraste WCAG (`280ef43`, 2026-10-05) | 23 915 494 |
+| `429f283` (guard de recientes + reintento P-81) | 23 915 518 |
+| **Hoy (2026-10-05, con las correcciones de §9.2)** | **23 915 518** (sin cambio medible) |
+| **Delta total sobre v0.3.0** | **+653 670 B (+2,8 %)** |
 
 De ese delta, +42 KB son todo mejoras-v3 + tipos dinámicos (código y strings) y
 +611 KB es RF-45: PdfBox-Android **sin BouncyCastle** (la exclusión evita ≈11 MB
@@ -159,12 +181,12 @@ respecto de v0.3.0 en **negrita**.
 | CP-04 | RF-07 | PASA + MANUAL (§8-A2) | Auto: `CreateAccountViewModelTest` (10), `CreateAccountUseCaseTest` (**11 — al crear la cuenta se guardan las credenciales cifradas para el reingreso silencioso**), `FirebaseAuthRepositoryTest` (15). |
 | CP-05 | RF-08, RF-09 | PASA + MANUAL ✅/parcial (§8-A3) | Auto: como v0.2.0. P-53 ✅; resta Device Explorer (P-28), **ahora junto a `account_meta.xml`** (§8-A3). |
 | CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ + **§8-A2** | Auto: `TutorialViewModelTest` (**10 — «Saltar por ahora»: el salto fija el logro sin práctica y la práctica sigue disponible desde Ajustes**), `TutorialUiStateTest` (5). P-34/P-53 ✅ (tutorial completo); **el salto se verifica en §8-A2**. |
-| CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (§8-A1) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4). P-11/P-14 bloqueantes (§8-A1). **El reingreso silencioso no toca la barra: el código sigue siendo la única puerta (RF-12).** |
+| CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (§8-A1) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4), **`NoTracesGuardTest` (8 — `RecentsThumbnailGuard` es el único archivo que toca la miniatura de recientes) y `RecentsThumbnailGuardTest` (6 — la decisión del latch, aislada como lógica pura porque la API de Android no expone getter del flag)**. **P-14 ✅ (2026-10-05): la miniatura SÍ mostraba el código a medias; la guard (API 33+, solo mientras se busca) se re-verificó en emulador con el APK `429f283`, y la auditoría final (A-1) la enganchó al ciclo de vida para cerrar la carrera sub-frame con la limpieza de ON_PAUSE.** P-11 bloqueante y **P-84 (residual: bajo API 33 no hay API y queda solo ON_PAUSE — se mira en §8-C2)**. P-11 en §8-A1. **El reingreso silencioso no toca la barra: el código sigue siendo la única puerta (RF-12).** |
 | CP-08 | RF-15 | PASA + MANUAL (§8-A4/A5) | Auto: `SignInUseCaseTest` (16), `LoginViewModelTest` (11), **`SilentSignInUseCaseTest` (9 — éxito, rechazo definitivo destruye el blob, deshacer bajo `NonCancellable` tras la salida), `SilentSessionCoordinatorTest` (10 — local-first, confirmación en segundo plano, monitor de red, reintento acotado con espera creciente P-81), `SilentSessionViewModelTest` (2); instrumentada `LocalCredentialStoreTest` (11)**. Manual: P-29 (login manual) y **P-71 (reingreso silencioso)** en §8-A4/A5. |
 | CP-09 | RF-16 | PASA + MANUAL (§8-A4, A11) | Auto: `SessionManagerTest` (20), `SecureFlagLedgerTest` (5), **`SilentSignInUseCaseTest` (la salida rápida con el silencioso en vuelo deshace el login)**. Manual: P-27 (§8-A11) y **P-71(7)** (§8-A4). |
 | CP-10 | RF-17, RF-18 | PASA + MANUAL ✅ | Auto: `ConsentViewModelTest` (2). P-53 ✅; visual V2 en §8-A2. |
 | CP-11 | RF-19 | PASA + MANUAL ✅ + **§8-A5** | Auto: **`SignOutViewModelTest` (2 — cerrar sesión destruye el blob de credenciales y converge en `quickExit`)**, `SignOutSessionCleanupTest`. P-53 ✅; **P-71(4): tras cerrar sesión el reingreso exige código + credenciales** (§8-A5). |
-| CP-12 | RF-20 | PASA + MANUAL ✅ + **§8-A14** | Auto: como v0.2.0 + **`OutcomeErasersTest` (2 — cascada sobre `guidance_store.db` y `outcomes`) y `StoredCredentialsEraser` (vía `LocalAccountEraser`)**. P-54 E2E ✅; **P-71(5) `account_meta` inexistente y cascada de RF-31/RF-33** en §8-A14. |
+| CP-12 | RF-20 | PASA + MANUAL ✅ + **§8-A14** | Auto: como v0.2.0 + **`OutcomeErasersTest` (2 — cascada sobre `guidance_store.db` y `outcomes`) y `StoredCredentialsEraser` (vía `LocalAccountEraser`)**. P-54 E2E ✅; **P-71(5) `account_meta` inexistente y cascada de RF-31/RF-33** en §8-A14. **Regresión H-1 tras el ADR 2026-10-05: `PendingErasureRecoveryTest` (4) fija que la cascada local NO se construye en arranques normales, SÍ con la marca izada, y que si el conjunto ni se puede construir la marca sigue izada (nada se da por borrado); `AppStartupTest` (3) fija que un fallo de arranque no tumba el proceso ni impide las demás tareas (auditoría final A-2). La prueba manual va en §8-A14.** |
 | CP-13 | RF-21, RF-22 | PASA + MANUAL (§8-A6, P1) | Auto: `TopicsViewModelTest` (3), `TopicDetailViewModelTest` (4), `RoutesViewModelTest` (3), `FirestoreContentRepositoryTest` (**14 — esquema v2 `icon`/`accent` con degradación por campo al mapeo automático, RF-25**), `ContentDocumentParsingTest` (9), **`ContentVisualTest` (8 — biblioteca cerrada de iconos/acentos, id desconocido → neutro), `CategoryContentProviderTest` (3 — los topics publicados son el catálogo de tipos del registro, P-68)**. Contenido real ✅ (P-50/P-57); **t05/t06 validados, publicación durante §8-A6**; visual y panel en §8-A6/P1. |
 | CP-14 | RF-23 | PASA + MANUAL (§8-A11) | Auto: `AgencyDetailViewModelTest` (5), `LinesViewModelTest` (3). P-26 bloqueante (§8-A11). |
 | CP-15 | RF-24, RF-25 | PASA + MANUAL ✅ | Auto: parsing tolerante (`ContentDocumentParsingTest` 9 + 11). P-50 E2E ✅ (2026-07-17, §7). **La tolerancia cubre el esquema v2: campos ausentes o ids fuera de la biblioteca degradan sin tumbar el fetch.** |
@@ -186,7 +208,7 @@ respecto de v0.3.0 en **negrita**.
 | CP-31 | RNF-04 | PASA + MANUAL parcial | Auto: `NoTracesGuardTest` (8), `ManifestMinimizationTest` (7) + §3 (permisos idénticos hoy). **RF-31 persiste solo fecha + nivel + tipos; el PDF exportado solo lleva lo que la usuaria marcó.** |
 | CP-32 | RNF-05 | PASA + MANUAL (§8-A1) | Auto: `CamouflageResourcesTest` + DEX §2 (**hoy: 0 símbolos nuevos legibles; `GuidanceDatabase` neutro como `JournalDatabase`**). **El permiso `ACCESS_NETWORK_STATE`, ahora declarado por la app, es de nivel normal y plausible en una app de clima** (§3). Residual P-78 (plantillas `toString` en el DEX). |
 | CP-33 | RNF-06 | PASA ✅ | `firestore.rules` **sin cambios en el diff**: `outcomes` y `account_meta` (local) no exigen regla nueva — `/users/{uid}/**` ya cubre `outcomes`. Playground 10/10 ✅ (2026-07-15/17). |
-| CP-34 | RNF-07 | MANUAL (§8-C1) | Gama media: arranque ≤ 3 s, interacción ≤ 2 s. **Añadir la generación de un PDF con adjuntos (RF-45) y la primera entrada sin red al cronómetro.** |
+| CP-34 | RNF-07 | MANUAL (§8-C1) | Gama media: arranque ≤ 3 s, interacción ≤ 2 s. **Añadir la generación de un PDF con adjuntos (RF-45) y la primera entrada sin red al cronómetro. Nuevo (ADR 2026-10-05, P-80): tres arranques en frío tras `am force-stop` sin «failed to complete startup» — el grafo de Hilt ya no construye Firestore/FirebaseAuth en el hilo principal.** |
 | CP-35 | RNF-09 | NO APLICA | Evaluación heurística formal de usabilidad (posterior). |
 | CP-36 | RNF-10 | MANUAL (§8-C2) | API 26: componentes V2 **+ exportación (PdfBox en minSdk) + selector de documentos**. |
 | CP-37 | RNF-11 | PASA | Pasada final de `revisora-arquitectura` sobre el diff completo `main..HEAD` (§9). |
@@ -194,12 +216,28 @@ respecto de v0.3.0 en **negrita**.
 
 ### Cobertura resumida (2026-10-05)
 
-**44 de 45 RF con cobertura automatizada** (v0.3.0: 42 de 44). Entran RF-31
-(antes trabajo futuro) y RF-45 (nuevo). El único RF sin prueba propia sigue
-siendo **RF-38** (sincronización diferida): la provee la cola durable de
-Firestore y se verificó manualmente en P-49 (2026-07-15), con repetición en
-§8-A4 (entrada sin red → reconexión). Los 11 RNF mantienen su cobertura
-(automatizada donde aplica; RNF-07/09/10 son de plataforma y usabilidad).
+**44 de 45 RF con cobertura automatizada** (v0.3.0: 42 de 44). Entran **RF-31**
+(antes trabajo futuro) y **RF-45** (nuevo), los dos RF que creció el alcance de
+la rama; los 42 anteriores conservan su cobertura y **ninguno la perdió**. El
+único RF sin prueba propia sigue siendo **RF-38** (sincronización diferida): la
+provee la cola durable de Firestore y se verificó manualmente en P-49
+(2026-07-15), con repetición en §8-A4 (entrada sin red → reconexión). Se
+mantiene el criterio conservador de v0.2.0 de no contarlo, aunque
+`FirestoreJournalSyncRepositoryTest` ya ejercite el encolado.
+
+Los **11 RNF** mantienen su cobertura y dos la ganaron o la ampliaron en esta
+rama: **RNF-08** (entrada local sin red, por las tres suites del reingreso
+silencioso) y **RNF-07**, que pasó de «solo plataforma» a tener una prueba
+propia — `PendingErasureRecoveryTest` fija que el arranque no construye la
+cascada de borrado sin la marca izada (el eslabón que rompía el arranque antes
+del ADR 2026-10-05) y `AppStartupTest` que ningún fallo de una tarea de arranque
+tumba el proceso. La medición de tiempos de RNF-07 sigue siendo manual (§8-C1),
+igual que RNF-09 (usabilidad, trabajo posterior) y RNF-10 (API 26, §8-C2).
+
+| Alcance | Con cobertura automatizada | Solo manual / futuro |
+|---|---|---|
+| **RF (45)** | **44** | RF-38 (cola de Firestore, manual en P-49 y §8-A4) |
+| **RNF (11)** | 9 (incluye RNF-07 parcial y RNF-08 nuevo) | RNF-09 (heurística posterior), RNF-10 (§8-C2) |
 
 ## 5. Pasadas manuales ya ejecutadas por la usuaria (integradas)
 
@@ -217,6 +255,7 @@ Firestore y se verificó manualmente en P-49 (2026-07-15), con repetición en
 | Siembra P-57 (contenido verificado) | 2026-07-22 | ✅ 4 topics / 5 lines / 3 routes / 24 agencies en producción |
 | **RF-45 revisión en emulador (parcial)** | 2026-10-03 | ✅ PDF con adjuntos abierto en Acrobat/Chrome/Drive: páginas anexadas, audio incrustado, jerarquía visual; motivó los commits `4c9ad3e`/`816a7d6`. **CP-38 completo sigue en §8-A10** |
 | **B8 contraste (parcial)** | 2026-10-05 | ✅ Exportación y clave personal vistas con el contorno nuevo; **resto de pantallas en §8 (transversal)** |
+| **Corrida por adb, §8 pasos 0–A8** | 2026-10-05 | ✅ Paso 0 (42/42), A1–A5 y A7 completos, A6/A8 parciales (tabla de avance en §8); **P-14 y P-81 re-verificados con el APK `429f283`**; dejó P-80..P-82 y el ADR 2026-10-05 |
 
 > Estas pasadas validaron comportamiento y siguen contando; su componente
 > visual V2 y los flujos nuevos se recorren en la lista única de §8.
@@ -248,18 +287,25 @@ APROBADO. *(v0.2.0: helpers extraídos a `core/network/FirestoreDocumentParsing.
 
 Todo lo manual que resta está aquí y solo aquí. Reemplaza las §8 de v0.2.0 y
 v0.3.0 e integra **P-71** (reingreso silencioso), **P-73(c)** (tipos conectados a
-la Guía), **CP-38** (exportación), **CP-19** (RF-31) y la verificación visual V2
-que seguía pendiente. Los pasos numerados completos de cada P-xx están en su
-entrada de `docs/PENDIENTES.md`; aquí va el resumen ejecutable, el resultado
-esperado y el orden.
+la Guía y al registro), **CP-38** (exportación), **CP-19** (RF-31), las dos
+pruebas que dejó el ADR 2026-10-05 (arranque en frío ×3 en C1 y regresión H-1
+en A14) y la verificación visual V2 que seguía pendiente. Los pasos numerados
+completos de cada P-xx están en su entrada de `docs/PENDIENTES.md`; aquí va el
+resumen ejecutable, el resultado esperado y el orden. El orden está pensado
+para **una sola instalación en A** (bloques A y P encadenados sin reinstalar),
+**una en B** (bloque B) y el bloque C aparte.
 
-**Montaje:** emulador **A** = `Medium_Phone_API_35`, instalación limpia del
-**debug** de esta rama (Room v5 / payload v3) — `./gradlew installDebug` y
-comprobar `lastUpdateTime` antes de empezar; proyecto real `aurora-31c37`;
-consola de Firebase y panel `admin/` (`npm run dev`) abiertos. Emulador **B**
-(segundo dispositivo) solo en el bloque B. **Regla de orden:** el APK v5 debe
-estar instalado ANTES de publicar t05/t06 (ADR 2026-10-03), y ninguna
-contraseña se cambia antes de que B haya restaurado (bloque B).
+**Montaje:** emulador **A** = `Medium_Phone_API_35` **relanzado con 4 núcleos y
+4 GB** (`emulator -avd Medium_Phone_API_35 -cores 4 -memory 4096`, P-82; con la
+configuración por defecto de 1 núcleo / 2 GB la app no completa el arranque),
+instalación limpia del **debug** de esta rama (`429f283`, Room v5 / payload v3) —
+`./gradlew installDebug` y comprobar `lastUpdateTime` antes de empezar;
+proyecto real `aurora-31c37`; consola de Firebase y panel `admin/` (`npm run
+dev`) abiertos. Emulador **B** (segundo dispositivo) solo en el bloque B.
+**Regla de orden:** el APK v5 debe estar instalado ANTES de publicar t05/t06
+(ADR 2026-10-03; hoy ya están publicados en producción con esquema v2, así que
+A6 solo verifica), y ninguna contraseña se cambia antes de que B haya
+restaurado (bloque B).
 
 **Transversales en TODA pantalla interna** (se anotan donde fallen, no se
 repiten como paso): captura bloqueada (RNF-02); nube violeta de salida
@@ -272,26 +318,36 @@ y se engrosa con foco, error en rosa, chips de tipo sin elegir con contorno
 gris; la barra de la fachada NO cambia sobre el cielo y muestra el contorno solo
 al buscar, la del tutorial siempre.
 
-### Avance de la corrida (2026-10-05, ejecutada por adb desde Claude Code; detalle en `docs/PENDIENTES.md` P-80..P-82)
+### Avance al 2026-10-05 (corrida por adb desde Claude Code; detalle en `docs/PENDIENTES.md` P-80..P-82)
+
+La corrida por adb cubrió el paso 0 y A1–A8 sobre la cuenta de prueba viva en A.
+**Lo que resta para la usuaria, en orden:** (1) terminar **A2** (repaso del
+tutorial desde Ajustes, RF-11), **A6** (fidelidad visual de la Guía) y **A8**
+(registro con PDF + audio, cámara, visor, Device Explorer, «×», tope de 10);
+(2) **A9–A14** completos, con la regresión H-1 nueva dentro de A14; (3) bloque
+**B** (B1–B4, B5 condicional); (4) bloque **P**; (5) bloque **C**, con el
+arranque en frío ×3 nuevo dentro de C1. Los pasos ya en verde no se repiten
+salvo que un cambio de código los toque.
 
 | Paso | Estado | Nota |
 |---|---|---|
 | 0 | ✅ 42/42 | Tras corregir `WeatherSearchBarFocusTest` (buscaba un texto que la UI V2 convirtió en icono; commit `e3c74e7`) |
-| A1 | ✅ / 🔁 P-14 | RF-13 idéntico píxel a píxel bajo la barra; **la miniatura de recientes sí mostraba el código a medias** → mitigación aplicada (`RecentsThumbnailGuard`, API 33+). **Repetido con el APK nuevo (18:43): ✅** la miniatura es una tarjeta neutra mientras se busca y vuelve a ser la fachada normal al salir de la búsqueda |
-| A2 | ✅ | Consentimiento, cuenta nueva, reglas de la clave en vivo, «Saltar por ahora» → Inicio. Resta el repaso del tutorial desde Ajustes (RF-11) |
+| A1 | ✅ (P-14 🔁 ✅) | RF-13 idéntico píxel a píxel bajo la barra; **la miniatura de recientes sí mostraba el código a medias** → mitigación aplicada (`RecentsThumbnailGuard`, API 33+, commit `429f283`). **Repetido con el APK nuevo (18:43): ✅** la miniatura es una tarjeta neutra mientras se busca y vuelve a ser la fachada normal al salir de la búsqueda. Resta P-11 (Gboard) |
+| A2 | ✅ parcial | Consentimiento, cuenta nueva, reglas de la clave en vivo, «Saltar por ahora» → Inicio. **Resta** el repaso del tutorial desde Ajustes (RF-11) |
 | A3 | ✅ | Reingreso cae en Inicio (P-67); prefs solo Base64 (`search_index`, `account_meta`, `backup_meta`); consola `profile g=1` |
-| A4 | ✅ / 🔁 paso 2 | Entrada sin red con chip, Guía y 6 tipos desde caché, validaciones y guardado sin red, nube + reentrada. **Al volver la red el chip no desapareció ni subió el registro** (P-81, resuelto con reintento acotado). **Repetido con el APK nuevo (18:45): ✅** el chip desapareció solo 12 s después de devolver la red (primer reintento a los 5 s) |
+| A4 | ✅ (paso 2 🔁 ✅) | Entrada sin red con chip, Guía y 6 tipos desde caché, validaciones y guardado sin red, nube + reentrada. **Al volver la red el chip no desapareció ni subió el registro** (P-81, resuelto con reintento acotado, commit `429f283`). **Repetido con el APK nuevo (18:45): ✅** el chip desapareció solo 12 s después de devolver la red (primer reintento a los 5 s) y el registro subió |
 | A5 | ✅ | Cerrar sesión destruye el blob; login manual; P-29 completo (mensaje único, pausa 5:00 que se retoma tras forzar detención, acceso normal al expirar); blob renace |
-| A6 | ✅ parcial | t05/t06 ya publicados en producción con esquema v2; 6 tipos en la Guía; fidelidad visual pendiente (capturas negras por FLAG_SECURE) |
+| A6 | ✅ parcial | t05/t06 ya publicados en producción con esquema v2; 6 tipos en la Guía; **resta** la fidelidad visual (capturas negras por FLAG_SECURE: mirar el emulador) |
 | A7 | ✅ | P-46 completo salvo FLAG_SECURE del selector (no verificable por adb): fecha con selector (en inglés por la locale del emulador), orden, detalle, edición (mismo doc), edición y borrado sin red con propagación, doble confirmación, nube a mitad (borrador no persiste), >5 min tecleando sin expirar |
 | A8 | ✅ parcial | Photo Picker sin permisos, ida y vuelta directa, dos fotos adjuntas y guardadas; con el selector de documentos abierto >5 min, al volver se aterriza en la fachada (esperado). **Resta:** registro con PDF + audio, cámara, visor, Device Explorer de `media_store`, «×», tope de 10 |
-| A9–A14, B, P, C | ⏳ | Pendientes: el emulador (1 núcleo / 2 GB) se saturó repetidamente — ver P-82 |
-| Nuevos por el ADR 2026-10-05 | ⏳ | (1) **CP-34 / C1 (RNF-07):** instalar el APK nuevo, `adb shell am force-stop com.auroraclima.app` y arrancar en frío 3 veces: sin «failed to complete startup» y fachada en ≤ 3 s. (2) **Regresión H-1 (RF-20):** con sesión abierta y datos apagados, «Eliminar todo y salir» con la doble confirmación (la parte remota falla y la marca queda izada) → cerrar la app → datos encendidos → reabrir: al reingresar no queda ningún registro/resultado/adjunto local y la marca baja en el siguiente arranque |
+| A9–A14, B, P, C | ⏳ | Pendientes: el emulador (1 núcleo / 2 GB) se saturó repetidamente — ver P-82 y el montaje de arriba |
 
 Hallazgo de código corregido en esta corrida: Aurora dejó de completar el arranque
 («failed to complete startup») porque el grafo de Hilt construía Firestore y
 FirebaseAuth en el hilo principal durante `Application.onCreate` — ADR 2026-10-05
-y P-80. Texto de la portada del cuestionario alineado con RF-31.
+y P-80 (resto del arrastre, no bloqueante). Texto de la portada del cuestionario
+alineado con RF-31. Las dos pruebas manuales que nacen de ese ADR están ya
+integradas en **C1** (arranque en frío ×3) y **A14** (regresión H-1).
 
 ### Paso 0 — Instrumentadas (una vez, emulador A arriba, antes de instalar)
 
@@ -303,15 +359,15 @@ y P-80. Texto de la portada del cuestionario alineado con RF-31.
 
 | # | Qué correr | Pasos (resumen) | Resultado esperado |
 |---|---|---|---|
-| A1 | **Fachada y camuflaje** — CP-01/02/03/07/32 · B1 · P-14 · P-11 (1.ª parte) | Mockups v2-01..03: clima con pestañas Hoy · 5 días · Lugares, búsqueda con recientes, barra de temperatura. Lista visual de camuflaje: ícono/nombre/splash, miniatura de recientes normal, capturas permitidas. **RF-13**: ciudad inexistente vs. código incorrecto → mismo «sin resultados» (texto, aspecto, tiempos). **P-14**: teclear el código a medias → Home → mirar la miniatura. Teclear `luna2026` (activación) | Tipografía neutra, solo iconos de clima; nada delata el doble fondo; la miniatura NO muestra el código a medias; «Lugares» abre la misma P02 (D4); la activación abre el consentimiento |
+| A1 | **Fachada y camuflaje** — CP-01/02/03/07/32 · B1 · P-14 · P-11 (1.ª parte) | Mockups v2-01..03: clima con pestañas Hoy · 5 días · Lugares, búsqueda con recientes, barra de temperatura. Lista visual de camuflaje: ícono/nombre/splash, miniatura de recientes normal, capturas permitidas. **RF-13**: ciudad inexistente vs. código incorrecto → mismo «sin resultados» (texto, aspecto, tiempos). **P-14**: teclear el código a medias → Home → mirar la miniatura, **repitiendo Home varias veces seguidas con 2–3 caracteres escritos** (la restauración está enganchada a ON_RESUME para cerrar la carrera sub-frame — auditoría final A-1). Teclear `luna2026` (activación) | Tipografía neutra, solo iconos de clima; nada delata el doble fondo. **Secuencia del latch, en este orden:** (1) teclear 2–3 caracteres → Home → recientes muestra una tarjeta neutra, nunca el código; (2) repetir 3–4 veces seguidas → siempre neutra; (3) **volver a la app** (la barra ya está vacía) y pulsar Home **sin teclear** → recientes vuelve a ser la fachada de clima normal — este paso es el que comprueba que la miniatura no queda oculta de forma permanente, que sí sería un distinguidor (RF-01/RNF-05); (4) repetir todo con un nombre de ciudad en lugar del código → comportamiento idéntico (RF-13). Mientras la app está en segundo plano tras buscar, la tarjeta neutra es el precio aceptado del latch (ADR 2026-10-05); «Lugares» abre la misma P02 (D4); la activación abre el consentimiento |
 | A2 | **Activación, cuenta y tutorial saltable** — CP-04/06/10 · B2 · CP-06 extendido | Consentimiento (3 tarjetas, botón inactivo hasta el checkbox) → crear cuenta «paso 1 de 3» con correo NUEVO → clave con reglas que cambian de icono (probar corta / `Bucaramanga` / `bogota` / confirmación distinta) → tutorial: **tocar «Saltar por ahora»** en el primer momento → Inicio. Luego Ajustes → «Ver el tutorial de nuevo» → práctica real con la clave → nube | Fiel a v2-05..v2-08; el salto lleva a Inicio sin práctica y sin dejar el tutorial inaccesible; en el repaso la práctica rechaza una clave incorrecta y fija el logro con la real; la nube regresa a la fachada al instante |
 | A3 | **Inicio, pestañas y Device Explorer #1** — B2 · P-28 final · P-71(6) · CP-05/28/31 | Inicio con saludo Marcellus, tarjeta del cuestionario sin conteo (D8), accesos rápidos, engranaje. Cambiar de pestaña varias veces → Home → reabrir. **Abrir la Guía una vez con red** (deja caché para A4). Device Explorer: `shared_prefs/search_index.xml`, `store_meta.xml`, **`account_meta.xml`**, `backup_meta.xml` | Fachada al reabrir y reingreso por código que **cae en Inicio** (P-67); atrás no sale del grafo a medias; la nube visible en las tres pestañas. Todos los XML solo con Base64 bajo claves neutras (`a0`/`a1`, `s0`/`s1`…), ningún rastro de clave, correo ni contraseña |
-| A4 | **Reingreso silencioso sin red** — P-71 (1)(2)(7) · CP-08/09/16/23 · RNF-08 | **Modo avión TOTAL** → código → espacio interno abre con chip «Sin conexión» → ver Mi registro y Guía (caché) → crear un registro → nube → reentrar (chip persiste, lo local sigue). **Volver la red sin salir** → chip desaparece; consola `users/{uid}/entries` muestra el doc nuevo. **(7)** con red: salir con la nube justo tras teclear el código (silencioso en curso) → reentrar | Entrada sin pedir contraseña ni red; chip solo mientras no hay confirmación; sync diferida al reconectar (RF-38, P-69a de paso); la salida rápida lleva a la fachada al instante y la reentrada pide solo el código |
+| A4 | **Reingreso silencioso sin red** — P-71 (1)(2)(7) · CP-08/09/16/23 · RNF-08 | **Modo avión TOTAL** → código → espacio interno abre con chip «Sin conexión» → ver Mi registro y Guía (caché) → crear un registro → nube → reentrar (chip persiste, lo local sigue). **Volver la red sin salir** → chip desaparece; consola `users/{uid}/entries` muestra el doc nuevo. **(7)** con red: salir con la nube justo tras teclear el código (silencioso en curso) → reentrar | Entrada sin pedir contraseña ni red; chip solo mientras no hay confirmación; **el chip se va solo entre ~5 s y ~65 s tras devolver la red (primer reintento a los 5 s, luego 15 s y 45 s — P-81)**; sync diferida al reconectar (RF-38, P-69a de paso); la salida rápida lleva a la fachada al instante y la reentrada pide solo el código. **Anotar si el parpadeo «Sin conexión → comprobando → Sin conexión» molesta** (puede verse hasta tres veces en el primer minuto del paso 1, porque los tres reintentos también corren en modo avión; residual P-70 d) |
 | A5 | **Cerrar sesión y login manual** — P-71 (4) · P-29 · CP-08/11 · B2 (P08) | Ajustes → «Cerrar sesión» → reentrar: código → **login manual** «Hola de nuevo.» (el blob se destruyó). P-29: contraseña mala / correo inexistente / correo malformado; 5 fallos seguidos; forzar detención con la pausa activa; esperar que expire. Login correcto | Reingreso exige código + credenciales; mensaje ÚNICO «Los datos no coinciden…» en los tres casos; «Pausa temporal» desde 5:00 con botón deshabilitado y cuenta regresiva que se retoma tras reinicio; tras el login correcto el **blob renace** (el siguiente reingreso vuelve a ser solo código) |
 | A6 | **Guía + tipos nuevos t05/t06** — CP-13/14/16 · B3 · P-73(c) 1.ª parte | Con el APK v5 YA instalado: en `tools/seed`, `npm run publicar-tipos -- --publicar` (solo t05 «Violencia digital» y t06 «Acoso sexual»). En la app: portada de tres secciones + «Puedes leerlo sin conexión» (probar en modo avión); tipos con icono/acento (t01 azul-figura, t02 lila-lóbulos, t03 rosa-círculo, t04 arena-tarjeta, **t05/t06 con el visual que traen del esquema v2**); detalle; rutas por sector; entidad; líneas | Fiel a v2-11..v2-16; **6 tipos** en la Guía en el orden publicado; los colores respetan el significado fijo; contenido real de producción; sin red se lee desde la caché |
 | A7 | **Registros con tipos dinámicos** — P-46 completo (CP-20/22) · P-73(c) · B4 · B8 · Device Explorer #2 | Mi registro vacío → «Agregar»: los **chips de tipo son los 6 topics publicados, mismo orden y visual que la Guía**; guardar vacío; tipo sin texto; fecha con el selector; segundo registro con fecha anterior; detalle; teclear >5 min; nube a mitad; edición prellenada (mismo doc en consola, `payload`/`iv` nuevos, **`schemaVersion` 3**); edición en modo avión; eliminación con doble confirmación («Conservar» primero), también en modo avión. **Dejar al final 3 registros** (uno de t05 o t06) para A8/A10. Device Explorer: `databases/journal_store.db` y `-wal` | Errores inline sin borrar lo tecleado; orden cronológico inverso; FLAG_SECURE en el selector; la sesión NO expira tecleando; el borrador no persiste tras la nube; el `delete` se propaga al reconectar; BD ilegible; los chips sin elegir con contorno gris y el elegido con su acento |
 | A8 | **Adjuntos** — P-59 (CP-21) · Device Explorer #3 | Imagen de galería (sin diálogo de permisos); cámara del sistema (DCIM vacío, regreso directo al formulario; dejarla abierta >5 min); PDF y audio por «Archivo»; visor interno; tipo vedado; «×», tope de 10, abandono con adjuntos; cerrar sesión y reabrir. Device Explorer: `files/media_store/`, `cache/media_pending/`. **Dejar: registro 1 con 2 fotos, registro 2 con PDF + audio, registro 3 sin adjuntos** | Sin permisos pedidos; sin copia en galería/DCIM; ida-y-vuelta sin pasar por la fachada (y CON fachada si expira la gracia); captura bloqueada en el visor; adjuntos persisten; solo blobs de 32 hex ilegibles; `media_pending` vacío |
-| A9 | **Cuestionario semafórico + guardado opcional** — P-43 (CP-17/18) · **CP-19 (RF-31)** · P-69(a) · B4 | Responder 2 y retroceder; «Abandonar»; nube a mitad; `adb shell am kill`; completar en 360×800 **cuatro veces para forzar los 4 niveles** (todo «Nunca» / dos mixtos / todo «Con frecuencia»); «Ver rutas». **RF-31**: «Terminar» sin guardar → Inicio sin rastro; repetir y «Guardar este resultado» → hoja de confirmación (captura bloqueada) → **«Cancelar» no persiste**; de nuevo → «Guardar» → Inicio «Resultados guardados» (fecha · nivel · señales) → detalle → eliminar (doble confirmación, «Conservar» primario). **Sin red**: guardar otro → reconectar → consola `users/{uid}/outcomes`. Captura en portada/pregunta/resultado/listado | Respuesta marcada al volver; portada vacía tras abandonar/nube/kill; **tarjeta del nivel semafórica dominante con un color distinto por orden 1→4 (verde sereno / ámbar / naranja / rojo profundo) y aviso RF-30 fijo visible SIN scroll en los cuatro**; nada persiste sin confirmar (criterio 1); el guardado deja solo fecha + nivel + tipos y aparece sellado (`payload`/`iv`) en `outcomes` al reconectar; la eliminación desaparece del listado y de la consola; capturas bloqueadas |
+| A9 | **Cuestionario semafórico + guardado opcional** — P-43 (CP-17/18) · **CP-19 (RF-31)** · P-69(a) · B4 | **Portada: confirmar la viñeta «Tú decides / …solo se guarda si tú lo eliges»** (texto alineado con RF-31 en `d5e1dc2`; el mockup P15 aún dice lo contrario — P-41). Responder 2 y retroceder; «Abandonar»; nube a mitad; `adb shell am kill`; completar en 360×800 **cuatro veces para forzar los 4 niveles** (todo «Nunca» / dos mixtos / todo «Con frecuencia»); «Ver rutas». **RF-31**: «Terminar» sin guardar → Inicio sin rastro; repetir y «Guardar este resultado» → hoja de confirmación (captura bloqueada) → **«Cancelar» no persiste**; de nuevo → «Guardar» → Inicio «Resultados guardados» (fecha · nivel · señales) → detalle → eliminar (doble confirmación, «Conservar» primario). **Sin red**: guardar otro → reconectar → consola `users/{uid}/outcomes`. Captura en portada/pregunta/resultado/listado | Respuesta marcada al volver; portada vacía tras abandonar/nube/kill; **tarjeta del nivel semafórica dominante con un color distinto por orden 1→4 (verde sereno / ámbar / naranja / rojo profundo) y aviso RF-30 fijo visible SIN scroll en los cuatro**; nada persiste sin confirmar (criterio 1); el guardado deja solo fecha + nivel + tipos y aparece sellado (`payload`/`iv`) en `outcomes` al reconectar; la eliminación desaparece del listado y de la consola; capturas bloqueadas |
 | A10 | **Exportación** — CP-38 / P-72 (RF-45) · B8 · Device Explorer #4 | «Exportar» → marcar 2 (los que tienen adjuntos) → resumen (fechas · tipos con el nombre de la Guía · «4 adjuntos»); contraseña corta (<10) y luego dos distintas; válida → «Guardar en el teléfono» → Descargas → abrir desde Archivos (pedir contraseña; probar una errónea); repetir con «Incluir adjuntos» y «Compartir» → selector → destino real (Gmail/Drive/WhatsApp) → confirmar que llega íntegro; repetir y cancelar; nube a mitad de la contraseña; esperar 5 min en el formulario; captura en la lista en selección y en el formulario. Device Explorer: `cache/doc_out/` y ausencia de `.pdfbox.cache` | Nada marcado al entrar; botón inactivo hasta marcar; interruptor apagado de entrada; errores de contraseña en línea; el PDF abre SOLO con la contraseña, trae fecha, tipo (nombre de la Guía) y relato; sin adjuntos se citan «· no incluido»; con adjuntos cada registro en su página con banda «REGISTRO n DE N», las 2 imágenes enmarcadas, el PDF anexado con cabecera «Registro 1 · Documento adjunto 1 · página x de y» y el audio incrustado (`audio_1.wav` en Acrobat; Chrome/Drive no lo muestran); nombre `documento_AAAA-MM-DD.pdf`; al volver del selector se aterriza en exportar (no en la fachada); `doc_out/` vacío tras compartir, tras la nube y tras los 5 min; capturas bloqueadas |
 | A11 | **Llamar** — P-26 + P-27 (CP-09/14) | Desde una entidad: «Llamar» → marcador → atrás; mirar recientes del marcador | Se aterriza en la FACHADA (pop en ON_STOP); recientes no muestra la pantalla de líneas; anotar si el número queda visible en el marcador (si sí: ampliar `content_agency_call_note`) y el costo UX del reingreso |
 | A12 | **Ajustes y flujos de extensión** — B5 · B8 · CP-05/09 | Tres secciones con «Eliminar todo» en ciruela y pie «Prototipo académico»; cambiar clave (actual errónea / nueva corta / éxito y verificar en la barra: la vieja responde como búsqueda fallida, la nueva abre); privacidad; **NO cambiar la contraseña aún** (va en B4) | Coherentes con el sistema V2; la clave nueva es la única puerta (RF-09/12/13); campos con el contorno B8 |
@@ -337,22 +393,31 @@ y P-80. Texto de la portada del cuestionario alineado con RF-31.
 
 | # | Qué correr | Pasos (resumen) | Resultado esperado |
 |---|---|---|---|
-| A14 | **RF-20 con todas las cascadas** — P-54 regresión · P-71 (5) · P-59 (8) · RF-31 · CP-12 · Device Explorer #5 | En A: Ajustes → «Eliminar tu cuenta y tus datos» → dos confirmaciones → contraseña (probar primero sin red y con contraseña incorrecta) → éxito. Device Explorer completo. Reabrir la app | Sin red / incorrecta: «Nada se ha eliminado todavía» y consola intacta; con éxito: consola sin `entries`/`media`/`mediaparts`/`outcomes`/`meta` y sin la cuenta en Auth; **`account_meta.xml` inexistente**, `media_store`/`media_view`/`media_pending`/`doc_out` inexistentes, `journal_store.db` y **`guidance_store.db`** ausentes; la app vuelve a ser solo clima (en debug el código de activación se resiembra; en release exigiría reinstalar — P-55) |
+| A14 | **RF-20 con todas las cascadas** — P-54 regresión · P-71 (5) · P-59 (8) · RF-31 · CP-12 · **regresión H-1 (ADR 2026-10-05)** · Device Explorer #5 | **Primero la regresión H-1:** con sesión abierta y datos apagados (no modo avión total, P-82), «Eliminar todo y salir» con la doble confirmación → la parte remota falla y la marca queda izada → cerrar la app → datos encendidos → reabrir y reingresar. **Luego la eliminación real:** Ajustes → «Eliminar tu cuenta y tus datos» → dos confirmaciones → contraseña (probar primero sin red y con contraseña incorrecta) → éxito. Device Explorer completo. Reabrir la app | **H-1:** al reingresar no queda ningún registro, resultado ni adjunto local y la marca baja en el siguiente arranque (sin «failed to complete startup»). Sin red / incorrecta: «Nada se ha eliminado todavía» y consola intacta; con éxito: consola sin `entries`/`media`/`mediaparts`/`outcomes`/`meta` y sin la cuenta en Auth; **`account_meta.xml` inexistente**, `media_store`/`media_view`/`media_pending`/`doc_out` inexistentes, `journal_store.db` y **`guidance_store.db`** ausentes; la app vuelve a ser solo clima (en debug el código de activación se resiembra; en release exigiría reinstalar — P-55) |
 
 ### Bloque C — Plataforma (recomendadas antes del tag, no encadenadas)
 
 | # | Qué correr | Pasos | Resultado esperado |
 |---|---|---|---|
-| C1 | **CP-34 (RNF-07) — gama media** | Emulador perfil gama media (2 GB RAM, ej. Pixel 2 API 30) o dispositivo real; instalar el RELEASE; cronometrar arranque en frío, fachada→código→pestañas, **primera entrada sin red** y **generación de un PDF con los 4 adjuntos** | Arranque ≤ 3 s; respuesta ≤ 2 s; la exportación muestra progreso y termina sin ANR; sin jank en las listas |
-| C2 | **CP-36 (RNF-10) — API 26** | Emulador API 26 (minSdk); instalar debug y release; recorrer fachada, activación, pestañas, guía, cuestionario (guardar resultado), registros, **exportar y compartir** | Sin crashes ni degradación visual de los componentes V2; FLAG_SECURE operativo; PdfBox escribe y el selector de documentos funciona en minSdk |
+| C1 | **CP-34 (RNF-07) — gama media + arranque en frío (ADR 2026-10-05, P-80)** | Emulador perfil gama media (2 GB RAM, ej. Pixel 2 API 30) o dispositivo real; instalar el RELEASE; **`adb shell am force-stop com.auroraclima.app` y arrancar en frío 3 veces midiendo con `adb shell am start -W com.auroraclima.app/.MainActivity` (anotar `TotalTime` de cada una)**; cronometrar arranque en frío, fachada→código→pestañas, **primera entrada sin red** y **generación de un PDF con los 4 adjuntos** | Ninguno de los 3 arranques muestra «failed to complete startup» y la fachada aparece en ≤ 3 s (`TotalTime` ≤ 3 000 ms; el AVD saturado de P-82 no sirve de referencia); respuesta ≤ 2 s; la exportación muestra progreso y termina sin ANR; sin jank en las listas |
+| C2 | **CP-36 (RNF-10) — API 26** · **RF-14 bajo API 33** | Emulador API 26 (minSdk); instalar debug y release; recorrer fachada, activación, pestañas, guía, cuestionario (guardar resultado), registros, **exportar y compartir**. **Además:** teclear el código a medias → Home → mirar la miniatura de recientes | Sin crashes ni degradación visual de los componentes V2; FLAG_SECURE operativo; PdfBox escribe y el selector de documentos funciona en minSdk. **La miniatura PUEDE mostrar el texto a medias: `setRecentsScreenshotEnabled` existe solo desde API 33, así que bajo minSdk solo queda la limpieza en ON_PAUSE — limitación documentada (nota de RF-14 y ADR 2026-10-05), NO una regresión.** Anotar lo observado |
 
-## 9. Pasada final de agentes (diff completo `main..HEAD`, 2026-10-05)
+## 9. Pasadas de agentes sobre el diff completo `main..HEAD` (2026-10-05)
 
-Ejecutada el 2026-10-05 sobre el diff íntegro `f69f1ff..HEAD` (29 commits,
-207 archivos, +10 644/−800; app + `admin/` + `tools/seed`), cada agente con su
-encargo. Los tres: **APROBADO CON OBSERVACIONES**, cero bloqueantes. Las dos
-correcciones de código que pidieron se aplicaron en esta misma sesión (commit
-de cierre) y la suite completa se re-ejecutó después en verde (§1).
+Dos pasadas el mismo día: la **intermedia** (§9.1) sobre los 31 commits que
+cerraban RF-45, antes de la corrida manual por adb; y la **final** (§9.2) sobre
+los 34 commits de la rama, después de los tres ajustes que dejó esa corrida
+(`d5e1dc2`, `429f283`, `e3c74e7`). Cada uno de esos tres commits pasó además
+por los tres agentes en su propia sesión (veredictos y observaciones atendidas
+en sus mensajes de commit).
+
+### 9.1 Pasada intermedia (`f69f1ff..5c93cb3`, 31 commits)
+
+Ejecutada sobre el diff íntegro de entonces (207 archivos, +10 644/−800; app +
+`admin/` + `tools/seed`), cada agente con su encargo. Los tres: **APROBADO CON
+OBSERVACIONES**, cero bloqueantes. Las dos correcciones de código que pidieron
+se aplicaron en esa misma sesión (commit `5c93cb3`) y la suite se re-ejecutó
+después en verde.
 
 - **revisora-arquitectura: APROBADO CON OBSERVACIONES** (0 bloqueantes, 7
   mejoras). Verificado en verde: regla de dependencias §2 — ninguna feature
@@ -429,6 +494,122 @@ de cierre) y la suite completa se re-ejecutó después en verde (§1).
   aunque `FirestoreJournalSyncRepositoryTest` ya ejercita el encolado — se
   mantiene el criterio conservador de v0.2.0).
 
-Veredicto conjunto: **el diff `main..HEAD` queda LISTO PARA MERGE a `main`,
-condicionado únicamente a las corridas manuales de la §8**, que ejecuta la
-usuaria antes de unir ramas y crear el tag.
+Veredicto conjunto de la pasada intermedia: LISTO PARA MERGE condicionado a la
+§8 (superado por la pasada final de §9.2).
+
+### 9.2 Pasada final (`f69f1ff..HEAD` = `429f283`, 34 commits)
+
+Ejecutada el 2026-10-05 al cierre de la jornada, ya con los tres commits que
+dejó la corrida manual por adb (`d5e1dc2`, `429f283`, `e3c74e7`) y sobre el
+árbol con esta misma documentación actualizada. Encargo de cada agente: el diff
+íntegro de la rama (214 archivos, +11 225/−1 054), con lectura línea a línea de
+esos tres commits y confirmación de que el mapa de la pasada intermedia sigue
+vigente. **Cero bloqueantes y cero cambios de código pedidos.**
+
+- **revisora-arquitectura: APROBADO CON OBSERVACIONES** (0 bloqueantes, 4
+  mejoras nuevas de baja prioridad). Barrido mecánico sobre todo
+  `app/src/main/java`: **0 importaciones entre las seis features** (30 pares
+  comprobados), 0 importaciones de `core/` hacia features (`core/catalog` y
+  `core/directory` solo importan stdlib, como corresponde a contratos de
+  inversión), 0 `*/ui` importando de `*/data`, 0 `*/domain` con `android.*`/
+  Room/Firebase/Compose, 0 ViewModels con Firebase/Room/HTTP. En las líneas
+  añadidas del diff completo: **0 `!!`, 0 `GlobalScope`/`runBlocking`, 0
+  `Log`/`println`**; el único `lateinit` es el `@Inject` de `dagger.Lazy` en
+  `AuroraApplication` (DI, permitido). Los dos patrones del ADR 2026-10-05 se
+  cumplen al pie: `dagger.Lazy<Set<AppInitializer>>` resuelto dentro del
+  `launch` (regla a) y `Provider<Set<LocalAccountDataEraser>>` resuelto solo con
+  la marca izada (regla b). `RecentsThumbnailGuard` vive en `core/security` con
+  el mismo criterio que FLAG_SECURE y su único consumidor es la raíz de
+  composición. Revisó la lógica nueva del coordinador: `withTimeoutOrNull`
+  distingue correctamente «volvió la red» (rearma las esperas) de «venció el
+  plazo» (reintento caliente), y la limpieza de sesión la cancela. Tests con
+  fakes, sin mocks de framework (0 `mockk`/`Mockito` en todo el diff).
+  `ktlintCheck` exit 0. **Mejoras nuevas registradas como P-83:** (a)
+  `SilentSessionCoordinator.start()` llegó a 35 líneas; (b) la guard de
+  recientes no admite test de comportamiento (Android no expone getter) y
+  conviene anotar la limitación en el ADR; (c) `DebugSecretCodeSeeder` recibe el
+  hasher por valor y no por `Provider` (impacto nulo, inconsistencia con la
+  letra de la regla b); (d) `SystemLauncher` sin test propio y ausente de
+  P-79(e). **Confirmó vigentes sin duplicar:** P-79 (a–e), P-80, P-63, P-69d,
+  P-74, P-75, P-76, P-77.
+- **auditora-seguridad: APROBADO CON OBSERVACIONES** (0 críticos, 0 altos, 4
+  medias: dos nuevas corregidas en el acto, una ya registrada y una que amplía un
+  residual). Re-ejecutó los barridos mecánicos sobre el diff íntegro, todos en
+  verde: 0 `Log`/`println`/`printStackTrace`/`Timber`/`Crashlytics`/
+  `FirebaseAnalytics` en `src/main`; 0 llaves, salts o contraseñas literales y 0
+  `buildConfigField`; FLAG_SECURE con un único punto de aplicación; 309 strings
+  sin un solo término vedado; el hash del código en tiempo constante y la
+  respuesta visible esperando siempre a la búsqueda real (RF-13). Verificó el APK
+  release de forma independiente y coincide con §2 y §3. Respondió las dos
+  preguntas centrales de la sesión: **la cascada local de RF-20 sigue garantizada**
+  tras el cambio de arranque — `dagger.Lazy` solo difiere la construcción, no la
+  vuelve condicional, y el `Provider` devuelve el conjunto completo de los nueve
+  erasers con la misma semántica de fallo; y **la guard de recientes no es un
+  distinguidor de RF-13**, porque se activa con «hay texto en la barra» y oculta
+  la miniatura en cualquier búsqueda, sin consultar el contenido ni el resultado
+  de la puerta. **Hallazgos nuevos, los dos corregidos en esta sesión:** A-1, la
+  limpieza de la barra en ON_PAUSE bajaba la protección antes de dibujar el frame
+  sin el código, así que un snapshot en esa ventana sub-frame podía volver a
+  fotografiarlo; y A-2, el bucle de inicializadores no contenía excepciones, de
+  modo que un servicio ausente podía tumbar el proceso — y una app de clima que
+  no arranca justo después de una eliminación interrumpida sería una anomalía
+  observable. **Las otras dos quedaron registradas:** A-3 → **P-84** (bajo API 33
+  no existe la API y solo queda ON_PAUSE: decide la política del piloto) y A-4 →
+  ampliación de **P-78** (el `keep` de Room conserva la ruta del paquete, así que
+  el segmento `questionnaire` sobrevive a R8 en el DEX release). Confirmó la
+  pasada intermedia vigente y P-70 sin duplicar.
+- **Segunda ronda sobre las dos correcciones (misma jornada).** Los tres agentes
+  volvieron a pasar sobre ellas, y las dos primeras versiones no sobrevivieron
+  iguales: **A-2 quedó APROBADO de entrada**, pero **A-1 fue RECHAZADO por
+  seguridad y por arquitectura con el mismo diagnóstico** — la corrección era
+  insuficiente porque `hidden` seguía siendo clave del `DisposableEffect`, y al
+  cambiar una clave Compose ejecuta el `onDispose` del efecto viejo, que
+  restauraba la miniatura justo en el instante del ON_PAUSE: el latch quedaba
+  anulado y el estado neto era idéntico al del código sin corregir. La segunda
+  versión saca `hidden` de las claves, lee el valor vivo con
+  `rememberUpdatedState` y extrae la decisión a `recentsThumbnailDecision`,
+  lógica pura con un disparador explícito por momento (`SearchChanged`,
+  `ReturnedToForeground`, `LeftFacade`) y `null` para «no tocar el flag», con
+  `RecentsThumbnailGuardTest` (6) fijando el caso crítico. Sobre ella, **los tres
+  dieron APROBADO**: seguridad recorrió los caminos de salida uno por uno
+  (segundo plano, navegación al grafo seguro, pronóstico, rotación, salida
+  rápida) y confirmó que ninguno deja la fachada sin miniatura de forma
+  permanente ni expone el código; arquitectura cerró su bloqueante y adoptó el
+  enum de tres disparadores como forma definitiva, porque la alternativa de dos
+  parámetros no podía expresar que al abandonar la fachada hay que restaurar
+  aunque no haya primer plano. Sus últimas observaciones se aplicaron antes del
+  commit: el sitio de llamada pasa los valores reales en lugar de literales que
+  no describen la realidad, el `when` quedó explícito en vez de `takeIf`, y el
+  ADR del guard dice ahora que abandonar la fachada restaura siempre porque de
+  ahí en adelante manda FLAG_SECURE.
+- **verificadora-rf: APROBADO CON OBSERVACIONES** (0 defectos de código; 5 notas
+  de redacción en la §8, todas incorporadas ya a este documento). Re-ejecutó 6
+  clases puntuales en verde (`SilentSessionCoordinatorTest` 10,
+  `PendingErasureRecoveryTest` 3, `NoTracesGuardTest` 8, `WeatherViewModelTest`
+  16, `CamouflageResourcesTest` 2, `GuidanceViewModelTest` 24) y comprobó que
+  los conteos declarados entonces en §1 y §4 cuadraban (529 + 181 = 710; 75 + 23
+  = 98; las correcciones posteriores los dejaron en 720 y 100).
+  Mapa criterio → evidencia de los tres commits: **RF-14 c2 CUMPLIDO en API
+  33+** (la guard se activa con `isSearchActive`, que es «hay texto en la
+  barra», de modo que oculta la miniatura en CUALQUIER búsqueda y no solo con el
+  código — no es un distinguidor de RF-13; bajo API 33 solo queda ON_PAUSE, y
+  esa limitación pasó a C2); **RF-15/RNF-08 CUMPLIDO** con las esperas
+  5/15/45 s, el rearme por regreso de red y el reintento inmediato, y el
+  silencioso sigue sin contar para el bloqueo por intentos; **RF-16/RNF-03 sin
+  regresión** (`core/security` solo gana `RecentsThumbnailGuard` y
+  `SystemLauncher`; `SessionManager` intacto); **RF-20 regresión H-1 CUMPLIDO**
+  (la cascada no se construye sin la marca y sí con ella, incluido el caso de un
+  eraser que falla y deja la marca izada); **RF-31 CUMPLIDO** con el texto nuevo
+  de la portada y sin claves huérfanas; **RNF-07 PARCIAL por diseño** — el
+  arranque ya no construye Firebase en `Application.onCreate`, pero P-80 sigue
+  vivo en `MainActivity` y la medición ≤ 3 s es manual (§8-C1). Verificó además
+  la trazabilidad completa de la §8: los ocho pasos de P-71, P-73(c) en
+  A6/A7/B1/B5/P1 y la cobertura 44 de 45 RF con RF-38 como única excepción
+  formal. **Sus cinco observaciones ya están aplicadas:** pasos de la regresión
+  H-1 en A14, medición `am start -W` en C1, miniatura bajo API 26 en C2, plazo
+  del chip y parpadeo P-70(d) en A4, viñeta «Tú decides» en A9.
+
+Veredicto conjunto de la pasada final: **el diff `main..HEAD` queda LISTO PARA
+MERGE a `main`, condicionado únicamente a las corridas manuales de la §8**, que
+ejecuta la usuaria antes de unir ramas y crear el tag. Los pendientes que la
+rama deja vivos son todos no bloqueantes: P-78, P-79, P-80, P-82 y P-83.

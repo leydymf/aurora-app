@@ -67,6 +67,17 @@ class PendingErasureRecoveryTest {
     }
 
     @Test
+    fun `si el conjunto de erasers no se puede construir la marca sigue izada`() = runTest {
+        val flag = FakeFlag(raised = true)
+
+        // Servicios ausentes al construir el conjunto (auditoría A-2): no propaga
+        // y el siguiente arranque lo reintenta, así que nada se da por borrado.
+        PendingErasureRecovery(flag, Provider { throw IllegalStateException() }).initialize()
+
+        assertTrue(flag.raised)
+    }
+
+    @Test
     fun `un eraser que vuelve a fallar deja la marca izada y no detiene al resto`() = runTest {
         val flag = FakeFlag(raised = true)
         val failing = CountingEraser(failure = IllegalStateException())

@@ -2,6 +2,7 @@ package com.auroraclima.app
 
 import android.app.Application
 import com.auroraclima.app.core.startup.AppInitializer
+import com.auroraclima.app.core.startup.runStartupTasks
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -24,8 +25,8 @@ class AuroraApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        applicationScope.launch {
-            initializers.get().forEach { it.initialize() }
-        }
+        // Un fallo de arranque no puede tumbar el proceso ni dejar a medias el
+        // resto de las tareas (auditoría A-2); ver runStartupTasks.
+        applicationScope.launch { runStartupTasks(initializers::get) }
     }
 }
