@@ -96,8 +96,7 @@ private fun V2TabBarPreview() {
         V2TabBar(
             items = listOf(
                 V2TabItem(R.drawable.ic_weather_cloud, "Hoy"),
-                V2TabItem(R.drawable.ic_weather_calendar, "5 días"),
-                V2TabItem(R.drawable.ic_weather_pin, "Lugares")
+                V2TabItem(R.drawable.ic_weather_calendar, "5 días")
             ),
             selectedIndex = 0,
             onSelect = {}

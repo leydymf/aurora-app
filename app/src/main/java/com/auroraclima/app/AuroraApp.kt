@@ -7,13 +7,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -80,21 +77,13 @@ fun AuroraApp(sessionManager: SessionManager) {
             navController = navController,
             startDestination = HOME_ROUTE
         ) {
-            composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) { entry ->
-                HomeRoute(navController = navController, entry = entry)
+            composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) {
+                HomeRoute(navController = navController)
             }
             // Pronóstico extendido (RF-04): pantalla de la fachada, fuera del
             // grafo seguro — refuerza la credibilidad de la app de clima (RNF-05).
             composable(FORECAST_ROUTE) {
-                ForecastRoute(
-                    onBack = { navController.popBackStack() },
-                    // «Lugares» (D4): volver a P01 y abrir la búsqueda; la señal
-                    // viaja por el savedStateHandle del destino de la fachada.
-                    onOpenPlaces = {
-                        navController.previousBackStackEntry?.savedStateHandle?.set(FOCUS_SEARCH_KEY, true)
-                        navController.popBackStack()
-                    }
-                )
+                ForecastRoute(onBack = { navController.popBackStack() })
             }
             // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y
             // de recientes, botón nube de salida rápida y reporte de interacción
@@ -413,17 +402,9 @@ fun AuroraApp(sessionManager: SessionManager) {
 
 /** Fachada de clima (RF-01..03) y puerta de búsqueda hacia el espacio interno (RF-12). */
 @Composable
-private fun HomeRoute(navController: NavHostController, entry: NavBackStackEntry) {
+private fun HomeRoute(navController: NavHostController) {
     val viewModel: WeatherViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
-    val searchFocus = remember { FocusRequester() }
-    // Señal de un solo uso de la pestaña «Lugares» del pronóstico (D4): al volver
-    // a la fachada se enfoca la barra — la misma puerta del código (RF-05/RF-12).
-    LaunchedEffect(entry) {
-        if (entry.savedStateHandle.remove<Boolean>(FOCUS_SEARCH_KEY) == true) {
-            searchFocus.requestFocus()
-        }
-    }
     // Miniatura de recientes sin la barra mientras se busca (RF-14, ADR 2026-10-05).
     RecentsThumbnailGuard(hidden = state.isSearchActive)
     // Mejor esfuerzo complementario (y único recurso en API < 33): limpiar la
@@ -453,16 +434,12 @@ private fun HomeRoute(navController: NavHostController, entry: NavBackStackEntry
             onSearchQueryChange = viewModel::onSearchQueryChange,
             onCitySelected = viewModel::onCitySelected,
             onSearchCancel = viewModel::onSearchCancel,
-            onOpenForecast = { navController.navigate(FORECAST_ROUTE) },
-            searchFocus = searchFocus
+            onOpenForecast = { navController.navigate(FORECAST_ROUTE) }
         )
     }
 }
 
 private const val HOME_ROUTE = "home"
-
-/** Señal de «Lugares» → fachada con la búsqueda abierta (D4); nombre neutro (RNF-05). */
-private const val FOCUS_SEARCH_KEY = "focus_search"
 private const val FORECAST_ROUTE = "forecast"
 private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"

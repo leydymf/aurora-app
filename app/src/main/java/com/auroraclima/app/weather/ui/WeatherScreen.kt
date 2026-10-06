@@ -31,11 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -56,8 +53,7 @@ import com.auroraclima.app.weather.domain.model.WeatherCondition
 
 /**
  * Pantalla principal de clima (mockups v2-01 y v2-02) — RF-01, RF-02, RF-03.
- * Solo pinta estado y emite eventos; sin lógica. La pestaña «Lugares» enfoca la
- * barra de búsqueda: es la misma puerta del código (decisión D4, RF-05/RF-12).
+ * Solo pinta estado y emite eventos; sin lógica.
  */
 @Composable
 fun WeatherScreen(
@@ -66,8 +62,7 @@ fun WeatherScreen(
     onCitySelected: (City) -> Unit,
     onSearchCancel: () -> Unit,
     onOpenForecast: () -> Unit,
-    modifier: Modifier = Modifier,
-    searchFocus: FocusRequester = remember { FocusRequester() }
+    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
@@ -99,9 +94,7 @@ fun WeatherScreen(
                 isActive = state.isSearchActive,
                 onBack = onSearchCancel,
                 onClear = { onSearchQueryChange("") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(searchFocus)
+                modifier = Modifier.fillMaxWidth()
             )
             if (!state.isSearchActive && state.weather != null) {
                 CurrentConditionsSummary(weather = state.weather)
@@ -128,8 +121,7 @@ fun WeatherScreen(
             FacadeTabBar(
                 selectedTab = FacadeTab.Today,
                 onOpenToday = {},
-                onOpenForecast = onOpenForecast,
-                onOpenPlaces = { searchFocus.requestFocus() }
+                onOpenForecast = onOpenForecast
             )
         }
     }

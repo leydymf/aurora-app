@@ -26,7 +26,6 @@
     <string name="weather_rain_notice">%1$s de probabilidad</string>
     <string name="weather_tab_today">Hoy</string>
     <string name="weather_tab_forecast">5 días</string>
-    <string name="weather_tab_places">Lugares</string>
     <string name="access_setup_title">Tu clave personal.</string>
     <string name="access_setup_body">Es tu llave. Elige algo fácil de recordar para ti, y sin significado para nadie más.</string>
     <string name="access_setup_rule_length">Mínimo 6 caracteres</string>
