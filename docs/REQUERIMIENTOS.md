@@ -503,6 +503,20 @@ El sistema debe permitir a la usuaria seleccionar uno o varios registros de inci
 
 *Notas:* Surge de la consulta con el comité de género: los casos se demoran por falta de fechas y pruebas. El archivo exportado sale del cifrado de Aurora; se mitiga con contraseña, nombre neutro y aviso previo (HU-35). Agregado el 2026-10-02; el 2026-10-03 la usuaria amplió el criterio 3 de «imágenes» a todos los adjuntos tras la revisión en emulador: un documento adjunto que solo se menciona no sirve como prueba.
 
+## RF-46 — Recuperación de la contraseña por correo
+**Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-15, RF-39
+
+El sistema debe permitir a la usuaria pedir, desde la pantalla de inicio de sesión, un correo para restablecer su contraseña, sin revelar si la dirección tiene una cuenta y advirtiendo antes de enviarlo que el respaldo en la nube podría no recuperarse en otro teléfono.
+
+**Criterios de aceptación:**
+1. La pantalla de inicio de sesión ofrece un enlace discreto para recuperar el acceso, que abre un formulario con un solo campo de correo.
+2. Antes de enviar se muestra un aviso de que, al restablecer la contraseña, la información guardada en la nube podría no abrirse en otro teléfono, y de que lo guardado en ese dispositivo no se pierde.
+3. El mensaje de confirmación es idéntico exista o no una cuenta con ese correo, y también cuando el correo está mal formado. Solo la falta de conexión se informa aparte.
+4. Tras varios envíos seguidos se aplica una pausa temporal con el mismo límite del inicio de sesión, con su propio contador: agotarla no impide iniciar sesión.
+5. Ningún texto nuevo delata el propósito de la aplicación.
+
+*Notas:* Refinamiento de RF-15. Hasta ahora la contraseña solo podía restablecerse desde la consola del proveedor. La decisión de conservar la recuperación por correo con plantilla de identidad meteorológica es la opción A de la reunión con la directora del 2026-07-21 (`docs/DECISIONES_DIRECTORA.md` §4.2, P-19); el texto de esa plantilla debe personalizarse en la consola ANTES de probar el flujo. El criterio 3 es el mismo de RF-15 criterio 2: la pantalla no puede servir para averiguar quién tiene cuenta. El aviso del criterio 2 es coherente con el ADR 2026-07-26: en un dispositivo sin copia local de la llave, una contraseña restablecida deja el respaldo ilegible y se reinicia. Agregado el 2026-10-06.
+
 ## RNF-01 — Cifrado de datos
 **Tipo:** No Funcional · **Prioridad:** Alta · **Dependencias:** -
 

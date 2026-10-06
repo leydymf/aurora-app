@@ -3,9 +3,11 @@ package com.auroraclima.app.accounts.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
+import com.auroraclima.app.accounts.domain.usecase.SendPasswordResetUseCase
 import com.auroraclima.app.accounts.domain.usecase.SignInOutcome
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,7 +42,8 @@ class LoginViewModel @Inject constructor(
     private val signIn: SignInUseCase,
     private val repository: AuthRepository,
     private val credentials: CredentialStore,
-    private val silentSession: SilentSessionOrchestrator
+    private val silentSession: SilentSessionOrchestrator,
+    private val sendPasswordReset: SendPasswordResetUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -133,5 +136,50 @@ class LoginViewModel @Inject constructor(
 
     private companion object {
         const val MILLIS_PER_SECOND = 1000L
+    }
+
+    /** Abre la hoja de recuperación (RF-46) con el correo ya escrito, si lo hay. */
+    fun onResetRequested() {
+        _uiState.update {
+            it.copy(
+                isResetSheetVisible = true,
+                resetEmail = it.email,
+                resetDoneRes = null,
+                resetErrorRes = null
+            )
+        }
+    }
+
+    fun onResetDismissed() {
+        _uiState.update {
+            it.copy(isResetSheetVisible = false, resetEmail = "", resetDoneRes = null, resetErrorRes = null)
+        }
+    }
+
+    fun onResetEmailChange(value: String) {
+        _uiState.update { it.copy(resetEmail = value, resetErrorRes = null) }
+    }
+
+    /**
+     * Envía el correo. El mensaje final es el MISMO exista o no la cuenta
+     * (RF-46): la pantalla no puede servir para averiguar quién tiene cuenta
+     * aquí. También la pausa por intentos se muestra con ese mismo mensaje —
+     * decir «estás en pausa» revelaría que alguien ya pidió para ese correo.
+     */
+    fun onResetSubmit() {
+        val state = _uiState.value
+        if (!state.canSendReset) return
+        _uiState.update { it.copy(isSendingReset = true, resetErrorRes = null) }
+        viewModelScope.launch {
+            val offline = sendPasswordReset(state.resetEmail) == PasswordResetResult.NoConnection
+            _uiState.update {
+                if (offline) {
+                    it.copy(isSendingReset = false, resetErrorRes = R.string.account_reset_offline)
+                } else {
+                    // Todo lo demás —incluida la pausa— muestra el mismo mensaje.
+                    it.copy(isSendingReset = false, resetEmail = "", resetDoneRes = R.string.account_reset_done)
+                }
+            }
+        }
     }
 }

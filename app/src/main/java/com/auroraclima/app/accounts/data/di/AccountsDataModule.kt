@@ -1,5 +1,6 @@
 package com.auroraclima.app.accounts.data.di
 
+import android.content.Context
 import com.auroraclima.app.accounts.data.AuthService
 import com.auroraclima.app.accounts.data.AuthSessionCleaner
 import com.auroraclima.app.accounts.data.FirebaseAuthRepository
@@ -14,14 +15,17 @@ import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.security.WallClock
+import com.auroraclima.app.accounts.domain.usecase.SendPasswordResetUseCase
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.SensitiveStateCleaner
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
+import javax.inject.Named
 import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -83,6 +87,21 @@ abstract class AccountsDataModule {
         /** Reloj de pared del bloqueo de RF-15 (ver KDoc de [WallClock]). */
         @Provides
         fun provideWallClock(): WallClock = WallClock { System.currentTimeMillis() }
+
+        /**
+         * Contador propio del restablecimiento (RF-46): mismo archivo neutro
+         * que el del inicio de sesión, claves distintas. Abusar del
+         * restablecimiento no debe cerrarle la entrada a la usuaria, ni al revés.
+         */
+        @Provides
+        @Singleton
+        @Named(SendPasswordResetUseCase.PASSWORD_RESET_ATTEMPTS)
+        fun providePasswordResetAttemptStore(@ApplicationContext context: Context): SignInAttemptStore =
+            PrefsSignInAttemptStore(
+                context = context,
+                countKey = PrefsSignInAttemptStore.RESET_COUNT_KEY,
+                deadlineKey = PrefsSignInAttemptStore.RESET_DEADLINE_KEY
+            )
 
         /** Main.immediate: el coordinador es main-confined, como SessionManager. */
         @Provides

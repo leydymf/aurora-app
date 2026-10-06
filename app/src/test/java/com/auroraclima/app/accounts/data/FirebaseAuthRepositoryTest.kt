@@ -2,6 +2,7 @@ package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
+import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import java.io.IOException
@@ -194,6 +195,42 @@ class FirebaseAuthRepositoryTest {
         service.activeSession = true
         assertEquals(true, repository.hasActiveSession())
     }
+
+    @Test
+    fun `el restablecimiento no revela si la cuenta existe`() = runTest {
+        // RF-46: cuenta inexistente y correo mal formado deben dar EXACTAMENTE
+        // el mismo resultado que un envío correcto. Si se distinguieran, la
+        // pantalla serviría para averiguar quién tiene cuenta aquí.
+        val conCuenta = repository.sendPasswordReset("usuaria@correo.co")
+
+        service.passwordResetError = AuthServiceException("ERROR_USER_NOT_FOUND")
+        val sinCuenta = repository.sendPasswordReset("no.existe@correo.co")
+
+        service.passwordResetError = AuthServiceException("ERROR_INVALID_EMAIL")
+        val malFormado = repository.sendPasswordReset("esto no es un correo")
+
+        assertEquals(PasswordResetResult.Requested, conCuenta)
+        assertEquals(conCuenta, sinCuenta)
+        assertEquals(conCuenta, malFormado)
+    }
+
+    @Test
+    fun `sin conexion el restablecimiento si se distingue`() = runTest {
+        // Mismo criterio que RF-20: sin red el correo NO salió y hay que
+        // poder decirlo, o la usuaria esperaría un mensaje que no llega.
+        service.passwordResetError = AuthServiceException(AuthServiceException.ERROR_NETWORK)
+
+        assertEquals(PasswordResetResult.NoConnection, repository.sendPasswordReset("usuaria@correo.co"))
+    }
+
+    @Test
+    fun `el rechazo por demasiadas peticiones tampoco se distingue`() = runTest {
+        // Solo se dispara con envíos reales, es decir cuando la cuenta existe:
+        // mostrarlo aparte sería un oráculo de existencia (criterio 3).
+        service.passwordResetError = AuthServiceException("ERROR_TOO_MANY_REQUESTS")
+
+        assertEquals(PasswordResetResult.Requested, repository.sendPasswordReset("usuaria@correo.co"))
+    }
 }
 
 private class FakeAuthService : AuthService {
@@ -218,6 +255,16 @@ private class FakeAuthService : AuthService {
 
     override suspend fun deleteCurrentUser() {
         nextError?.let { throw it }
+    }
+
+    var passwordResetError: Exception? = null
+
+    var passwordResetEmails = mutableListOf<String>()
+
+    override suspend fun sendPasswordReset(email: String) {
+        passwordResetEmails += email
+
+        passwordResetError?.let { throw it }
     }
 
     override suspend fun updatePassword(newPassword: String) {

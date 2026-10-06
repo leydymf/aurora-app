@@ -100,6 +100,17 @@
     <string name="account_login_lock_title">Pausa temporal</string>
     <string name="account_login_lock_body">Por tu seguridad, el acceso queda en pausa unos minutos. Respira; tu información sigue protegida.</string>
     <string name="account_login_lock_countdown">PODRÁS INTENTAR DE NUEVO EN %1$s</string>
+    <!-- RF-46: recuperación por correo. Redacción aprobada por la usuaria el
+         2026-10-06; el mensaje de confirmación es el MISMO exista o no la
+         cuenta, para que la pantalla no sirva de oráculo. -->
+    <string name="account_reset_link">¿Olvidaste tu contraseña?</string>
+    <string name="account_reset_title">Recuperar el acceso</string>
+    <string name="account_reset_body">Escribe tu correo y te enviamos un mensaje para elegir una contraseña nueva.</string>
+    <string name="account_reset_warning">Al restablecer tu contraseña, la información guardada en la nube podría no abrirse en otro teléfono. Lo que tienes en este dispositivo no se pierde.</string>
+    <string name="account_reset_submit">Enviar el correo</string>
+    <string name="account_reset_cancel">Ahora no</string>
+    <string name="account_reset_done">Si ese correo tiene una cuenta, te enviamos un mensaje para elegir una contraseña nueva. Revisa tu bandeja de entrada y la carpeta de correo no deseado.</string>
+    <string name="account_reset_offline">No hay conexión, así que el correo no salió. Inténtalo cuando vuelvas a tener internet.</string>
     <string name="access_settings_title">Ajustes</string>
     <string name="access_settings_group_security">Tu llave de entrada</string>
     <string name="access_settings_change_code">Cambiar tu código de acceso</string>

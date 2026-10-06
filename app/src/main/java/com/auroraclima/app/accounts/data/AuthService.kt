@@ -31,6 +31,13 @@ interface AuthService {
      * [reauthenticate].
      */
     suspend fun updatePassword(newPassword: String)
+
+    /**
+     * Pide al proveedor el correo de restablecimiento (RF-46). No requiere
+     * sesión: es la vía de quien NO puede entrar. La plantilla del correo tiene
+     * identidad 100 % de clima (P-19, decisión de la directora §4.2).
+     */
+    suspend fun sendPasswordReset(email: String)
 }
 
 /**

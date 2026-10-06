@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -26,12 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
+import com.auroraclima.app.core.security.SecureSheet
 import com.auroraclima.app.core.ui.components.BrandHeader
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
@@ -40,10 +44,12 @@ import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2FieldLabel
 import com.auroraclima.app.core.ui.v2.V2FieldMessage
 import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2NoticeCard
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PlainField
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecretField
+import com.auroraclima.app.core.ui.v2.V2SheetCard
 import com.auroraclima.app.core.ui.v2.V2Voice
 
 /**
@@ -76,6 +82,16 @@ fun LoginRoute(onAccessGranted: () -> Unit) {
                 // También el envío con la tecla «Done» del IME cuenta como interacción.
                 sessionManager.registerInteraction()
                 viewModel.onSubmit()
+            },
+            onResetRequested = viewModel::onResetRequested,
+            onResetDismissed = viewModel::onResetDismissed,
+            onResetEmailChange = {
+                sessionManager.registerInteraction()
+                viewModel.onResetEmailChange(it)
+            },
+            onResetSubmit = {
+                sessionManager.registerInteraction()
+                viewModel.onResetSubmit()
             }
         )
     }
@@ -88,6 +104,10 @@ internal fun LoginScreen(
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
     onSubmit: () -> Unit,
+    onResetRequested: () -> Unit,
+    onResetDismissed: () -> Unit,
+    onResetEmailChange: (String) -> Unit,
+    onResetSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -157,8 +177,102 @@ internal fun LoginScreen(
             enabled = state.canSubmit,
             isLoading = state.isLoading
         )
+        Spacer(modifier = Modifier.height(12.dp))
+        // Enlace discreto (RF-46): sin peso tipográfico ni acento, para que no
+        // compita con el único botón lleno de la pantalla (regla 2).
+        Text(
+            text = stringResource(R.string.account_reset_link),
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .clickable(onClick = onResetRequested, role = Role.Button)
+                .padding(8.dp)
+        )
         // Aire final para no chocar con el botón nube de salida rápida.
         Spacer(modifier = Modifier.height(48.dp))
+    }
+    if (state.isResetSheetVisible) {
+        ResetPasswordSheet(
+            state = state,
+            onEmailChange = onResetEmailChange,
+            onSubmit = onResetSubmit,
+            onDismiss = onResetDismissed
+        )
+    }
+}
+
+/**
+ * Recuperación por correo (RF-46), en hoja segura porque un diálogo es ventana
+ * propia y el grafo seguro no la cubre (RNF-02).
+ *
+ * El aviso va ANTES del envío, no después: tras restablecer la contraseña el
+ * respaldo de la nube queda ilegible (ADR 2026-07-26), y eso hay que saberlo
+ * mientras todavía se puede no hacerlo. Enviado, la hoja muestra un mensaje
+ * único —el mismo exista o no la cuenta— y el campo desaparece.
+ */
+@Composable
+private fun ResetPasswordSheet(
+    state: LoginUiState,
+    onEmailChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    SecureSheet(onDismissRequest = onDismiss) {
+        V2SheetCard {
+            Text(
+                text = stringResource(R.string.account_reset_title),
+                style = InteriorTypeVoice.cardTitle,
+                color = V2Palette.inkPrimary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            if (state.resetDoneRes != null) {
+                Text(
+                    text = stringResource(state.resetDoneRes),
+                    style = InteriorTypeVoice.body,
+                    color = V2Palette.inkSecondary
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+                V2PrimaryButton(text = stringResource(R.string.common_back), onClick = onDismiss)
+            } else {
+                Text(
+                    text = stringResource(R.string.account_reset_body),
+                    style = InteriorTypeVoice.body,
+                    color = V2Palette.inkSecondary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                V2NoticeCard(stringResource(R.string.account_reset_warning))
+                Spacer(modifier = Modifier.height(14.dp))
+                V2FieldLabel(stringResource(R.string.account_register_email_label))
+                V2PlainField(
+                    value = state.resetEmail,
+                    onValueChange = onEmailChange,
+                    isError = state.resetErrorRes != null,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { onSubmit() })
+                )
+                V2FieldMessage(messageRes = state.resetErrorRes, fallbackRes = null)
+                Spacer(modifier = Modifier.height(16.dp))
+                V2PrimaryButton(
+                    text = stringResource(R.string.account_reset_submit),
+                    onClick = onSubmit,
+                    enabled = state.canSendReset,
+                    isLoading = state.isSendingReset
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text(
+                        text = stringResource(R.string.account_reset_cancel),
+                        style = InteriorTypeVoice.bodyStrong,
+                        color = V2Palette.inkSecondary
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
 

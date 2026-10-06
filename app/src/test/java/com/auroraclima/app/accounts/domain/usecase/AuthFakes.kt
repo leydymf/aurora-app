@@ -2,6 +2,7 @@ package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
+import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.model.SilentSessionState
@@ -88,6 +89,16 @@ internal class FakeAuthRepository : AuthRepository {
 
     /** Contraseñas que llegaron a updatePassword; su tamaño es el conteo de llamadas. */
     val updatedPasswords = mutableListOf<String>()
+
+    var nextPasswordResetResult: PasswordResetResult = PasswordResetResult.Requested
+
+    /** Correos a los que se pidió el restablecimiento (RF-46). */
+    val passwordResetRequests = mutableListOf<String>()
+
+    override suspend fun sendPasswordReset(email: String): PasswordResetResult {
+        passwordResetRequests += email
+        return nextPasswordResetResult
+    }
 
     override suspend fun updatePassword(newPassword: String): UpdatePasswordResult {
         updatedPasswords += newPassword

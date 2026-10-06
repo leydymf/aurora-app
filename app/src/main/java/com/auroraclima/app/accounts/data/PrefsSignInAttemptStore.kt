@@ -17,11 +17,21 @@ import kotlinx.coroutines.withContext
  * persiste para que cerrar la app o forzar su detención no salte el bloqueo.
  * Mejor esfuerzo (§3): un fallo de lectura/escritura degrada en silencio — el
  * proveedor mantiene además su propio límite de intentos en el servidor.
+ *
+ * Las claves son parámetro porque el restablecimiento (RF-46) lleva su propio
+ * contador en el MISMO archivo neutro: abusar del restablecimiento no debe
+ * cerrarle la entrada a la usuaria, ni al revés.
  */
 @Singleton
-class PrefsSignInAttemptStore @Inject constructor(
-    @ApplicationContext private val context: Context
+class PrefsSignInAttemptStore(
+    private val context: Context,
+    private val countKey: String,
+    private val deadlineKey: String
 ) : SignInAttemptStore {
+    /** Constructor que inyecta Hilt: el contador del inicio de sesión (RF-15). */
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, COUNT_KEY, DEADLINE_KEY)
+
     private val preferences: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
@@ -29,8 +39,8 @@ class PrefsSignInAttemptStore @Inject constructor(
     override suspend fun read(): SignInAttempts = withContext(Dispatchers.IO) {
         runCatching {
             SignInAttempts(
-                failedCount = preferences.getInt(COUNT_KEY, 0),
-                lockDeadlineEpochMs = preferences.getLong(DEADLINE_KEY, 0L).takeIf { it > 0L }
+                failedCount = preferences.getInt(countKey, 0),
+                lockDeadlineEpochMs = preferences.getLong(deadlineKey, 0L).takeIf { it > 0L }
             )
         }.getOrDefault(SignInAttempts())
     }
@@ -39,8 +49,8 @@ class PrefsSignInAttemptStore @Inject constructor(
         withContext(Dispatchers.IO) {
             runCatching {
                 preferences.edit()
-                    .putInt(COUNT_KEY, value.failedCount)
-                    .putLong(DEADLINE_KEY, value.lockDeadlineEpochMs ?: 0L)
+                    .putInt(countKey, value.failedCount)
+                    .putLong(deadlineKey, value.lockDeadlineEpochMs ?: 0L)
                     .commit()
             }
         }
@@ -50,17 +60,23 @@ class PrefsSignInAttemptStore @Inject constructor(
         withContext(Dispatchers.IO) {
             runCatching {
                 preferences.edit()
-                    .remove(COUNT_KEY)
-                    .remove(DEADLINE_KEY)
+                    .remove(countKey)
+                    .remove(deadlineKey)
                     .commit()
             }
         }
     }
 
-    private companion object {
+    companion object {
         // Nombres neutros, plausibles en una app de clima (RNF-05).
-        const val PREFS_NAME = "sync_meta"
+        private const val PREFS_NAME = "sync_meta"
+
+        /** Contador del inicio de sesión (RF-15). */
         const val COUNT_KEY = "m0"
         const val DEADLINE_KEY = "m1"
+
+        /** Contador propio del restablecimiento (RF-46), mismo archivo neutro. */
+        const val RESET_COUNT_KEY = "m2"
+        const val RESET_DEADLINE_KEY = "m3"
     }
 }
