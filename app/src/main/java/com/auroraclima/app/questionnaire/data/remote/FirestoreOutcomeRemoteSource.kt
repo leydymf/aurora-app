@@ -34,13 +34,16 @@ class FirestoreOutcomeRemoteSource @Inject constructor(
     }
 
     /** Restauración (RF-39): aquí SÍ se espera al servidor — es una lectura. */
-    override suspend fun downloadAll(): List<Pair<String, EncryptedOutcomeDto>> =
-        outcomes().get(Source.SERVER).awaitCompletion().documents.mapNotNull { document ->
-            val dto = EncryptedOutcomeDto(
-                ciphertext = document.getString(FIELD_PAYLOAD) ?: return@mapNotNull null,
-                iv = document.getString(FIELD_IV) ?: return@mapNotNull null,
-                schemaVersion = document.getLong(FIELD_SCHEMA_VERSION) ?: return@mapNotNull null
-            )
+    override suspend fun downloadAll(): List<Pair<String, EncryptedOutcomeDto?>> =
+        outcomes().get(Source.SERVER).awaitCompletion().documents.map { document ->
+            val payload = document.getString(FIELD_PAYLOAD)
+            val iv = document.getString(FIELD_IV)
+            val schemaVersion = document.getLong(FIELD_SCHEMA_VERSION)
+            val dto = if (payload != null && iv != null && schemaVersion != null) {
+                EncryptedOutcomeDto(ciphertext = payload, iv = iv, schemaVersion = schemaVersion)
+            } else {
+                null
+            }
             document.id to dto
         }
 

@@ -1,6 +1,7 @@
 package com.auroraclima.app.records.ui
 
 import com.auroraclima.app.R
+import com.auroraclima.app.accounts.domain.usecase.NoCloudReconciliation
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.catalog.FakeCategoryCatalog
 import com.auroraclima.app.core.security.FakeSyncKeyManager
@@ -32,7 +33,13 @@ class JournalListViewModelTest {
     private val keyManager = FakeSyncKeyManager()
     private val catalog = FakeCategoryCatalog()
 
-    private fun viewModel() = JournalListViewModel(repository, attachments, LoadEntryKindsUseCase(catalog), keyManager)
+    private fun viewModel() = JournalListViewModel(
+        repository,
+        attachments,
+        LoadEntryKindsUseCase(catalog),
+        NoCloudReconciliation,
+        keyManager
+    )
 
     @Test
     fun `expone los registros en el orden del repositorio`() = runTest {
@@ -75,7 +82,9 @@ class JournalListViewModelTest {
         val state = viewModel.uiState.value
         assertNull(state.errorRes)
         assertEquals(1, state.entries.size)
-        assertEquals(2, repository.entriesCalls)
+        // Cada refresco lee dos veces: lo local primero y otra vez al terminar
+        // la reconciliación con la nube (ADR 2026-10-06).
+        assertEquals(4, repository.entriesCalls)
     }
 
     @Test

@@ -229,4 +229,42 @@ class NoTracesGuardTest {
             violations.isEmpty()
         )
     }
+
+    /**
+     * Regla 4 de CLAUDE.md, innegociable y hasta ahora sin guarda: nada del
+     * doble fondo puede ir a logs ni a telemetría. Se barre `src/main` entero
+     * porque un `Log.d` en cualquier capa basta para volcar contenido
+     * descifrado a logcat, legible por `adb` sin root (auditoría 2026-10-06).
+     */
+    @Test
+    fun `no hay registro en logs ni telemetria en ninguna capa`() {
+        val forbidden = listOf(
+            "android.util.Log",
+            "Log.d(", "Log.e(", "Log.i(", "Log.v(", "Log.w(",
+            "println(",
+            "printStackTrace",
+            "System.out", "System.err",
+            "FirebaseCrashlytics",
+            "FirebaseAnalytics"
+        )
+        val violations = mainFiles("kt")
+            .filter { file -> forbidden.any { it in file.readText().withoutComments() } }
+            .map { "${it.relativeTo(mainDir)}" }
+            .toList()
+
+        assertTrue(
+            "Registro en logs o telemetría fuera de lo permitido (regla 4):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    /**
+     * Quita comentarios antes de barrer: varios KDoc explican precisamente que
+     * la librería de PDF escribe en logcat y que Aurora la silencia, y nombrar
+     * la API en una explicación no es usarla.
+     */
+    private fun String.withoutComments(): String = replace(Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL), "")
+        .lines()
+        .joinToString("\n") { it.substringBefore("//") }
 }

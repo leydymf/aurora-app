@@ -1,6 +1,7 @@
 package com.auroraclima.app.questionnaire.data.di
 
 import com.auroraclima.app.core.database.EncryptedDatabaseFactory
+import com.auroraclima.app.core.security.AccountDataReconciler
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.RemoteAccountDataEraser
@@ -65,16 +66,27 @@ abstract class QuestionnaireDataModule {
     @IntoSet
     abstract fun bindOutcomeSyncReconciler(impl: OutcomeSyncReconciler): AccountDataRestorer
 
+    /** ADR 2026-10-06: y además traen lo que se guardó o eliminó en otro dispositivo. */
+    @Binds
+    @IntoSet
+    abstract fun bindOutcomeCloudReconciler(impl: OutcomeSyncReconciler): AccountDataReconciler
+
     companion object {
         /**
          * Solo captura la fábrica: NO construye la BD aquí (P-36) — la apertura
          * hace I/O y puede lanzar, y eso ocurre recién dentro del acceso, en su
-         * dispatcher de I/O y traducido a Result. v1 sin migraciones.
+         * dispatcher de I/O y traducido a Result. La migración v1→v2 (nombre
+         * del documento en la nube y constancias de borrado, ADR 2026-10-06)
+         * conserva los resultados ya guardados.
          */
         @Provides
         fun provideGuidanceDatabaseSource(factory: EncryptedDatabaseFactory): GuidanceDatabaseSource =
             GuidanceDatabaseSource {
-                factory.create(GuidanceDatabase::class.java, GuidanceDatabase.NAME)
+                factory.create(
+                    GuidanceDatabase::class.java,
+                    GuidanceDatabase.NAME,
+                    GuidanceDatabase.MIGRATION_1_2
+                )
             }
     }
 }

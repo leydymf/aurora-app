@@ -36,7 +36,11 @@ class LocalJournalRepositoryTest {
         database.close()
     }
 
-    private fun repositoryOf(source: JournalDatabaseSource) = LocalJournalRepository(JournalStoreAccess(source))
+    private var nextDocId = 0
+
+    private fun repositoryOf(source: JournalDatabaseSource) = LocalJournalRepository(JournalStoreAccess(source)) {
+        "doc-${++nextDocId}"
+    }
 
     private fun newEntry(kindId: String = "t02", kindLabel: String = "Segunda", detail: String = "x") =
         NewJournalEntry(occurredOn = LocalDate.now(), kindId = kindId, kindLabel = kindLabel, detail = detail)

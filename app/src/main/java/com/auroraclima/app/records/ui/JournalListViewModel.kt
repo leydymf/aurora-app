@@ -3,6 +3,7 @@ package com.auroraclima.app.records.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.CloudReconciliation
 import com.auroraclima.app.core.security.SyncKeyManager
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
@@ -32,6 +33,7 @@ class JournalListViewModel @Inject constructor(
     private val repository: JournalRepository,
     private val attachmentRepository: JournalAttachmentRepository,
     private val loadEntryKinds: LoadEntryKindsUseCase,
+    private val cloudReconciliation: CloudReconciliation,
     keyManager: SyncKeyManager
 ) : ViewModel() {
     // El aviso de respaldo reiniciado (RF-39) se consume UNA vez y vive en el
@@ -75,18 +77,8 @@ class JournalListViewModel @Inject constructor(
     fun refresh() {
         _uiState.update { it.copy(isLoading = true, errorRes = null) }
         viewModelScope.launch {
-            repository.entries()
-                .onSuccess { entries ->
-                    val surviving = entries.map { it.id }.toSet()
-                    _uiState.update {
-                        it.copy(isLoading = false, entries = entries, selectedIds = it.selectedIds intersect surviving)
-                    }
-                }
-                .onFailure {
-                    _uiState.update { it.copy(isLoading = false, errorRes = R.string.common_error_generic) }
-                }
-            attachmentRepository.counts()
-                .onSuccess { counts -> _uiState.update { it.copy(attachmentCounts = counts) } }
+            loadEntries(showErrors = true)
+            loadCounts()
         }
         viewModelScope.launch {
             // El catálogo llega por su lado (puede esperar a la red): la lista
@@ -94,5 +86,38 @@ class JournalListViewModel @Inject constructor(
             loadEntryKinds()
                 .onSuccess { kinds -> _uiState.update { it.copy(kinds = kinds) } }
         }
+        viewModelScope.launch {
+            // Lo que se editó o eliminó en el otro dispositivo (ADR 2026-10-06)
+            // llega por su lado: la lista ya se pintó con lo local y se vuelve a
+            // leer cuando la reconciliación termina. Sin red no hace nada.
+            cloudReconciliation.reconcile()
+            loadEntries(showErrors = false)
+            loadCounts()
+        }
+    }
+
+    /**
+     * Lee el historial y poda las marcas de selección de lo que ya no existe.
+     * La relectura posterior a la reconciliación NO muestra errores: la lista
+     * ya está pintada y un fallo de fondo no debe estropearla (§3).
+     */
+    private suspend fun loadEntries(showErrors: Boolean) {
+        repository.entries()
+            .onSuccess { entries ->
+                val surviving = entries.map { it.id }.toSet()
+                _uiState.update {
+                    it.copy(isLoading = false, entries = entries, selectedIds = it.selectedIds intersect surviving)
+                }
+            }
+            .onFailure {
+                if (showErrors) {
+                    _uiState.update { it.copy(isLoading = false, errorRes = R.string.common_error_generic) }
+                }
+            }
+    }
+
+    private suspend fun loadCounts() {
+        attachmentRepository.counts()
+            .onSuccess { counts -> _uiState.update { it.copy(attachmentCounts = counts) } }
     }
 }

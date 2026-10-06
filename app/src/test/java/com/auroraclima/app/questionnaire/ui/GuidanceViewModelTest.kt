@@ -520,7 +520,7 @@ private class FakeSavedOutcomeRepository : SavedOutcomeRepository {
 
     override suspend fun outcome(id: Long): Result<SavedOutcome?> = Result.success(null)
 
-    override suspend fun delete(id: Long): Result<Unit> = Result.success(Unit)
+    override suspend fun delete(id: Long): Result<String> = Result.success("doc-$id")
 }
 
 private class FakeOutcomeSyncRepository : OutcomeSyncRepository {
@@ -531,9 +531,11 @@ private class FakeOutcomeSyncRepository : OutcomeSyncRepository {
         return Result.success(Unit)
     }
 
-    override suspend fun remove(outcomeId: Long): Result<Unit> = Result.success(Unit)
+    override suspend fun remove(docId: String): Result<Unit> = Result.success(Unit)
 
     override suspend fun restore(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun reconcile(): Result<Unit> = Result.success(Unit)
 }
 
 private class FakeDirectoryProvider : DirectoryProvider {

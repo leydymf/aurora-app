@@ -9,7 +9,14 @@ package com.auroraclima.app.questionnaire.domain.repository
 interface OutcomeSyncRepository {
     suspend fun push(outcomeId: Long): Result<Unit>
 
-    suspend fun remove(outcomeId: Long): Result<Unit>
+    suspend fun remove(docId: String): Result<Unit>
 
     suspend fun restore(): Result<Unit>
+
+    /**
+     * Hace converger los resultados guardados con la nube (ADR 2026-10-06):
+     * trae los que se guardaron en otro dispositivo y elimina aquí los que allá
+     * se eliminaron. Un resultado no se edita nunca, así que no hay empates.
+     */
+    suspend fun reconcile(): Result<Unit>
 }

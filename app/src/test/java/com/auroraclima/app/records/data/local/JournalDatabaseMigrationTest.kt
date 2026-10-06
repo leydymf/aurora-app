@@ -189,4 +189,52 @@ class JournalDatabaseMigrationTest {
             assertEquals(0L, cursor.getLong(4))
         }
     }
+
+    @Test
+    fun `v5 a v6 da a cada registro su nombre en la nube sin migrar lo ya publicado`() = runTest6 {
+        val db = migratedToV5()
+
+        JournalDatabase.MIGRATION_5_6.migrate(db)
+
+        db.query("SELECT id, doc_id, updated_at, created_at, pending FROM entries").use { cursor ->
+            assertEquals(1, cursor.count)
+            cursor.moveToFirst()
+            val id = cursor.getLong(0)
+            // El nombre remoto de lo ya publicado ES su id numérico: ningún
+            // documento de la nube cambia de nombre con esta migración.
+            assertEquals(id.toString(), cursor.getString(1))
+            // Un registro que nunca se editó se modificó al crearse.
+            assertEquals(cursor.getLong(3), cursor.getLong(2))
+            // Y no nace con cambios pendientes por el solo hecho de migrar.
+            assertEquals(0, cursor.getInt(4))
+        }
+    }
+
+    @Test
+    fun `v5 a v6 crea la tabla de constancias de borrado`() = runTest6 {
+        val db = migratedToV5()
+
+        JournalDatabase.MIGRATION_5_6.migrate(db)
+
+        db.execSQL("INSERT INTO removed (doc_id, scope, at) VALUES ('abc', 'e', 7)")
+        db.query("SELECT doc_id, scope FROM removed").use { cursor ->
+            assertEquals(1, cursor.count)
+            cursor.moveToFirst()
+            assertEquals("abc", cursor.getString(0))
+            assertEquals("e", cursor.getString(1))
+        }
+    }
+
+    /** Lleva una base v2 sembrada hasta v5, que es el punto de partida real. */
+    private fun migratedToV5(): SupportSQLiteDatabase = openV2WithData().also { db ->
+        // El fixture de v2 solo siembra `entries`; la tabla de adjuntos la crea
+        // su propia migración, que es idempotente (`IF NOT EXISTS`).
+        JournalDatabase.MIGRATION_1_2.migrate(db)
+        JournalDatabase.MIGRATION_2_3.migrate(db)
+        JournalDatabase.MIGRATION_3_4.migrate(db)
+        JournalDatabase.MIGRATION_4_5.migrate(db)
+    }
+
+    /** Las migraciones son síncronas: no hace falta corrutina, solo legibilidad. */
+    private fun runTest6(block: () -> Unit) = block()
 }

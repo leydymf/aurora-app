@@ -207,7 +207,7 @@ class JournalDetailViewModelTest {
 
         // RF-36 criterio 2: desaparece del dispositivo y la propagación va al mismo id.
         assertEquals(listOf(7L), repository.deleted)
-        assertEquals(listOf(7L), sync.removed)
+        assertEquals(listOf("doc-1"), sync.removed)
         assertEquals(listOf(Unit), viewModel.deletedEvents.replayCache)
     }
 

@@ -18,7 +18,9 @@ class SignInUseCaseTest {
     private val credentials = FakeCredentialStore()
     private var restoreCalls = 0
     private val restorer = AccountDataRestorer { restoreCalls++ }
-    private val useCase = SignInUseCase(repository, store, clock, syncKeys, setOf(restorer), credentials)
+    private val cloudReconciliation = FakeCloudReconciliation()
+    private val useCase =
+        SignInUseCase(repository, store, clock, syncKeys, cloudReconciliation, setOf(restorer), credentials)
 
     @Test
     fun `credenciales correctas dan acceso`() = runTest {

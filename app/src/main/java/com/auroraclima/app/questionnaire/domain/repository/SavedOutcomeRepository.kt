@@ -18,5 +18,9 @@ interface SavedOutcomeRepository {
 
     suspend fun outcome(id: Long): Result<SavedOutcome?>
 
-    suspend fun delete(id: Long): Result<Unit>
+    /**
+     * Borra el resultado y devuelve su nombre de documento en la nube (vacío si
+     * la fila ya no estaba), con el mismo criterio que el historial.
+     */
+    suspend fun delete(id: Long): Result<String>
 }

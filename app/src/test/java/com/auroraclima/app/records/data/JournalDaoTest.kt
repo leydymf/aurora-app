@@ -69,7 +69,7 @@ class JournalDaoTest {
         // RF-35: `created_at` se preserva para que el orden del listado no cambie.
         val id = dao.insert(row(day = 100, createdAt = 5, detail = "original"))
 
-        dao.update(id = id, day = 120, kind = "t04", label = "Cuarta", detail = "corregido")
+        dao.update(id = id, day = 120, kind = "t04", label = "Cuarta", detail = "corregido", updatedAt = 42)
 
         val edited = requireNotNull(dao.entryById(id))
         assertEquals(120L, edited.day)
@@ -77,6 +77,7 @@ class JournalDaoTest {
         assertEquals("Cuarta", edited.label)
         assertEquals("corregido", edited.detail)
         assertEquals(5L, edited.createdAt)
+        assertEquals("la edición queda fechada para desempatar entre dispositivos", 42L, edited.updatedAt)
     }
 
     @Test

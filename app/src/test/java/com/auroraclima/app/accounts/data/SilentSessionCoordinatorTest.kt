@@ -4,6 +4,7 @@ import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.model.SilentSessionState
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
+import com.auroraclima.app.accounts.domain.usecase.NoCloudReconciliation
 import com.auroraclima.app.accounts.domain.usecase.SilentSignInUseCase
 import com.auroraclima.app.core.network.ConnectivityMonitor
 import com.auroraclima.app.core.security.FakeSyncKeyManager
@@ -33,7 +34,8 @@ class SilentSessionCoordinatorTest {
     private val connectivity = FakeConnectivityMonitor()
 
     private fun TestScope.createCoordinator(): SilentSessionCoordinator {
-        val useCase = SilentSignInUseCase(repository, credentials, FakeSyncKeyManager(), emptySet())
+        val useCase =
+            SilentSignInUseCase(repository, credentials, FakeSyncKeyManager(), NoCloudReconciliation, emptySet())
         return SilentSessionCoordinator(useCase, connectivity, backgroundScope)
     }
 

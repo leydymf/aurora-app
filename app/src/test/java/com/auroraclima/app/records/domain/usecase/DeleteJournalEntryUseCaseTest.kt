@@ -28,7 +28,7 @@ class DeleteJournalEntryUseCaseTest {
         assertEquals(listOf(7L), repository.deleted)
         // RF-36 criterio 2: las evidencias del registro caen con él.
         assertEquals(listOf(7L), attachments.deletedOwners)
-        assertEquals(listOf(7L), sync.removed)
+        assertEquals(listOf("doc-1"), sync.removed)
     }
 
     @Test
@@ -51,7 +51,7 @@ class DeleteJournalEntryUseCaseTest {
 
         assertTrue(result.isSuccess)
         assertEquals(listOf(7L), repository.deleted)
-        assertEquals(listOf(7L), sync.removed)
+        assertEquals(listOf("doc-1"), sync.removed)
     }
 
     @Test

@@ -6,9 +6,11 @@ import androidx.test.core.app.ApplicationProvider
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.local.JournalEntryRow
+import com.auroraclima.app.records.ui.FakeJournalAttachmentRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -39,20 +41,30 @@ class JournalSyncReconcilerTest {
         metaCipher = ReversiblePayloadCipher(),
         keyManager = keyManager
     )
-    private val reconciler = JournalSyncReconciler(storeAccess, syncRepository, mediaSyncRepository, keyManager)
+    private val attachmentRepository = FakeJournalAttachmentRepository()
+    private val reconciler = JournalSyncReconciler(
+        storeAccess,
+        syncRepository,
+        mediaSyncRepository,
+        attachmentRepository,
+        keyManager
+    )
 
     @After
     fun tearDown() {
         database.close()
     }
 
+    /** Filas como las crea el repositorio real: con su nombre de documento propio. */
     private suspend fun seedRows(count: Int): List<Long> = (1..count).map { index ->
         database.journalDao().insert(
             JournalEntryRow(
+                docId = "doc-$index",
                 day = 20_600L + index,
                 kind = "t04",
                 detail = "registro $index",
-                createdAt = index.toLong()
+                createdAt = index.toLong(),
+                updatedAt = index.toLong()
             )
         )
     }
@@ -65,8 +77,8 @@ class JournalSyncReconcilerTest {
 
         reconciler.restore()
 
-        assertEquals(ids.map { it.toString() }, remote.uploaded.map { it.first })
-        assertTrue(remote.uploaded.all { it.second.schemaVersion == 3L })
+        assertEquals(ids.indices.map { "doc-${it + 1}" }, remote.uploaded.map { it.first })
+        assertTrue(remote.uploaded.all { it.second.schemaVersion == 4L })
         ids.forEach { id ->
             assertEquals(1L, database.journalDao().entryById(id)?.syncedGeneration)
         }
@@ -88,7 +100,7 @@ class JournalSyncReconcilerTest {
         remote.failAfterUploads = null
         reconciler.restore()
 
-        assertEquals(ids.map { it.toString() }, remote.uploaded.map { it.first })
+        assertEquals(ids.indices.map { "doc-${it + 1}" }, remote.uploaded.map { it.first })
         ids.forEach { id ->
             assertEquals(1L, database.journalDao().entryById(id)?.syncedGeneration)
         }
@@ -143,10 +155,11 @@ class JournalSyncReconcilerTest {
 
         reconciler.restore()
 
-        assertEquals(listOf(7L), database.journalDao().entries().map { it.id })
-        assertEquals("registro remoto", database.journalDao().entryById(7)?.detail)
-        assertEquals("t04", database.journalDao().entryById(7)?.kind)
-        assertEquals(1L, database.journalDao().entryById(7)?.syncedGeneration)
+        val restored = database.journalDao().entries().single()
+        assertEquals("7", restored.docId)
+        assertEquals("registro remoto", restored.detail)
+        assertEquals("t04", restored.kind)
+        assertEquals(1L, restored.syncedGeneration)
         assertTrue(remote.uploaded.isEmpty())
     }
 
@@ -248,9 +261,85 @@ class JournalSyncReconcilerTest {
         reconciler.restore()
 
         // El registro volvió y su evidencia también, íntegra y legible.
-        assertEquals(1, database.journalDao().entries().size)
-        val restored = database.attachmentDao().byOwner(ids[0]).single()
+        val owner = database.journalDao().entries().single()
+        val restored = database.attachmentDao().byOwner(owner.id).single()
         assertEquals(ref, restored.ref)
         org.junit.Assert.assertArrayEquals(content, store.read(ref) { it.readBytes() })
+    }
+
+    @Test
+    fun `la reconciliacion baja y borra antes de subir lo pendiente`() = runTest {
+        // El orden importa y este test lo discrimina: la fila ya estuvo en la
+        // nube (`cloudSeen`), se editó aquí sin subir (`pending`) y allá la
+        // eliminaron. Si se subiera primero, la edición se re-subiría y el
+        // registro que la usuaria borró reaparecería (segunda auditoría del
+        // 2026-10-06). Debe borrarse y NO subir nada.
+        val id = database.journalDao().insert(
+            JournalEntryRow(
+                docId = "doc-borrado-alla",
+                day = 20_600,
+                kind = "t04",
+                detail = "editado aquí sin subir",
+                createdAt = 1,
+                updatedAt = 2,
+                syncedGeneration = 1,
+                pending = true,
+                cloudSeenGeneration = 1
+            )
+        )
+
+        reconciler.reconcile()
+
+        assertNull(database.journalDao().entryById(id))
+        assertTrue(remote.uploaded.none { it.first == "doc-borrado-alla" })
+    }
+
+    @Test
+    fun `lo pendiente que nadie elimino si se sube al reconciliar`() = runTest {
+        val ids = seedRows(2)
+
+        reconciler.reconcile()
+
+        assertEquals(ids.indices.map { "doc-${it + 1}" }, remote.uploaded.map { it.first })
+        assertEquals(2, database.journalDao().entries().size)
+    }
+
+    @Test
+    fun `los adjuntos de un registro eliminado alla se borran con el`() = runTest {
+        val ids = seedRows(1)
+        val ref = store.newRef()
+        store.write(ref) { it.write("evidencia".toByteArray(Charsets.UTF_8)) }
+        database.attachmentDao().insert(
+            com.auroraclima.app.records.data.local.AttachmentRow(
+                owner = ids[0],
+                ref = ref,
+                kind = "image/jpeg",
+                createdAt = 5
+            )
+        )
+        // Primero sube; la reconciliación siguiente lo VE en el servidor y lo
+        // marca; solo entonces su desaparición significa «lo eliminaron allá»
+        // (son dos ciclos a propósito: ver P-86 f).
+        reconciler.reconcile()
+        reconciler.reconcile()
+        remote.remoteDocs.clear()
+        mediaRemote.headers.clear()
+
+        reconciler.reconcile()
+
+        assertEquals(0, database.journalDao().entries().size)
+        assertEquals(listOf(ids[0]), attachmentRepository.deletedOwners)
+    }
+
+    @Test
+    fun `sin llave la reconciliacion no toca nada`() = runTest {
+        val ids = seedRows(1)
+        keyManager.generation = null
+
+        reconciler.reconcile()
+
+        assertEquals(1, database.journalDao().entries().size)
+        assertEquals(ids.size, database.journalDao().entries().size)
+        assertTrue(remote.uploaded.isEmpty())
     }
 }

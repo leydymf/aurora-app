@@ -19,4 +19,13 @@ class FakeJournalMediaSyncRepository : JournalMediaSyncRepository {
         restoreCalls++
         return restoreResult
     }
+
+    var reconcileCalls = 0
+        private set
+    var reconcileResult: Result<Unit> = Result.success(Unit)
+
+    override suspend fun reconcile(): Result<Unit> {
+        reconcileCalls++
+        return reconcileResult
+    }
 }

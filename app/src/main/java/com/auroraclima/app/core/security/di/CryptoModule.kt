@@ -1,6 +1,10 @@
 package com.auroraclima.app.core.security.di
 
+import com.auroraclima.app.core.security.AccountDataReconciler
 import com.auroraclima.app.core.security.AccountDataRestorer
+import com.auroraclima.app.core.security.CloudReconciliation
+import com.auroraclima.app.core.security.CloudReconciliationCoordinator
+import com.auroraclima.app.core.security.CloudReconciliationScope
 import com.auroraclima.app.core.security.DefaultSyncKeyManager
 import com.auroraclima.app.core.security.DekMediaCipher
 import com.auroraclima.app.core.security.DekPayloadCipher
@@ -10,12 +14,15 @@ import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.LocalDekStore
 import com.auroraclima.app.core.security.MediaCipher
 import com.auroraclima.app.core.security.MediaKeyEraser
+import com.auroraclima.app.core.security.OpaqueIdSource
 import com.auroraclima.app.core.security.PasswordKeyDerivation
 import com.auroraclima.app.core.security.PasswordKeyWrapper
 import com.auroraclima.app.core.security.PayloadCipher
 import com.auroraclima.app.core.security.Pbkdf2PasswordKeyDerivation
 import com.auroraclima.app.core.security.RecoverableMediaCipher
 import com.auroraclima.app.core.security.RemoteAccountDataEraser
+import com.auroraclima.app.core.security.SecureRandomOpaqueIds
+import com.auroraclima.app.core.security.SensitiveStateCleaner
 import com.auroraclima.app.core.security.SyncKeyEraser
 import com.auroraclima.app.core.security.SyncKeyManager
 import com.auroraclima.app.core.security.SyncKeyRemoteEraser
@@ -26,6 +33,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import dagger.multibindings.Multibinds
+import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /** Enlaza los cifradores de core (RF-37, RF-33, RF-39). Viven en core: los usa todo feature que cifre datos propios. */
 @Module
@@ -51,6 +62,19 @@ abstract class CryptoModule {
     @Binds
     abstract fun bindPasswordKeyDerivation(impl: Pbkdf2PasswordKeyDerivation): PasswordKeyDerivation
 
+    /** Nombres de documento opacos para todo lo que viaja a la nube (ADR 2026-10-06). */
+    @Binds
+    abstract fun bindOpaqueIdSource(impl: SecureRandomOpaqueIds): OpaqueIdSource
+
+    /** Disparo de la reconciliación con la nube (ADR 2026-10-06). */
+    @Binds
+    abstract fun bindCloudReconciliation(impl: CloudReconciliationCoordinator): CloudReconciliation
+
+    /** Toda salida del espacio interno cancela la reconciliación en vuelo. */
+    @Binds
+    @IntoSet
+    abstract fun bindCloudReconciliationCleaner(impl: CloudReconciliationCoordinator): SensitiveStateCleaner
+
     // KeyEnvelopeRemoteSource se bindea en su implementador (core/network,
     // FirestoreBindingsModule) — mismo criterio que FirestoreCacheEraser.
 
@@ -73,7 +97,21 @@ abstract class CryptoModule {
     @Multibinds
     abstract fun accountDataRestorers(): Set<AccountDataRestorer>
 
+    /** Conjunto de reconciliadores (ADR 2026-10-06), con el mismo criterio. */
+    @Multibinds
+    abstract fun accountDataReconcilers(): Set<AccountDataReconciler>
+
     companion object {
+        /**
+         * Scope propio de la reconciliación en segundo plano (ADR 2026-10-06):
+         * el inicio de sesión la pide y sigue adelante sin esperarla. Vive lo
+         * que vive el proceso; cada trabajo es idempotente y silencioso.
+         */
+        @Provides
+        @Singleton
+        @CloudReconciliationScope
+        fun provideCloudReconciliationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
         /** Sobre de la DEK con las iteraciones de producción (ver KDoc del wrapper). */
         @Provides
         fun providePasswordKeyWrapper(keyDerivation: PasswordKeyDerivation): PasswordKeyWrapper =

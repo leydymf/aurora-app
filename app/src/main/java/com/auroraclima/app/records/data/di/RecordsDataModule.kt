@@ -3,6 +3,7 @@ package com.auroraclima.app.records.data.di
 import android.content.Context
 import android.net.Uri
 import com.auroraclima.app.core.database.EncryptedDatabaseFactory
+import com.auroraclima.app.core.security.AccountDataReconciler
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.RemoteAccountDataEraser
@@ -114,6 +115,11 @@ abstract class RecordsDataModule {
     @IntoSet
     abstract fun bindJournalSyncReconciler(impl: JournalSyncReconciler): AccountDataRestorer
 
+    /** ADR 2026-10-06: y además trae lo que se creó, editó o eliminó en otro dispositivo. */
+    @Binds
+    @IntoSet
+    abstract fun bindJournalCloudReconciler(impl: JournalSyncReconciler): AccountDataReconciler
+
     companion object {
         /** Fecha civil del dispositivo para nombrar y fechar la exportación (RF-45). */
         @Provides
@@ -128,8 +134,10 @@ abstract class RecordsDataModule {
          * Solo captura la fábrica: NO construye la BD aquí (P-36) — la apertura
          * hace I/O y puede lanzar, y eso ocurre recién dentro del repositorio,
          * en su dispatcher de I/O y traducido a Result. Las migraciones v1→v2
-         * (adjuntos, RF-33), v2→v3 y v3→v4 (constancia de sync, RF-39) y v4→v5
-         * (tipos por id de tema, P-68) conservan el historial ya guardado.
+         * (adjuntos, RF-33), v2→v3 y v3→v4 (constancia de sync, RF-39), v4→v5
+         * (tipos por id de tema, P-68) y v5→v6 (nombre del documento en la nube,
+         * fecha de edición y constancias de borrado, ADR 2026-10-06) conservan
+         * el historial ya guardado.
          */
         @Provides
         fun provideJournalDatabaseSource(factory: EncryptedDatabaseFactory): JournalDatabaseSource =
@@ -140,7 +148,8 @@ abstract class RecordsDataModule {
                     JournalDatabase.MIGRATION_1_2,
                     JournalDatabase.MIGRATION_2_3,
                     JournalDatabase.MIGRATION_3_4,
-                    JournalDatabase.MIGRATION_4_5
+                    JournalDatabase.MIGRATION_4_5,
+                    JournalDatabase.MIGRATION_5_6
                 )
             }
     }

@@ -25,7 +25,7 @@ class DeleteSavedOutcomeUseCaseTest {
 
         assertTrue(result.isSuccess)
         assertEquals(listOf(42L), repository.deleted)
-        assertEquals(listOf(42L), sync.removed)
+        assertEquals(listOf("doc-42"), sync.removed)
     }
 
     @Test
@@ -35,7 +35,7 @@ class DeleteSavedOutcomeUseCaseTest {
         val result = useCase(42L)
 
         assertTrue(result.isFailure)
-        assertEquals(emptyList<Long>(), sync.removed)
+        assertEquals(emptyList<String>(), sync.removed)
     }
 
     @Test
@@ -59,22 +59,24 @@ private class RecordingSavedOutcomeRepository : SavedOutcomeRepository {
 
     override suspend fun outcome(id: Long): Result<SavedOutcome?> = Result.success(null)
 
-    override suspend fun delete(id: Long): Result<Unit> {
+    override suspend fun delete(id: Long): Result<String> {
         if (deleteResult.isSuccess) deleted += id
-        return deleteResult
+        return deleteResult.map { "doc-$id" }
     }
 }
 
 private class RecordingOutcomeSyncRepository : OutcomeSyncRepository {
-    val removed = mutableListOf<Long>()
+    val removed = mutableListOf<String>()
     var removeResult: Result<Unit> = Result.success(Unit)
 
     override suspend fun push(outcomeId: Long): Result<Unit> = Result.success(Unit)
 
-    override suspend fun remove(outcomeId: Long): Result<Unit> {
-        removed += outcomeId
+    override suspend fun remove(docId: String): Result<Unit> {
+        removed += docId
         return removeResult
     }
 
     override suspend fun restore(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun reconcile(): Result<Unit> = Result.success(Unit)
 }

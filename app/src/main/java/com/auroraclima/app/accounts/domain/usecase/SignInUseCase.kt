@@ -7,6 +7,7 @@ import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.core.security.AccountDataRestorer
+import com.auroraclima.app.core.security.CloudReconciliation
 import com.auroraclima.app.core.security.SyncKeyManager
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -42,6 +43,7 @@ class SignInUseCase @Inject constructor(
     private val attemptStore: SignInAttemptStore,
     private val clock: WallClock,
     private val syncKeys: SyncKeyManager,
+    private val cloudReconciliation: CloudReconciliation,
     private val restorers: Set<@JvmSuppressWildcards AccountDataRestorer>,
     private val credentials: CredentialStore
 ) {
@@ -82,6 +84,11 @@ class SignInUseCase @Inject constructor(
             // habría cómo abrir lo descargado y el intento sería ruido.
             if (syncKeys.establish(password).isSuccess) {
                 restorers.forEach { restorer -> restorer.restore() }
+                // Entrar al espacio protegido es el primer momento en que la
+                // usuaria espera ver lo que hizo en su otro teléfono
+                // (ADR 2026-10-06). Se PIDE sin esperarla: recorrer la nube no
+                // puede alargar el login. Sin red no hace nada.
+                cloudReconciliation.request()
             }
         } catch (cancellation: CancellationException) {
             throw cancellation

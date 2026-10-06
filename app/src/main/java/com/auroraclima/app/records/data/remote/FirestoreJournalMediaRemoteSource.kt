@@ -41,14 +41,17 @@ class FirestoreJournalMediaRemoteSource @Inject constructor(
         }
     }
 
-    override suspend fun downloadHeaders(): List<Pair<String, EncryptedMediaHeaderDto>> =
-        mediaCollection().get(Source.SERVER).awaitCompletion().documents.mapNotNull { document ->
-            val header = EncryptedMediaHeaderDto(
-                meta = document.getString(FIELD_META) ?: return@mapNotNull null,
-                iv = document.getString(FIELD_IV) ?: return@mapNotNull null,
-                partCount = (document.getLong(FIELD_PART_COUNT) ?: return@mapNotNull null).toInt(),
-                schemaVersion = document.getLong(FIELD_SCHEMA_VERSION) ?: return@mapNotNull null
-            )
+    override suspend fun downloadHeaders(): List<Pair<String, EncryptedMediaHeaderDto?>> =
+        mediaCollection().get(Source.SERVER).awaitCompletion().documents.map { document ->
+            val meta = document.getString(FIELD_META)
+            val iv = document.getString(FIELD_IV)
+            val partCount = document.getLong(FIELD_PART_COUNT)
+            val schemaVersion = document.getLong(FIELD_SCHEMA_VERSION)
+            val header = if (meta != null && iv != null && partCount != null && schemaVersion != null) {
+                EncryptedMediaHeaderDto(meta, iv, partCount.toInt(), schemaVersion)
+            } else {
+                null
+            }
             document.id to header
         }
 

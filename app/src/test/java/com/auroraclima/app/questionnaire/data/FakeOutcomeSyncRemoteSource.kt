@@ -9,11 +9,14 @@ import com.auroraclima.app.questionnaire.data.remote.OutcomeSyncRemoteSource
  * memoria para la restauración (mismo criterio que el fake del historial).
  */
 class FakeOutcomeSyncRemoteSource : OutcomeSyncRemoteSource {
+    /** Sin conexión, leer del servidor lanza (como `Source.SERVER`). */
+    var online = true
+
     val uploaded = mutableListOf<Pair<String, EncryptedOutcomeDto>>()
     val deleted = mutableListOf<String>()
 
     /** Documentos «en el servidor» que servirá [downloadAll] (restauración RF-39). */
-    val remoteDocs = mutableListOf<Pair<String, EncryptedOutcomeDto>>()
+    val remoteDocs = mutableListOf<Pair<String, EncryptedOutcomeDto?>>()
 
     override suspend fun upload(documentId: String, document: EncryptedOutcomeDto) {
         uploaded += documentId to document
@@ -26,5 +29,8 @@ class FakeOutcomeSyncRemoteSource : OutcomeSyncRemoteSource {
         remoteDocs.removeAll { it.first == documentId }
     }
 
-    override suspend fun downloadAll(): List<Pair<String, EncryptedOutcomeDto>> = remoteDocs.toList()
+    override suspend fun downloadAll(): List<Pair<String, EncryptedOutcomeDto?>> {
+        if (!online) throw IllegalStateException()
+        return remoteDocs.toList()
+    }
 }

@@ -13,6 +13,7 @@ import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.repository.StoredCredentials
 import com.auroraclima.app.accounts.domain.security.WallClock
+import com.auroraclima.app.core.security.CloudReconciliation
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -156,4 +157,29 @@ internal class FakeCredentialStore : CredentialStore {
         eraseCalls++
         stored = null
     }
+}
+
+/** Reconciliación con la nube simulada (ADR 2026-10-06): solo cuenta llamadas. */
+internal class FakeCloudReconciliation : CloudReconciliation {
+    var calls = 0
+        private set
+
+    /** Peticiones que NO se esperan (las del inicio de sesión). */
+    var requests = 0
+        private set
+
+    override suspend fun reconcile() {
+        calls++
+    }
+
+    override fun request() {
+        requests++
+    }
+}
+
+/** Reconciliación inerte para pruebas que no la observan. */
+internal object NoCloudReconciliation : CloudReconciliation {
+    override suspend fun reconcile() = Unit
+
+    override fun request() = Unit
 }
