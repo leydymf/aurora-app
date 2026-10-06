@@ -157,6 +157,37 @@ class ManifestMinimizationTest {
         )
     }
 
+    /**
+     * `androidx.compose.ui.tooling` (debugImplementation, necesaria para los
+     * @Preview) fusiona una `PreviewActivity` EXPORTADA que permitiría abrir
+     * por ADB cualquier composable sin parámetros FUERA del grafo seguro: sin
+     * FLAG_SECURE, sin clave personal y con entrada propia en recientes. El
+     * manifest de debug la retira; este test impide que esa retirada se pierda
+     * (auditoría 2026-10-06 H-1). El release nunca la tuvo.
+     */
+    @Test
+    fun `el manifest de debug retira la activity exportada de las previsualizaciones`() {
+        val file = requireNotNull(
+            sequenceOf(
+                File("src/debug/AndroidManifest.xml"),
+                File("app/src/debug/AndroidManifest.xml")
+            ).firstOrNull { it.exists() }
+        ) { "Falta app/src/debug/AndroidManifest.xml: PreviewActivity volvería a quedar exportada" }
+        val debugManifest = DocumentBuilderFactory.newInstance()
+            .apply { isNamespaceAware = true }
+            .newDocumentBuilder()
+            .parse(file)
+            .documentElement
+        val activities = debugManifest.getElementsByTagName("activity")
+        val removed = (0 until activities.length)
+            .map { activities.item(it) as Element }
+            .any { element ->
+                element.androidAttr("name") == "androidx.compose.ui.tooling.PreviewActivity" &&
+                    element.getAttributeNS("http://schemas.android.com/tools", "node") == "remove"
+            }
+        assertTrue("El manifest de debug debe retirar androidx.compose.ui.tooling.PreviewActivity", removed)
+    }
+
     @Test
     fun `el backup automatico esta deshabilitado`() {
         val application = elements("application").single()
