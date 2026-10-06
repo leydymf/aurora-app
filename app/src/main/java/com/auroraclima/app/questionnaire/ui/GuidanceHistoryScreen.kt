@@ -211,8 +211,9 @@ private fun OutcomeCard(outcome: SavedOutcome, onClick: () -> Unit) {
                 color = V2Palette.inkSecondary
             )
             if (outcome.tags.isNotEmpty()) {
+                // Mismos nombres en negrilla que el resultado y el detalle.
                 Text(
-                    text = outcome.tags.joinToString(" · "),
+                    text = emphasizedLabels(outcome.tags, CARD_LABEL_SEPARATOR),
                     style = InteriorTypeVoice.caption,
                     color = V2Palette.inkSecondary
                 )
@@ -266,9 +267,9 @@ private fun OutcomeDetailSheet(
             if (outcome.tags.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = stringResource(
-                        R.string.guidance_history_types,
-                        outcome.tags.joinToString(", ")
+                    text = emphasizedLabelList(
+                        lead = stringResource(R.string.guidance_history_types),
+                        labels = outcome.tags
                     ),
                     style = InteriorTypeVoice.caption,
                     color = V2Palette.inkPrimary,

@@ -423,10 +423,12 @@ private fun ResultContent(
                 style = InteriorTypeVoice.body,
                 color = V2Palette.inkPrimary
             )
-            state.recognitionText?.let { recognition ->
+            state.recognition?.let { recognition ->
                 Spacer(modifier = Modifier.height(12.dp))
+                // Los nombres de los tipos van en negrilla para que resalten;
+                // el texto y lo que se guarda (RF-31) no cambian.
                 Text(
-                    text = recognition,
+                    text = emphasizedRecognition(recognition),
                     style = InteriorTypeVoice.body,
                     color = V2Palette.inkPrimary
                 )

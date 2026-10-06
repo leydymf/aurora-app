@@ -218,7 +218,8 @@
     <string name="guidance_history_title">Resultados guardados</string>
     <string name="guidance_history_subtitle">Solo tú puedes verlos. Puedes eliminarlos cuando quieras.</string>
     <string name="guidance_history_empty">Aún no has guardado ningún resultado. Al terminar las preguntas puedes decidir guardarlo aquí.</string>
-    <string name="guidance_history_types">Señales reconocidas: %1$s.</string>
+    <!-- Rótulo de la lista de tipos; las etiquetas se agregan aparte para resaltarlas. -->
+    <string name="guidance_history_types">Señales reconocidas:</string>
     <string name="guidance_history_close">Cerrar</string>
     <string name="guidance_history_delete">Eliminar</string>
     <string name="guidance_history_delete_title">¿Eliminar este resultado?</string>

@@ -69,13 +69,17 @@ data class GuidanceUiState(
      * Línea de reconocimiento de tipos (§6.1): nombra las dimensiones encendidas
      * o, si no hay ninguna, el texto de ausencia. Los fragmentos y el texto de
      * ausencia son literales del documento (viven en el cuestionario, no en el APK).
+     * La UI resalta los nombres con [emphasizedRecognition]; el texto es el mismo.
      */
-    val recognitionText: String?
+    val recognition: RecognitionLine?
         get() {
             val recognition = questionnaire?.recognition ?: return null
             val dimensions = result?.dimensions ?: return null
-            if (dimensions.isEmpty()) return recognition.empty
-            return "${recognition.prefix} ${joinWithConjunction(dimensions.map { it.label })}."
+            return RecognitionLine(
+                prefix = recognition.prefix,
+                labels = dimensions.map { it.label },
+                empty = recognition.empty
+            )
         }
 
     /** Líneas nacionales del nivel (siempre visibles), ya resueltas y en orden. */
@@ -98,11 +102,4 @@ data class GuidanceUiState(
         val byId = access?.entities?.associateBy { it.id } ?: return emptyList()
         return ids.mapNotNull { byId[it] }
     }
-}
-
-/** Une etiquetas en español: «a», «a y b», «a, b y c». */
-private fun joinWithConjunction(labels: List<String>): String = when (labels.size) {
-    0 -> ""
-    1 -> labels.first()
-    else -> labels.dropLast(1).joinToString(", ") + " y " + labels.last()
 }
