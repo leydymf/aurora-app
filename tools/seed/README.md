@@ -84,7 +84,13 @@ npm run publicar-tipos -- --publicar   # escribe t05 y t06 en topics (pide confi
 - Mismas barreras que `seed.mjs`: la llave fuera del repo (B-1) y la
   confirmación de reglas publicadas (M-1 o `AURORA_RULES_PUBLISHED=1`). La
   compuerta M-2 también aplica: un documento con `[POR CONFIRMAR` se rechaza.
-- Idempotente (`set` con `merge`): se puede repetir tras una corrección.
+- Escribe el documento vivo Y su borrador del panel (2026-10-06). Antes solo
+  tocaba `topics`, así que el borrador que edita el panel se quedaba congelado
+  en lo último guardado allí; en producción eso dejó el texto «Prueba» de una
+  corrida E2E en `drafts/topics__t05`, y publicar desde el panel habría
+  sobrescrito el contenido validado. Para los borradores obsoletos que ya
+  existen, ver `tools/admin/limpiar-borradores.mjs`.
+- Idempotente: se puede repetir tras una corrección. Escribe el documento completo (sin `merge`) para que el borrador quede idéntico a lo publicado.
 - Para publicar otros ids: `--ids t05,t06` (lista explícita; nunca «todos»).
 
 ## Modelo de datos

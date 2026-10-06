@@ -24,6 +24,19 @@ export function EditorStatus({ selected, isDirty, issues }: EditorStatusProps) {
                 </p>
             )}
             {isDirty && <p className="muted">Hay cambios sin guardar.</p>}
+            {selected?.staleDraftDiscarded === true && (
+                <p className="notice">
+                    El borrador guardado en el panel era más viejo que lo publicado y se descartó:
+                    estás editando la versión que la app muestra hoy. Guarda un borrador nuevo si
+                    quieres cambiarla.
+                </p>
+            )}
+            {selected !== null && selected.differsFromLive && !selected.staleDraftDiscarded && (
+                <p className="notice">
+                    Lo que publicarías es distinto de lo que la app muestra hoy. Revisa el contenido
+                    antes de publicar: la versión publicada se reemplaza por completo.
+                </p>
+            )}
             {selected !== null &&
                 selected.status === 'borrador' &&
                 !isDirty &&

@@ -30,6 +30,12 @@ export type DraftStatus = 'borrador' | 'publicado'
  * Vista combinada de un recurso: borrador (si existe) + documento vivo.
  * `data` es la versión que se edita y publica: el borrador cuando lo hay;
  * si no, lo vivo (documentos sembrados antes de que existiera el panel).
+ *
+ * Excepción importante (2026-10-06): un borrador marcado como «publicado» que
+ * NO coincide con el documento vivo está obsoleto — lo vivo se publicó por otra
+ * vía (la siembra o `publicar-tipos`) y el borrador se quedó congelado en lo que
+ * se editó la última vez en el panel. Editarlo y publicarlo sobrescribiría
+ * contenido validado con texto viejo, así que en ese caso `data` es lo VIVO.
  */
 export interface ResourceEntry<T> {
     readonly docId: string
@@ -39,6 +45,10 @@ export interface ResourceEntry<T> {
     readonly hasDraft: boolean
     readonly updatedAt: Date | null
     readonly publishedAt: Date | null
+    /** El borrador estaba obsoleto y se descartó en favor de lo publicado. */
+    readonly staleDraftDiscarded: boolean
+    /** Hay un borrador en edición que difiere de lo publicado (aviso antes de publicar). */
+    readonly differsFromLive: boolean
 }
 
 const DRAFTS_COLLECTION = 'drafts'
@@ -54,6 +64,64 @@ function draftRef(resource: ResourceCollection, docId: string): DocumentReferenc
 
 function toDate(value: unknown): Date | null {
     return value instanceof Timestamp ? value.toDate() : null
+}
+
+/**
+ * Decide qué versión edita y publica el panel para UN documento. Es pura a
+ * propósito: es la regla que impide que un borrador viejo sobrescriba contenido
+ * validado, y así puede probarse sin Firestore.
+ *
+ * - Sin documento vivo (recurso nuevo): manda el borrador.
+ * - Borrador marcado «publicado» que NO coincide con lo vivo: está obsoleto —
+ *   alguien publicó por otra vía (la siembra, `publicar-tipos`) y el borrador
+ *   se quedó atrás. Se edita lo VIVO y se avisa.
+ * - Borrador «en edición»: manda el borrador, que es trabajo real sin publicar.
+ *
+ * `differsFromLive` dice si lo que se publicaría cambia lo que hoy ve la app,
+ * para que el panel lo advierta antes de tocar «Publicar».
+ */
+export function combine<T>(
+    docId: string,
+    status: DraftStatus,
+    draftData: T,
+    liveData: T | null,
+    updatedAt: Date | null,
+    publishedAt: Date | null,
+): ResourceEntry<T> {
+    // `liveData` se comprueba aquí una sola vez: si es nulo no hay con qué
+    // comparar y el borrador manda (recurso nuevo, aún sin publicar).
+    const stale = status === 'publicado' && liveData !== null && !sameContent(draftData, liveData)
+    const data = stale ? (liveData as T) : draftData
+    return {
+        docId,
+        status,
+        data,
+        liveData,
+        hasDraft: true,
+        updatedAt,
+        publishedAt,
+        staleDraftDiscarded: stale,
+        // Lo que se publicaría NO es lo que hoy ve la app: el panel lo advierte.
+        differsFromLive: liveData !== null && !sameContent(data, liveData),
+    }
+}
+
+/** Comparación estructural estable: el orden de las claves no debe importar. */
+function sameContent(a: unknown, b: unknown): boolean {
+    return stableJson(a) === stableJson(b)
+}
+
+function stableJson(value: unknown): string {
+    return JSON.stringify(value, (_key, raw: unknown) => {
+        if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return raw
+        const record = raw as Record<string, unknown>
+        return Object.keys(record)
+            .sort()
+            .reduce<Record<string, unknown>>((acc, key) => {
+                acc[key] = record[key]
+                return acc
+            }, {})
+    })
 }
 
 /** Carga vivo + borradores de un recurso y los combina por id de documento. */
@@ -76,15 +144,20 @@ export async function loadEntries<T>(
         const raw = asRecord(document.data())
         const docId = typeof raw.docId === 'string' ? raw.docId : ''
         if (isBlankId(docId)) continue
-        entries.set(docId, {
+        const status: DraftStatus = raw.status === 'publicado' ? 'publicado' : 'borrador'
+        const draftData = fromRaw(asRecord(raw.data))
+        const liveData = liveById.get(docId) ?? null
+        entries.set(
             docId,
-            status: raw.status === 'publicado' ? 'publicado' : 'borrador',
-            data: fromRaw(asRecord(raw.data)),
-            liveData: liveById.get(docId) ?? null,
-            hasDraft: true,
-            updatedAt: toDate(raw.updatedAt),
-            publishedAt: toDate(raw.publishedAt),
-        })
+            combine(
+                docId,
+                status,
+                draftData,
+                liveData,
+                toDate(raw.updatedAt),
+                toDate(raw.publishedAt),
+            ),
+        )
     }
     for (const [docId, live] of liveById) {
         if (entries.has(docId)) continue
@@ -97,6 +170,8 @@ export async function loadEntries<T>(
             hasDraft: false,
             updatedAt: null,
             publishedAt: null,
+            staleDraftDiscarded: false,
+            differsFromLive: false,
         })
     }
     return [...entries.values()]

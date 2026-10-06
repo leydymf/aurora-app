@@ -673,6 +673,17 @@ button:disabled {
     font-size: 0.8rem;
 }
 
+/* Aviso del editor: borrador obsoleto descartado, o publicación que cambia lo
+   que la app muestra hoy (2026-10-06). Mismo tono que «Falta para publicar». */
+.notice {
+    margin: 0;
+    background: var(--v2-notice-tint);
+    border-radius: var(--v2-radius-control);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.85rem;
+    color: var(--v2-notice-stroke);
+}
+
 /* «Falta para publicar» (v2-28): el motivo del bloqueo, siempre visible */
 .issues {
     background: var(--v2-notice-tint);

@@ -15,6 +15,13 @@
 // Comparte las barreras de seed.mjs: la llave de servicio nunca dentro del
 // repositorio (B-1), reglas publicadas antes de escribir (M-1) y rechazo de
 // documentos con "[POR CONFIRMAR" (M-2). El modo de prueba no toca la red.
+//
+// Escribe el documento vivo Y su borrador del panel (2026-10-06). Antes solo
+// tocaba `topics`, así que el borrador que edita el panel se quedaba congelado
+// en lo último que se guardó allí: para t05 eso era el texto «Prueba» de una
+// corrida E2E de julio, y un clic en «Publicar» habría sobrescrito el contenido
+// validado por la directora. Dejando los dos lados iguales, el panel siempre
+// parte de lo que la app está mostrando.
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
@@ -64,6 +71,7 @@ console.log(`${publish ? "PUBLICACIÓN" : "MODO DE PRUEBA (no escribe nada)"} �
 for (const doc of selected) {
   console.log(`  ${doc.id}: order ${doc.order}, ${doc.icon}/${doc.accent}, schemaVersion ${doc.schemaVersion}, "${doc.title}", ${doc.signals?.length ?? 0} señales, ${doc.examples?.length ?? 0} ejemplos`);
 }
+console.log("También se iguala el borrador del panel de cada uno, para que no quede más viejo que lo publicado.");
 console.log("El resto de topics y las demás colecciones no se tocan.");
 
 if (!publish) {
@@ -104,9 +112,24 @@ const { applicationDefault, initializeApp } = await import("firebase-admin/app")
 const { getFirestore } = await import("firebase-admin/firestore");
 initializeApp({ credential: applicationDefault() });
 const db = getFirestore();
+const { FieldValue } = await import("firebase-admin/firestore");
 const batch = db.batch();
 for (const { id, ...fields } of selected) {
-  batch.set(db.collection(collection).doc(id), fields, { merge: true });
+  // Sin `merge`: el documento vivo queda EXACTAMENTE con los campos de la
+  // fuente, que es lo único que hace que el borrador de abajo sea idéntico a lo
+  // publicado. Con merge, un campo heredado ausente de la fuente dejaría los dos
+  // lados distintos y el panel marcaría el borrador como obsoleto enseguida.
+  batch.set(db.collection(collection).doc(id), fields);
+  // El borrador del panel queda igual a lo publicado, con el mismo id compuesto
+  // que usa admin/src/lib/drafts.ts (`${coleccion}__${docId}`).
+  batch.set(db.collection("drafts").doc(`${collection}__${id}`), {
+    collection,
+    docId: id,
+    status: "publicado",
+    data: fields,
+    updatedAt: FieldValue.serverTimestamp(),
+    publishedAt: FieldValue.serverTimestamp(),
+  });
 }
 await batch.commit();
-console.log(`Publicados ${selected.map((d) => d.id).join(", ")} en "${collection}".`);
+console.log(`Publicados ${selected.map((d) => d.id).join(", ")} en "${collection}" y en sus borradores del panel.`);
