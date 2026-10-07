@@ -1,4 +1,4 @@
-# Aurora — Resultados de pruebas (cierre de `mejoras-v3` + tipos dinámicos + RF-45 · previo a la corrida manual final)
+# Aurora — Resultados de pruebas (cierre de `mejoras-v3` + tipos dinámicos + RF-45/RF-46 · previo al merge y al tag)
 
 > Evidencia para el informe. Corrida del **2026-10-05** sobre el árbol completo
 > (app + panel), rama `feat/tipos-dinamicos-y-exportacion` (34 commits sobre
@@ -195,7 +195,7 @@ respecto de v0.3.0 en **negrita**.
 | CP-18 | RF-29, RF-30 | PASA + MANUAL (§8-A9) | Auto: `CalculateGuidanceLevelUseCaseTest` (19), **`GuidanceSeverityTest` (2 — par semafórico fijo por orden de nivel, reversión P-41), `PaletteContrastTest` (7 — los cuatro pares `accentSeverity` cumplen contraste)**. P-43 (incluido «aviso fijo visible sin scroll» con la tarjeta semafórica dominante) en §8-A9. |
 | CP-19 | RF-31 | **PASA + MANUAL (§8-A9)** | **Antes NO APLICA. Auto: `GuidanceViewModelTest` (guardar exige confirmación en hoja segura; «Terminar»/salida rápida/abandono no persisten nada — criterio 1), `LocalSavedOutcomeRepositoryTest` (5 — mínimo consultable fecha + nivel + tipos en `guidance_store.db` cifrada, RNF-04), `FirestoreOutcomeSyncRepositoryTest` (4 — sellado con la DEK de RF-39 a `outcomes`), `OutcomeSyncReconcilerTest` (2 — restauración), `GuidanceHistoryViewModelTest` (7 — listado, detalle, eliminación con doble confirmación), `DeleteSavedOutcomeUseCaseTest` (3 — propagación remota como RF-36), `OutcomeErasersTest` (2 — cascada RF-20). Manual: guardado sin red + reconexión (P-69a), restauración en B y cascada** en §8-A9/B1/A14. |
 | CP-20 | RF-32 | PASA + MANUAL (§8-A7) | Auto: `JournalEditorViewModelTest` (**33 — los chips de tipo son los topics publicados en su orden y visual; sin catálogo → «Sin tipo»; tipo retirado conserva el último nombre**), **`LoadEntryKindsUseCaseTest` (2), `ResolvedKindTest` (5), `AddJournalEntryUseCaseTest` (9), `JournalDatabaseMigrationTest` (6 — Room v4→v5 conserva los tipos como `storageCode`), `JournalDaoTest` (6)**. P-46 bloqueante y **P-73(c)** en §8-A7/B1/P1. |
-| CP-21 | RF-33 | PASA + MANUAL (§8-A8) | Auto: `LocalJournalAttachmentRepositoryTest` (18) y compañía. P-59 bloqueante (§8-A8). |
+| CP-21 | RF-33 | PASA + MANUAL ✅ (§8-A8, 2026-10-07) | Auto: `LocalJournalAttachmentRepositoryTest` (18) y compañía. P-59 ✅ (§8-A8). |
 | CP-22 | RF-34, RF-35, RF-36 | PASA + MANUAL (§8-A7) | Auto: `JournalDetailViewModelTest` (12), `UpdateJournalEntryUseCaseTest` (3), `JournalListViewModelTest` (15). P-46 bloqueante (§8-A7). |
 | CP-23 | RF-37, RF-38 | PASA + MANUAL ✅ + §8-A4 | Auto: `FirestoreJournalSyncRepositoryTest` (**15 — payload v3 con el id del topic; lectura tolerante de v2 vía `LegacyKindCodes`**), `JournalSyncReconcilerTest` (9). P-49 ✅; **sync diferida tras la entrada sin red** en §8-A4. |
 | CP-24 | RF-39 | PASA + MANUAL (§8-B1..B4) | Auto: como v0.2.0 + payload v3 en la restauración. P-61 bloqueante **(ahora incluye `outcomes` de RF-31 y la restauración v3 de P-73c)** en §8-B. |
@@ -212,18 +212,21 @@ respecto de v0.3.0 en **negrita**.
 | CP-35 | RNF-09 | NO APLICA | Evaluación heurística formal de usabilidad (posterior). |
 | CP-36 | RNF-10 | MANUAL (§8-C2) | API 26: componentes V2 **+ exportación (PdfBox en minSdk) + selector de documentos**. |
 | CP-37 | RNF-11 | PASA | Pasada final de `revisora-arquitectura` sobre el diff completo `main..HEAD` (§9). |
-| CP-38 | RF-45 | PASA + MANUAL (§8-A10) | Auto (2026-10-03): `JournalListViewModelTest` (selección), `ExportPolicyTest` (5), `BuildExportDocumentUseCaseTest` (9), `LoadExportSummaryUseCaseTest` (3), `JournalExportViewModelTest` (13), `LocalJournalExportRepositoryTest` (8, incluida la cancelación a mitad de escritura), `PdfBoxExportWriterTest` (16, escritor real: abre solo con la contraseña, PDF anexado con recursos heredados y podado de anotaciones/metadatos, cabecera y pie en páginas rotadas/recortadas, banda de continuación, audios incrustados sin colisión, PDF dañado o con árbol roto), `ManifestMinimizationTest` (dos `cache-path`), `CamouflageResourcesTest`; instrumentada `JournalExportPipelineTest` (2). Selector de documentos y de apps = UI del sistema: **manual bloqueante** (§8-A10). |
+| CP-38 | RF-45 | PASA + MANUAL ✅ (§8-A10, 2026-10-07) | Auto (2026-10-03): `JournalListViewModelTest` (selección), `ExportPolicyTest` (5), `BuildExportDocumentUseCaseTest` (9), `LoadExportSummaryUseCaseTest` (3), `JournalExportViewModelTest` (13), `LocalJournalExportRepositoryTest` (8, incluida la cancelación a mitad de escritura), `PdfBoxExportWriterTest` (16, escritor real: abre solo con la contraseña, PDF anexado con recursos heredados y podado de anotaciones/metadatos, cabecera y pie en páginas rotadas/recortadas, banda de continuación, audios incrustados sin colisión, PDF dañado o con árbol roto), `ManifestMinimizationTest` (dos `cache-path`), `CamouflageResourcesTest`; instrumentada `JournalExportPipelineTest` (2). Selector de documentos y de apps = UI del sistema: **manual ✅ (§8-A10, 2026-10-07)**. |
+| **CP-39** | **RF-46** | **PASA + MANUAL ✅ (§8-B3)** | Auto (2026-10-06): `SendPasswordResetUseCaseTest` (10 — mismo desenlace con/sin cuenta y con correo mal formado, pausa tras cinco envíos con contador propio, sin conexión se distingue), `LoginViewModelTest` (ampliado, +13 del archivo), `FirebaseAuthRepositoryTest` (ampliado, +18 del archivo), `NoTracesGuardTest` (guarda ampliada: ninguna capa de la recuperación registra en logs ni telemetría). Manual: **B3 ✅ (2026-10-07)** — mensaje de confirmación idéntico con correo con cuenta / sin cuenta / mal formado, aviso previo, sin conexión distinto, pausa al sexto envío sin bloquear el inicio de sesión normal. **Pendiente (P-19/P-88): personalizar la plantilla de Firebase y verificarla con un correo real antes de cualquier entrega del APK al piloto** — la corrida de hoy validó el comportamiento de la app, no el contenido del correo que compone Firebase. |
 
-### Cobertura resumida (2026-10-05)
+### Cobertura resumida (2026-10-05; RF-46 agregado 2026-10-07)
 
-**44 de 45 RF con cobertura automatizada** (v0.3.0: 42 de 44). Entran **RF-31**
-(antes trabajo futuro) y **RF-45** (nuevo), los dos RF que creció el alcance de
-la rama; los 42 anteriores conservan su cobertura y **ninguno la perdió**. El
-único RF sin prueba propia sigue siendo **RF-38** (sincronización diferida): la
-provee la cola durable de Firestore y se verificó manualmente en P-49
-(2026-07-15), con repetición en §8-A4 (entrada sin red → reconexión). Se
-mantiene el criterio conservador de v0.2.0 de no contarlo, aunque
-`FirestoreJournalSyncRepositoryTest` ya ejercite el encolado.
+**45 de 46 RF con cobertura automatizada** (v0.3.0: 42 de 44; 2026-10-05: 44 de
+45). Entran **RF-31** (antes trabajo futuro), **RF-45** y ahora **RF-46**
+(recuperación de contraseña por correo, agregado el 2026-10-06 — CP-39, ver
+arriba), los tres RF que creció el alcance de la rama; los anteriores conservan
+su cobertura y **ninguno la perdió**. El único RF sin prueba propia sigue
+siendo **RF-38** (sincronización diferida): la provee la cola durable de
+Firestore y se verificó manualmente en P-49 (2026-07-15), con repetición en
+§8-A4 (entrada sin red → reconexión). Se mantiene el criterio conservador de
+v0.2.0 de no contarlo, aunque `FirestoreJournalSyncRepositoryTest` ya ejercite
+el encolado.
 
 Los **11 RNF** mantienen su cobertura y dos la ganaron o la ampliaron en esta
 rama: **RNF-08** (entrada local sin red, por las tres suites del reingreso
@@ -236,7 +239,7 @@ igual que RNF-09 (usabilidad, trabajo posterior) y RNF-10 (API 26, §8-C2).
 
 | Alcance | Con cobertura automatizada | Solo manual / futuro |
 |---|---|---|
-| **RF (45)** | **44** | RF-38 (cola de Firestore, manual en P-49 y §8-A4) |
+| **RF (46)** | **45** | RF-38 (cola de Firestore, manual en P-49 y §8-A4) |
 | **RNF (11)** | 9 (incluye RNF-07 parcial y RNF-08 nuevo) | RNF-09 (heurística posterior), RNF-10 (§8-C2) |
 
 ## 5. Pasadas manuales ya ejecutadas por la usuaria (integradas)
@@ -256,6 +259,7 @@ igual que RNF-09 (usabilidad, trabajo posterior) y RNF-10 (API 26, §8-C2).
 | **RF-45 revisión en emulador (parcial)** | 2026-10-03 | ✅ PDF con adjuntos abierto en Acrobat/Chrome/Drive: páginas anexadas, audio incrustado, jerarquía visual; motivó los commits `4c9ad3e`/`816a7d6`. **CP-38 completo sigue en §8-A10** |
 | **B8 contraste (parcial)** | 2026-10-05 | ✅ Exportación y clave personal vistas con el contorno nuevo; **resto de pantallas en §8 (transversal)** |
 | **Corrida por adb, §8 pasos 0–A8** | 2026-10-05 | ✅ Paso 0 (42/42), A1–A5 y A7 completos, A6/A8 parciales (tabla de avance en §8); **P-14 y P-81 re-verificados con el APK `429f283`**; dejó P-80..P-82 y el ADR 2026-10-05 |
+| **Corrida manual de la usuaria, §8: P1/A1/A3/A13/A6/B5/A9/B1/B2/B3/B4/A14** | 2026-10-07 | ✅ Las doce en verde, sin fallos; cierra los residuales visuales de A1/A6, cierra A9/A13/A14/B1-B5/P1 completos e incluye RF-46/CP-39; plantilla del correo de restablecimiento personalizada (P-19). **Restan del §8: A2 (residual), A8 (residual), A10 (RF-45, bloqueante), A11, A12 y bloque C** |
 
 > Estas pasadas validaron comportamiento y siguen contando; su componente
 > visual V2 y los flujos nuevos se recorren en la lista única de §8.
@@ -348,6 +352,55 @@ FirebaseAuth en el hilo principal durante `Application.onCreate` — ADR 2026-10
 y P-80 (resto del arrastre, no bloqueante). Texto de la portada del cuestionario
 alineado con RF-31. Las dos pruebas manuales que nacen de ese ADR están ya
 integradas en **C1** (arranque en frío ×3) y **A14** (regresión H-1).
+
+### Avance al 2026-10-07 (corrida manual de la usuaria)
+
+La usuaria corrió a mano, con sus propios ojos (no por adb), los pasos que la
+corrida del 2026-10-05 había dejado como «visual pendiente» o como bloques
+enteros sin tocar, en este orden: **P1, A1, A3, A13, A6, B5, A9, B1, B2, B3,
+B4 y A14**. Resultado: **todas pasaron, sin fallos**. La plantilla del correo
+de restablecimiento ya está personalizada en la consola de Firebase (P-19).
+
+| Paso | Estado | Nota |
+|---|---|---|
+| A1 | ✅ **completo (2026-10-07)** | Cierra el «🔁 visual pendiente» del 2026-10-05: la usuaria confirmó en el emulador que la fachada se ve creíble con las dos pestañas (Hoy · 5 días), con espaciado e indicador activo correctos tras el retiro de «Lugares» (ADR 2026-10-06). Resta solo P-11 (Gboard), que sigue como pendiente aparte |
+| A3 | ✅ **reconfirmado (2026-10-07)** | Ya estaba en verde por la corrida por adb; la usuaria lo repitió a mano sin hallazgos nuevos |
+| A6 | ✅ **completo (2026-10-07)** | Cierra el «resta la fidelidad visual» del 2026-10-05: la usuaria confirmó a ojo (capturas bloqueadas por FLAG_SECURE) que la Guía con t05/t06 es fiel a los mockups v2-11..v2-16 |
+| A9 | ✅ **(2026-10-07)** | Cuestionario semafórico + guardado opcional (RF-27..31, CP-17/18/19) completo: los cuatro niveles, el aviso RF-30 fijo, «Terminar»/«Guardar»/«Cancelar» y la eliminación con doble confirmación, todo en verde |
+| A13 | ✅ **(2026-10-07)** | Fuente grande (fontScale 2.0, P-64) verificada: las tres tarjetas de Acciones rápidas miden lo mismo; el corte de etiquetas en 360 dp quedó anotado como esperado, sin bloquear |
+| A14 | ✅ **(2026-10-07)** | Cierre — eliminación total con todas las cascadas (RF-20, regresión H-1 del ADR 2026-10-05) verificada de punta a punta |
+| B1 | ✅ **(2026-10-07)** | Restauración íntegra v3 en el segundo dispositivo, íntegra (registros, adjuntos y resultado guardado) |
+| B2 | ✅ **(2026-10-07)** | Edición y borrado cruzados entre A y B, incluido el caso de conflicto (gana la eliminación), en verde |
+| B3 | ✅ **(2026-10-07)** | Incluye la corrida de **RF-46/CP-39** (recuperación de contraseña): mensaje idéntico con/sin cuenta y con correo mal formado, aviso previo, sin conexión distinto, pausa al sexto envío sin bloquear el login; después, respaldo ilegible y reingreso manual en A, todo en verde |
+| B4 | ✅ **(2026-10-07)** | Cambio de contraseña desde la app, con los tres casos de error, en verde |
+| B5 | ✅ **(2026-10-07)** | Migración v4→v5 con datos previos, condicional, aplicada y en verde |
+| P1 | ✅ **(2026-10-07)** | Panel V2 + esquema v2 + P-68, incluido el retiro/republicación de t06 y el borrador vs. publicado, en verde |
+| A2 | ✅ **completo (2026-10-07)** | Cierra el residual: desde Ajustes → «Ver el tutorial de nuevo», la práctica rechaza una clave incorrecta y fija el logro con la clave real; la salida rápida regresa a la fachada al instante |
+| A8 | ✅ **completo (2026-10-07)** | Cierra el residual: adjuntar PDF y audio por «Archivo», cámara del sistema sin copia en galería/DCIM y con la gracia de 5 min, visor interno con captura bloqueada, tipo vedado rechazado, quitar con «×», tope de 10, abandono sin rastro, persistencia tras cerrar sesión y blobs ilegibles en Device Explorer — todo en verde |
+| A10 | ✅ **completo (2026-10-07)** | **Cierra el único bloqueante real del tag:** exportación a PDF (RF-45/CP-38) — selección, validaciones de contraseña, «Guardar en el teléfono» con apertura y rechazo de contraseña errónea, «Compartir» con adjuntos a un destino real, cancelación a mitad y salida rápida durante la contraseña, todo en verde |
+
+**Decisión de la usuaria (2026-10-07):** **A11** (Llamar), **A12** (Ajustes y
+flujos de extensión) y el bloque **C** (C1 arranque en frío/gama media, C2 API
+26) quedan **deliberadamente deferidos a justo antes del piloto**, no al tag:
+A11 es una ruta que este ciclo no tocó (duda de diseño ya registrada en P-27,
+no un riesgo de regresión); A12 ya quedó probado a fondo en su parte funcional
+por B4 (cambio de contraseña) y lo que resta es solo visual; el propio bloque C
+se documentaba como «recomendadas antes del tag, **no encadenadas**» y conviene
+correrlo en un teléfono real de gama media/baja en vez de otro emulador. Con
+A2/A8/A10 cerrados, **el §8 ya no bloquea el merge ni el tag** — A11/A12/C
+quedan anotados como condición previa al piloto, no al TRL 4.
+
+**Re-verificación automatizada previa al merge (2026-10-07):** `./gradlew
+cleanTestDebugUnitTest cleanTestReleaseUnitTest test ktlintCheck lint
+assembleDebug assembleRelease` → **BUILD SUCCESSFUL** (3 min 47 s, 137 tareas).
+**791 pruebas unitarias JVM por variante (debug y release), 0 fallos, 0
+errores** — incluye las de RF-46 y las de la sincronización entre dispositivos
+que se añadieron después de la corrida del 2026-10-05, por eso el número crece
+frente a los 720 documentados entonces. `ktlintCheck` y `lint` sin violaciones
+nuevas. En `admin/`: `npm run test` **91/91** (+8 sobre los 83 documentados),
+`npm run lint` y `npm run build` en verde. El release queda firmado con la
+llave de depuración (decisión TRL 4 vigente, ver `docs/PENDIENTES.md`), 23 951
+586 B.
 
 ### Paso 0 — Instrumentadas (una vez, emulador A arriba, antes de instalar)
 
