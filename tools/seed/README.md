@@ -89,7 +89,8 @@ npm run publicar-tipos -- --publicar   # escribe t05 y t06 en topics (pide confi
   en lo último guardado allí; en producción eso dejó el texto «Prueba» de una
   corrida E2E en `drafts/topics__t05`, y publicar desde el panel habría
   sobrescrito el contenido validado. Para los borradores obsoletos que ya
-  existen, ver `tools/admin/limpiar-borradores.mjs`.
+  existen, ver `tools/admin/limpiar-borradores.mjs`, que antes de borrar nada
+  guarda una copia íntegra en `~/.config/aurora-seed/respaldos/`.
 - Idempotente: se puede repetir tras una corrección. Escribe el documento completo (sin `merge`) para que el borrador quede idéntico a lo publicado.
 - Para publicar otros ids: `--ids t05,t06` (lista explícita; nunca «todos»).
 

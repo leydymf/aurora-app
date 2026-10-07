@@ -25,6 +25,12 @@ google-services.json
 # canónica es ~/.config/aurora-seed/ FUERA del repo, esto es doble barrera
 service-account*.json
 *-adminsdk-*.json
+
+# Copias de los borradores obsoletos del panel (limpiar-borradores.mjs) — llevan
+# el contenido de los documentos. La ruta canónica es
+# ~/.config/aurora-seed/respaldos/ FUERA del repo y el propio comando rechaza
+# escribir dentro; esto es doble barrera.
+borradores-obsoletos-*.json
 tools/seed/node_modules/
 tools/admin/node_modules/
 

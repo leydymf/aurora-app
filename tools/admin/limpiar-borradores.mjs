@@ -17,13 +17,20 @@
 //   node limpiar-borradores.mjs                      # modo de prueba: solo informa
 //   node limpiar-borradores.mjs --ids topics__t05    # acota a unos ids concretos
 //   node limpiar-borradores.mjs --borrar             # borra de verdad (pide confirmación)
+//   node limpiar-borradores.mjs --respaldo <ruta>    # otro destino para la copia
 //
 // El modo de prueba es el DEFAULT y lista, uno por uno, qué dice el borrador y
 // qué dice lo publicado, para decidir con el contenido a la vista.
 //
+// SIEMPRE guarda una copia íntegra de los borradores obsoletos antes de nada,
+// también en modo de prueba: así se puede revisar con calma o reponer uno si al
+// final no debía irse. La copia va FUERA del repositorio —misma barrera que la
+// llave de servicio— porque lleva el contenido de los documentos.
+//
 // Mismas barreras que seed.mjs: la llave de servicio nunca dentro del
 // repositorio (B-1) y confirmación explícita antes de escribir.
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { createInterface } from "node:readline/promises";
 import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,6 +40,7 @@ const repoRoot = realpathSync(resolve(here, "..", ".."));
 
 const args = process.argv.slice(2);
 const erase = args.includes("--borrar");
+const respaldoIndex = args.indexOf("--respaldo");
 const idsIndex = args.indexOf("--ids");
 const onlyIds =
   idsIndex >= 0
@@ -41,6 +49,21 @@ const onlyIds =
         .map((s) => s.trim())
         .filter(Boolean)
     : null;
+
+// Destino de la copia. Por omisión, junto a la llave de servicio: fuera del
+// repositorio y en una carpeta que ya es de uso local exclusivo.
+const marca = new Date().toISOString().replace(/[:.]/g, "-");
+const respaldoPath =
+  respaldoIndex >= 0 && args[respaldoIndex + 1]
+    ? resolve(args[respaldoIndex + 1])
+    : resolve(homedir(), ".config", "aurora-seed", "respaldos", `borradores-obsoletos-${marca}.json`);
+if (respaldoPath === repoRoot || respaldoPath.startsWith(repoRoot + sep)) {
+  console.error(
+    "La copia de respaldo caería DENTRO del repositorio y lleva el contenido de los documentos. " +
+      "Elige una ruta fuera (por omisión va a ~/.config/aurora-seed/respaldos/).",
+  );
+  process.exit(1);
+}
 
 const keyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 if (!keyPath) {
@@ -113,7 +136,13 @@ for (const document of snapshot.docs) {
     continue;
   }
 
-  obsoletos.push({ id: document.id, collection, docId });
+  obsoletos.push({
+    id: document.id,
+    collection,
+    docId,
+    // Copia íntegra del borrador, tal como está hoy en la nube.
+    borrador: draft,
+  });
   const draftData = draft.data ?? {};
   const liveData = live.data() ?? {};
   const campos = [...new Set([...Object.keys(draftData), ...Object.keys(liveData)])].sort();
@@ -133,6 +162,24 @@ if (obsoletos.length === 0) {
 
 console.log(`\n${obsoletos.length} borrador(es) obsoleto(s): ${obsoletos.map((o) => o.id).join(", ")}`);
 console.log("Los documentos PUBLICADOS no se tocan: esto solo borra el borrador del panel.");
+
+// La copia se escribe ANTES de borrar nada y también en modo de prueba.
+mkdirSync(dirname(respaldoPath), { recursive: true });
+writeFileSync(
+  respaldoPath,
+  `${JSON.stringify(
+    {
+      generado: new Date().toISOString(),
+      proyecto: process.env.GOOGLE_CLOUD_PROJECT ?? "(el de la llave de servicio)",
+      nota: "Copia de los borradores del panel que limpiar-borradores.mjs considera obsoletos. Los documentos publicados no se tocan.",
+      borradores: obsoletos.map(({ id, collection, docId, borrador }) => ({ id, collection, docId, borrador })),
+    },
+    null,
+    2,
+  )}\n`,
+  { mode: 0o600 },
+);
+console.log(`Copia guardada en ${respaldoPath}`);
 
 if (!erase) {
   console.log("\nMODO DE PRUEBA: no se borró nada. Para borrar de verdad: node limpiar-borradores.mjs --borrar");
