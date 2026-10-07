@@ -8,6 +8,7 @@ import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
 import com.auroraclima.app.questionnaire.domain.repository.QuestionnaireRepository
 import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUseCase
+import com.auroraclima.app.questionnaire.domain.usecase.SaveGuidanceOutcomeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ import kotlinx.coroutines.launch
 class GuidanceViewModel @Inject constructor(
     private val repository: QuestionnaireRepository,
     private val calculateGuidanceLevel: CalculateGuidanceLevelUseCase,
+    private val saveGuidanceOutcome: SaveGuidanceOutcomeUseCase,
     private val directory: DirectoryProvider,
     sessionManager: SessionManager
 ) : ViewModel() {
@@ -105,6 +107,41 @@ class GuidanceViewModel @Inject constructor(
         discardAnswers()
     }
 
+    /** Abre la hoja de confirmación (RF-31 criterio 2). Tocar el botón aún no guarda nada. */
+    fun onSaveRequested() {
+        _uiState.update { state ->
+            if (state.result == null || state.isSaved) state else state.copy(isSaveSheetVisible = true)
+        }
+    }
+
+    fun onSaveDismissed() {
+        _uiState.update { it.copy(isSaveSheetVisible = false, saveErrorRes = null) }
+    }
+
+    /**
+     * Confirmación expresa del guardado (RF-31 criterio 2): recién aquí el
+     * resultado toca disco — mínimo consultable, cifrado, vía el caso de uso.
+     * Un fallo muestra el error genérico dentro de la hoja (§3) y no persiste.
+     */
+    fun onSaveConfirmed() {
+        val result = _uiState.value.result ?: return
+        if (_uiState.value.isSaving) return
+        _uiState.update { it.copy(isSaving = true, saveErrorRes = null) }
+        viewModelScope.launch {
+            saveGuidanceOutcome(result)
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(isSaving = false, isSaveSheetVisible = false, isSaved = true)
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(isSaving = false, saveErrorRes = R.string.common_error_generic)
+                    }
+                }
+        }
+    }
+
     /**
      * Resuelve todos los accesos posibles del nivel (líneas + entidades fijas +
      * entidades de todos los municipios) en una sola consulta; la selección de
@@ -120,6 +157,8 @@ class GuidanceViewModel @Inject constructor(
     }
 
     private fun discardAnswers() {
+        // RF-28 cubre también la hoja de guardado abierta: si la salida rápida
+        // llega antes de la confirmación expresa, no se persiste nada.
         _uiState.update {
             it.copy(
                 phase = GuidancePhase.INTRO,
@@ -127,7 +166,11 @@ class GuidanceViewModel @Inject constructor(
                 answers = emptyMap(),
                 result = null,
                 selectedMunicipalityId = null,
-                access = null
+                access = null,
+                isSaveSheetVisible = false,
+                isSaving = false,
+                isSaved = false,
+                saveErrorRes = null
             )
         }
     }

@@ -43,14 +43,14 @@ class FakeJournalSyncRemoteSource : JournalSyncRemoteSource {
      * Documentos «en el servidor» que servirá [downloadAll] (restauración
      * RF-39): las subidas en línea lo actualizan, como el servidor real.
      */
-    val remoteDocs = mutableListOf<Pair<String, EncryptedEntryDto>>()
+    val remoteDocs = mutableListOf<Pair<String, EncryptedEntryDto?>>()
 
-    private fun upsertRemote(write: Pair<String, EncryptedEntryDto>) {
+    private fun upsertRemote(write: Pair<String, EncryptedEntryDto?>) {
         remoteDocs.removeAll { it.first == write.first }
         remoteDocs += write
     }
 
-    override suspend fun downloadAll(): List<Pair<String, EncryptedEntryDto>> {
+    override suspend fun downloadAll(): List<Pair<String, EncryptedEntryDto?>> {
         // Es una lectura del servidor: sin red, lanza (como Source.SERVER).
         if (!online) throw IllegalStateException()
         return remoteDocs.toList()

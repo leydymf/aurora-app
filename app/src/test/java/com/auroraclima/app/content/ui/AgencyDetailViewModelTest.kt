@@ -40,6 +40,31 @@ class AgencyDetailViewModelTest {
     }
 
     @Test
+    fun `la seleccion visual del sector llega al estado y ausente queda nula`() = runTest {
+        // Esquema v2 (ADR 2026-08-14): el ViewModel propaga icon/accent tal
+        // cual; la resolución (y su degradación) es de la capa de presentación.
+        repository.routesResult = Result.success(
+            listOf(route("r01", agencies = listOf(agency("a01")), icon = "pin", accent = "sand"))
+        )
+
+        val viewModel = viewModel("r01", "a01")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("pin", state.routeIcon)
+        assertEquals("sand", state.routeAccent)
+
+        repository.routesResult = Result.success(
+            listOf(route("r01", agencies = listOf(agency("a01"))))
+        )
+        viewModel.onRetry()
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.routeIcon)
+        assertNull(viewModel.uiState.value.routeAccent)
+    }
+
+    @Test
     fun `una entidad inexistente muestra el mensaje generico`() = runTest {
         repository.routesResult = Result.success(listOf(route("r01")))
 

@@ -98,6 +98,36 @@ class ContentDocumentParsingTest {
     }
 
     @Test
+    fun `icon y accent se leen como texto y un tipo inesperado queda nulo`() {
+        // Esquema v2: la selección visual viaja como texto plano.
+        val explicit = mapOf("icon" to "figure", "accent" to "blue").toTopicDto("t01")
+        assertEquals("figure", explicit.icon)
+        assertEquals("blue", explicit.accent)
+
+        val corrupt = mapOf("icon" to 7L, "accent" to listOf("blue")).toRouteDto("r01")
+        assertNull(corrupt.icon)
+        assertNull(corrupt.accent)
+    }
+
+    @Test
+    fun `un icon corrupto degrada solo ese campo sin omitir el documento`() {
+        // Contrato de degradación del esquema v2: el visual jamás decide la
+        // supervivencia del documento — eso sigue en manos de los obligatorios.
+        val topic = mapOf(
+            "schemaVersion" to 2L,
+            "order" to 1L,
+            "title" to "Título",
+            "summary" to "Resumen",
+            "icon" to 7L,
+            "accent" to "blue"
+        ).toTopicDto("t01").toDomain()
+
+        assertEquals("t01", topic?.id)
+        assertNull(topic?.icon)
+        assertEquals("blue", topic?.accent)
+    }
+
+    @Test
     fun `un documento malformado termina omitido por el mapper`() {
         // Cadena completa RF-25: tipos corruptos → DTO con nulos → dominio nulo.
         val corrupt = mapOf(

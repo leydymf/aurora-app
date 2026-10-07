@@ -13,14 +13,19 @@ import com.auroraclima.app.questionnaire.domain.model.Block
 import com.auroraclima.app.questionnaire.domain.model.Dimension
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
 import com.auroraclima.app.questionnaire.domain.model.Municipality
+import com.auroraclima.app.questionnaire.domain.model.NewSavedOutcome
 import com.auroraclima.app.questionnaire.domain.model.Question
 import com.auroraclima.app.questionnaire.domain.model.Questionnaire
 import com.auroraclima.app.questionnaire.domain.model.Recognition
+import com.auroraclima.app.questionnaire.domain.model.SavedOutcome
 import com.auroraclima.app.questionnaire.domain.model.Scale
 import com.auroraclima.app.questionnaire.domain.model.ScaleOption
 import com.auroraclima.app.questionnaire.domain.model.ThresholdFlag
+import com.auroraclima.app.questionnaire.domain.repository.OutcomeSyncRepository
 import com.auroraclima.app.questionnaire.domain.repository.QuestionnaireRepository
+import com.auroraclima.app.questionnaire.domain.repository.SavedOutcomeRepository
 import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUseCase
+import com.auroraclima.app.questionnaire.domain.usecase.SaveGuidanceOutcomeUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -28,6 +33,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -44,6 +50,8 @@ class GuidanceViewModelTest {
 
     private val repository = FakeQuestionnaireRepository()
     private val directory = FakeDirectoryProvider()
+    private val savedOutcomes = FakeSavedOutcomeRepository()
+    private val outcomeSync = FakeOutcomeSyncRepository()
 
     @Test
     fun `la carga exitosa expone el cuestionario en la portada`() = runTest {
@@ -202,6 +210,40 @@ class GuidanceViewModelTest {
     }
 
     @Test
+    fun `la linea de reconocimiento nombra las dimensiones encendidas`() = runTest {
+        // Las etiquetas que la UI resalta son las de las dimensiones del
+        // resultado, y el prefijo es el del documento: nada viene del APK.
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+
+        val recognition = requireNotNull(viewModel.uiState.value.recognition)
+        assertEquals(listOf("violencia psicológica"), recognition.labels)
+        assertEquals("Por tus respuestas, aparecen señales de", recognition.prefix)
+        assertEquals("Por tus respuestas, aparecen señales de violencia psicológica.", recognition.plain)
+    }
+
+    @Test
+    fun `sin dimensiones encendidas la linea es el texto de ausencia`() = runTest {
+        // Todo «Nunca»: ninguna dimensión alcanza su mínimo (criterio de RF-29).
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s0")
+            viewModel.onNext()
+        }
+
+        val recognition = requireNotNull(viewModel.uiState.value.recognition)
+        assertEquals(emptyList<String>(), recognition.labels)
+        assertEquals("No aparecen señales", recognition.plain)
+    }
+
+    @Test
     fun `el resultado registra cuantas preguntas quedaron sin responder`() = runTest {
         // Con pocas respuestas la UI matiza el nivel (nota de GuidanceResult):
         // un nivel bajo por silencio no debe leerse como ausencia de señales.
@@ -337,9 +379,111 @@ class GuidanceViewModelTest {
         assertEquals(mapOf("q01" to "s1"), viewModel.uiState.value.answers)
     }
 
+    // ——— RF-31: guardado opcional del resultado ———
+
+    @Test
+    fun `tocar guardar solo abre la hoja de confirmacion sin persistir nada`() = runTest {
+        val viewModel = viewModelAtResult()
+
+        viewModel.onSaveRequested()
+
+        assertTrue(viewModel.uiState.value.isSaveSheetVisible)
+        assertFalse(viewModel.uiState.value.isSaved)
+        assertEquals(emptyList<NewSavedOutcome>(), savedOutcomes.saved)
+    }
+
+    @Test
+    fun `confirmar guarda el minimo consultable y deja la constancia`() = runTest {
+        // RF-31 criterio 2 + RNF-04: rank/label del nivel y etiquetas de tipos —
+        // jamás las respuestas ni el puntaje. La subida es de mejor esfuerzo.
+        val viewModel = viewModelAtResult()
+        viewModel.onSaveRequested()
+
+        viewModel.onSaveConfirmed()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isSaved)
+        assertFalse(state.isSaveSheetVisible)
+        assertEquals(
+            listOf(NewSavedOutcome(rank = 3, label = "Nivel n03", tags = listOf("violencia psicológica"))),
+            savedOutcomes.saved
+        )
+        assertEquals(listOf(7L), outcomeSync.pushed)
+    }
+
+    @Test
+    fun `terminar o abandonar sin confirmar no toca el repositorio`() = runTest {
+        // RF-31 criterio 1 / RF-28: el descarte por defecto se conserva.
+        val viewModel = viewModelAtResult()
+
+        viewModel.onAbandon()
+
+        assertEquals(emptyList<NewSavedOutcome>(), savedOutcomes.saved)
+        assertNull(viewModel.uiState.value.result)
+    }
+
+    @Test
+    fun `la salida rapida con la hoja de guardado abierta descarta sin persistir`() = runTest {
+        // Regresión RF-28 pedida por el plan: la hoja abierta no es confirmación.
+        val sessionManager = sessionManager()
+        val viewModel = viewModelAtResult(sessionManager)
+        sessionManager.startSession()
+        viewModel.onSaveRequested()
+
+        sessionManager.quickExit()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isSaveSheetVisible)
+        assertFalse(state.isSaved)
+        assertNull(state.result)
+        assertEquals(emptyList<NewSavedOutcome>(), savedOutcomes.saved)
+    }
+
+    @Test
+    fun `un fallo del guardado muestra el error generico dentro de la hoja`() = runTest {
+        savedOutcomes.result = Result.failure(RuntimeException("detalle interno"))
+        val viewModel = viewModelAtResult()
+        viewModel.onSaveRequested()
+
+        viewModel.onSaveConfirmed()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.isSaveSheetVisible)
+        assertFalse(state.isSaved)
+        assertEquals(R.string.common_error_generic, state.saveErrorRes)
+    }
+
+    @Test
+    fun `con el resultado ya guardado el boton no reabre la hoja`() = runTest {
+        val viewModel = viewModelAtResult()
+        viewModel.onSaveRequested()
+        viewModel.onSaveConfirmed()
+        advanceUntilIdle()
+
+        viewModel.onSaveRequested()
+
+        assertFalse(viewModel.uiState.value.isSaveSheetVisible)
+        assertEquals(1, savedOutcomes.saved.size)
+    }
+
+    /** Lleva el flujo hasta el resultado (todo «Con frecuencia» → nivel n03). */
+    private fun viewModelAtResult(sessionManager: SessionManager = sessionManager()): GuidanceViewModel {
+        val viewModel = viewModel(sessionManager)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+        return viewModel
+    }
+
     private fun viewModel(sessionManager: SessionManager = sessionManager()) = GuidanceViewModel(
         repository = repository,
         calculateGuidanceLevel = CalculateGuidanceLevelUseCase(),
+        saveGuidanceOutcome = SaveGuidanceOutcomeUseCase(savedOutcomes, outcomeSync),
         directory = directory,
         sessionManager = sessionManager
     )
@@ -360,6 +504,38 @@ internal class FakeQuestionnaireRepository : QuestionnaireRepository {
         calls++
         return result
     }
+}
+
+/** Fake de RF-31: registra los guardados; el id devuelto es fijo (7L). */
+private class FakeSavedOutcomeRepository : SavedOutcomeRepository {
+    val saved = mutableListOf<NewSavedOutcome>()
+    var result: Result<Long> = Result.success(7L)
+
+    override suspend fun save(outcome: NewSavedOutcome): Result<Long> {
+        if (result.isSuccess) saved += outcome
+        return result
+    }
+
+    override suspend fun outcomes(): Result<List<SavedOutcome>> = Result.success(emptyList())
+
+    override suspend fun outcome(id: Long): Result<SavedOutcome?> = Result.success(null)
+
+    override suspend fun delete(id: Long): Result<String> = Result.success("doc-$id")
+}
+
+private class FakeOutcomeSyncRepository : OutcomeSyncRepository {
+    val pushed = mutableListOf<Long>()
+
+    override suspend fun push(outcomeId: Long): Result<Unit> {
+        pushed += outcomeId
+        return Result.success(Unit)
+    }
+
+    override suspend fun remove(docId: String): Result<Unit> = Result.success(Unit)
+
+    override suspend fun restore(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun reconcile(): Result<Unit> = Result.success(Unit)
 }
 
 private class FakeDirectoryProvider : DirectoryProvider {

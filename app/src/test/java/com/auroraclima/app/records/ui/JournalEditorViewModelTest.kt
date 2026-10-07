@@ -3,12 +3,15 @@ package com.auroraclima.app.records.ui
 import androidx.lifecycle.SavedStateHandle
 import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.catalog.FakeCategoryCatalog
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
+import com.auroraclima.app.records.domain.model.ResolvedKind
+import com.auroraclima.app.records.domain.model.UNSPECIFIED_KIND_ID
 import com.auroraclima.app.records.domain.usecase.AddJournalEntryUseCase
+import com.auroraclima.app.records.domain.usecase.LoadEntryKindsUseCase
 import com.auroraclima.app.records.domain.usecase.UpdateJournalEntryUseCase
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,11 +41,13 @@ class JournalEditorViewModelTest {
     private val attachments = FakeJournalAttachmentRepository()
     private val sync = FakeJournalSyncRepository()
     private val mediaSync = FakeJournalMediaSyncRepository()
+    private val catalog = FakeCategoryCatalog()
 
     private fun viewModel(entryId: Long? = null) = JournalEditorViewModel(
         SavedStateHandle(entryId?.let { mapOf(ENTRY_ID_ARG to it.toString()) }.orEmpty()),
         AddJournalEntryUseCase(repository, attachments, sync, mediaSync),
         UpdateJournalEntryUseCase(repository, sync),
+        LoadEntryKindsUseCase(catalog),
         repository,
         attachments
     )
@@ -50,9 +55,18 @@ class JournalEditorViewModelTest {
     private val stored = JournalEntry(
         id = 7,
         occurredOn = LocalDate.of(2026, 6, 28),
-        kind = EntryKind.ECONOMIC,
+        kindId = "t04",
+        kindLabel = "Cuarta",
         detail = "tomó el dinero del mercado"
     )
+
+    /** Chip publicado tal como lo ofrece el selector tras cargar el catálogo. */
+    private fun published(id: String, label: String, icon: String, accent: String) =
+        ResolvedKind(id = id, label = label, icon = icon, accent = accent, isPublished = true)
+
+    private val fourth = published("t04", "Cuarta", "card", "sand")
+    private val second = published("t02", "Segunda", "lobes", "lilac")
+    private val first = published("t01", "Primera", "figure", "blue")
 
     @Test
     fun `guardar sin campos obligatorios señala ambos sin perder la fecha`() = runTest {
@@ -92,7 +106,7 @@ class JournalEditorViewModelTest {
         viewModel.onSubmit()
         advanceUntilIdle()
 
-        viewModel.onKindSelected(EntryKind.ECONOMIC)
+        viewModel.onKindSelected(fourth)
 
         assertNull(viewModel.uiState.value.kindErrorRes)
     }
@@ -101,7 +115,7 @@ class JournalEditorViewModelTest {
     fun `con todo diligenciado guarda recortado y emite el evento`() = runTest {
         val viewModel = viewModel()
         viewModel.onDaySelected(LocalDate.of(2026, 6, 28))
-        viewModel.onKindSelected(EntryKind.ECONOMIC)
+        viewModel.onKindSelected(fourth)
         viewModel.onDetailChange("  tomó el dinero del mercado  ")
 
         viewModel.onSubmit()
@@ -110,7 +124,9 @@ class JournalEditorViewModelTest {
         assertEquals(1, repository.added.size)
         val saved = repository.added[0]
         assertEquals(LocalDate.of(2026, 6, 28), saved.occurredOn)
-        assertEquals(EntryKind.ECONOMIC, saved.kind)
+        assertEquals("t04", saved.kindId)
+        // Instantánea del nombre publicado al guardar (último nombre conocido, P-68).
+        assertEquals("Cuarta", saved.kindLabel)
         assertEquals("tomó el dinero del mercado", saved.detail)
         // RF-37: el registro guardado también se sincroniza con su id local
         // (el contenido lo lee la implementación desde la fila, RF-39).
@@ -124,7 +140,7 @@ class JournalEditorViewModelTest {
         // RF-37/§3: la nube es mejor esfuerzo; su fallo es silencioso para la UI.
         sync.pushResult = Result.failure(IllegalStateException("sin sesión"))
         val viewModel = viewModel()
-        viewModel.onKindSelected(EntryKind.PHYSICAL)
+        viewModel.onKindSelected(first)
         viewModel.onDetailChange("lo que pasó")
 
         viewModel.onSubmit()
@@ -157,7 +173,7 @@ class JournalEditorViewModelTest {
         assertTrue(state.isEditing)
         assertFalse(state.isLoading)
         assertEquals(stored.occurredOn, state.occurredOn)
-        assertEquals(stored.kind, state.kind)
+        assertEquals(stored.kindId, state.kindId)
         assertEquals(stored.detail, state.detail)
     }
 
@@ -167,7 +183,7 @@ class JournalEditorViewModelTest {
         val viewModel = viewModel(entryId = 7)
         advanceUntilIdle()
 
-        viewModel.onKindSelected(EntryKind.PSYCHOLOGICAL)
+        viewModel.onKindSelected(second)
         viewModel.onDetailChange("  el relato corregido  ")
         viewModel.onSubmit()
         advanceUntilIdle()
@@ -177,7 +193,8 @@ class JournalEditorViewModelTest {
         assertEquals(1, repository.updated.size)
         val saved = repository.updated[0]
         assertEquals(7L, saved.id)
-        assertEquals(EntryKind.PSYCHOLOGICAL, saved.kind)
+        assertEquals("t02", saved.kindId)
+        assertEquals("Segunda", saved.kindLabel)
         assertEquals("el relato corregido", saved.detail)
         // El cambio se refleja en la sincronización, al MISMO documento.
         assertEquals(listOf(7L), sync.pushed)
@@ -209,6 +226,7 @@ class JournalEditorViewModelTest {
             SavedStateHandle(mapOf(ENTRY_ID_ARG to "no-numerico")),
             AddJournalEntryUseCase(repository, attachments, sync, mediaSync),
             UpdateJournalEntryUseCase(repository, sync),
+            LoadEntryKindsUseCase(catalog),
             repository,
             attachments
         )
@@ -280,7 +298,7 @@ class JournalEditorViewModelTest {
         )
         val viewModel = viewModel()
         advanceUntilIdle()
-        viewModel.onKindSelected(EntryKind.PHYSICAL)
+        viewModel.onKindSelected(first)
         viewModel.onDetailChange("lo que pasó")
 
         viewModel.onSubmit()
@@ -380,7 +398,7 @@ class JournalEditorViewModelTest {
         // El detalle de la excepción (rutas, passphrase, SQL) jamás llega a la UI (P-24/P-36).
         repository.addResult = Result.failure(IllegalStateException("blob corrupto: detalle interno"))
         val viewModel = viewModel()
-        viewModel.onKindSelected(EntryKind.PHYSICAL)
+        viewModel.onKindSelected(first)
         viewModel.onDetailChange("lo que pasó")
 
         viewModel.onSubmit()
@@ -390,6 +408,171 @@ class JournalEditorViewModelTest {
         assertEquals(R.string.common_error_generic, state.saveErrorRes)
         assertFalse(state.isSaving)
         assertEquals("lo que pasó", state.detail)
-        assertEquals(EntryKind.PHYSICAL, state.kind)
+        assertEquals("t01", state.kindId)
+    }
+
+    // ---- Catálogo de tipos (RF-32 refinado 2026-10-03, cierre P-68) ----
+
+    @Test
+    fun `los chips son los temas publicados en su orden con su visual`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoadingKinds)
+        assertFalse(state.kindsUnavailable)
+        assertEquals(listOf("t01", "t02", "t03", "t04"), state.kindOptions.map { it.id })
+        assertEquals(listOf("Primera", "Segunda", "Tercera", "Cuarta"), state.kindOptions.map { it.label })
+        assertEquals(first, state.kindOptions[0])
+        assertTrue(state.kindOptions.all { it.isPublished })
+    }
+
+    @Test
+    fun `sin catalogo ofrece la opcion neutra y registrar sigue siendo posible`() = runTest {
+        // RNF-08: sin red ni caché de contenido el formulario no se bloquea.
+        catalog.result = Result.failure(IllegalStateException("sin red ni caché"))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.kindsUnavailable)
+        assertEquals(1, state.kindOptions.size)
+        val neutral = state.kindOptions[0]
+        assertEquals(UNSPECIFIED_KIND_ID, neutral.id)
+        assertNull(neutral.label)
+        assertFalse(neutral.isPublished)
+
+        viewModel.onKindSelected(neutral)
+        viewModel.onDetailChange("lo que pasó")
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        val saved = repository.added.single()
+        assertEquals(UNSPECIFIED_KIND_ID, saved.kindId)
+        assertEquals("", saved.kindLabel)
+        assertEquals(listOf(Unit), viewModel.savedEvents.replayCache)
+    }
+
+    @Test
+    fun `un catalogo vacio se trata como no disponible`() = runTest {
+        catalog.result = Result.success(emptyList())
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.kindsUnavailable)
+        assertEquals(listOf(UNSPECIFIED_KIND_ID), state.kindOptions.map { it.id })
+    }
+
+    @Test
+    fun `reintentar el catalogo reemplaza la opcion neutra por los temas publicados`() = runTest {
+        catalog.result = Result.failure(IllegalStateException("sin red"))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        catalog.result = Result.success(FakeCategoryCatalog.defaultCategories)
+        viewModel.onRetryKinds()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.kindsUnavailable)
+        assertEquals(listOf("t01", "t02", "t03", "t04"), state.kindOptions.map { it.id })
+        assertEquals(2, catalog.calls)
+    }
+
+    @Test
+    fun `si la opcion neutra estaba elegida al crear y llega el catalogo, la eleccion se suelta`() = runTest {
+        // El chip neutro desaparece con el catálogo: no debe quedar un «Sin
+        // tipo» invisible seleccionado — la usuaria vuelve a elegir.
+        catalog.result = Result.failure(IllegalStateException("sin red"))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onKindSelected(viewModel.uiState.value.kindOptions.single())
+
+        catalog.result = Result.success(FakeCategoryCatalog.defaultCategories)
+        viewModel.onRetryKinds()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.kindId)
+        assertEquals(listOf("t01", "t02", "t03", "t04"), state.kindOptions.map { it.id })
+    }
+
+    @Test
+    fun `sin tipo elegido no se guarda aunque el catalogo no este disponible`() = runTest {
+        // RF-32 criterio 2 se mantiene: la opción neutra hay que elegirla.
+        catalog.result = Result.failure(IllegalStateException("sin red"))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onDetailChange("texto")
+
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(R.string.journal_kind_missing, viewModel.uiState.value.kindErrorRes)
+        assertTrue(repository.added.isEmpty())
+    }
+
+    @Test
+    fun `en edicion un tipo retirado sigue siendo una opcion con su ultimo nombre`() = runTest {
+        repository.entryResult = Result.success(stored.copy(kindId = "t09", kindLabel = "Nombre que tuvo"))
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("t09", state.kindId)
+        val retired = state.kindOptions.last()
+        assertEquals("t09", retired.id)
+        assertEquals("Nombre que tuvo", retired.label)
+        assertFalse(retired.isPublished)
+        assertEquals(listOf("t01", "t02", "t03", "t04", "t09"), state.kindOptions.map { it.id })
+
+        // Guardar sin tocar el tipo conserva id e instantánea.
+        viewModel.onDetailChange("corregido")
+        viewModel.onSubmit()
+        advanceUntilIdle()
+        assertEquals("t09" to "Nombre que tuvo", repository.updated.single().let { it.kindId to it.kindLabel })
+    }
+
+    @Test
+    fun `en edicion un registro sin tipo ofrece la opcion neutra y permite clasificarlo`() = runTest {
+        repository.entryResult = Result.success(stored.copy(kindId = UNSPECIFIED_KIND_ID, kindLabel = ""))
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("t01", "t02", "t03", "t04", UNSPECIFIED_KIND_ID),
+            viewModel.uiState.value.kindOptions.map { it.id }
+        )
+
+        viewModel.onKindSelected(second)
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals("t02" to "Segunda", repository.updated.single().let { it.kindId to it.kindLabel })
+    }
+
+    @Test
+    fun `al editar sin tocar el tipo la instantanea toma el nombre publicado vigente`() = runTest {
+        // La administradora renombró el tema: al guardar, el registro
+        // actualiza su último nombre conocido sin que la usuaria lo re-elija.
+        repository.entryResult = Result.success(stored.copy(kindLabel = "Nombre viejo"))
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        viewModel.onDetailChange("corregido")
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals("t04" to "Cuarta", repository.updated.single().let { it.kindId to it.kindLabel })
+    }
+
+    @Test
+    fun `en edicion un tipo publicado no duplica el chip`() = runTest {
+        repository.entryResult = Result.success(stored)
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        assertEquals(listOf("t01", "t02", "t03", "t04"), viewModel.uiState.value.kindOptions.map { it.id })
     }
 }

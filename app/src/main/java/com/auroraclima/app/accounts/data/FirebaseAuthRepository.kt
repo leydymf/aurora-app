@@ -2,6 +2,7 @@ package com.auroraclima.app.accounts.data
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
+import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
@@ -46,6 +47,10 @@ class FirebaseAuthRepository @Inject constructor(
 
     override fun hasActiveSession(): Boolean = service.hasActiveSession()
 
+    override fun signOut() {
+        service.signOut()
+    }
+
     override suspend fun reauthenticate(password: String): ReauthenticateResult = withContext(Dispatchers.IO) {
         try {
             service.reauthenticate(password)
@@ -83,6 +88,30 @@ class FirebaseAuthRepository @Inject constructor(
                 ERROR_WEAK_PASSWORD -> UpdatePasswordResult.WeakPassword
                 AuthServiceException.ERROR_NETWORK -> UpdatePasswordResult.NoConnection
                 else -> UpdatePasswordResult.GenericFailure
+            }
+        }
+    }
+
+    /**
+     * Restablecimiento por correo (RF-46). **Todo lo que no sea una caída de
+     * red devuelve el MISMO desenlace**: la pantalla no puede servir para
+     * averiguar quién tiene cuenta aquí (mismo criterio que RF-15 criterio 2),
+     * y eso incluye el rechazo por demasiadas peticiones, que solo se dispara
+     * con envíos reales. Sin conexión sí se dice, porque el correo no salió.
+     */
+    override suspend fun sendPasswordReset(email: String): PasswordResetResult = withContext(Dispatchers.IO) {
+        try {
+            service.sendPasswordReset(email)
+            PasswordResetResult.Requested
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: Exception) {
+            // Solo la red se distingue (criterio 3): cuenta inexistente, correo
+            // mal formado y cualquier otro rechazo del proveedor se pliegan en
+            // el mismo desenlace.
+            when (errorCode(error)) {
+                AuthServiceException.ERROR_NETWORK -> PasswordResetResult.NoConnection
+                else -> PasswordResetResult.Requested
             }
         }
     }

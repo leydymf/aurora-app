@@ -1,6 +1,5 @@
 package com.auroraclima.app.records.domain.usecase
 
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.NewJournalEntry
 import com.auroraclima.app.records.ui.FakeJournalAttachmentRepository
 import com.auroraclima.app.records.ui.FakeJournalMediaSyncRepository
@@ -27,7 +26,8 @@ class AddJournalEntryUseCaseTest {
 
     private val entry = NewJournalEntry(
         occurredOn = LocalDate.of(2026, 6, 28),
-        kind = EntryKind.ECONOMIC,
+        kindId = "t04",
+        kindLabel = "Cuarta",
         detail = "tomó el dinero del mercado"
     )
 

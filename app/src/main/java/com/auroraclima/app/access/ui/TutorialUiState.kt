@@ -19,6 +19,12 @@ data class TutorialUiState(
      * estaba la usuaria.
      */
     fun showsBack(isReview: Boolean): Boolean = !isFirstStep || isReview
+
+    /**
+     * «Saltar por ahora» existe solo en el primer uso (refinamiento RF-10,
+     * 2026-08): en repaso (RF-11) no hay nada que saltar — «Atrás» ya regresa.
+     */
+    fun showsSkip(isReview: Boolean): Boolean = !isReview
 }
 
 /** Páginas del tutorial, en el orden del pager (criterio 1 de RF-10). */

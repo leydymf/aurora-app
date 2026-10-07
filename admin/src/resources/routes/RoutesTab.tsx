@@ -8,7 +8,13 @@ import { EditorActions } from '../../components/EditorActions'
 import { EditorStatus } from '../../components/EditorStatus'
 import { RowControls } from '../../components/RowControls'
 import { StatusBadge } from '../../components/StatusBadge'
-import { routeVisual } from '../../components/contentVisuals'
+import { VisualPicker } from '../../components/VisualPicker'
+import {
+    isContentAccentId,
+    isContentIconId,
+    routeVisual,
+    routeVisualIds,
+} from '../../components/contentVisuals'
 import { IconBadge } from '../../components/icons'
 import { buildOrderIndex } from '../../lib/drafts'
 import { nextOpaqueId } from '../../lib/ids'
@@ -74,6 +80,9 @@ export function RoutesTab() {
         !editor.isDirty &&
         publishIssues.length === 0
 
+    // Visual vigente de lo que se edita (explícito o degradado al automático).
+    const editingVisual = routeVisual(selectedId ?? '', editing?.icon ?? '', editing?.accent ?? '')
+
     // El cuestionario validado v2 ya no recomienda rutas por id (sus accesos
     // referencian líneas y entidades, no rutas): eliminar una ruta no deja
     // referencias rotas en `forms`, así que no hay bloqueo por ese motivo.
@@ -135,7 +144,7 @@ export function RoutesTab() {
                         <p className="muted">Sin rutas todavía.</p>
                     )}
                     {sorted.map((entry) => {
-                        const visual = routeVisual(entry.docId)
+                        const visual = routeVisual(entry.docId, entry.data.icon, entry.data.accent)
                         return (
                             <button
                                 key={entry.docId}
@@ -163,7 +172,10 @@ export function RoutesTab() {
                     {editor.isNew && editing && (
                         <div className="list__item list__item--active">
                             <span className="list__lead">
-                                <IconBadge name="place" accent="group" />
+                                <IconBadge
+                                    name={editingVisual.icon}
+                                    accent={editingVisual.accent}
+                                />
                                 <span className="list__title">{editing.title || '(nueva)'}</span>
                             </span>
                             <StatusBadge status="borrador" />
@@ -193,6 +205,21 @@ export function RoutesTab() {
                                 />
                             </label>
                         </div>
+                        <VisualPicker
+                            effective={routeVisualIds(
+                                selectedId ?? '',
+                                editing.icon,
+                                editing.accent,
+                            )}
+                            iconConfirmed={isContentIconId(editing.icon)}
+                            accentConfirmed={isContentAccentId(editing.accent)}
+                            onSelectIcon={(id) => {
+                                editor.setEditing({ ...editing, icon: id })
+                            }}
+                            onSelectAccent={(id) => {
+                                editor.setEditing({ ...editing, accent: id })
+                            }}
+                        />
                         <label className="field">
                             <span>Título (sector)</span>
                             <input

@@ -15,9 +15,12 @@ class SignInUseCaseTest {
     private val store = FakeSignInAttemptStore()
     private val clock = MutableWallClock()
     private val syncKeys = FakeSyncKeyManager()
+    private val credentials = FakeCredentialStore()
     private var restoreCalls = 0
     private val restorer = AccountDataRestorer { restoreCalls++ }
-    private val useCase = SignInUseCase(repository, store, clock, syncKeys, setOf(restorer))
+    private val cloudReconciliation = FakeCloudReconciliation()
+    private val useCase =
+        SignInUseCase(repository, store, clock, syncKeys, cloudReconciliation, setOf(restorer), credentials)
 
     @Test
     fun `credenciales correctas dan acceso`() = runTest {
@@ -154,5 +157,34 @@ class SignInUseCaseTest {
         syncKeys.establishOutcome = Result.failure(IllegalStateException())
 
         assertEquals(SignInOutcome.Success, useCase("usuaria@correo.co", "clave-segura-1"))
+    }
+
+    @Test
+    fun `el exito hace nacer el blob de credenciales`() = runTest {
+        // P-31 opción C: el login manual es donde nace el reingreso silencioso.
+        useCase("usuaria@correo.co", "clave-segura-1")
+
+        assertEquals("usuaria@correo.co", credentials.stored?.email)
+        assertEquals("clave-segura-1", credentials.stored?.password)
+    }
+
+    @Test
+    fun `un rechazo no crea el blob`() = runTest {
+        repository.nextSignInResult = SignInResult.InvalidCredentials
+
+        useCase("usuaria@correo.co", "clave-mala")
+
+        assertNull(credentials.stored)
+    }
+
+    @Test
+    fun `un fallo al guardar el blob jamas degrada el acceso concedido`() = runTest {
+        // Mejor esfuerzo: sin blob solo se pierde el silencioso, no la entrada.
+        credentials.failNextSave = true
+
+        assertEquals(SignInOutcome.Success, useCase("usuaria@correo.co", "clave-segura-1"))
+        assertNull(credentials.stored)
+        // El respaldo (RF-39) corre igual: los pasos de mejor esfuerzo no se encadenan.
+        assertEquals(listOf("clave-segura-1"), syncKeys.establishedPasswords)
     }
 }

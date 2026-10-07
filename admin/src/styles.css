@@ -176,6 +176,40 @@ h2 {
     flex: 0 0 auto;
 }
 
+/* Selector de icono/acento de la biblioteca cerrada (P23·b, esquema v2) */
+.visualpicker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.visualpicker__option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: var(--v2-radius-pill);
+}
+
+.visualpicker__option:hover {
+    background: var(--v2-group-tint);
+}
+
+.visualpicker__option--active {
+    border-color: var(--v2-ink-2);
+}
+
+.accentdot {
+    display: inline-block;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--v2-radius-pill);
+    background: var(--tint, var(--v2-group-tint));
+    border: 2px solid var(--stroke, var(--v2-group-stroke));
+}
+
 /* ---- Botones ----
    Base = acción principal (lavanda, regla 2). Secundarias: .btn--outline /
    .btn--ghost en blanco con borde --v2-ink-2; delicadas: .btn--danger en rosa. */
@@ -637,6 +671,17 @@ button:disabled {
     margin: 0;
     color: var(--v2-ink-2);
     font-size: 0.8rem;
+}
+
+/* Aviso del editor: borrador obsoleto descartado, o publicación que cambia lo
+   que la app muestra hoy (2026-10-06). Mismo tono que «Falta para publicar». */
+.notice {
+    margin: 0;
+    background: var(--v2-notice-tint);
+    border-radius: var(--v2-radius-control);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.85rem;
+    color: var(--v2-notice-stroke);
 }
 
 /* «Falta para publicar» (v2-28): el motivo del bloqueo, siempre visible */

@@ -2,12 +2,20 @@
 // app Android lee: RouteDto/AgencyDto/LineDto (content/data/remote/
 // ContentDtos.kt) y sus campos obligatorios en ContentMappers.kt. Agregar o
 // renombrar un campo es un cambio de esquema y requiere decisión explícita.
+import { isContentAccentId, isContentIconId } from '../../components/contentVisuals'
 import { num, str, strList, strOrNull } from '../../lib/parse'
 import { phoneIssueMessage } from '../../lib/phone'
 import { containsDraftMarker, isBlank, type ValidationIssue } from '../../lib/validation'
 
-/** Espejo de SUPPORTED_SCHEMA_VERSION de la app (ContentMappers.kt). */
-export const SCHEMA_VERSION = 1
+/**
+ * Versión por tipo de documento, espejo de lo que la app interpreta
+ * (SUPPORTED_SCHEMA_VERSION = 2 acepta el rango 1..2). El v2 (ADR 2026-08-14)
+ * solo cambió topics y routes (`icon`/`accent`): agencies y lines conservan
+ * su esquema v1 intacto.
+ */
+export const ROUTE_SCHEMA_VERSION = 2
+export const AGENCY_SCHEMA_VERSION = 1
+export const LINE_SCHEMA_VERSION = 1
 
 export type RouteDoc = {
     schemaVersion: number
@@ -15,6 +23,8 @@ export type RouteDoc = {
     title: string
     summary: string
     agencyIds: string[]
+    icon: string
+    accent: string
 }
 
 export type AgencyDoc = {
@@ -40,17 +50,21 @@ export type LineDoc = {
 
 export function routeFromRaw(raw: Record<string, unknown>): RouteDoc {
     return {
-        schemaVersion: num(raw, 'schemaVersion', SCHEMA_VERSION),
+        schemaVersion: num(raw, 'schemaVersion', ROUTE_SCHEMA_VERSION),
         order: num(raw, 'order'),
         title: str(raw, 'title'),
         summary: str(raw, 'summary'),
         agencyIds: strList(raw, 'agencyIds'),
+        // Vacío = documento v1 sin selección: se pinta el mapeo automático
+        // por id; publicar exigirá elegir de la biblioteca cerrada.
+        icon: str(raw, 'icon'),
+        accent: str(raw, 'accent'),
     }
 }
 
 export function agencyFromRaw(raw: Record<string, unknown>): AgencyDoc {
     return {
-        schemaVersion: num(raw, 'schemaVersion', SCHEMA_VERSION),
+        schemaVersion: num(raw, 'schemaVersion', AGENCY_SCHEMA_VERSION),
         name: str(raw, 'name'),
         role: str(raw, 'role'),
         whenToUse: str(raw, 'whenToUse'),
@@ -62,7 +76,7 @@ export function agencyFromRaw(raw: Record<string, unknown>): AgencyDoc {
 
 export function lineFromRaw(raw: Record<string, unknown>): LineDoc {
     return {
-        schemaVersion: num(raw, 'schemaVersion', SCHEMA_VERSION),
+        schemaVersion: num(raw, 'schemaVersion', LINE_SCHEMA_VERSION),
         order: num(raw, 'order'),
         name: str(raw, 'name'),
         number: str(raw, 'number'),
@@ -74,12 +88,21 @@ export function lineFromRaw(raw: Record<string, unknown>): LineDoc {
 // ---- Plantillas para crear ----
 
 export function emptyRoute(order: number): RouteDoc {
-    return { schemaVersion: SCHEMA_VERSION, order, title: '', summary: '', agencyIds: [] }
+    return {
+        schemaVersion: ROUTE_SCHEMA_VERSION,
+        order,
+        title: '',
+        summary: '',
+        agencyIds: [],
+        // El neutro de rutas: lo mismo que la app da a un id sin mapear.
+        icon: 'pin',
+        accent: 'neutral',
+    }
 }
 
 export function emptyAgency(): AgencyDoc {
     return {
-        schemaVersion: SCHEMA_VERSION,
+        schemaVersion: AGENCY_SCHEMA_VERSION,
         name: '',
         role: '',
         whenToUse: '',
@@ -91,7 +114,7 @@ export function emptyAgency(): AgencyDoc {
 
 export function emptyLine(order: number): LineDoc {
     return {
-        schemaVersion: SCHEMA_VERSION,
+        schemaVersion: LINE_SCHEMA_VERSION,
         order,
         name: '',
         number: '',
@@ -108,12 +131,19 @@ function trimmedOrNull(value: string | null): string | null {
     return trimmed.length === 0 ? null : trimmed
 }
 
+/**
+ * Guardar bajo el panel v2 sube además la ruta al esquema vigente: la app
+ * soporta 1..2 y la validación dura exigirá la selección visual al publicar.
+ */
 export function normalizeRoute(route: RouteDoc): RouteDoc {
     return {
         ...route,
+        schemaVersion: ROUTE_SCHEMA_VERSION,
         title: route.title.trim(),
         summary: route.summary.trim(),
         agencyIds: [...route.agencyIds],
+        icon: route.icon.trim(),
+        accent: route.accent.trim(),
     }
 }
 
@@ -159,12 +189,12 @@ function checkOrder(order: number, takenBy: ReadonlyMap<number, string>): Valida
 
 // Primera compuerta de la app (isSupportedSchema, ContentMappers.kt): una
 // versión extraña haría que la app ignore el documento en silencio.
-function checkSchemaVersion(schemaVersion: number): ValidationIssue[] {
-    if (schemaVersion === SCHEMA_VERSION) return []
+function checkSchemaVersion(schemaVersion: number, expected: number): ValidationIssue[] {
+    if (schemaVersion === expected) return []
     return [
         {
             field: 'general',
-            message: `schemaVersion ${String(schemaVersion)} no es la soportada (${String(SCHEMA_VERSION)}).`,
+            message: `schemaVersion ${String(schemaVersion)} no es la soportada (${String(expected)}).`,
         },
     ]
 }
@@ -192,9 +222,17 @@ export function validateRoute(
     agencyNames: ReadonlyMap<string, string>,
 ): ValidationIssue[] {
     const issues = [
-        ...checkSchemaVersion(route.schemaVersion),
+        ...checkSchemaVersion(route.schemaVersion, ROUTE_SCHEMA_VERSION),
         ...checkOrder(route.order, orderTakenBy),
     ]
+    if (!isContentIconId(route.icon)) {
+        // La biblioteca cerrada no crece con datos: el campo solo SELECCIONA
+        // dentro de ella; cualquier otro valor degradaría en la app (RF-25).
+        issues.push({ field: 'icon', message: 'Elige un icono de la biblioteca cerrada.' })
+    }
+    if (!isContentAccentId(route.accent)) {
+        issues.push({ field: 'accent', message: 'Elige un acento de la biblioteca cerrada.' })
+    }
     if (isBlank(route.title)) {
         issues.push({ field: 'title', message: 'El título es obligatorio.' })
     }
@@ -215,7 +253,7 @@ export function validateRoute(
 }
 
 export function validateAgency(agency: AgencyDoc): ValidationIssue[] {
-    const issues = checkSchemaVersion(agency.schemaVersion)
+    const issues = checkSchemaVersion(agency.schemaVersion, AGENCY_SCHEMA_VERSION)
     if (isBlank(agency.name)) {
         issues.push({ field: 'name', message: 'El nombre es obligatorio.' })
     }
@@ -240,7 +278,7 @@ export function validateLine(
     orderTakenBy: ReadonlyMap<number, string>,
 ): ValidationIssue[] {
     const issues = [
-        ...checkSchemaVersion(line.schemaVersion),
+        ...checkSchemaVersion(line.schemaVersion, LINE_SCHEMA_VERSION),
         ...checkOrder(line.order, orderTakenBy),
     ]
     if (isBlank(line.name)) {

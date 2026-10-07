@@ -27,9 +27,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +47,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureDayPicker
+import com.auroraclima.app.core.security.rememberSystemLauncher
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.RowChevron
@@ -60,17 +63,18 @@ import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2ParagraphField
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalAttachment
+import com.auroraclima.app.records.domain.model.ResolvedKind
 import java.time.LocalDate
 
 /**
  * Creación (RF-32) y edición (RF-35) de un registro; mockup P19 / v2-21, con
  * la fila de adjuntos (RF-33) y su tercera vía «Archivo» de la política
- * ampliada (D0 §5.1.iii). El tipo se elige en chips de color con el matiz fijo
- * de cada tipo (espejo del mapeo D2) en un solo gesto (decisión F7); la
- * validación sigue en línea y sin pérdida (criterio 2). En modo edición la
- * pantalla es la misma con el formulario prellenado; solo cambia el rótulo.
+ * ampliada (D0 §5.1.iii). El tipo se elige en chips de color — los temas
+ * publicados de la Guía con su mismo visual (cierre P-68) — en un solo gesto
+ * (decisión F7); la validación sigue en línea y sin pérdida (criterio 2). En
+ * modo edición la pantalla es la misma con el formulario prellenado; solo
+ * cambia el rótulo.
  *
  * P-15: el campo de texto reporta cada tecla como interacción — el teclado es
  * una ventana propia que el observador de toques del grafo seguro no ve — y
@@ -100,16 +104,9 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
     LaunchedEffect(viewModel) {
         viewModel.savedEvents.collect { onSaved() }
     }
-    // Plomería única de lanzamiento hacia una pantalla del sistema: armar la
-    // ida-y-vuelta y, si el lanzamiento falla, desarmarla — extraída para que
-    // ninguna vía (ni una futura) pueda olvidar el cancelSystemReturn.
-    val launchExternal: (() -> Unit) -> Unit = { launch ->
-        sessionManager.expectSystemReturn()
-        runCatching(launch).onFailure {
-            sessionManager.cancelSystemReturn()
-            viewModel.onLaunchFailed()
-        }
-    }
+    // Ida-y-vuelta hacia una pantalla del sistema (core/security): armada
+    // antes de cada lanzamiento y desarmada si falla.
+    val launchExternal = rememberSystemLauncher(onLaunchFailed = viewModel::onLaunchFailed)
     LaunchedEffect(viewModel) {
         viewModel.captureEvents.collect { uri ->
             launchExternal { takePicture.launch(Uri.parse(uri)) }
@@ -129,6 +126,7 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
             viewModel.onDaySelected(it)
         },
         onKindSelected = viewModel::onKindSelected,
+        onRetryKinds = viewModel::onRetryKinds,
         onDetailChange = {
             sessionManager.registerInteraction()
             viewModel.onDetailChange(it)
@@ -157,7 +155,8 @@ internal fun JournalEditorScreen(
     onOpenDatePicker: () -> Unit,
     onDismissDatePicker: () -> Unit,
     onDaySelected: (LocalDate) -> Unit,
-    onKindSelected: (EntryKind) -> Unit,
+    onKindSelected: (ResolvedKind) -> Unit,
+    onRetryKinds: () -> Unit,
     onDetailChange: (String) -> Unit,
     onPickGallery: () -> Unit,
     onPickCamera: () -> Unit,
@@ -184,6 +183,7 @@ internal fun JournalEditorScreen(
                 state = state,
                 onOpenDatePicker = onOpenDatePicker,
                 onKindSelected = onKindSelected,
+                onRetryKinds = onRetryKinds,
                 onDetailChange = onDetailChange,
                 onPickGallery = onPickGallery,
                 onPickCamera = onPickCamera,
@@ -209,7 +209,8 @@ internal fun JournalEditorScreen(
 private fun JournalEditorForm(
     state: JournalEditorUiState,
     onOpenDatePicker: () -> Unit,
-    onKindSelected: (EntryKind) -> Unit,
+    onKindSelected: (ResolvedKind) -> Unit,
+    onRetryKinds: () -> Unit,
     onDetailChange: (String) -> Unit,
     onPickGallery: () -> Unit,
     onPickCamera: () -> Unit,
@@ -228,9 +229,10 @@ private fun JournalEditorForm(
         Spacer(modifier = Modifier.height(20.dp))
 
         V2FieldLabel(stringResource(R.string.journal_kind_label))
-        KindChips(
-            selected = state.kind,
-            onKindSelected = onKindSelected
+        KindSelector(
+            state = state,
+            onKindSelected = onKindSelected,
+            onRetryKinds = onRetryKinds
         )
         V2FieldMessage(messageRes = state.kindErrorRes, fallbackRes = null)
         Spacer(modifier = Modifier.height(16.dp))
@@ -396,24 +398,77 @@ private fun DayField(text: String, onClick: () -> Unit) {
 }
 
 /**
- * Tipos como chips de color (v2-21): cada uno con el matiz fijo de su tipo —
- * punto del tinte en reposo; tinte, borde y visto al elegirlo, siempre con la
- * etiqueta (regla 3). Un solo gesto y sin menús (decisión F7). FlowRow porque
- * las etiquetas varían de ancho y la V2 respeta la fuente del sistema (D5):
- * una rejilla fija las cortaría; el opt-in experimental queda acotado a este
- * selector.
+ * Selector de tipo (P-68): los chips del catálogo publicado; mientras carga,
+ * un indicador discreto; sin catálogo, la nota de degradación con reintento
+ * y la única opción neutra que trae `kindOptions` — registrar nunca se
+ * bloquea por la red (RNF-08).
+ */
+@Composable
+private fun KindSelector(
+    state: JournalEditorUiState,
+    onKindSelected: (ResolvedKind) -> Unit,
+    onRetryKinds: () -> Unit
+) {
+    if (state.isLoadingKinds && state.kindOptions.isEmpty()) {
+        CircularProgressIndicator(
+            color = V2Palette.inkSecondary,
+            strokeWidth = 2.dp,
+            modifier = Modifier
+                .padding(vertical = 12.dp)
+                .size(20.dp)
+        )
+        return
+    }
+    KindChips(
+        options = state.kindOptions,
+        selectedId = state.kindId,
+        onKindSelected = onKindSelected
+    )
+    if (state.kindsUnavailable) {
+        KindsUnavailableNote(onRetry = onRetryKinds, enabled = !state.isLoadingKinds)
+    }
+}
+
+/** Nota de degradación sin catálogo (P-68): texto neutro y reintento en línea. */
+@Composable
+private fun KindsUnavailableNote(onRetry: () -> Unit, enabled: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.journal_kind_unavailable),
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(onClick = onRetry, enabled = enabled) {
+            Text(
+                text = stringResource(R.string.common_retry),
+                style = InteriorTypeVoice.label,
+                color = V2Palette.inkSecondary
+            )
+        }
+    }
+}
+
+/**
+ * Tipos como chips de color (v2-21): cada uno con el matiz de su tema —
+ * punto del tinte y contorno gris de control en reposo (la píldora blanca sola
+ * daba 1.12:1 sobre el fondo, bajo el 3:1 de WCAG §1.4.11); tinte, borde y
+ * visto al elegirlo, siempre con la etiqueta (regla 3). Un solo gesto y sin
+ * menús (decisión F7). FlowRow porque las etiquetas varían de ancho y la V2
+ * respeta la fuente del sistema (D5): una rejilla fija las cortaría; el opt-in
+ * experimental queda acotado a este selector.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun KindChips(selected: EntryKind?, onKindSelected: (EntryKind) -> Unit) {
+private fun KindChips(options: List<ResolvedKind>, selectedId: String?, onKindSelected: (ResolvedKind) -> Unit) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        EntryKind.entries.forEach { kind ->
+        options.forEach { kind ->
             KindChip(
                 kind = kind,
-                isSelected = kind == selected,
+                isSelected = kind.id == selectedId,
                 onSelected = { onKindSelected(kind) }
             )
         }
@@ -421,18 +476,16 @@ private fun KindChips(selected: EntryKind?, onKindSelected: (EntryKind) -> Unit)
 }
 
 @Composable
-private fun KindChip(kind: EntryKind, isSelected: Boolean, onSelected: () -> Unit) {
+private fun KindChip(kind: ResolvedKind, isSelected: Boolean, onSelected: () -> Unit) {
     val accent = kind.visual().accent
     Row(
         modifier = Modifier
             .clip(V2Corner.pill)
             .background(if (isSelected) accent.tint else V2Palette.cardSurface)
-            .then(
-                if (isSelected) {
-                    Modifier.border(width = 1.2.dp, color = accent.stroke, shape = V2Corner.pill)
-                } else {
-                    Modifier
-                }
+            .border(
+                width = if (isSelected) 1.2.dp else 1.dp,
+                color = if (isSelected) accent.stroke else V2Palette.controlOutline,
+                shape = V2Corner.pill
             )
             .selectable(selected = isSelected, role = Role.RadioButton, onClick = onSelected)
             .heightIn(min = 44.dp)
@@ -457,7 +510,7 @@ private fun KindChip(kind: EntryKind, isSelected: Boolean, onSelected: () -> Uni
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = stringResource(kind.labelRes()),
+            text = kind.labelText(),
             style = if (isSelected) InteriorTypeVoice.label else InteriorTypeVoice.caption,
             color = if (isSelected) accent.stroke else V2Palette.inkPrimary
         )

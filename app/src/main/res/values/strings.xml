@@ -26,7 +26,6 @@
     <string name="weather_rain_notice">%1$s de probabilidad</string>
     <string name="weather_tab_today">Hoy</string>
     <string name="weather_tab_forecast">5 días</string>
-    <string name="weather_tab_places">Lugares</string>
     <string name="access_setup_title">Tu clave personal.</string>
     <string name="access_setup_body">Es tu llave. Elige algo fácil de recordar para ti, y sin significado para nadie más.</string>
     <string name="access_setup_rule_length">Mínimo 6 caracteres</string>
@@ -50,6 +49,8 @@
     <string name="access_guide_practice_card_title">Practiquemos ahora</string>
     <string name="access_guide_practice_teaser">Vas a escribir tu clave y después tocar la nube, para que tus manos lo recuerden.</string>
     <string name="access_guide_practice_cta">Practicar</string>
+    <string name="access_guide_skip">Saltar por ahora</string>
+    <string name="access_guide_skip_hint">Puedes volver a verlo cuando quieras desde Ajustes.</string>
     <string name="access_guide_back">Atrás</string>
     <string name="access_guide_practice_tag">TUTORIAL · PRÁCTICA</string>
     <string name="access_guide_practice_title">Practica tu entrada.</string>
@@ -99,6 +100,17 @@
     <string name="account_login_lock_title">Pausa temporal</string>
     <string name="account_login_lock_body">Por tu seguridad, el acceso queda en pausa unos minutos. Respira; tu información sigue protegida.</string>
     <string name="account_login_lock_countdown">PODRÁS INTENTAR DE NUEVO EN %1$s</string>
+    <!-- RF-46: recuperación por correo. Redacción aprobada por la usuaria el
+         2026-10-06; el mensaje de confirmación es el MISMO exista o no la
+         cuenta, para que la pantalla no sirva de oráculo. -->
+    <string name="account_reset_link">¿Olvidaste tu contraseña?</string>
+    <string name="account_reset_title">Recuperar el acceso</string>
+    <string name="account_reset_body">Escribe tu correo y te enviamos un mensaje para elegir una contraseña nueva.</string>
+    <string name="account_reset_warning">Al restablecer tu contraseña, la información guardada en la nube podría no abrirse en otro teléfono. Lo que tienes en este dispositivo no se pierde.</string>
+    <string name="account_reset_submit">Enviar el correo</string>
+    <string name="account_reset_cancel">Ahora no</string>
+    <string name="account_reset_done">Si ese correo tiene una cuenta, te enviamos un mensaje para elegir una contraseña nueva. Revisa tu bandeja de entrada y la carpeta de correo no deseado.</string>
+    <string name="account_reset_offline">No hay conexión, así que el correo no salió. Inténtalo cuando vuelvas a tener internet.</string>
     <string name="access_settings_title">Ajustes</string>
     <string name="access_settings_group_security">Tu llave de entrada</string>
     <string name="access_settings_change_code">Cambiar tu código de acceso</string>
@@ -151,8 +163,12 @@
     <string name="access_home_learn">Informarme</string>
     <string name="access_tab_guide">Guía</string>
     <string name="access_tab_journal">Mi registro</string>
+    <!-- Modo local del reingreso silencioso (P-31 opción C): sobrio, sin jerga técnica. -->
+    <string name="access_offline_chip">Sin conexión</string>
     <string name="access_panel_guide_title">Reconocer tu situación</string>
     <string name="access_panel_guide_body">Unas preguntas para orientarte, a tu ritmo.</string>
+    <string name="access_panel_history_title">Resultados guardados</string>
+    <string name="access_panel_history_body">Los que decidiste conservar, con su fecha.</string>
     <string name="content_guide_title">Guía</string>
     <string name="content_guide_subtitle">Todo lo que necesitas saber y a quién acudir, en un solo lugar.</string>
     <string name="content_guide_topics_support">Los tipos, con señales y ejemplos</string>
@@ -186,8 +202,8 @@
     <string name="guidance_intro_point_pace_body">Puedes devolverte, dejar preguntas sin responder o salir cuando quieras.</string>
     <string name="guidance_intro_point_discard_title">Si sales, se borra</string>
     <string name="guidance_intro_point_discard_body">Tus respuestas se descartan por completo.</string>
-    <string name="guidance_intro_point_once_title">Una sola vez</string>
-    <string name="guidance_intro_point_once_body">El resultado se muestra al terminar y no se guarda.</string>
+    <string name="guidance_intro_point_choice_title">Tú decides</string>
+    <string name="guidance_intro_point_choice_body">El resultado se muestra al terminar y solo se guarda si tú lo eliges.</string>
     <string name="guidance_start">Comenzar cuando estés lista</string>
     <string name="guidance_not_now">Ahora no</string>
     <string name="guidance_question_tag">Pregunta %1$d de %2$d</string>
@@ -203,6 +219,24 @@
     <string name="guidance_call">Llamar</string>
     <string name="guidance_result_routes">Ver rutas de atención</string>
     <string name="guidance_result_finish">Terminar</string>
+    <string name="guidance_result_save">Guardar este resultado</string>
+    <string name="guidance_result_saved">Resultado guardado</string>
+    <string name="guidance_save_title">¿Guardar este resultado?</string>
+    <string name="guidance_save_body">Se guardará la fecha, el nivel y los tipos reconocidos — nunca tus respuestas. Queda protegido, solo se ve dentro de la app y puedes eliminarlo cuando quieras.</string>
+    <string name="guidance_save_confirm">Guardar</string>
+    <string name="guidance_save_cancel">Cancelar</string>
+    <string name="guidance_history_tag">Tus resultados</string>
+    <string name="guidance_history_title">Resultados guardados</string>
+    <string name="guidance_history_subtitle">Solo tú puedes verlos. Puedes eliminarlos cuando quieras.</string>
+    <string name="guidance_history_empty">Aún no has guardado ningún resultado. Al terminar las preguntas puedes decidir guardarlo aquí.</string>
+    <!-- Rótulo de la lista de tipos; las etiquetas se agregan aparte para resaltarlas. -->
+    <string name="guidance_history_types">Señales reconocidas:</string>
+    <string name="guidance_history_close">Cerrar</string>
+    <string name="guidance_history_delete">Eliminar</string>
+    <string name="guidance_history_delete_title">¿Eliminar este resultado?</string>
+    <string name="guidance_history_delete_body">Se borrará de aquí y de la nube. Esta acción no se puede deshacer.</string>
+    <string name="guidance_history_delete_keep">Conservar</string>
+    <string name="guidance_history_delete_confirm">Sí, eliminar</string>
     <string name="journal_tag">Mi registro</string>
     <string name="journal_title">Mi registro</string>
     <string name="journal_subtitle">Lo que anotas queda solo para ti, protegido en tu espacio.</string>
@@ -219,10 +253,8 @@
     <string name="journal_date_confirm">Listo</string>
     <string name="journal_date_cancel">Cancelar</string>
     <string name="journal_kind_label">Qué tipo fue</string>
-    <string name="journal_kind_psychological">Psicológica</string>
-    <string name="journal_kind_physical">Física</string>
-    <string name="journal_kind_sexual">Sexual</string>
-    <string name="journal_kind_economic">Económica y patrimonial</string>
+    <string name="journal_kind_none">Sin tipo</string>
+    <string name="journal_kind_unavailable">No se pudieron cargar los tipos. Puedes guardar ahora y elegirlo después.</string>
     <string name="journal_kind_missing">Elige un tipo para poder guardar.</string>
     <string name="journal_detail_label">Qué pasó</string>
     <string name="journal_detail_placeholder">Escribe con tus palabras. Solo tú lo leerás.</string>
@@ -247,6 +279,61 @@
     <string name="journal_media_only_here">Tus adjuntos solo se ven dentro de la app.</string>
     <string name="journal_media_audio_note">Los audios quedan guardados y protegidos; podrás reproducirlos en una próxima versión.</string>
     <string name="journal_media_tag">MI REGISTRO · ADJUNTO</string>
+    <!-- Exportación selectiva (RF-45): selección en el listado y pantalla de exportación -->
+    <string name="journal_select">Exportar</string>
+    <string name="journal_select_cancel">Cancelar</string>
+    <string name="journal_select_hint">Marca los registros que quieras exportar a un archivo PDF.</string>
+    <string name="journal_select_continue">Exportar seleccionados</string>
+    <string name="journal_select_marked">Marcado</string>
+    <string name="journal_select_unmarked">Sin marcar</string>
+    <plurals name="journal_selected_count">
+        <item quantity="one">%d seleccionado</item>
+        <item quantity="other">%d seleccionados</item>
+    </plurals>
+    <string name="journal_export_title">Exportar</string>
+    <string name="journal_export_subtitle">Se creará un archivo PDF con lo que elegiste, protegido con una contraseña.</string>
+    <plurals name="journal_export_summary_count">
+        <item quantity="one">%d registro</item>
+        <item quantity="other">%d registros</item>
+    </plurals>
+    <plurals name="journal_export_attachments_count">
+        <item quantity="one">%d adjunto</item>
+        <item quantity="other">%d adjuntos</item>
+    </plurals>
+    <string name="journal_export_include_attachments">Incluir adjuntos</string>
+    <string name="journal_export_include_note">Las imágenes y los documentos PDF se agregan como páginas; los audios van como archivos dentro del mismo PDF (panel de adjuntos del lector). Si lo apagas, solo se mencionan.</string>
+    <string name="journal_export_too_large">Los adjuntos de esta selección pesan demasiado para un solo archivo. Exporta menos registros a la vez para incluirlos.</string>
+    <string name="journal_export_notice">El archivo quedará fuera de tu espacio protegido. Quien tenga el archivo y la contraseña podrá leerlo: guárdalo o compártelo solo con quien confíes.</string>
+    <string name="journal_export_password_label">Contraseña del archivo</string>
+    <string name="journal_export_password_confirm">Repite la contraseña</string>
+    <string name="journal_export_password_help">Mínimo 10 caracteres; mezcla letras y números. No la pierdas: sin ella el archivo no se puede abrir.</string>
+    <string name="journal_export_password_short">La contraseña debe tener al menos 10 caracteres.</string>
+    <string name="journal_export_password_mismatch">Las contraseñas no coinciden.</string>
+    <string name="journal_export_password_toggle">Cambiar visibilidad de la contraseña</string>
+    <string name="journal_export_save">Guardar en el teléfono</string>
+    <string name="journal_export_share">Compartir</string>
+    <string name="journal_export_preparing">Preparando el archivo…</string>
+    <string name="journal_export_saved">Archivo guardado.</string>
+    <string name="journal_export_done">Listo</string>
+    <string name="journal_export_share_title">Enviar archivo</string>
+    <!-- Textos que van dentro del PDF (RF-45 criterio 3) -->
+    <string name="journal_export_pdf_title">Mi registro</string>
+    <string name="journal_export_pdf_generated">Exportado el %1$s</string>
+    <string name="journal_export_pdf_range">del %1$s al %2$s</string>
+    <string name="journal_export_pdf_entry_band">Registro %1$d de %2$d</string>
+    <string name="journal_export_pdf_kind">Tipo</string>
+    <string name="journal_export_pdf_detail">Relato</string>
+    <string name="journal_export_pdf_attachments">Adjuntos (%1$d)</string>
+    <string name="journal_export_pdf_image_n">Imagen %1$d · Registro %2$d</string>
+    <string name="journal_export_pdf_document_n">Documento adjunto %1$d · sus %2$d páginas van a continuación, con cabecera propia</string>
+    <string name="journal_export_pdf_document_failed">Documento adjunto %1$d · no se pudo incluir (archivo dañado o protegido)</string>
+    <string name="journal_export_pdf_audio_n">Audio adjunto %1$d · archivo «%2$s» dentro de este PDF; ábrelo desde el panel de adjuntos del lector</string>
+    <string name="journal_export_pdf_appended">Registro %1$d · Documento adjunto %2$d · página %3$d de %4$d</string>
+    <string name="journal_export_pdf_image_omitted">Imagen adjunta %1$d · no incluida</string>
+    <string name="journal_export_pdf_document_omitted">Documento adjunto %1$d · no incluido</string>
+    <string name="journal_export_pdf_audio_omitted">Audio adjunto %1$d · no incluido</string>
+    <string name="journal_export_pdf_omitted">Los adjuntos no se incluyeron en este archivo.</string>
+    <string name="journal_export_pdf_page">Página %1$d de %2$d</string>
     <plurals name="journal_media_count">
         <item quantity="one">1 adjunto</item>
         <item quantity="other">%d adjuntos</item>

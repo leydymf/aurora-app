@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Solo para builds debug. `androidx.compose.ui.tooling` (dependencia
+    `debugImplementation` que hace falta para renderizar los @Preview en el IDE)
+    fusiona una PreviewActivity EXPORTADA. Con ella, quien tenga depuración USB
+    puede lanzar por nombre cualquier composable sin parámetros y verlo FUERA
+    del grafo seguro: sin la bandera que bloquea capturas, sin pedir la clave
+    personal y con entrada propia en recientes (RNF-02, RNF-05, RF-12).
+
+    Aquí se retira. El IDE sigue pintando las previsualizaciones (usa layoutlib,
+    no esta Activity); lo único que se pierde es «ejecutar una preview en el
+    dispositivo», que no se usa. El release nunca la tuvo.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
+            tools:node="remove" />
+    </application>
+</manifest>

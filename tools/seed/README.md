@@ -50,9 +50,12 @@ npm run seed    # agrega -- --borrador SOLO en un entorno de prueba
   directora, editar el JSON y volver a ejecutar.
 - El script **no borra** documentos retirados de los JSON: si un contenido se
   retira, eliminar el documento a mano en la consola.
-- Todo documento lleva `schemaVersion` (hoy `1`): la app ignora versiones que
-  no conoce (ARQUITECTURA §6), así el futuro panel puede evolucionar el esquema
-  sin romper instalaciones viejas.
+- Todo documento lleva `schemaVersion` (hoy `2` en `topics`/`routes` —
+  `icon`/`accent` del ADR 2026-08-14 — y `1` en `agencies`/`lines`): la app
+  ignora versiones que no conoce (ARQUITECTURA §6), así el panel puede
+  evolucionar el esquema sin romper instalaciones viejas. Ojo: un APK anterior
+  al soporte v2 descarta los documentos v2 — actualizar la app antes de
+  re-sembrar.
 - Usar `npm ci` (no `npm install`): el `package-lock.json` versionado fija las
   versiones exactas en la máquina que custodia la llave administrativa
   (auditoría D4 M-3). Riesgo residual aceptado: `npm audit` reporta un aviso
@@ -60,12 +63,43 @@ npm run seed    # agrega -- --borrador SOLO en un entorno de prueba
   degrada firebase-admin a la serie 10; no aplica a este uso local sin
   entradas de terceros. Revisar al actualizar firebase-admin.
 
+## Publicar solo t05 y t06 (`publish-topics.mjs`)
+
+Los dos tipos agregados en octubre de 2026 («Violencia digital» y «Acoso
+sexual», validados por la directora) se publican con un comando aparte que
+escribe ÚNICAMENTE esos documentos en `topics`, sin tocar t01–t04 ni ninguna
+otra colección. Por defecto corre **en modo de prueba**: lee `content/topics.json`,
+muestra qué escribiría y termina sin conectarse a Firestore.
+
+```bash
+cd tools/seed
+export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/aurora-seed/service-account.json"
+npm run publicar-tipos                 # modo de prueba: solo muestra t05 y t06
+npm run publicar-tipos -- --publicar   # escribe t05 y t06 en topics (pide confirmación)
+```
+
+- Requisito previo (ADR 2026-10-03): el APK con soporte de BD v5 / payload v3
+  debe estar instalado ANTES de publicar — un APK anterior sí mostraría los
+  temas en la Guía, pero su registro no los conocería.
+- Mismas barreras que `seed.mjs`: la llave fuera del repo (B-1) y la
+  confirmación de reglas publicadas (M-1 o `AURORA_RULES_PUBLISHED=1`). La
+  compuerta M-2 también aplica: un documento con `[POR CONFIRMAR` se rechaza.
+- Escribe el documento vivo Y su borrador del panel (2026-10-06). Antes solo
+  tocaba `topics`, así que el borrador que edita el panel se quedaba congelado
+  en lo último guardado allí; en producción eso dejó el texto «Prueba» de una
+  corrida E2E en `drafts/topics__t05`, y publicar desde el panel habría
+  sobrescrito el contenido validado. Para los borradores obsoletos que ya
+  existen, ver `tools/admin/limpiar-borradores.mjs`, que antes de borrar nada
+  guarda una copia íntegra en `~/.config/aurora-seed/respaldos/`.
+- Idempotente: se puede repetir tras una corrección. Escribe el documento completo (sin `merge`) para que el borrador quede idéntico a lo publicado.
+- Para publicar otros ids: `--ids t05,t06` (lista explícita; nunca «todos»).
+
 ## Modelo de datos
 
 | Colección | Documento | Campos |
 |---|---|---|
-| `topics` | tipo de violencia | `schemaVersion, order, title, summary, signals[], examples[]` |
-| `routes` | sector de la ruta (Salud/Protección/Justicia) | `schemaVersion, order, title, summary, agencyIds[]` |
+| `topics` | tipo de violencia (también las opciones de tipo del registro de la usuaria desde el cierre de P-68; t05/t06 validados por la directora en octubre de 2026) | `schemaVersion, order, icon, accent, title, summary, signals[], examples[]` |
+| `routes` | sector de la ruta (Salud/Protección/Justicia) | `schemaVersion, order, icon, accent, title, summary, agencyIds[]` |
 | `agencies` | entidad de atención | `schemaVersion, name, role, whenToUse, phones[], address?, hours?` |
 | `lines` | línea de atención | `schemaVersion, order, name, number, description, hours?` |
 | `forms` | configuración completa del cuestionario | `schemaVersion, version, title, intro, notice, scale[], questions[], levels[]` |

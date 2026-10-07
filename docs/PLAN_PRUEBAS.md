@@ -37,4 +37,6 @@
 - **CP-35** (US, fase 2 y 4) — RQ: RNF-09 — Evaluación heurística sin hallazgos de severidad ≥ 3 pendientes (prototipos y app).
 - **CP-36** (PI, fase 3) — RQ: RNF-10 — Ejecución en la versión mínima de Android definida y en dispositivo reciente.
 - **CP-37** (Revisión, fase 3) — RQ: RNF-11 — Revisión de arquitectura por capas y muestreo de documentación.
+- **CP-38** (PI + CN + PS, fase 3 y 4) — RQ: RF-45 — Exportación de dos de tres registros, con y sin adjuntos (imágenes como páginas, PDF anexados, audios incrustados): PDF con contraseña y nombre neutro, sin permisos nuevos, sin copias en la app y con captura bloqueada.
+- **CP-39** (PU + CN + PS, fase 3 y 4) — RQ: RF-46 — Recuperación por correo: el mensaje de confirmación es idéntico con un correo que tiene cuenta y con uno que no; el aviso previo aparece antes de enviar; la pausa temporal se activa tras varios envíos y no bloquea el inicio de sesión; sin conexión se informa que el correo no salió; el correo recibido no contiene ningún término ajeno a la identidad de clima.
 - **Tipos de prueba: PU = unitaria · PI = instrumentada (paralelas al desarrollo, Fase 3) · CN = caja negra · PS = seguridad · US = usabilidad (formales, Fase 4).** (None, fase None) — RQ: None — None

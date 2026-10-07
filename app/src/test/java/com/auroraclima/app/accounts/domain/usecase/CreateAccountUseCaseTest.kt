@@ -4,12 +4,14 @@ import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class CreateAccountUseCaseTest {
     private val repository = FakeAuthRepository()
     private val syncKeys = FakeSyncKeyManager()
-    private val useCase = CreateAccountUseCase(repository, syncKeys)
+    private val credentials = FakeCredentialStore()
+    private val useCase = CreateAccountUseCase(repository, syncKeys, credentials)
 
     @Test
     fun `con correo valido y contrasena de 8 o mas la cuenta se crea`() = runTest {
@@ -78,6 +80,32 @@ class CreateAccountUseCaseTest {
         syncKeys.establishOutcome = Result.failure(IllegalStateException())
 
         assertEquals(CreateAccountResult.Success, useCase("usuaria@correo.co", "clave-segura-1"))
+    }
+
+    @Test
+    fun `la cuenta creada hace nacer el blob de credenciales normalizado`() = runTest {
+        // P-31 opción C: mismo criterio que el sobre — momentos con contraseña.
+        useCase("  usuaria@correo.co ", "clave-segura-1")
+
+        assertEquals("usuaria@correo.co", credentials.stored?.email)
+        assertEquals("clave-segura-1", credentials.stored?.password)
+    }
+
+    @Test
+    fun `una creacion rechazada no crea el blob`() = runTest {
+        repository.nextCreateResult = CreateAccountResult.EmailAlreadyInUse
+
+        useCase("usuaria@correo.co", "clave-segura-1")
+
+        assertNull(credentials.stored)
+    }
+
+    @Test
+    fun `un fallo al guardar el blob no rompe la creacion ni el sobre`() = runTest {
+        credentials.failNextSave = true
+
+        assertEquals(CreateAccountResult.Success, useCase("usuaria@correo.co", "clave-segura-1"))
+        assertEquals(listOf("clave-segura-1"), syncKeys.establishedPasswords)
     }
 }
 // El fake compartido vive en AuthFakes.kt.

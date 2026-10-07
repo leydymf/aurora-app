@@ -117,7 +117,7 @@ El sistema debe presentar, tras la creación del código, un tutorial del doble 
 1. Al finalizar la creación del código inicia el tutorial (ingreso, salida rápida y qué ve un tercero).
 2. La usuaria realiza al menos un ingreso de práctica con su código y una salida rápida antes de finalizar.
 
-*Notas:* Clave para la apropiación segura de la app (HU-08).
+*Notas:* Clave para la apropiación segura de la app (HU-08). **Refinamiento (2026-08, decisión de la usuaria):** el tutorial es **saltable** — «Saltar por ahora» (acción secundaria; el primario sigue siendo continuar con la práctica) aparece en sus dos flujos de aparición (tras crear el código en cuenta nueva, y tras restaurar en dispositivo nuevo por RF-39) y navega al panel, el mismo destino donde termina el flujo completo; una línea bajo el botón recuerda que puede volver a verse desde Ajustes (RF-11). Los criterios 1 y 2 describen el camino completo cuando la usuaria no salta; en modo repaso (RF-11) no se ofrece saltar.
 
 ## RF-11 — Reapertura del tutorial
 **Tipo:** Funcional · **Prioridad:** Baja · **Dependencias:** RF-10
@@ -138,7 +138,7 @@ El sistema debe abrir el acceso a Aurora cuando el texto de la barra de búsqued
 1. El código exacto abre Aurora (inicio de sesión, o pantalla principal si hay sesión activa).
 2. Cualquier variación del código se trata como búsqueda normal.
 
-*Notas:* Puerta única de entrada al doble fondo.
+*Notas:* Puerta única de entrada al doble fondo. **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el criterio 1 se amplía — el código correcto abre la pantalla principal también cuando existe la credencial local cifrada (reingreso silencioso): el espacio interno se abre SIEMPRE con los datos locales y la sesión de la cuenta se confirma en segundo plano; el inicio de sesión manual solo aparece sin credencial local o si la confirmación es rechazada. Ver ADR 2026-08-19 en `docs/ARQUITECTURA.md`.
 
 ## RF-13 — Respuesta indistinguible de búsqueda
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-02, RF-12
@@ -160,7 +160,7 @@ El sistema debe limpiar la barra de búsqueda al salir del doble fondo y no regi
 1. Al regresar al clima la barra está vacía.
 2. El código no aparece en historial ni en sugerencias de autocompletado.
 
-*Notas:* -
+*Notas:* **Refinamiento 2026-10-05 (cierre de P-14):** el criterio 2 cubre también la miniatura de recientes — mientras hay texto en la barra la miniatura se oculta (`RecentsThumbnailGuard` en core/security, `setRecentsScreenshotEnabled`, API 33+; el sistema muestra una tarjeta neutra) y se restaura al vaciarla o salir del modo búsqueda; con la búsqueda inactiva la fachada se fotografía normal (no es distinguidor, RF-13/RNF-05). En API < 33 solo queda la limpieza en ON_PAUSE (mejor esfuerzo). ADR 2026-10-05.
 
 ## RF-15 — Inicio de sesión
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-07
@@ -172,7 +172,7 @@ El sistema debe permitir iniciar sesión con correo y contraseña, mostrando err
 2. Credenciales incorrectas muestran un error genérico que no indica cuál campo falló.
 3. Tras 5 intentos fallidos consecutivos se aplica un bloqueo temporal.
 
-*Notas:* -
+*Notas:* **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el inicio de sesión puede ser SILENCIOSO — con la credencial local cifrada, la sesión se confirma en segundo plano sin formulario. El silencioso NO cuenta para el bloqueo del criterio 3 (no es superficie de adivinación; su rechazo destruye la credencial local y fuerza el login manual, que sí cuenta). Los criterios 1–3 aplican intactos al formulario manual. Ver ADR 2026-08-19.
 
 ## RF-16 — Salida rápida
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12
@@ -240,7 +240,7 @@ El sistema debe presentar los tipos de violencia de género con descripción, se
 1. Se presentan los tipos física, psicológica, sexual y económica/patrimonial.
 2. Cada tipo incluye descripción, señales y ejemplos en lenguaje claro.
 
-*Notas:* Contenido gestionado desde el panel de administración.
+*Notas:* Contenido gestionado desde el panel de administración. **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** los tipos publicados son también el catálogo con el que la usuaria clasifica sus registros (RF-32): mismo orden, icono y acento, sin versión nueva de la app. Se agregan al contenido «Violencia digital» (t05) y «Acoso sexual» (t06), validados por la directora en octubre de 2026 (fuentes: Resolución 020310 de 2026 del Ministerio de Educación; Ley 2365 de 2024); el criterio 1 sigue exigiendo los cuatro tipos de la Ley 1257 como mínimo.
 
 ## RF-22 — Consulta de rutas de atención
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12, RF-24
@@ -347,7 +347,7 @@ El sistema debe almacenar el resultado del cuestionario únicamente cuando la us
 1. Descartar o salir no deja registro alguno.
 2. Guardar exige confirmación expresa y el resultado queda protegido y consultable.
 
-*Notas:* La usuaria mantiene control total sobre su información.
+*Notas:* La usuaria mantiene control total sobre su información. **Implementado (2026-08-14, rama mejoras-v3; ADR y acta §3.2):** botón «Guardar este resultado» con hoja segura de confirmación (criterio 2); se persiste solo fecha + nivel + tipos reconocidos (RNF-04) en el almacén cifrado `guidance_store.db`, viaja sellado con la DEK de RF-39 (`/users/{uid}/outcomes`) y se restaura multi-dispositivo; listado consultable en Inicio con detalle y eliminación individual (doble confirmación, propagación remota como RF-36) y cascada RF-20. Descartar/salida rápida no dejan registro (criterio 1, regresión RF-28 probada).
 
 ## RF-32 — Registro de incidentes
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-15, RNF-01
@@ -358,7 +358,7 @@ El sistema debe permitir registrar incidentes con fecha, tipo de violencia y des
 1. Con los campos obligatorios completos, el incidente se guarda protegido.
 2. Si falta un campo obligatorio, se indica sin perder lo ya escrito.
 
-*Notas:* -
+*Notas:* **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** el «tipo de violencia» se elige entre los tipos publicados en la Guía (RF-21), que son la única fuente — mismo orden, icono y acento; un tipo nuevo o editado desde el panel aparece en el registro en la siguiente actualización de contenido. Si el catálogo no está disponible (sin conexión y sin caché de contenido), registrar sigue siendo posible con la opción neutra «Sin tipo», y el tipo se elige después al editar (RF-35); el criterio 2 se mantiene: sin tipo elegido no se guarda. Un registro cuyo tipo dejó de publicarse se muestra con su último nombre conocido (o «Sin tipo») y el visual neutro, nunca se pierde. Los registros anteriores migran su tipo al id del tema equivalente (local, nube y restauración en otro dispositivo, RF-37/RF-39); su instantánea de nombre nace vacía, así que sin catálogo disponible se ven como «Sin tipo» hasta que haya contenido o se editen.
 
 ## RF-33 — Evidencias adjuntas
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-32
@@ -488,6 +488,35 @@ Los cambios publicados desde el panel deben reflejarse en la app tras la siguien
 
 *Notas:* Cierra el ciclo de gestión de contenido panel → app.
 
+## RF-45 — Exportación selectiva de registros
+**Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-32, RF-33, RF-34
+
+El sistema debe permitir a la usuaria seleccionar uno o varios registros de incidentes y exportarlos en un único archivo PDF protegido con contraseña, con la opción de incluir o no sus adjuntos (imágenes, documentos y audios), sin exportar el historial completo por defecto.
+
+**Criterios de aceptación:**
+1. Desde «Mi registro» la usuaria puede marcar uno o varios registros; ninguno viene marcado por defecto.
+2. Antes de exportar se muestra un resumen de lo seleccionado y un aviso de que el archivo quedará fuera del espacio protegido.
+3. Por cada registro, el PDF contiene fecha del hecho, tipo y relato, y sus adjuntos solo si la usuaria eligió incluirlos: las imágenes y los documentos PDF como páginas del mismo archivo y los audios como archivos incrustados en él.
+4. El PDF se protege con una contraseña que la usuaria define al exportar y tiene un nombre neutro, sin términos que delaten su contenido.
+5. La usuaria elige guardar o compartir el archivo mediante el selector del sistema, sin que la app pida permisos nuevos ni conserve copias temporales.
+6. Las pantallas de selección y exportación bloquean capturas de pantalla.
+
+*Notas:* Surge de la consulta con el comité de género: los casos se demoran por falta de fechas y pruebas. El archivo exportado sale del cifrado de Aurora; se mitiga con contraseña, nombre neutro y aviso previo (HU-35). Agregado el 2026-10-02; el 2026-10-03 la usuaria amplió el criterio 3 de «imágenes» a todos los adjuntos tras la revisión en emulador: un documento adjunto que solo se menciona no sirve como prueba.
+
+## RF-46 — Recuperación de la contraseña por correo
+**Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-15, RF-39
+
+El sistema debe permitir a la usuaria pedir, desde la pantalla de inicio de sesión, un correo para restablecer su contraseña, sin revelar si la dirección tiene una cuenta y advirtiendo antes de enviarlo que el respaldo en la nube podría no recuperarse en otro teléfono.
+
+**Criterios de aceptación:**
+1. La pantalla de inicio de sesión ofrece un enlace discreto para recuperar el acceso, que abre un formulario con un solo campo de correo.
+2. Antes de enviar se muestra un aviso de que, al restablecer la contraseña, la información guardada en la nube podría no abrirse en otro teléfono, y de que lo guardado en ese dispositivo no se pierde.
+3. El mensaje de confirmación es idéntico exista o no una cuenta con ese correo, y también cuando el correo está mal formado. Solo la falta de conexión se informa aparte.
+4. Tras varios envíos seguidos se aplica una pausa temporal con el mismo límite del inicio de sesión, con su propio contador: agotarla no impide iniciar sesión.
+5. Ningún texto nuevo delata el propósito de la aplicación.
+
+*Notas:* Refinamiento de RF-15. Hasta ahora la contraseña solo podía restablecerse desde la consola del proveedor. La decisión de conservar la recuperación por correo con plantilla de identidad meteorológica es la opción A de la reunión con la directora del 2026-07-21 (`docs/DECISIONES_DIRECTORA.md` §4.2, P-19); el texto de esa plantilla debe personalizarse en la consola ANTES de probar el flujo. El criterio 3 es el mismo de RF-15 criterio 2: la pantalla no puede servir para averiguar quién tiene cuenta. El aviso del criterio 2 es coherente con el ADR 2026-07-26: en un dispositivo sin copia local de la llave, una contraseña restablecida deja el respaldo ilegible y se reinicia. Agregado el 2026-10-06.
+
 ## RNF-01 — Cifrado de datos
 **Tipo:** No Funcional · **Prioridad:** Alta · **Dependencias:** -
 
@@ -528,7 +557,7 @@ Solo deben recolectarse los datos definidos en el inventario aprobado (correo, c
 **Criterios de aceptación:**
 1. La auditoría del almacenamiento local y en nube no encuentra datos fuera del inventario aprobado.
 
-*Notas:* Principio de minimización, Ley 1581 de 2012. Inventario de datos como anexo.
+*Notas:* Principio de minimización, Ley 1581 de 2012. Inventario de datos como anexo. *Ampliación 2026-10-05 (P-31 opción C, P-70a):* el inventario LOCAL incluye además las credenciales de la cuenta (correo y contraseña) cifradas en reposo bajo `account_meta` para el reingreso silencioso; no se recolecta ningún dato nuevo de la usuaria, solo se conserva cifrado uno que ya aportaba en cada ingreso.
 
 ## RNF-05 — Camuflaje integral
 **Tipo:** No Funcional · **Prioridad:** Alta · **Dependencias:** RF-01, RF-06

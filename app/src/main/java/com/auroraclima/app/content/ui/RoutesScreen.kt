@@ -104,7 +104,7 @@ private fun RoutesContent(routes: List<Route>, onAgencySelected: (routeId: Strin
             color = V2Palette.inkSecondary
         )
         routes.forEach { route ->
-            val visual = routeVisual(route.id)
+            val visual = routeVisual(route.id, route.icon, route.accent)
             Spacer(modifier = Modifier.height(24.dp))
             // Encabezado del sector (v2-14): insignia menor + título en el
             // trazo del acento — el color acompaña al texto (regla 3).

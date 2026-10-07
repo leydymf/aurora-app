@@ -7,8 +7,11 @@ import com.auroraclima.app.core.security.SearchGateResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,7 +30,21 @@ class TutorialViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TutorialUiState())
     val uiState: StateFlow<TutorialUiState> = _uiState.asStateFlow()
 
+    private val _skipEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Saltar por ahora (refinamiento RF-10, 2026-08): continúa el flujo sin practicar. */
+    val skipEvents: SharedFlow<Unit> = _skipEvents.asSharedFlow()
+
     private var practiceCheckJob: Job? = null
+
+    /**
+     * Saltar es solo una decisión de navegación: no toca la máquina de pasos ni
+     * la práctica, así que reabrir el tutorial desde Ajustes (RF-11) lo encuentra
+     * intacto, como la primera vez.
+     */
+    fun onSkip() {
+        _skipEvents.tryEmit(Unit)
+    }
 
     fun onNext() {
         _uiState.update { state ->

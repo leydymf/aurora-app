@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Marcador de lugar (fachada V2): búsqueda y pestaña de lugares.
+<!-- Marcador de lugar (fachada V2): icono de búsqueda inactiva y resultado de ciudad.
      Trazo negro: se tiñe con el token del tema en el punto de uso. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"

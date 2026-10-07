@@ -15,7 +15,8 @@
 > madurez TRL 4, trabajo de grado) puede resolver, y se documenta para el informe.
 >
 > **Estado:** ACTA — decisiones tomadas en la reunión con la directora del **2026-07-21**.
-> Cada bloque registra la decisión adoptada. Última actualización: 2026-07-21.
+> Cada bloque registra la decisión adoptada. Última actualización: 2026-08-15
+> (adopción de la opción C en §2).
 
 ---
 
@@ -136,6 +137,25 @@ dejar **C como la evolución natural** para después del prototipo.
 > midiendo el costo real de uso). El **reingreso silencioso (C)** queda como **trabajo
 > futuro priorizado**. **P-31 cerrado** con esta decisión.  **Fecha:** 2026-07-21
 
+> **Decisión posterior — se ADOPTA la opción C (reingreso silencioso y acceso local
+> sin red):** medido el costo real de la opción A, la directora aprueba adelantar el
+> reingreso silencioso, con un alcance que además resuelve un problema detectado en el
+> uso: hoy el inicio de sesión necesita internet, así que **sin red no se podía entrar
+> ni a los datos guardados en el propio teléfono** — inaceptable para el perfil de
+> usuaria (RNF-08). Con la opción C: el **código correcto abre siempre** el espacio
+> interno con los datos locales; si hay red, la sesión de la cuenta se confirma **en
+> segundo plano sin preguntar nada**; la pantalla de contraseña solo aparece si esa
+> confirmación es **rechazada** (contraseña cambiada o credencial revocada) — y sin
+> red no aparece: se opera en local con un indicador sobrio de «sin conexión». Las
+> credenciales viven **cifradas en un blob neutro** bajo una llave del Keystore del
+> dispositivo (nunca en claro; el riesgo H-3 —tokens del SDK en claro— sigue mitigado
+> porque `AuthSessionCleaner` conserva el cierre de sesión del proveedor en cada
+> salida). El **cierre de sesión explícito (RF-19)** y la **eliminación (RF-20)**
+> destruyen el blob y regresan al ingreso completo actual; **restaurar en un
+> dispositivo nuevo sigue exigiendo login manual la primera vez** (RF-39 — ahí nace el
+> blob). **P-31 se reabre como trabajo comprometido**; el diseño detallado y su ADR
+> quedan en `docs/ARQUITECTURA.md`. **Fecha:** 2026-08-15
+
 ---
 
 ## 3. Contenido y cuestionario
@@ -210,6 +230,23 @@ umbrales + rutas). Tras el visto bueno, se retira la marca de borrador y se publ
 > gradación por palabras/acento sobrio de P-41 **RATIFICADA**. La usuaria entregará los
 > datos verificados para cargarlos; la validación **ya no bloquea**: queda pendiente
 > **solo la carga**.  **Fecha:** 2026-07-21
+
+> **Decisión posterior — REVERSIÓN INFORMADA de la presentación de P-41:** la
+> directora aprueba usar **colores semafóricos representativos** en el resultado
+> (Variable→verde sereno, Moderado→ámbar, Grave→naranja, Extremo→rojo profundo),
+> sustituyendo la gradación sobria dentro de una sola paleta ratificada el
+> 2026-07-21. Se conserva todo lo demás de aquella decisión: el nombre del nivel
+> sigue siendo el protagonista **en palabras** (los textos validados no cambian),
+> el color solo refuerza y nunca informa solo, y los tintes mantienen la
+> suavidad de la paleta serena (sin rojos de alarma estridentes). En código, la
+> escala vive como cuatro tokens semánticos nuevos del tema V2 con nombres
+> neutros de avisos meteorológicos (`accentSeverity1..4`, contraste AA
+> verificado por test) y el mapeo es por el orden del nivel con degradación
+> tolerante. En la misma decisión se aprueba implementar **RF-31 (guardado
+> opcional del resultado)**, que deja de ser trabajo futuro: guardado opt-in
+> fechado de nivel + tipos detectados (sin respuestas individuales, RNF-04),
+> cifrado, sincronizado (RF-39) y con eliminación individual y cascada RF-20.
+> Ver ADR 2026-08-14 en `docs/ARQUITECTURA.md`. **Fecha:** 2026-08-14
 
 ---
 

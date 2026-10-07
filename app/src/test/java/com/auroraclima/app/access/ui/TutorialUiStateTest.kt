@@ -30,4 +30,21 @@ class TutorialUiStateTest {
             assertTrue(state.showsBack(isReview = true))
         }
     }
+
+    @Test
+    fun `primer uso - ofrece saltar por ahora`() {
+        // Refinamiento RF-10 (2026-08): el tutorial es saltable en primer uso.
+        val state = TutorialUiState(step = TutorialStep.ENTER)
+        assertTrue(state.showsSkip(isReview = false))
+    }
+
+    @Test
+    fun `repaso - no ofrece saltar`() {
+        // Regresión RF-11: en repaso la vía de regreso sigue siendo «Atrás»;
+        // «Saltar» no aparece ni en la primera página ni en las posteriores.
+        for (step in listOf(TutorialStep.ENTER, TutorialStep.QUICK_EXIT, TutorialStep.AUTO_CLOSE)) {
+            val state = TutorialUiState(step = step)
+            assertFalse(state.showsSkip(isReview = true))
+        }
+    }
 }

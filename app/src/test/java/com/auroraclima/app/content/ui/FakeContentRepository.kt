@@ -58,8 +58,10 @@ internal fun route(
     order: Int = 1,
     title: String = "Sector $id",
     summary: String = "Resumen $id",
-    agencies: List<Agency> = listOf(agency("a-$id"))
-) = Route(id = id, order = order, title = title, summary = summary, agencies = agencies)
+    agencies: List<Agency> = listOf(agency("a-$id")),
+    icon: String? = null,
+    accent: String? = null
+) = Route(id = id, order = order, title = title, summary = summary, agencies = agencies, icon = icon, accent = accent)
 
 internal fun line(
     id: String,

@@ -79,7 +79,7 @@ private fun AttachmentChip(
         Surface(
             shape = V2Corner.control,
             color = V2Palette.cardSurface,
-            border = BorderStroke(1.dp, V2Palette.divider)
+            border = BorderStroke(1.dp, V2Palette.controlOutline)
         ) {
             Box(
                 modifier = Modifier

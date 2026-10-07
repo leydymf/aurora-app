@@ -103,8 +103,13 @@ pinta `SecureScreen` por construcción — solo cambia de apariencia, no de meca
 6. **Icono y color propios por tipo de violencia** (v2-12, v2-25, v2-28): resuelto
    con asignación fija local en `core/ui` (id de topic → icono/matiz, fallback al
    neutro) — sin campos nuevos en Firestore ni cambios en `domain`/`data` (D2).
+   *Actualización 2026-08-14: la «opción a» se activó — esquema v2 con
+   `icon`/`accent` seleccionables; el mapa fijo sobrevive como degradación (ADR
+   2026-08-14 en ARQUITECTURA.md).*
 7. **Editor del panel P23·b** (v2-28): el selector de iconos/colores se difiere
    post-V2 (D2); el editor conserva checklist y vista previa con el neutro.
+   *Cerrado 2026-08-14: selector implementado (`VisualPicker`, solo la biblioteca
+   cerrada con su significado) en los editores de tipos y rutas.*
 
 ---
 
@@ -222,6 +227,28 @@ Dos hallazgos no textuales, resueltos por diseño en la Fase 1:
   aceptado por el mismo criterio: la barra va siempre flanqueada por las cifras de
   mínima y máxima; es refuerzo visual, nunca el único indicador.
 
+Contorno de los controles (hallazgo 2026-10-05 en el emulador, WCAG 2.1 §1.4.11 —
+≥ 3:1 entre el borde de un control y lo que lo rodea):
+
+| Par | Ratio | 1.4.11 |
+|---|---|---|
+| Separador `#F0EEF4` como relleno/borde de campo / fondo `#F3F1F7` | 1.03:1 | ❌ (era el estado anterior: campo invisible sin tarjeta) |
+| Separador `#F0EEF4` / tarjeta `#FFFFFF` | 1.15:1 | ❌ |
+| Píldora blanca sin borde (chip sin elegir, barras de búsqueda) / fondo | 1.12:1 | ❌ |
+| **`controlOutline` `#7E788E` / tarjeta** | **4.23:1** | ✅ |
+| **`controlOutline` `#7E788E` / fondo** | **3.77:1** | ✅ |
+| Borde con foco `#1B2530` / tarjeta y fondo | 15.51:1 / 13.84:1 | ✅ |
+| Casillas, interruptor, anillo de opción y botón secundario `#5A5568` / tarjeta y fondo | 7.16:1 / 6.39:1 | ✅ |
+| Opción elegida del cuestionario `#3A3550` / fondo | 10.38:1 | ✅ |
+
+- **Corrección en el sistema, no por pantalla:** los tres campos del kit V2 son
+  blancos SIEMPRE con borde `controlOutline` en reposo e `inkPrimary` (2 dp) con
+  foco; `divider` queda solo para separadores y rieles. Las píldoras blancas sin
+  borde (chip de tipo sin elegir, chip «Salir» del cuestionario, barra del
+  tutorial, barra de la fachada en búsqueda activa) y el chip de adjunto llevan
+  el mismo contorno de 1 dp; `AuroraV2Theme` lo expone como `outline`.
+  `PaletteContrastTest` fija estos pares.
+
 ---
 
 ## 4. Decisiones de la usuaria (2026-08-11) — cierran las preguntas de la Fase 0
@@ -241,6 +268,9 @@ Las ocho preguntas quedaron resueltas. Estas decisiones VINCULAN a las Fases 1�
   de icono/color del editor P23·b se **difiere post-V2** (el editor web conserva el
   resto: checklist «falta para publicar», vista previa con el neutro); si algún día
   se quiere elegible desde el panel, será con `schemaVersion` nuevo (opción a).
+  *Diferido CERRADO el 2026-08-14: la opción a se activó con el esquema v2
+  (`icon`/`accent`, ids camuflados de la biblioteca cerrada) y el mapa fijo pasó a
+  ser el contrato de degradación — ADR 2026-08-14 en ARQUITECTURA.md.*
 - **D3 (Q3) · Tres pestañas; Ajustes desde el Inicio, arriba a la derecha, con el
   icono de ajustes ya establecido** (engranaje, no el sol del mockup). Barra interna:
   Inicio · Guía · Mi registro; P21 Ajustes se abre desde ese acceso y vuelve con

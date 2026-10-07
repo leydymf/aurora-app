@@ -59,7 +59,9 @@ internal fun Map<String, Any?>.toTopicDto(id: String) = TopicDto(
     title = str(FIELD_TITLE),
     summary = str(FIELD_SUMMARY),
     signals = strList("signals"),
-    examples = strList("examples")
+    examples = strList("examples"),
+    icon = str(FIELD_ICON),
+    accent = str(FIELD_ACCENT)
 )
 
 internal fun Map<String, Any?>.toRouteDto(id: String) = RouteDto(
@@ -68,7 +70,9 @@ internal fun Map<String, Any?>.toRouteDto(id: String) = RouteDto(
     order = num(FIELD_ORDER),
     title = str(FIELD_TITLE),
     summary = str(FIELD_SUMMARY),
-    agencyIds = strList("agencyIds")
+    agencyIds = strList("agencyIds"),
+    icon = str(FIELD_ICON),
+    accent = str(FIELD_ACCENT)
 )
 
 internal fun Map<String, Any?>.toAgencyDto(id: String) = AgencyDto(
@@ -93,6 +97,8 @@ internal fun Map<String, Any?>.toLineDto(id: String) = LineDto(
 )
 
 private const val FIELD_SCHEMA_VERSION = "schemaVersion"
+private const val FIELD_ICON = "icon"
+private const val FIELD_ACCENT = "accent"
 private const val FIELD_ORDER = "order"
 private const val FIELD_TITLE = "title"
 private const val FIELD_SUMMARY = "summary"

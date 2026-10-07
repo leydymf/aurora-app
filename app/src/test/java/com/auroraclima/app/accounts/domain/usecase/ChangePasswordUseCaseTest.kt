@@ -17,7 +17,8 @@ import org.junit.Test
 class ChangePasswordUseCaseTest {
     private val repository = FakeAuthRepository()
     private val syncKeys = FakeSyncKeyManager()
-    private val useCase = ChangePasswordUseCase(repository, syncKeys)
+    private val credentials = FakeCredentialStore()
+    private val useCase = ChangePasswordUseCase(repository, syncKeys, credentials)
 
     @Test
     fun `el camino feliz re-envuelve, cambia y adopta con la contrasena nueva`() = runTest {
@@ -86,6 +87,35 @@ class ChangePasswordUseCaseTest {
         assertEquals(ChangePasswordResult.GenericFailure, result)
         assertEquals(listOf("clave-nueva-22"), syncKeys.rewrappedPasswords)
         assertEquals(listOf("clave-actual-1"), syncKeys.establishedPasswords)
+    }
+
+    @Test
+    fun `el cambio exitoso re-escribe el blob con la contrasena nueva`() = runTest {
+        // P-31 opción C, caso 2 del ciclo de vida del blob.
+        credentials.save("usuaria@correo.co", "clave-actual-1")
+
+        useCase("clave-actual-1", "clave-nueva-22")
+
+        assertEquals("usuaria@correo.co", credentials.stored?.email)
+        assertEquals("clave-nueva-22", credentials.stored?.password)
+    }
+
+    @Test
+    fun `un cambio fallido conserva el blob vigente`() = runTest {
+        credentials.save("usuaria@correo.co", "clave-actual-1")
+        repository.nextUpdatePasswordResult = UpdatePasswordResult.GenericFailure
+
+        useCase("clave-actual-1", "clave-nueva-22")
+
+        assertEquals("clave-actual-1", credentials.stored?.password)
+    }
+
+    @Test
+    fun `sin blob previo el cambio exitoso no crea uno`() = runTest {
+        // Sin correo guardado no hay con qué re-escribir: el siguiente login
+        // manual lo crea. El desenlace visible no cambia.
+        assertEquals(ChangePasswordResult.Success, useCase("clave-actual-1", "clave-nueva-22"))
+        assertEquals(null, credentials.stored)
     }
 
     @Test

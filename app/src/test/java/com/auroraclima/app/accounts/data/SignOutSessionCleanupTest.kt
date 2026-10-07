@@ -41,6 +41,7 @@ class SignOutSessionCleanupTest {
         override suspend fun reauthenticate(password: String) = Unit
 
         override suspend fun deleteCurrentUser() = Unit
+        override suspend fun sendPasswordReset(email: String) = Unit
 
         override suspend fun updatePassword(newPassword: String) = Unit
     }

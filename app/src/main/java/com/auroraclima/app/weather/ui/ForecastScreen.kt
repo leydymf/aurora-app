@@ -46,22 +46,17 @@ import com.auroraclima.app.weather.domain.model.WeatherCondition
 
 /** Pronóstico extendido de la ciudad seleccionada (RF-04, mockup v2-03). */
 @Composable
-fun ForecastRoute(onBack: () -> Unit, onOpenPlaces: () -> Unit) {
+fun ForecastRoute(onBack: () -> Unit) {
     val viewModel: ForecastViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     // Voz de FACHADA del tema V2: tipografía neutra, jamás Marcellus (F1, RNF-05).
     AuroraV2Theme(V2Voice.Facade) {
-        ForecastScreen(state = state, onBack = onBack, onOpenPlaces = onOpenPlaces)
+        ForecastScreen(state = state, onBack = onBack)
     }
 }
 
 @Composable
-fun ForecastScreen(
-    state: ForecastUiState,
-    onBack: () -> Unit,
-    onOpenPlaces: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun ForecastScreen(state: ForecastUiState, onBack: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -88,13 +83,11 @@ fun ForecastScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
-        // «Hoy» desde el pronóstico es volver a P01; «Lugares» vuelve y abre la
-        // búsqueda (D4) — ambas las decide la navegación raíz.
+        // «Hoy» desde el pronóstico es volver a P01 — lo decide la navegación raíz.
         FacadeTabBar(
             selectedTab = FacadeTab.Forecast,
             onOpenToday = onBack,
-            onOpenForecast = {},
-            onOpenPlaces = onOpenPlaces
+            onOpenForecast = {}
         )
     }
 }
@@ -216,8 +209,7 @@ private fun ForecastScreenPreview() {
                     ForecastDayUiState(false, "vie 10", WeatherCondition.RAIN, "20 %", "24°", "18°", 24, 18)
                 )
             ),
-            onBack = {},
-            onOpenPlaces = {}
+            onBack = {}
         )
     }
 }

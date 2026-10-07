@@ -7,6 +7,7 @@ import com.auroraclima.app.R
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.usecase.DeleteJournalEntryUseCase
+import com.auroraclima.app.records.domain.usecase.LoadEntryKindsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,14 +28,16 @@ const val ENTRY_ID_ARG = "entryId"
  * [refresh] se invoca en cada entrada en composición: al volver del editor la
  * ruta reingresa y los cambios se ven sin plomería adicional (mismo patrón del
  * listado). Un id inexistente y un fallo de la BD cifrada se muestran con el
- * mismo mensaje genérico (§3, P-24/P-36).
+ * mismo mensaje genérico (§3, P-24/P-36). El catálogo de tipos (P-68) no es
+ * crítico: sin él, el tipo se pinta con su instantánea y el visual neutro.
  */
 @HiltViewModel
 class JournalDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: JournalRepository,
     private val attachmentRepository: JournalAttachmentRepository,
-    private val deleteJournalEntry: DeleteJournalEntryUseCase
+    private val deleteJournalEntry: DeleteJournalEntryUseCase,
+    private val loadEntryKinds: LoadEntryKindsUseCase
 ) : ViewModel() {
     // El argumento llega como String de la ruta; uno malformado o ausente no
     // debe lanzar (§3, auditoría C3 H-1): se trata igual que un id inexistente.
@@ -73,6 +76,10 @@ class JournalDetailViewModel @Inject constructor(
             // sección simplemente no se pinta — sin error adicional.
             attachmentRepository.attachments(id)
                 .onSuccess { attachments -> _uiState.update { it.copy(attachments = attachments) } }
+        }
+        viewModelScope.launch {
+            loadEntryKinds()
+                .onSuccess { kinds -> _uiState.update { it.copy(kinds = kinds) } }
         }
     }
 

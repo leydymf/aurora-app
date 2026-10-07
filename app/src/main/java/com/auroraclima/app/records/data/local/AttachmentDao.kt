@@ -16,6 +16,18 @@ interface AttachmentDao {
     @Query("SELECT * FROM attachments WHERE id = :id")
     suspend fun byId(id: Long): AttachmentRow?
 
+    /** Resuelve por el nombre opaco con el que el adjunto viaja a la nube. */
+    @Query("SELECT * FROM attachments WHERE ref = :ref")
+    suspend fun byRef(ref: String): AttachmentRow?
+
+    /** Adjuntos que una lectura del servidor vio EN ESTA generación (reconciliación). */
+    @Query("SELECT * FROM attachments WHERE owner != 0 AND cloud_seen = :generation")
+    suspend fun seenInCloud(generation: Long): List<AttachmentRow>
+
+    /** Marca en qué generación lo vio una lectura del servidor (auditoría 2026-10-06). */
+    @Query("UPDATE attachments SET cloud_seen = :generation WHERE ref = :ref")
+    suspend fun markCloudSeen(ref: String, generation: Long)
+
     /** Contadores del listado (P18); los adjuntos en preparación no cuentan. */
     @Query("SELECT owner, COUNT(*) AS total FROM attachments WHERE owner != 0 GROUP BY owner")
     suspend fun countsByOwner(): List<OwnerCount>

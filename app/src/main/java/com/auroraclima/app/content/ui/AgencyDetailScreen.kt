@@ -32,6 +32,7 @@ import com.auroraclima.app.R
 import com.auroraclima.app.content.domain.model.Agency
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.AccentPair
+import com.auroraclima.app.core.ui.v2.ContentVisual
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2BackHeader
@@ -85,14 +86,17 @@ internal fun AgencyDetailScreen(
             state.isLoading -> V2LoadingState()
             state.errorRes != null || state.agency == null ->
                 V2ErrorState(messageRes = R.string.content_error_generic, onRetry = onRetry)
-            else -> AgencyDetailContent(routeId = state.routeId, agency = state.agency, onCall = onCall)
+            else -> AgencyDetailContent(
+                sectorVisual = routeVisual(state.routeId, state.routeIcon, state.routeAccent),
+                agency = state.agency,
+                onCall = onCall
+            )
         }
     }
 }
 
 @Composable
-private fun AgencyDetailContent(routeId: String, agency: Agency, onCall: (String) -> Unit) {
-    val sectorVisual = routeVisual(routeId)
+private fun AgencyDetailContent(sectorVisual: ContentVisual, agency: Agency, onCall: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier

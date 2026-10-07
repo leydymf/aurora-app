@@ -1,5 +1,6 @@
 package com.auroraclima.app.records.domain.repository
 
+import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentContent
 import com.auroraclima.app.records.domain.model.JournalAttachment
 
@@ -38,6 +39,9 @@ interface JournalAttachmentRepository {
 
     /** Contenido descifrado para el visor interno; null si el adjunto ya no existe. */
     suspend fun content(id: Long): Result<AttachmentContent?>
+
+    /** Bytes descifrados de cualquier adjunto para exportarlo (RF-45), sin temporal; null si ya no existe. */
+    suspend fun exportable(id: Long): Result<AttachmentBytes?>
 
     /** El guardado de un registro nuevo reclama sus adjuntos en preparación. */
     suspend fun claim(ids: List<Long>, owner: Long): Result<Unit>

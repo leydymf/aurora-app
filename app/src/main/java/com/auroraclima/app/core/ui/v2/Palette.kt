@@ -41,8 +41,16 @@ object V2Palette {
     /** Texto sobre la lavanda de acción — 7.5:1. */
     val onPrimaryAction = Color(0xFF231F31)
 
-    /** Separadores finos y rieles vacíos. */
+    /** Separadores finos y rieles vacíos. NUNCA como borde o relleno de un control. */
     val divider = Color(0xFFF0EEF4)
+
+    /**
+     * Contorno de un control en reposo (campo sin foco, chip sin elegir): gris con
+     * el matiz lila de la tinta secundaria. WCAG 2.1 §1.4.11 exige ≥ 3:1 entre el
+     * borde de un control y lo que lo rodea: 4.23:1 sobre tarjeta y 3.77:1 sobre
+     * fondo (`PaletteContrastTest` lo fija). Con foco el borde pasa a [inkPrimary].
+     */
+    val controlOutline = Color(0xFF7E788E)
 
     /** Lila — reconocer la situación (cuestionario). Trazo 8.9:1 sobre tinte. */
     val accentRecognize = AccentPair(tint = Color(0xFFE3E0EC), stroke = Color(0xFF3A3550))
@@ -76,6 +84,28 @@ object V2Palette {
      * Siempre acompaña a un icono y una etiqueta — nunca informa sola (regla 3).
      */
     val tabIndicator = Color(0xFFE3E0EC)
+
+    // ——— Escala de severidad del resultado orientativo (RF-29) ———
+    // Decisión directora 2026-08-14 (reversión informada de P-41, acta §3.2):
+    // el nivel del resultado se acompaña de un color semafórico representativo.
+    // Escala CERRADA de cuatro pares, ordenada de menor a mayor severidad, con
+    // los tintes en la suavidad del resto de la paleta y el nombre del nivel
+    // siempre en palabras encima (regla 3: el color nunca informa solo). Léxico
+    // de avisos meteorológicos (verde/ámbar/naranja/rojo), plausible en una app
+    // de clima (RNF-05). NO pertenecen a la biblioteca seleccionable del
+    // contenido (`ContentVisual`): solo los mapea el resultado por su orden.
+
+    /** Severidad 1 — verde sereno. Trazo 8.6:1 sobre tinte. */
+    val accentSeverity1 = AccentPair(tint = Color(0xFFDEEBE2), stroke = Color(0xFF1F4634))
+
+    /** Severidad 2 — ámbar. Trazo 7.4:1 sobre tinte. */
+    val accentSeverity2 = AccentPair(tint = Color(0xFFF3E8CD), stroke = Color(0xFF5E440D))
+
+    /** Severidad 3 — naranja. Trazo 7.3:1 sobre tinte. */
+    val accentSeverity3 = AccentPair(tint = Color(0xFFF5E1D3), stroke = Color(0xFF77330A))
+
+    /** Severidad 4 — rojo profundo. Trazo 8.5:1 sobre tinte. */
+    val accentSeverity4 = AccentPair(tint = Color(0xFFF3DCDC), stroke = Color(0xFF6E1F2A))
 
     // ——— Fachada de clima (P01–P03, mockups v2-01..v2-03) ———
     // La fachada comparte la paleta lila del V2 pero suma el cielo de su portada.

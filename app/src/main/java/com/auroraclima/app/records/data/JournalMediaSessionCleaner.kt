@@ -2,6 +2,7 @@ package com.auroraclima.app.records.data
 
 import android.content.Context
 import com.auroraclima.app.core.security.SensitiveStateCleaner
+import com.auroraclima.app.records.data.export.ExportStaging
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -10,8 +11,8 @@ import javax.inject.Singleton
 /**
  * Limpieza de sesión de los temporales de adjuntos (RF-33; auditoría E1 M-2):
  * todo cierre — salida rápida, inactividad, background prolongado — barre la
- * caché de visualización (restos de un visor de PDF interrumpido) y cualquier
- * captura pendiente. Complementa al barrido del editor: sin este cleaner, un
+ * caché de visualización (restos de un visor de PDF interrumpido), cualquier
+ * captura pendiente y el temporal de exportación (RF-45). Complementa al barrido del editor: sin este cleaner, un
  * resto podía sobrevivir entre sesiones si la usuaria no volvía al editor.
  *
  * Corre en el hilo principal como el resto de cleaners (SessionManager es
@@ -22,11 +23,15 @@ import javax.inject.Singleton
 class JournalMediaSessionCleaner @Inject constructor(
     @ApplicationContext private val context: Context,
     private val store: AttachmentStore,
-    private val captureBuffer: CaptureBuffer
+    private val captureBuffer: CaptureBuffer,
+    private val exportStaging: ExportStaging
 ) : SensitiveStateCleaner {
     override fun onSessionCleanup() {
         runCatching { store.clearViewCache() }
         runCatching { captureBuffer.clear() }
+        // Temporal del PDF para compartir (RF-45): ya cifrado con su
+        // contraseña, pero ninguna copia debe sobrevivir a la sesión.
+        runCatching { exportStaging.clear() }
         // Temporales SOLO-CIFRADOS del viaje de evidencias (RF-39, revisión D2
         // M-5): los finally los borran en el camino normal; esto barre restos
         // de una muerte de proceso.

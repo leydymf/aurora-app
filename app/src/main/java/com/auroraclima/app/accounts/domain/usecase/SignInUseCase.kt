@@ -2,10 +2,12 @@ package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
+import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttemptStore
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.core.security.AccountDataRestorer
+import com.auroraclima.app.core.security.CloudReconciliation
 import com.auroraclima.app.core.security.SyncKeyManager
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -30,13 +32,20 @@ import kotlinx.coroutines.CancellationException
  * restauradores de cada feature. Ambos pasos son de mejor esfuerzo y
  * silenciosos (§3): su fallo jamás degrada el acceso concedido ni asoma un
  * error revelador; el siguiente inicio de sesión reintenta.
+ *
+ * P-31 opción C: el mismo momento hace nacer el blob de credenciales
+ * ([CredentialStore.save]) que habilita el reingreso silencioso y el acceso
+ * local sin red. También de mejor esfuerzo: si el guardado falla, la usuaria
+ * simplemente vuelve al login manual la próxima vez.
  */
 class SignInUseCase @Inject constructor(
     private val repository: AuthRepository,
     private val attemptStore: SignInAttemptStore,
     private val clock: WallClock,
     private val syncKeys: SyncKeyManager,
-    private val restorers: Set<@JvmSuppressWildcards AccountDataRestorer>
+    private val cloudReconciliation: CloudReconciliation,
+    private val restorers: Set<@JvmSuppressWildcards AccountDataRestorer>,
+    private val credentials: CredentialStore
 ) {
     /** Milisegundos restantes del bloqueo vigente, o 0 si no hay bloqueo. */
     suspend fun currentLockMillis(): Long {
@@ -49,11 +58,22 @@ class SignInUseCase @Inject constructor(
         return when (repository.signIn(email, password)) {
             SignInResult.Success -> {
                 attemptStore.clear()
+                saveCredentials(email, password)
                 establishBackupKeys(password)
                 SignInOutcome.Success
             }
             SignInResult.InvalidCredentials -> registerRejection()
             SignInResult.GenericFailure -> SignInOutcome.Failure
+        }
+    }
+
+    /** Nacimiento del blob del reingreso silencioso (P-31 C), mejor esfuerzo (§3). */
+    private fun saveCredentials(email: String, password: String) {
+        try {
+            credentials.save(email, password)
+        } catch (ignored: Exception) {
+            // Sin blob no hay reingreso silencioso, pero el acceso concedido no
+            // se degrada: el siguiente login manual reintenta el guardado.
         }
     }
 
@@ -64,6 +84,11 @@ class SignInUseCase @Inject constructor(
             // habría cómo abrir lo descargado y el intento sería ruido.
             if (syncKeys.establish(password).isSuccess) {
                 restorers.forEach { restorer -> restorer.restore() }
+                // Entrar al espacio protegido es el primer momento en que la
+                // usuaria espera ver lo que hizo en su otro teléfono
+                // (ADR 2026-10-06). Se PIDE sin esperarla: recorrer la nube no
+                // puede alargar el login. Sin red no hace nada.
+                cloudReconciliation.request()
             }
         } catch (cancellation: CancellationException) {
             throw cancellation

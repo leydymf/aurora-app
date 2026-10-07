@@ -1,11 +1,16 @@
 package com.auroraclima.app.accounts.ui
 
 import com.auroraclima.app.R
+import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
+import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
 import com.auroraclima.app.accounts.domain.usecase.FakeSignInAttemptStore
+import com.auroraclima.app.accounts.domain.usecase.FakeSilentSessionOrchestrator
+import com.auroraclima.app.accounts.domain.usecase.NoCloudReconciliation
+import com.auroraclima.app.accounts.domain.usecase.SendPasswordResetUseCase
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.security.FakeSyncKeyManager
@@ -32,14 +37,29 @@ class LoginViewModelTest {
 
     private val repository = FakeAuthRepository()
     private val store = FakeSignInAttemptStore()
+    private val credentials = FakeCredentialStore()
+    private val silentSession = FakeSilentSessionOrchestrator()
 
     /** Reloj de pared anclado al tiempo virtual del test: la cuenta regresiva
      *  se re-ancla al deadline persistido en cada tick y ambos deben avanzar juntos. */
+    private val resetAttempts = FakeSignInAttemptStore()
+
     private fun TestScope.createViewModel(): LoginViewModel {
         val clock = WallClock { BASE_EPOCH_MS + testScheduler.currentTime }
         return LoginViewModel(
-            SignInUseCase(repository, store, clock, FakeSyncKeyManager(), emptySet()),
-            repository
+            SignInUseCase(
+                repository,
+                store,
+                clock,
+                FakeSyncKeyManager(),
+                NoCloudReconciliation,
+                emptySet(),
+                credentials
+            ),
+            repository,
+            credentials,
+            silentSession,
+            SendPasswordResetUseCase(repository, resetAttempts, clock)
         )
     }
 
@@ -84,6 +104,36 @@ class LoginViewModelTest {
         // El formulario nunca llega a pintarse
         assertTrue(viewModel.uiState.value.isCheckingSession)
         assertEquals(0, repository.signInCalls)
+        // Con sesión viva no hay nada que confirmar en segundo plano
+        assertEquals(0, silentSession.startCalls)
+    }
+
+    @Test
+    fun `con blob y sin sesion abre siempre y arranca el silencioso`() = runTest {
+        // P-31 opción C: el código correcto abre con los datos locales; la
+        // sesión del proveedor se confirma en paralelo, sin formulario.
+        credentials.save("usuaria@correo.co", "clave-segura-1")
+        val viewModel = createViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(1, events.size)
+        assertTrue(viewModel.uiState.value.isCheckingSession)
+        assertEquals(1, silentSession.startCalls)
+        // El silencioso corre en el coordinador, no aquí: cero login directo.
+        assertEquals(0, repository.signInCalls)
+    }
+
+    @Test
+    fun `sin sesion y sin blob se muestra el formulario`() = runTest {
+        // Comportamiento previo a la opción C (también tras RF-19/RF-20/rechazo).
+        val viewModel = createViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isCheckingSession)
+        assertEquals(0, silentSession.startCalls)
     }
 
     @Test
@@ -195,5 +245,41 @@ class LoginViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.signInCalls)
+    }
+
+    @Test
+    fun `la pausa del restablecimiento se muestra con el MISMO mensaje que un envio normal`() = runTest {
+        // RF-46 criterio 3: decir «estás en pausa» revelaría que alguien ya
+        // pidió el restablecimiento para ese correo.
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.onResetRequested()
+        viewModel.onResetEmailChange("usuaria@correo.co")
+        repeat(5) {
+            viewModel.onResetSubmit()
+            advanceUntilIdle()
+            viewModel.onResetEmailChange("usuaria@correo.co")
+        }
+
+        viewModel.onResetSubmit()
+        advanceUntilIdle()
+
+        assertEquals(R.string.account_reset_done, viewModel.uiState.value.resetDoneRes)
+        assertNull(viewModel.uiState.value.resetErrorRes)
+    }
+
+    @Test
+    fun `sin conexion el restablecimiento dice que el correo no salio`() = runTest {
+        repository.nextPasswordResetResult = PasswordResetResult.NoConnection
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.onResetRequested()
+        viewModel.onResetEmailChange("usuaria@correo.co")
+
+        viewModel.onResetSubmit()
+        advanceUntilIdle()
+
+        assertEquals(R.string.account_reset_offline, viewModel.uiState.value.resetErrorRes)
+        assertNull(viewModel.uiState.value.resetDoneRes)
     }
 }

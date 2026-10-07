@@ -26,6 +26,11 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideClock(): Clock = Clock.systemDefaultZone()
+
+    /** Señal de conectividad del reingreso silencioso (P-31 opción C, RNF-08). */
+    @Provides
+    @Singleton
+    fun provideConnectivityMonitor(impl: AndroidConnectivityMonitor): ConnectivityMonitor = impl
 }
 
 /** Crea instancias de Retrofit con la conversión JSON compartida. */

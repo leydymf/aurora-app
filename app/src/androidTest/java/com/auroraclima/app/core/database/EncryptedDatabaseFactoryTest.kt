@@ -73,7 +73,7 @@ class EncryptedDatabaseFactoryTest {
         val database = newFactory().create(JournalDatabase::class.java, journalDatabaseName)
         runBlocking {
             database.journalDao().insert(
-                JournalEntryRow(day = 20_000, kind = "physical", detail = sentinel, createdAt = 1L)
+                JournalEntryRow(day = 20_000, kind = "t01", label = sentinel, detail = sentinel, createdAt = 1L)
             )
         }
         database.close()

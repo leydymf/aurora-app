@@ -4,6 +4,7 @@ import com.auroraclima.app.accounts.domain.model.ChangePasswordResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
+import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.core.security.SyncKeyManager
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -23,10 +24,17 @@ import kotlinx.coroutines.CancellationException
  *    el siguiente login concilia — la vía rápida exige la revisión al día, así
  *    que ningún estado intermedio pasa inadvertido ni deja el respaldo
  *    ilegible en un dispositivo nuevo.
+ *
+ * P-31 opción C: si el cambio culmina, el blob del reingreso silencioso se
+ * re-escribe con la contraseña nueva (mejor esfuerzo: si no hay blob o el
+ * guardado falla, el siguiente login manual lo crea; un blob desactualizado
+ * sería rechazado por el proveedor y el flujo de credencial inválida lo
+ * destruye y pide login manual — degradación prevista, nunca un estado roto).
  */
 class ChangePasswordUseCase @Inject constructor(
     private val repository: AuthRepository,
-    private val syncKeys: SyncKeyManager
+    private val syncKeys: SyncKeyManager,
+    private val credentials: CredentialStore
 ) {
     suspend operator fun invoke(currentPassword: String, newPassword: String): ChangePasswordResult {
         if (newPassword.length < CreateAccountUseCase.MIN_PASSWORD_LENGTH) {
@@ -40,12 +48,23 @@ class ChangePasswordUseCase @Inject constructor(
         }
         if (syncKeys.rewrap(newPassword).isFailure) return ChangePasswordResult.GenericFailure
         val update = repository.updatePassword(newPassword)
+        if (update == UpdatePasswordResult.Success) refreshStoredCredentials(newPassword)
         reconcileEnvelope(if (update == UpdatePasswordResult.Success) newPassword else currentPassword)
         return when (update) {
             UpdatePasswordResult.Success -> ChangePasswordResult.Success
             UpdatePasswordResult.WeakPassword -> ChangePasswordResult.WeakPassword
             UpdatePasswordResult.NoConnection -> ChangePasswordResult.NoConnection
             UpdatePasswordResult.GenericFailure -> ChangePasswordResult.GenericFailure
+        }
+    }
+
+    /** Re-escritura del blob con la contraseña nueva (P-31 C), mejor esfuerzo. */
+    private fun refreshStoredCredentials(newPassword: String) {
+        try {
+            credentials.load()?.let { stored -> credentials.save(stored.email, newPassword) }
+        } catch (ignored: Exception) {
+            // Sin blob al día no hay reingreso silencioso; el flujo de
+            // credencial inválida lo destruye y el login manual lo re-crea.
         }
     }
 

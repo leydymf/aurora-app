@@ -9,6 +9,7 @@ import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -39,13 +40,15 @@ class FirestoreContentRepositoryTest {
     @Test
     fun `un documento con esquema futuro se ignora sin romper el resto`() = runTest {
         // ARQUITECTURA §6: el panel podrá publicar esquemas nuevos sin tumbar la app.
+        // Esta app interpreta v1 (sin visual) y v2 (icon/accent, ADR 2026-08-14).
         remote.topics = listOf(
-            topicDto(id = "actual", order = 1, schemaVersion = 1),
-            topicDto(id = "futuro", order = 2, schemaVersion = 2),
-            topicDto(id = "sin-version", order = 3, schemaVersion = null)
+            topicDto(id = "v1", order = 1, schemaVersion = 1),
+            topicDto(id = "v2", order = 2, schemaVersion = 2),
+            topicDto(id = "futuro", order = 3, schemaVersion = 3),
+            topicDto(id = "sin-version", order = 4, schemaVersion = null)
         )
 
-        assertEquals(listOf("actual"), repository.getTopics().getOrThrow().map { it.id })
+        assertEquals(listOf("v1", "v2"), repository.getTopics().getOrThrow().map { it.id })
     }
 
     @Test
@@ -68,6 +71,27 @@ class FirestoreContentRepositoryTest {
         )
 
         assertEquals(listOf("valido"), repository.getTopics().getOrThrow().map { it.id })
+    }
+
+    @Test
+    fun `icon y accent del esquema v2 llegan al dominio y ausentes quedan nulos`() = runTest {
+        // ADR 2026-08-14: la selección visual viaja intacta hasta el dominio;
+        // los documentos v1 legados simplemente no la traen.
+        remote.topics = listOf(
+            topicDto(id = "explicito", order = 1, schemaVersion = 2, icon = "device", accent = "green"),
+            topicDto(id = "legado", order = 2, schemaVersion = 1)
+        )
+        remote.routes = listOf(routeDto(id = "r1", order = 1, schemaVersion = 2, icon = "pin", accent = "sand"))
+
+        val topics = repository.getTopics().getOrThrow()
+        assertEquals("device", topics.first().icon)
+        assertEquals("green", topics.first().accent)
+        assertNull(topics.last().icon)
+        assertNull(topics.last().accent)
+
+        val route = repository.getRoutes().getOrThrow().single()
+        assertEquals("pin", route.icon)
+        assertEquals("sand", route.accent)
     }
 
     @Test
@@ -98,7 +122,7 @@ class FirestoreContentRepositoryTest {
 
     @Test
     fun `una entidad con esquema futuro no se resuelve en la ruta`() = runTest {
-        remote.agencies = listOf(agencyDto(id = "e1", schemaVersion = 2))
+        remote.agencies = listOf(agencyDto(id = "e1", schemaVersion = 3))
         remote.routes = listOf(routeDto(id = "r1", order = 1, agencyIds = listOf("e1")))
 
         assertTrue(repository.getRoutes().getOrThrow().single().agencies.isEmpty())
@@ -216,8 +240,10 @@ private fun topicDto(
     title: String? = "Tema $id",
     summary: String? = "Resumen",
     signals: List<String> = emptyList(),
-    examples: List<String> = emptyList()
-) = TopicDto(id, schemaVersion, order, title, summary, signals, examples)
+    examples: List<String> = emptyList(),
+    icon: String? = null,
+    accent: String? = null
+) = TopicDto(id, schemaVersion, order, title, summary, signals, examples, icon, accent)
 
 private fun routeDto(
     id: String,
@@ -225,8 +251,10 @@ private fun routeDto(
     schemaVersion: Long? = 1,
     title: String? = "Sector $id",
     summary: String? = "Resumen",
-    agencyIds: List<String> = emptyList()
-) = RouteDto(id, schemaVersion, order, title, summary, agencyIds)
+    agencyIds: List<String> = emptyList(),
+    icon: String? = null,
+    accent: String? = null
+) = RouteDto(id, schemaVersion, order, title, summary, agencyIds, icon, accent)
 
 private fun agencyDto(
     id: String,

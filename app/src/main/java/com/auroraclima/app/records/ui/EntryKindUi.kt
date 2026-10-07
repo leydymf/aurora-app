@@ -1,35 +1,25 @@
 package com.auroraclima.app.records.ui
 
-import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import com.auroraclima.app.R
 import com.auroraclima.app.core.ui.v2.ContentVisual
-import com.auroraclima.app.core.ui.v2.V2Icons
-import com.auroraclima.app.core.ui.v2.V2Palette
-import com.auroraclima.app.records.domain.model.EntryKind
+import com.auroraclima.app.core.ui.v2.neutralContentVisual
+import com.auroraclima.app.core.ui.v2.topicVisual
+import com.auroraclima.app.records.domain.model.ResolvedKind
 
 /**
- * Etiquetas visibles de los tipos (P19/P18). Claves neutras `journal_*` en
- * strings.xml, sin términos vedados; el riesgo residual de leerlas juntas en
- * resources.arsc queda registrado en PENDIENTES (mismo criterio que P-40).
+ * Icono y matiz del tipo de un registro (P18/P19/P20, mockups v2-20/21/22).
+ * Desde el cierre de P-68 ya no hay espejo local: un tipo publicado se pinta
+ * con `topicVisual` — EXACTAMENTE lo que la Guía pinta para ese tema, incluida
+ * la selección del esquema v2 y su degradación por campo —; un tipo retirado o
+ * un registro sin tipo cae al visual neutro de la Guía (ADR 2026-10-03). El
+ * nombre visible sale del catálogo o de la instantánea del registro; el único
+ * texto del APK es el rótulo neutro `journal_kind_none`.
  */
-@StringRes
-internal fun EntryKind.labelRes(): Int = when (this) {
-    EntryKind.PSYCHOLOGICAL -> R.string.journal_kind_psychological
-    EntryKind.PHYSICAL -> R.string.journal_kind_physical
-    EntryKind.SEXUAL -> R.string.journal_kind_sexual
-    EntryKind.ECONOMIC -> R.string.journal_kind_economic
-}
+internal fun ResolvedKind.visual(): ContentVisual =
+    if (isPublished) topicVisual(id, icon, accent) else neutralContentVisual()
 
-/**
- * Icono y matiz de cada tipo (P18/P19/P20, mockups v2-20/21/22): ESPEJO del
- * mapeo fijo por id de la Guía (`topicVisual`, decisión D2 ratificada en S3) —
- * el catálogo local `EntryKind` y los topics t01–t04 nombran los mismos cuatro
- * tipos de la Ley 1257, y un mismo tipo no puede cambiar de color entre la
- * Guía y el registro (regla 1 del anexo).
- */
-internal fun EntryKind.visual(): ContentVisual = when (this) {
-    EntryKind.PHYSICAL -> ContentVisual(V2Icons.figure, V2Palette.accentProtection)
-    EntryKind.PSYCHOLOGICAL -> ContentVisual(V2Icons.lobes, V2Palette.accentRecognize)
-    EntryKind.SEXUAL -> ContentVisual(V2Icons.slashCircle, V2Palette.accentNotice)
-    EntryKind.ECONOMIC -> ContentVisual(V2Icons.card, V2Palette.accentJustice)
-}
+/** Nombre visible del tipo: el del catálogo o la instantánea; sin ninguno, el rótulo neutro. */
+@Composable
+internal fun ResolvedKind.labelText(): String = label ?: stringResource(R.string.journal_kind_none)
