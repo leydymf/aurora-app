@@ -24,8 +24,12 @@ interface JournalMediaRemoteSource {
      */
     suspend fun delete(ref: String)
 
-    /** Cabeceras de todas las evidencias de la cuenta, DESDE EL SERVIDOR (restauración). */
-    suspend fun downloadHeaders(): List<Pair<String, EncryptedMediaHeaderDto>>
+    /**
+     * TODAS las cabeceras, con DTO nulo cuando a la cabecera le falta un campo:
+     * el ref siempre viaja para que un documento ilegible no se confunda con
+     * uno eliminado (auditoría 2026-10-06).
+     */
+    suspend fun downloadHeaders(): List<Pair<String, EncryptedMediaHeaderDto?>>
 
     /** Trozo [index] de [ref] desde el servidor, o null si no existe. */
     suspend fun downloadPart(ref: String, index: Int): String?

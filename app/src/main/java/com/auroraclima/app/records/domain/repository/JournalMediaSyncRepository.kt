@@ -25,4 +25,12 @@ interface JournalMediaSyncRepository {
      * indescifrable o incompleto se omite en silencio.
      */
     suspend fun restore(): Result<Unit>
+
+    /**
+     * Hace converger los adjuntos con la nube (ADR 2026-10-06) sobre un
+     * dispositivo que ya tiene datos: trae los que otro dispositivo adjuntó y
+     * elimina los que allá se eliminaron. Corre DESPUÉS de la reconciliación de
+     * registros, porque un adjunto necesita a su registro dueño.
+     */
+    suspend fun reconcile(): Result<Unit>
 }

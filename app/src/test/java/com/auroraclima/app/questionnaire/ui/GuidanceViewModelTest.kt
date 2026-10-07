@@ -210,6 +210,40 @@ class GuidanceViewModelTest {
     }
 
     @Test
+    fun `la linea de reconocimiento nombra las dimensiones encendidas`() = runTest {
+        // Las etiquetas que la UI resalta son las de las dimensiones del
+        // resultado, y el prefijo es el del documento: nada viene del APK.
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s2")
+            viewModel.onNext()
+        }
+
+        val recognition = requireNotNull(viewModel.uiState.value.recognition)
+        assertEquals(listOf("violencia psicológica"), recognition.labels)
+        assertEquals("Por tus respuestas, aparecen señales de", recognition.prefix)
+        assertEquals("Por tus respuestas, aparecen señales de violencia psicológica.", recognition.plain)
+    }
+
+    @Test
+    fun `sin dimensiones encendidas la linea es el texto de ausencia`() = runTest {
+        // Todo «Nunca»: ninguna dimensión alcanza su mínimo (criterio de RF-29).
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        repeat(3) {
+            viewModel.onOptionSelected("s0")
+            viewModel.onNext()
+        }
+
+        val recognition = requireNotNull(viewModel.uiState.value.recognition)
+        assertEquals(emptyList<String>(), recognition.labels)
+        assertEquals("No aparecen señales", recognition.plain)
+    }
+
+    @Test
     fun `el resultado registra cuantas preguntas quedaron sin responder`() = runTest {
         // Con pocas respuestas la UI matiza el nivel (nota de GuidanceResult):
         // un nivel bajo por silencio no debe leerse como ausencia de señales.
@@ -486,7 +520,7 @@ private class FakeSavedOutcomeRepository : SavedOutcomeRepository {
 
     override suspend fun outcome(id: Long): Result<SavedOutcome?> = Result.success(null)
 
-    override suspend fun delete(id: Long): Result<Unit> = Result.success(Unit)
+    override suspend fun delete(id: Long): Result<String> = Result.success("doc-$id")
 }
 
 private class FakeOutcomeSyncRepository : OutcomeSyncRepository {
@@ -497,9 +531,11 @@ private class FakeOutcomeSyncRepository : OutcomeSyncRepository {
         return Result.success(Unit)
     }
 
-    override suspend fun remove(outcomeId: Long): Result<Unit> = Result.success(Unit)
+    override suspend fun remove(docId: String): Result<Unit> = Result.success(Unit)
 
     override suspend fun restore(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun reconcile(): Result<Unit> = Result.success(Unit)
 }
 
 private class FakeDirectoryProvider : DirectoryProvider {

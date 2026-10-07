@@ -42,3 +42,27 @@
 # No se añade nada extra para no ampliar la superficie legible; los nombres que
 # Room deja visibles (`JournalDatabase`, `WeatherDatabase`, entidades) son
 # neutros y no delatan el propósito.
+
+# ── PdfBox-Android (RF-45) ───────────────────────────────────────────────────
+# El AAR trae sus propias consumer-rules (instancia SecurityHandlers por
+# reflexión). BouncyCastle queda EXCLUIDA del grafo (ADR RF-45): solo la
+# referencia PublicKeySecurityHandler (cifrado por certificado, nunca ejecutado),
+# así que R8 debe ignorar esas clases ausentes.
+-dontwarn org.bouncycastle.**
+# JPEG 2000 (JPXFilter) es una dependencia OPCIONAL de la librería que Aurora
+# no declara: solo se incrustan JPEG convencionales (DCTDecode).
+-dontwarn com.gemalto.jp2.**
+
+# ── Sin logs en release (regla 4 de CLAUDE.md) ───────────────────────────────
+# Aurora no llama android.util.Log en src/main, pero PdfBox-Android sí registra
+# avisos técnicos en 141 archivos. R8 elimina esas llamadas del DEX del release:
+# ningún rastro del contenido exportado ni de la generación en logcat.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+    public static int wtf(...);
+    public static int println(...);
+}

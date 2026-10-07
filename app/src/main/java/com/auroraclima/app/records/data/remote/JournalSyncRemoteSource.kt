@@ -14,21 +14,21 @@ interface JournalSyncRemoteSource {
     suspend fun delete(documentId: String)
 
     /**
-     * Todos los documentos cifrados de la cuenta, DESDE EL SERVIDOR
-     * (restauración RF-39): la caché local de una instalación nueva está vacía
-     * y la restauración debe ver el estado real. Lanza sin red — la
-     * reconciliación lo traduce a fallo silencioso y reintenta al siguiente
-     * login.
+     * TODOS los documentos de la colección, con DTO nulo cuando al documento le
+     * falta algún campo. El id SIEMPRE viaja: la reconciliación borra por
+     * ausencia, así que un documento presente pero ilegible no puede
+     * confundirse con uno eliminado (auditoría 2026-10-06).
      */
-    suspend fun downloadAll(): List<Pair<String, EncryptedEntryDto>>
+    suspend fun downloadAll(): List<Pair<String, EncryptedEntryDto?>>
 }
 
 /**
  * Lo único que viaja a Firestore por cada registro (RF-37, RNF-01/RNF-04): el
  * contenido cifrado en el cliente y su nonce, más la versión del formato. Ni
  * `day`, ni `kind`, ni `detail` aparecen como campos legibles — van dentro de
- * [ciphertext]. El id del documento (un entero de secuencia local) es el único
- * metadato y no revela contenido.
+ * [ciphertext]. El id del documento es el único metadato y no revela
+ * contenido: desde el ADR 2026-10-06 son 32 hex aleatorios para lo creado a
+ * partir de esa versión, y el id numérico de siempre para lo ya publicado.
  */
 data class EncryptedEntryDto(
     val ciphertext: String,

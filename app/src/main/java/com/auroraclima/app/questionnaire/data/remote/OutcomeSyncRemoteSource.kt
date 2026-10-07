@@ -10,7 +10,8 @@ interface OutcomeSyncRemoteSource {
 
     suspend fun delete(documentId: String)
 
-    suspend fun downloadAll(): List<Pair<String, EncryptedOutcomeDto>>
+    /** TODOS los documentos, con DTO nulo si falta algún campo (auditoría 2026-10-06). */
+    suspend fun downloadAll(): List<Pair<String, EncryptedOutcomeDto?>>
 }
 
 /** Purga de la colección esperando al servidor (RF-20 criterio 2). */

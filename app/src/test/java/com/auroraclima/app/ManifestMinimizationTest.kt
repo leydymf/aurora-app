@@ -80,7 +80,7 @@ class ManifestMinimizationTest {
             .flatMap { elements(it) }
 
         assertEquals("Debe existir exactamente un activity", 1, activities.size)
-        assertEquals("Debe existir exactamente un provider (el de captura, RF-33)", 1, providers.size)
+        assertEquals("Debe existir exactamente un provider (captura RF-33 y PDF RF-45)", 1, providers.size)
         assertTrue(
             "No debe haber services, receivers ni aliases propios (RF-06)",
             others.isEmpty()
@@ -108,6 +108,33 @@ class ManifestMinimizationTest {
     }
 
     @Test
+    fun `el FileProvider expone exactamente los dos temporales de la cache privada`() {
+        // RF-33 (captura de cámara) y RF-45 (PDF cifrado para compartir): nada
+        // más del almacenamiento privado es alcanzable por URI — en particular
+        // el almacén cifrado de adjuntos y la BD quedan fuera por construcción.
+        val file = requireNotNull(
+            sequenceOf(
+                File("src/main/res/xml/file_paths.xml"),
+                File("app/src/main/res/xml/file_paths.xml")
+            ).firstOrNull { it.exists() }
+        ) { "No se encontró file_paths.xml" }
+        val paths = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).documentElement
+        val children = (0 until paths.childNodes.length)
+            .map { paths.childNodes.item(it) }
+            .filterIsInstance<Element>()
+
+        assertEquals(
+            "Solo rutas de la caché privada",
+            setOf("cache-path"),
+            children.map { it.tagName }.toSet()
+        )
+        assertEquals(
+            mapOf("m" to "media_pending/", "d" to "doc_out/"),
+            children.associate { it.getAttribute("name") to it.getAttribute("path") }
+        )
+    }
+
+    @Test
     fun `solo el launcher esta exportado y con el filtro estandar`() {
         val exported = elements("activity") + elements("service") + elements("receiver") +
             elements("provider")
@@ -128,6 +155,37 @@ class ManifestMinimizationTest {
             setOf("android.intent.action.MAIN", "android.intent.category.LAUNCHER"),
             declaredNames
         )
+    }
+
+    /**
+     * `androidx.compose.ui.tooling` (debugImplementation, necesaria para los
+     * @Preview) fusiona una `PreviewActivity` EXPORTADA que permitiría abrir
+     * por ADB cualquier composable sin parámetros FUERA del grafo seguro: sin
+     * FLAG_SECURE, sin clave personal y con entrada propia en recientes. El
+     * manifest de debug la retira; este test impide que esa retirada se pierda
+     * (auditoría 2026-10-06 H-1). El release nunca la tuvo.
+     */
+    @Test
+    fun `el manifest de debug retira la activity exportada de las previsualizaciones`() {
+        val file = requireNotNull(
+            sequenceOf(
+                File("src/debug/AndroidManifest.xml"),
+                File("app/src/debug/AndroidManifest.xml")
+            ).firstOrNull { it.exists() }
+        ) { "Falta app/src/debug/AndroidManifest.xml: PreviewActivity volvería a quedar exportada" }
+        val debugManifest = DocumentBuilderFactory.newInstance()
+            .apply { isNamespaceAware = true }
+            .newDocumentBuilder()
+            .parse(file)
+            .documentElement
+        val activities = debugManifest.getElementsByTagName("activity")
+        val removed = (0 until activities.length)
+            .map { activities.item(it) as Element }
+            .any { element ->
+                element.androidAttr("name") == "androidx.compose.ui.tooling.PreviewActivity" &&
+                    element.getAttributeNS("http://schemas.android.com/tools", "node") == "remove"
+            }
+        assertTrue("El manifest de debug debe retirar androidx.compose.ui.tooling.PreviewActivity", removed)
     }
 
     @Test

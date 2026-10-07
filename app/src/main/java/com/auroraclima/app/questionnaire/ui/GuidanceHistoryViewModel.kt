@@ -3,6 +3,7 @@ package com.auroraclima.app.questionnaire.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.CloudReconciliation
 import com.auroraclima.app.questionnaire.domain.repository.QuestionnaireRepository
 import com.auroraclima.app.questionnaire.domain.repository.SavedOutcomeRepository
 import com.auroraclima.app.questionnaire.domain.usecase.DeleteSavedOutcomeUseCase
@@ -25,7 +26,8 @@ import kotlinx.coroutines.launch
 class GuidanceHistoryViewModel @Inject constructor(
     private val repository: SavedOutcomeRepository,
     private val questionnaireRepository: QuestionnaireRepository,
-    private val deleteSavedOutcome: DeleteSavedOutcomeUseCase
+    private val deleteSavedOutcome: DeleteSavedOutcomeUseCase,
+    private val cloudReconciliation: CloudReconciliation
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(GuidanceHistoryUiState())
     val uiState: StateFlow<GuidanceHistoryUiState> = _uiState.asStateFlow()
@@ -102,6 +104,15 @@ class GuidanceHistoryViewModel @Inject constructor(
                 .onSuccess { questionnaire ->
                     _uiState.update { it.copy(notice = questionnaire.notice) }
                 }
+        }
+        viewModelScope.launch {
+            // Lo que se guardó o eliminó en el otro dispositivo (ADR
+            // 2026-10-06) llega por su lado y vuelve a leerse al terminar; el
+            // listado no espera y sin red no pasa nada.
+            cloudReconciliation.reconcile()
+            repository.outcomes().onSuccess { outcomes ->
+                _uiState.update { it.copy(outcomes = outcomes) }
+            }
         }
     }
 }

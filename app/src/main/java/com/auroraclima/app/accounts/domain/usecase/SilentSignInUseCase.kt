@@ -4,6 +4,7 @@ import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.core.security.AccountDataRestorer
+import com.auroraclima.app.core.security.CloudReconciliation
 import com.auroraclima.app.core.security.SyncKeyManager
 import javax.inject.Inject
 import kotlin.coroutines.coroutineContext
@@ -36,6 +37,7 @@ class SilentSignInUseCase @Inject constructor(
     private val repository: AuthRepository,
     private val credentials: CredentialStore,
     private val syncKeys: SyncKeyManager,
+    private val cloudReconciliation: CloudReconciliation,
     private val restorers: Set<@JvmSuppressWildcards AccountDataRestorer>
 ) {
     suspend operator fun invoke(): SilentSignInOutcome {
@@ -75,6 +77,11 @@ class SilentSignInUseCase @Inject constructor(
         try {
             if (syncKeys.establish(password).isSuccess) {
                 restorers.forEach { restorer -> restorer.restore() }
+                // Entrar al espacio protegido es el primer momento en que la
+                // usuaria espera ver lo que hizo en su otro teléfono
+                // (ADR 2026-10-06). Se PIDE sin esperarla: recorrer la nube no
+                // puede alargar el login. Sin red no hace nada.
+                cloudReconciliation.request()
             }
         } catch (cancellation: CancellationException) {
             throw cancellation

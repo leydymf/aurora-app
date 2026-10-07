@@ -68,6 +68,14 @@ class ContentVisualTest {
     }
 
     @Test
+    fun `el neutro explicito coincide con el de un id desconocido`() {
+        // P-68: un registro con tema retirado o sin tema se pinta exactamente
+        // como la Guía pinta un id sin mapear.
+        assertEquals(topicVisual("desconocido"), neutralContentVisual())
+        assertEquals(ContentVisual(V2Icons.guide, V2Palette.accentGroup), neutralContentVisual())
+    }
+
+    @Test
     fun `un documento nuevo con seleccion explicita no depende del id`() {
         // Caso del panel: la administradora crea t05 y elige su visual.
         assertEquals(

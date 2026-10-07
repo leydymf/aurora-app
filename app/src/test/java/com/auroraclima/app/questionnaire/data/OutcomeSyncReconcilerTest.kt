@@ -59,6 +59,6 @@ class OutcomeSyncReconcilerTest {
         val rows = database.outcomeDao().outcomes()
         assertEquals(1, rows.size)
         assertEquals("remoto", rows[0].label)
-        assertEquals(seededId, rows[0].id)
+        assertEquals(seededId.toString(), rows[0].docId)
     }
 }

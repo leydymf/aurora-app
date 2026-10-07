@@ -41,8 +41,16 @@ object V2Palette {
     /** Texto sobre la lavanda de acción — 7.5:1. */
     val onPrimaryAction = Color(0xFF231F31)
 
-    /** Separadores finos y rieles vacíos. */
+    /** Separadores finos y rieles vacíos. NUNCA como borde o relleno de un control. */
     val divider = Color(0xFFF0EEF4)
+
+    /**
+     * Contorno de un control en reposo (campo sin foco, chip sin elegir): gris con
+     * el matiz lila de la tinta secundaria. WCAG 2.1 §1.4.11 exige ≥ 3:1 entre el
+     * borde de un control y lo que lo rodea: 4.23:1 sobre tarjeta y 3.77:1 sobre
+     * fondo (`PaletteContrastTest` lo fija). Con foco el borde pasa a [inkPrimary].
+     */
+    val controlOutline = Color(0xFF7E788E)
 
     /** Lila — reconocer la situación (cuestionario). Trazo 8.9:1 sobre tinte. */
     val accentRecognize = AccentPair(tint = Color(0xFFE3E0EC), stroke = Color(0xFF3A3550))

@@ -12,8 +12,18 @@ import org.junit.Test
  * con la escala de severidad del resultado (decisión directora 2026-08-14,
  * reversión de P-41) y de paso fija los siete acentos preexistentes, cuyos
  * ratios estaban solo documentados en `docs/mockups-v2/README.md` §3.6.
+ *
+ * Desde 2026-10-05 fija además los pares de las superficies: el contorno de los
+ * controles contra tarjeta y fondo (≥ 3:1, WCAG §1.4.11) y las dos tintas de
+ * texto contra tarjeta y fondo (≥ 4.5:1), tras el hallazgo de los campos
+ * invisibles sobre el fondo lila (relleno y borde en `divider`, 1.03:1).
  */
 class PaletteContrastTest {
+
+    private val surfaces = mapOf(
+        "cardSurface" to V2Palette.cardSurface,
+        "screenBackground" to V2Palette.screenBackground
+    )
 
     private val accentPairs = mapOf(
         "accentRecognize" to V2Palette.accentRecognize,
@@ -57,6 +67,55 @@ class PaletteContrastTest {
                     ratio >= 4.5
                 )
             }
+        }
+    }
+
+    @Test
+    fun `el contorno de los controles se distingue sobre tarjeta y sobre fondo`() {
+        // §1.4.11: el borde de un campo sin foco o de un chip sin elegir es la única
+        // pista de que ahí hay un control; debe dar ≥ 3:1 contra lo que lo rodea.
+        surfaces.forEach { (name, surface) ->
+            val ratio = contrastRatio(V2Palette.controlOutline, surface)
+            assertTrue(
+                "controlOutline sobre $name da ${"%.2f".format(ratio)}:1, se exige >= 3:1",
+                ratio >= 3.0
+            )
+        }
+    }
+
+    @Test
+    fun `el borde con foco de los campos se distingue sobre tarjeta y sobre fondo`() {
+        surfaces.forEach { (name, surface) ->
+            val ratio = contrastRatio(V2Palette.inkPrimary, surface)
+            assertTrue(
+                "inkPrimary (borde con foco) sobre $name da ${"%.2f".format(ratio)}:1, se exige >= 3:1",
+                ratio >= 3.0
+            )
+        }
+    }
+
+    @Test
+    fun `las tintas de texto cumplen AA sobre tarjeta y sobre fondo`() {
+        // inkSecondary también sirve de borde a casillas, interruptor y botón
+        // secundario; AA de texto normal (4.5:1) cubre de sobra el 3:1 no textual.
+        mapOf("inkPrimary" to V2Palette.inkPrimary, "inkSecondary" to V2Palette.inkSecondary)
+            .forEach { (ink, color) ->
+                surfaces.forEach { (name, surface) ->
+                    val ratio = contrastRatio(color, surface)
+                    assertTrue(
+                        "$ink sobre $name da ${"%.2f".format(ratio)}:1, se exige >= 4.5:1",
+                        ratio >= 4.5
+                    )
+                }
+            }
+    }
+
+    @Test
+    fun `el separador nunca alcanza para delimitar un control`() {
+        // Guarda del hallazgo: si algún día `divider` se oscurece hasta pasar 3:1,
+        // este test avisa para revisar si el KDoc («NUNCA como borde») sigue vigente.
+        surfaces.forEach { (_, surface) ->
+            assertTrue(contrastRatio(V2Palette.divider, surface) < 3.0)
         }
     }
 

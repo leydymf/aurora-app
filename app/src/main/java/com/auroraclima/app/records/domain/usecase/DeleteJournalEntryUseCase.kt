@@ -25,11 +25,13 @@ class DeleteJournalEntryUseCase @Inject constructor(
     private val syncRepository: JournalSyncRepository
 ) {
     suspend operator fun invoke(entryId: Long): Result<Unit> {
-        journalRepository.delete(entryId).getOrElse { return Result.failure(it) }
+        // El borrado local devuelve el nombre del documento en la nube; de paso
+        // deja la constancia que impide que la reconciliación lo resucite.
+        val docId = journalRepository.delete(entryId).getOrElse { return Result.failure(it) }
         // Con el dueño borrado, las evidencias se van con él (RF-36 criterio 2).
         attachmentRepository.deleteForOwner(entryId)
         // Mejor esfuerzo: localmente ya no existe. El resultado remoto se ignora.
-        syncRepository.remove(entryId)
+        if (docId.isNotEmpty()) syncRepository.remove(docId)
         return Result.success(Unit)
     }
 }

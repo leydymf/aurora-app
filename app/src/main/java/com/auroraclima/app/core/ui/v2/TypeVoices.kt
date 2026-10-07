@@ -26,6 +26,13 @@ object InteriorTypeVoice {
     /** Sans de lectura de todo el espacio interno. */
     val bodyFamily: FontFamily = PlexSans
 
+    /**
+     * Único peso de énfasis del espacio interno. Lo usan los estilos de abajo y
+     * cualquier resalte dentro de una frase (`SpanStyle`), para que no aparezca
+     * una segunda negrilla por el camino.
+     */
+    val emphasisWeight: FontWeight = FontWeight.SemiBold
+
     /** Saludo del Inicio (P09). */
     val greeting = TextStyle(
         fontFamily = Marcellus,
@@ -43,7 +50,7 @@ object InteriorTypeVoice {
     /** Título de tarjeta o de sección dentro de una pantalla. */
     val cardTitle = TextStyle(
         fontFamily = PlexSans,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = emphasisWeight,
         fontSize = 17.sp,
         lineHeight = 24.sp
     )
@@ -58,7 +65,7 @@ object InteriorTypeVoice {
     /** Cuerpo con énfasis: títulos de fila, texto de botones. */
     val bodyStrong = TextStyle(
         fontFamily = PlexSans,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = emphasisWeight,
         fontSize = 15.sp,
         lineHeight = 22.sp
     )
@@ -66,7 +73,7 @@ object InteriorTypeVoice {
     /** Etiquetas cortas: chips, estados, «Paso N de M». */
     val label = TextStyle(
         fontFamily = PlexSans,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = emphasisWeight,
         fontSize = 13.sp,
         lineHeight = 18.sp
     )
@@ -81,7 +88,7 @@ object InteriorTypeVoice {
     /** Número protagonista (líneas de atención, v2-16). */
     val numberLarge = TextStyle(
         fontFamily = PlexSans,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = emphasisWeight,
         fontSize = 30.sp,
         lineHeight = 36.sp
     )

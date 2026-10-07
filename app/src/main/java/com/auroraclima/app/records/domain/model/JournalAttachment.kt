@@ -8,7 +8,9 @@ package com.auroraclima.app.records.domain.model
  */
 data class JournalAttachment(
     val id: Long,
-    val kind: AttachmentKind
+    val kind: AttachmentKind,
+    /** Tamaño del archivo cifrado (≈ tamaño en claro); sirve para acotar la exportación (RF-45) sin descifrar. */
+    val sizeBytes: Long = 0
 )
 
 /** Familia del adjunto; decide ícono y visor. Se deriva del MIME al importar. */
@@ -48,6 +50,18 @@ sealed interface AttachmentContent {
      * descriptor sigue vivo sin entrada en el sistema de archivos.
      */
     data class Document(val path: String) : AttachmentContent
+}
+
+/**
+ * Contenido descifrado de un adjunto de cualquier familia para la exportación
+ * (RF-45): bytes en memoria con su MIME, SIN pasar por un temporal en disco.
+ * Acotado por el tope de tamaño por adjunto ([AttachmentPolicy.MAX_DOCUMENT_BYTES]).
+ */
+data class AttachmentBytes(val kind: AttachmentKind, val mime: String, val bytes: ByteArray) {
+    override fun equals(other: Any?): Boolean = this === other ||
+        (other is AttachmentBytes && kind == other.kind && mime == other.mime && bytes.contentEquals(other.bytes))
+
+    override fun hashCode(): Int = 31 * (31 * kind.hashCode() + mime.hashCode()) + bytes.contentHashCode()
 }
 
 /**

@@ -22,6 +22,10 @@ interface JournalRepository {
     /** Reemplaza el contenido de un registro existente (RF-35). */
     suspend fun update(entry: JournalEntry): Result<Unit>
 
-    /** Borra un registro del dispositivo (RF-36). */
-    suspend fun delete(id: Long): Result<Unit>
+    /**
+     * Borra el registro y devuelve su nombre de documento en la nube para que
+     * el caso de uso propague el borrado (vacío si la fila ya no estaba). Mismo
+     * criterio que [add], que devuelve el id recién asignado.
+     */
+    suspend fun delete(id: Long): Result<String>
 }

@@ -16,6 +16,18 @@ interface OutcomeDao {
     @Query("SELECT * FROM outcomes WHERE id = :id")
     suspend fun outcomeById(id: Long): OutcomeRow?
 
+    /** Resuelve por el nombre del documento en la nube (reconciliación). */
+    @Query("SELECT * FROM outcomes WHERE doc_id = :docId")
+    suspend fun outcomeByDocId(docId: String): OutcomeRow?
+
+    /** Guardados que una lectura del servidor vio EN ESTA generación (reconciliación). */
+    @Query("SELECT * FROM outcomes WHERE cloud_seen = :generation")
+    suspend fun seenInCloud(generation: Long): List<OutcomeRow>
+
+    /** Marca en qué generación lo vio una lectura del servidor (auditoría 2026-10-06). */
+    @Query("UPDATE outcomes SET cloud_seen = :generation WHERE doc_id = :docId")
+    suspend fun markCloudSeen(docId: String, generation: Long)
+
     @Query("DELETE FROM outcomes WHERE id = :id")
     suspend fun deleteById(id: Long)
 

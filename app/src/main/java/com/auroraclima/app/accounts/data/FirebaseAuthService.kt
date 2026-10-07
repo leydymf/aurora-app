@@ -40,6 +40,18 @@ class FirebaseAuthService @Inject constructor(
         }
     }
 
+    override suspend fun sendPasswordReset(email: String) {
+        try {
+            firebaseAuth.sendPasswordResetEmail(email).awaitCompletion()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (error: FirebaseAuthException) {
+            throw AuthServiceException(error.errorCode, error)
+        } catch (error: FirebaseNetworkException) {
+            throw AuthServiceException(AuthServiceException.ERROR_NETWORK, error)
+        }
+    }
+
     override fun hasActiveSession(): Boolean = firebaseAuth.currentUser != null
 
     override fun signOut() {

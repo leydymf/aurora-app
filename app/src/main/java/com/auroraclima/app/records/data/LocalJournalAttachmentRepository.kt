@@ -5,7 +5,9 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import com.auroraclima.app.records.data.local.AttachmentRow
 import com.auroraclima.app.records.data.local.JournalDatabase
+import com.auroraclima.app.records.data.local.RemovedRow
 import com.auroraclima.app.records.data.remote.JournalMediaRemoteSource
+import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentContent
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
@@ -115,6 +117,12 @@ class LocalJournalAttachmentRepository @Inject constructor(
         }
     }
 
+    override suspend fun exportable(id: Long): Result<AttachmentBytes?> = storeAccess.withDatabase { db ->
+        val row = db.attachmentDao().byId(id) ?: return@withDatabase null
+        val kind = AttachmentKind.fromMime(row.kind) ?: return@withDatabase null
+        AttachmentBytes(kind, row.kind, store.read(row.ref) { it.readBytes() })
+    }
+
     override suspend fun claim(ids: List<Long>, owner: Long): Result<Unit> = storeAccess.withDatabase { db ->
         if (ids.isNotEmpty()) db.attachmentDao().claim(ids, owner)
     }
@@ -123,7 +131,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
         val row = db.attachmentDao().byId(id) ?: return@withDatabase
         db.attachmentDao().deleteById(id)
         store.delete(row.ref)
-        removeRemoteCopy(row)
+        removeRemoteCopy(db, row)
     }
 
     override suspend fun deleteForOwner(owner: Long): Result<Unit> = storeAccess.withDatabase { db ->
@@ -132,7 +140,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
         db.attachmentDao().deleteByIds(rows.map { it.id })
         rows.forEach {
             store.delete(it.ref)
-            removeRemoteCopy(it)
+            removeRemoteCopy(db, it)
         }
     }
 
@@ -144,7 +152,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
                 store.delete(it.ref)
                 // Un huérfano reclamado (resto de un borrado interrumpido) pudo
                 // haber subido: su copia remota se va con él (RF-36 criterio 2).
-                removeRemoteCopy(it)
+                removeRemoteCopy(db, it)
             }
         }
         // Restos de visualización de un proceso muerto en la ventana de apertura.
@@ -172,9 +180,16 @@ class LocalJournalAttachmentRepository @Inject constructor(
      * en preparación jamás subieron y se omiten; para los reclamados, el
      * `delete` queda en la cola durable del SDK y se aplica al reconectar —
      * ningún fallo revierte el borrado local ni asoma un error (§3).
+     *
+     * Deja además la constancia del ADR 2026-10-06: mientras el borrado siga en
+     * la cola, la cabecera todavía está en la nube y la reconciliación no debe
+     * volver a bajar el adjunto.
      */
-    private suspend fun removeRemoteCopy(row: AttachmentRow) {
+    private suspend fun removeRemoteCopy(db: JournalDatabase, row: AttachmentRow) {
         if (row.owner == AttachmentPolicy.STAGED_OWNER) return
+        db.removedDao().insert(
+            RemovedRow(docId = row.ref, scope = RemovedRow.SCOPE_MEDIA, at = System.currentTimeMillis())
+        )
         try {
             mediaRemote.delete(row.ref)
         } catch (cancellation: CancellationException) {
@@ -229,7 +244,7 @@ class LocalJournalAttachmentRepository @Inject constructor(
     }.getOrNull()
 
     private fun AttachmentRow.toDomain(): JournalAttachment? =
-        AttachmentKind.fromMime(kind)?.let { JournalAttachment(id = id, kind = it) }
+        AttachmentKind.fromMime(kind)?.let { JournalAttachment(id = id, kind = it, sizeBytes = store.sizeOf(ref)) }
 
     private companion object {
         const val COPY_BUFFER_BYTES = 8 * 1024

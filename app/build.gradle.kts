@@ -49,6 +49,18 @@ android {
     buildFeatures {
         compose = true
     }
+    androidResources {
+        // PdfBox-Android (RF-45) trae ~2,4 MB de CMaps CJK en assets que solo
+        // usa la LECTURA de fuentes compuestas; Aurora solo escribe con las 14
+        // fuentes estándar. Fuera del APK (A2-1: peso). Los AFM, la fuente de
+        // respaldo y las listas de glifos sí se necesitan y se conservan.
+        ignoreAssetsPatterns += listOf("<dir>cmap")
+    }
+    testOptions {
+        // Robolectric necesita los assets fusionados (los AFM de Helvetica que
+        // trae PdfBox-Android) para probar el escritor del PDF en la JVM (RF-45).
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -85,6 +97,13 @@ dependencies {
     // Orientación EXIF al sanear imágenes adjuntas (RF-33); la limpieza de
     // metadatos la hace la re-codificación — esta lib solo evita fotos acostadas
     implementation(libs.androidx.exifinterface)
+
+    // Exportación de registros a PDF cifrado con contraseña (RF-45). BouncyCastle
+    // solo lo usaría el cifrado por certificado, que Aurora no emplea: se excluye
+    // (≈11 MB) y el cifrado estándar AES-256 corre con javax.crypto — ADR RF-45
+    implementation(libs.pdfbox.android) {
+        exclude(group = "org.bouncycastle")
+    }
 
     // Red (Open-Meteo)
     implementation(libs.retrofit)

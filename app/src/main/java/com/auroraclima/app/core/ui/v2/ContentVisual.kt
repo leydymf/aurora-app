@@ -51,6 +51,13 @@ fun topicVisual(topicId: String, icon: String? = null, accent: String? = null): 
 fun routeVisual(routeId: String, icon: String? = null, accent: String? = null): ContentVisual =
     defaultRouteVisual(routeId).select(icon, accent)
 
+/**
+ * El neutro final de los temas (regla 5 del anexo): lo que recibe un id sin
+ * mapear y, desde el ADR 2026-10-03, un registro cuyo tema ya no está
+ * publicado o que se guardó sin tema.
+ */
+fun neutralContentVisual(): ContentVisual = ContentVisual(V2Icons.guide, V2Palette.accentGroup)
+
 // Degradación POR CAMPO (tolerancia estilo RF-25): cada campo desconocido cae
 // por separado al mapeo automático — un `icon` válido no se pierde porque el
 // `accent` venga corrupto, y viceversa.
@@ -69,7 +76,7 @@ private fun defaultTopicVisual(topicId: String): ContentVisual = when (topicId) 
     "t03" -> ContentVisual(V2Icons.slashCircle, V2Palette.accentNotice)
     // Económica y patrimonial — lo material: arena de justicia.
     "t04" -> ContentVisual(V2Icons.card, V2Palette.accentJustice)
-    else -> ContentVisual(V2Icons.guide, V2Palette.accentGroup)
+    else -> neutralContentVisual()
 }
 
 /** Mapeo automático de sectores: significados fijos del anexo, sin decisión nueva. */

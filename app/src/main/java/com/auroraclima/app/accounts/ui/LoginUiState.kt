@@ -17,7 +17,14 @@ data class LoginUiState(
     val isCheckingSession: Boolean = true,
     /** Segundos restantes del bloqueo, o null si no hay bloqueo. */
     val lockRemainingSeconds: Long? = null,
-    @StringRes val errorRes: Int? = null
+    @StringRes val errorRes: Int? = null,
+    /** Hoja de recuperación por correo (RF-46) visible. */
+    val isResetSheetVisible: Boolean = false,
+    val resetEmail: String = "",
+    val isSendingReset: Boolean = false,
+    /** Mensaje final de la hoja: el MISMO exista o no la cuenta. */
+    @StringRes val resetDoneRes: Int? = null,
+    @StringRes val resetErrorRes: Int? = null
 ) {
     val isLocked: Boolean
         get() = lockRemainingSeconds != null
@@ -29,4 +36,8 @@ data class LoginUiState(
     val canSubmit: Boolean
         get() = email.isNotBlank() && password.isNotEmpty() &&
             !isLoading && !isLocked && !isCheckingSession
+
+    /** Enviar exige un correo escrito y que no haya un envío en curso (RF-46). */
+    val canSendReset: Boolean
+        get() = resetEmail.isNotBlank() && !isSendingReset && resetDoneRes == null
 }

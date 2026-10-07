@@ -2,6 +2,7 @@ package com.auroraclima.app.access.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -328,14 +329,18 @@ private fun PracticeContent(input: String, status: PracticeStatus, onInputChange
 /**
  * Réplica visual de la barra V2 de la fachada (v2-01): la práctica se ve igual
  * que el uso real, por eso usa el icono meteorológico de búsqueda y no la
- * librería interna.
+ * librería interna. Lleva el mismo contorno gris que la barra real muestra sobre
+ * fondo plano (aquí siempre lo está): la píldora blanca sola daba 1.12:1 sobre
+ * el lila, bajo el 3:1 de WCAG §1.4.11.
  */
 @Composable
 private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
     TextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(width = 1.dp, color = V2Palette.controlOutline, shape = V2Corner.pill),
         textStyle = InteriorTypeVoice.body.copy(color = V2Palette.inkPrimary),
         leadingIcon = {
             Icon(

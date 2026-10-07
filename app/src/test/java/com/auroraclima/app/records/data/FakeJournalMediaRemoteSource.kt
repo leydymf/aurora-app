@@ -34,7 +34,7 @@ class FakeJournalMediaRemoteSource : JournalMediaRemoteSource {
         parts.keys.filter { it.startsWith("${ref}_") }.forEach { parts.remove(it) }
     }
 
-    override suspend fun downloadHeaders(): List<Pair<String, EncryptedMediaHeaderDto>> {
+    override suspend fun downloadHeaders(): List<Pair<String, EncryptedMediaHeaderDto?>> {
         if (!online) throw IllegalStateException()
         return headers.map { (ref, header) -> ref to header }
     }

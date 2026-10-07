@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Orquesta el reingreso silencioso (P-31 opción C) por fuera de los ViewModels
@@ -31,8 +32,12 @@ import kotlinx.coroutines.launch
  *   un evento en [loginRequests]: la navegación interpone la pantalla de
  *   contraseña (el blob ya fue destruido por el caso de uso).
  * - Fallo transitorio → [SilentSessionState.Offline] (el chip sobrio «Sin
- *   conexión» deriva de aquí) y reintento SOLO cuando la red regresa — nunca
- *   en caliente contra un servicio caído.
+ *   conexión» deriva de aquí) y reintento cuando la red regresa o, como mucho
+ *   tres veces, tras una espera creciente ([RETRY_BACKOFF_MS]): la corrida
+ *   manual 2026-10-05 mostró que `onAvailable` llega antes de que el DNS sirva
+ *   y el único intento «al volver la red» fallaba dejando el chip fijo (P-81).
+ *   Agotadas las esperas, solo el regreso de la red reintenta (y rearma las
+ *   tres esperas) — nunca se martillea un servicio caído.
  *
  * Es [SensitiveStateCleaner]: toda salida del espacio interno (rápida,
  * inactividad, background) cancela el trabajo y regresa a [SilentSessionState.Idle].
@@ -60,6 +65,7 @@ class SilentSessionCoordinator @Inject constructor(
         if (job?.isActive == true) return
         _state.value = SilentSessionState.Checking
         job = scope.launch {
+            var hotRetries = 0
             while (true) {
                 when (silentSignIn()) {
                     SilentSignInOutcome.Success -> {
@@ -74,7 +80,16 @@ class SilentSessionCoordinator @Inject constructor(
                     }
                     SilentSignInOutcome.Unavailable -> {
                         _state.value = SilentSessionState.Offline
-                        awaitNetworkReturn()
+                        val backoff = RETRY_BACKOFF_MS.getOrNull(hotRetries)
+                        if (backoff == null) {
+                            awaitNetworkReturn()
+                            hotRetries = 0
+                        } else {
+                            hotRetries++
+                            // Si fue la red la que volvió (no el plazo), las esperas se
+                            // rearman: cada regreso real trae de nuevo la ventana sin DNS.
+                            if (withTimeoutOrNull(backoff) { awaitNetworkReturn() } != null) hotRetries = 0
+                        }
                         _state.value = SilentSessionState.Checking
                     }
                 }
@@ -83,8 +98,9 @@ class SilentSessionCoordinator @Inject constructor(
     }
 
     /**
-     * Espera el próximo REGRESO de la red. Si el fallo ocurrió con red viva
-     * (servicio caído), exige verla caer y volver: sin reintentos en caliente.
+     * Espera el próximo REGRESO de la red. Si el fallo ocurrió con red viva,
+     * exige verla caer y volver; las esperas de [RETRY_BACKOFF_MS] acotan ese
+     * requisito durante el primer minuto (red «disponible» pero aún sin DNS).
      */
     private suspend fun awaitNetworkReturn() {
         var seenOffline = false
@@ -98,5 +114,10 @@ class SilentSessionCoordinator @Inject constructor(
         job?.cancel()
         job = null
         _state.value = SilentSessionState.Idle
+    }
+
+    private companion object {
+        /** Esperas crecientes tras un fallo transitorio con red viva (P-81). */
+        val RETRY_BACKOFF_MS = listOf(5_000L, 15_000L, 45_000L)
     }
 }

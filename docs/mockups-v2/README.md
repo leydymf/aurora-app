@@ -227,6 +227,28 @@ Dos hallazgos no textuales, resueltos por diseño en la Fase 1:
   aceptado por el mismo criterio: la barra va siempre flanqueada por las cifras de
   mínima y máxima; es refuerzo visual, nunca el único indicador.
 
+Contorno de los controles (hallazgo 2026-10-05 en el emulador, WCAG 2.1 §1.4.11 —
+≥ 3:1 entre el borde de un control y lo que lo rodea):
+
+| Par | Ratio | 1.4.11 |
+|---|---|---|
+| Separador `#F0EEF4` como relleno/borde de campo / fondo `#F3F1F7` | 1.03:1 | ❌ (era el estado anterior: campo invisible sin tarjeta) |
+| Separador `#F0EEF4` / tarjeta `#FFFFFF` | 1.15:1 | ❌ |
+| Píldora blanca sin borde (chip sin elegir, barras de búsqueda) / fondo | 1.12:1 | ❌ |
+| **`controlOutline` `#7E788E` / tarjeta** | **4.23:1** | ✅ |
+| **`controlOutline` `#7E788E` / fondo** | **3.77:1** | ✅ |
+| Borde con foco `#1B2530` / tarjeta y fondo | 15.51:1 / 13.84:1 | ✅ |
+| Casillas, interruptor, anillo de opción y botón secundario `#5A5568` / tarjeta y fondo | 7.16:1 / 6.39:1 | ✅ |
+| Opción elegida del cuestionario `#3A3550` / fondo | 10.38:1 | ✅ |
+
+- **Corrección en el sistema, no por pantalla:** los tres campos del kit V2 son
+  blancos SIEMPRE con borde `controlOutline` en reposo e `inkPrimary` (2 dp) con
+  foco; `divider` queda solo para separadores y rieles. Las píldoras blancas sin
+  borde (chip de tipo sin elegir, chip «Salir» del cuestionario, barra del
+  tutorial, barra de la fachada en búsqueda activa) y el chip de adjunto llevan
+  el mismo contorno de 1 dp; `AuroraV2Theme` lo expone como `outline`.
+  `PaletteContrastTest` fija estos pares.
+
 ---
 
 ## 4. Decisiones de la usuaria (2026-08-11) — cierran las preguntas de la Fase 0

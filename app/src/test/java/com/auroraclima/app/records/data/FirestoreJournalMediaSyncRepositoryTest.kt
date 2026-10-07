@@ -59,7 +59,14 @@ class FirestoreJournalMediaSyncRepositoryTest {
         content: ByteArray = "contenido pequeño".toByteArray(Charsets.UTF_8)
     ): Long {
         database.journalDao().insert(
-            JournalEntryRow(id = owner, day = 1, kind = "economic", detail = "x", createdAt = 1)
+            JournalEntryRow(
+                id = owner,
+                docId = owner.toString(),
+                day = 1,
+                kind = "economic",
+                detail = "x",
+                createdAt = 1
+            )
         )
         val ref = store.newRef()
         store.write(ref) { it.write(content) }
@@ -252,5 +259,66 @@ class FirestoreJournalMediaSyncRepositoryTest {
         repository.restore().getOrThrow()
 
         assertTrue(database.attachmentDao().byOwner(7).isEmpty())
+    }
+
+    @Test
+    fun `un adjunto subido sin confirmar del servidor no se borra`() = runTest {
+        // La mitad de la corrección de H-1 que vive aquí: subir solo encola, así
+        // que mientras ninguna lectura del servidor haya visto el adjunto, su
+        // ausencia no autoriza a borrarlo ni a destruir su archivo.
+        val id = seedAttachment()
+        repository.push(id).getOrThrow()
+        val ref = database.attachmentDao().byId(id)!!.ref
+        remote.headers.clear()
+
+        repository.reconcile().getOrThrow()
+
+        assertNotNull(database.attachmentDao().byId(id))
+        assertNotNull(store.read(ref) { it.readBytes() })
+    }
+
+    @Test
+    fun `un adjunto eliminado en el otro dispositivo se va con su archivo`() = runTest {
+        val id = seedAttachment()
+        repository.push(id).getOrThrow()
+        val ref = database.attachmentDao().byId(id)!!.ref
+        // La primera reconciliación lo ve en el servidor y lo marca.
+        repository.reconcile().getOrThrow()
+        remote.headers.clear()
+
+        repository.reconcile().getOrThrow()
+
+        assertEquals(null, database.attachmentDao().byId(id))
+        assertEquals(emptyList<String>(), mediaDir.list()?.toList() ?: emptyList<String>())
+        assertEquals(ref, ref) // el ref se conserva solo para el mensaje de arriba
+    }
+
+    @Test
+    fun `un adjunto nuevo del otro dispositivo aparece aqui`() = runTest {
+        // Sube desde «A», se borra lo local y se reconcilia como haría «B»,
+        // que ya tiene datos (no es la restauración de un almacén vacío).
+        val content = "evidencia del otro teléfono".toByteArray(Charsets.UTF_8)
+        val id = seedAttachment(content = content)
+        repository.push(id).getOrThrow()
+        val ref = database.attachmentDao().byId(id)!!.ref
+        database.attachmentDao().deleteById(id)
+        store.deleteAll()
+        // Otro adjunto local cualquiera: el almacén NO está vacío.
+        seedAttachment(owner = 8, content = "otro".toByteArray(Charsets.UTF_8))
+
+        repository.reconcile().getOrThrow()
+
+        assertNotNull(database.attachmentDao().byRef(ref))
+        assertArrayEquals(content, store.read(ref) { it.readBytes() })
+    }
+
+    @Test
+    fun `sin llave la reconciliacion de adjuntos no toca nada`() = runTest {
+        val id = seedAttachment()
+        repository.push(id).getOrThrow()
+        keyManager.generation = null
+
+        assertTrue(repository.reconcile().isFailure)
+        assertNotNull(database.attachmentDao().byId(id))
     }
 }

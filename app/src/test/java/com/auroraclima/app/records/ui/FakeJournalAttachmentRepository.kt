@@ -1,12 +1,13 @@
 package com.auroraclima.app.records.ui
 
+import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentContent
 import com.auroraclima.app.records.domain.model.AttachmentKind
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 
 /** Fake de adjuntos (RF-33) para ViewModels y casos de uso (guía §5). */
-class FakeJournalAttachmentRepository : JournalAttachmentRepository {
+open class FakeJournalAttachmentRepository : JournalAttachmentRepository {
     val imported = mutableListOf<Pair<String, Long>>()
     val capturesImported = mutableListOf<Long>()
     val claimed = mutableListOf<Pair<List<Long>, Long>>()
@@ -22,6 +23,11 @@ class FakeJournalAttachmentRepository : JournalAttachmentRepository {
     var attachmentsResult: Result<List<JournalAttachment>> = Result.success(emptyList())
     var countsResult: Result<Map<Long, Int>> = Result.success(emptyMap())
     var contentResult: Result<AttachmentContent?> = Result.success(null)
+
+    /** Lo que devuelve `exportable` por id; sin entrada → null (adjunto inexistente). */
+    val exportableById = mutableMapOf<Long, AttachmentBytes>()
+    var exportableResult: Result<AttachmentBytes?>? = null
+    val exportableIds = mutableListOf<Long>()
     var claimResult: Result<Unit> = Result.success(Unit)
     var deleteResult: Result<Unit> = Result.success(Unit)
     var deleteForOwnerResult: Result<Unit> = Result.success(Unit)
@@ -55,7 +61,13 @@ class FakeJournalAttachmentRepository : JournalAttachmentRepository {
 
     override suspend fun counts(): Result<Map<Long, Int>> = countsResult
 
-    override suspend fun content(id: Long): Result<AttachmentContent?> = contentResult
+    open override suspend fun content(id: Long): Result<AttachmentContent?> = contentResult
+
+    override suspend fun exportable(id: Long): Result<AttachmentBytes?> {
+        exportableIds += id
+        exportableResult?.let { return it }
+        return Result.success(exportableById[id])
+    }
 
     override suspend fun claim(ids: List<Long>, owner: Long): Result<Unit> {
         claimResult.onSuccess { claimed += ids to owner }

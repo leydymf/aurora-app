@@ -27,9 +27,9 @@ class NoTracesGuardTest {
         "pushDynamicShortcut",
         "AppWidgetProvider",
         "GlanceAppWidget",
-        "TileService",
-        // Permitido solo con decisión registrada (ver P-14 en docs/PENDIENTES.md).
-        "setRecentsScreenshotEnabled"
+        "TileService"
+        // setRecentsScreenshotEnabled dejó esta lista el 2026-10-05 (P-14 cerrado):
+        // vive SOLO en core/security/RecentsThumbnailGuard, ver el test de abajo.
     )
 
     private val mainDir = requireNotNull(
@@ -90,6 +90,27 @@ class NoTracesGuardTest {
 
         assertTrue(
             "FLAG_SECURE fuera del componente central de core/security (RNF-02):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    /**
+     * La miniatura de recientes solo se oculta mientras se teclea en la barra (P-14,
+     * ADR 2026-10-05) y desde un único componente: fuera de core/security sería un
+     * distinguidor (una app de clima sin miniatura) o un rastro mal acotado.
+     */
+    @Test
+    fun `setRecentsScreenshotEnabled solo existe en core security`() {
+        val allowedFile = File(mainDir, "java/com/auroraclima/app/core/security/RecentsThumbnailGuard.kt")
+        val violations = mainFiles("kt", "xml")
+            .filter { "setRecentsScreenshotEnabled" in it.readText() }
+            .filterNot { it == allowedFile }
+            .map { "${it.relativeTo(mainDir)}" }
+            .toList()
+
+        assertTrue(
+            "setRecentsScreenshotEnabled fuera de RecentsThumbnailGuard (RF-14/P-14):\n" +
                 violations.joinToString("\n"),
             violations.isEmpty()
         )
@@ -208,4 +229,42 @@ class NoTracesGuardTest {
             violations.isEmpty()
         )
     }
+
+    /**
+     * Regla 4 de CLAUDE.md, innegociable y hasta ahora sin guarda: nada del
+     * doble fondo puede ir a logs ni a telemetría. Se barre `src/main` entero
+     * porque un `Log.d` en cualquier capa basta para volcar contenido
+     * descifrado a logcat, legible por `adb` sin root (auditoría 2026-10-06).
+     */
+    @Test
+    fun `no hay registro en logs ni telemetria en ninguna capa`() {
+        val forbidden = listOf(
+            "android.util.Log",
+            "Log.d(", "Log.e(", "Log.i(", "Log.v(", "Log.w(",
+            "println(",
+            "printStackTrace",
+            "System.out", "System.err",
+            "FirebaseCrashlytics",
+            "FirebaseAnalytics"
+        )
+        val violations = mainFiles("kt")
+            .filter { file -> forbidden.any { it in file.readText().withoutComments() } }
+            .map { "${it.relativeTo(mainDir)}" }
+            .toList()
+
+        assertTrue(
+            "Registro en logs o telemetría fuera de lo permitido (regla 4):\n" +
+                violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    /**
+     * Quita comentarios antes de barrer: varios KDoc explican precisamente que
+     * la librería de PDF escribe en logcat y que Aurora la silencia, y nombrar
+     * la API en una explicación no es usarla.
+     */
+    private fun String.withoutComments(): String = replace(Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL), "")
+        .lines()
+        .joinToString("\n") { it.substringBefore("//") }
 }

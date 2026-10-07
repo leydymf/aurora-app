@@ -232,8 +232,8 @@ private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss:
                 IconListRow(
                     iconRes = V2Icons.info,
                     accent = V2Palette.accentJustice,
-                    title = stringResource(R.string.guidance_intro_point_once_title),
-                    supportingText = stringResource(R.string.guidance_intro_point_once_body)
+                    title = stringResource(R.string.guidance_intro_point_choice_title),
+                    supportingText = stringResource(R.string.guidance_intro_point_choice_body)
                 )
             }
             Spacer(modifier = Modifier.height(14.dp))
@@ -341,13 +341,18 @@ private fun QuestionContent(
     }
 }
 
-/** Chip «Salir» de P16 (RF-28): píldora blanca con la equis de mobiliario. */
+/**
+ * Chip «Salir» de P16 (RF-28): píldora blanca con la equis de mobiliario y el
+ * contorno gris de control, porque va directo sobre el fondo lila (sin borde,
+ * 1.12:1; WCAG §1.4.11 pide ≥ 3:1).
+ */
 @Composable
 private fun ExitChip(onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clip(V2Corner.pill)
             .background(V2Palette.cardSurface)
+            .border(width = 1.dp, color = V2Palette.controlOutline, shape = V2Corner.pill)
             .clickable(onClick = onClick, role = Role.Button)
             .heightIn(min = 36.dp)
             .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -418,10 +423,12 @@ private fun ResultContent(
                 style = InteriorTypeVoice.body,
                 color = V2Palette.inkPrimary
             )
-            state.recognitionText?.let { recognition ->
+            state.recognition?.let { recognition ->
                 Spacer(modifier = Modifier.height(12.dp))
+                // Los nombres de los tipos van en negrilla para que resalten;
+                // el texto y lo que se guarda (RF-31) no cambian.
                 Text(
-                    text = recognition,
+                    text = emphasizedRecognition(recognition),
                     style = InteriorTypeVoice.body,
                     color = V2Palette.inkPrimary
                 )

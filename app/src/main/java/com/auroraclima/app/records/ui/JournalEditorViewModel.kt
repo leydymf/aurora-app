@@ -5,12 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
-import com.auroraclima.app.records.domain.model.EntryKind
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.model.NewJournalEntry
+import com.auroraclima.app.records.domain.model.ResolvedKind
+import com.auroraclima.app.records.domain.model.UNSPECIFIED_KIND_ID
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalRepository
 import com.auroraclima.app.records.domain.usecase.AddJournalEntryUseCase
+import com.auroraclima.app.records.domain.usecase.LoadEntryKindsUseCase
 import com.auroraclima.app.records.domain.usecase.UpdateJournalEntryUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
@@ -37,6 +39,10 @@ import kotlinx.coroutines.launch
  * formulario queda intacto para reintentar; un fallo de la sync es silencioso
  * (§3), lo absorbe el caso de uso y jamás llega aquí.
  *
+ * Tipos (cierre P-68): se cargan del catálogo publicado al abrir; si no hay
+ * catálogo (sin red y sin caché) el selector degrada a la opción neutra y
+ * registrar sigue siendo posible (RNF-08) — el tipo se elige después al editar.
+ *
  * Adjuntos (RF-33): en edición se asocian directo al registro; en creación se
  * importan EN PREPARACIÓN (owner 0) y el guardado los reclama con el id nuevo.
  * El init barre huérfanos — adjuntos de creaciones abandonadas (salida rápida,
@@ -48,6 +54,7 @@ class JournalEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val addJournalEntry: AddJournalEntryUseCase,
     private val updateJournalEntry: UpdateJournalEntryUseCase,
+    private val loadEntryKinds: LoadEntryKindsUseCase,
     private val repository: JournalRepository,
     private val attachmentRepository: JournalAttachmentRepository
 ) : ViewModel() {
@@ -78,6 +85,7 @@ class JournalEditorViewModel @Inject constructor(
 
     init {
         if (isEditing) loadForEdit()
+        loadKinds()
         viewModelScope.launch {
             // Limpia adjuntos en preparación de una creación abandonada antes
             // de listar; su fallo no es visible (el barrido reintenta después).
@@ -88,6 +96,11 @@ class JournalEditorViewModel @Inject constructor(
 
     fun onRetryLoad() {
         if (isEditing) loadForEdit()
+    }
+
+    /** Reintento del catálogo de tipos (vuelve la red o se llena la caché). */
+    fun onRetryKinds() {
+        loadKinds()
     }
 
     fun onOpenDatePicker() {
@@ -102,8 +115,8 @@ class JournalEditorViewModel @Inject constructor(
         _uiState.update { it.copy(occurredOn = day, isPickingDate = false) }
     }
 
-    fun onKindSelected(kind: EntryKind) {
-        _uiState.update { it.copy(kind = kind, kindErrorRes = null) }
+    fun onKindSelected(kind: ResolvedKind) {
+        _uiState.update { it.copy(kindId = kind.id, kindLabel = kind.label.orEmpty(), kindErrorRes = null) }
     }
 
     fun onDetailChange(text: String) {
@@ -167,10 +180,10 @@ class JournalEditorViewModel @Inject constructor(
         val state = _uiState.value
         if (state.isSaving) return
         // RF-32 criterio 2: si falta un campo se señala en línea y lo escrito permanece.
-        if (state.kind == null || state.detail.isBlank()) {
+        if (state.kindId == null || state.detail.isBlank()) {
             _uiState.update {
                 it.copy(
-                    kindErrorRes = if (state.kind == null) R.string.journal_kind_missing else null,
+                    kindErrorRes = if (state.kindId == null) R.string.journal_kind_missing else null,
                     detailErrorRes = if (state.detail.isBlank()) R.string.journal_detail_missing else null
                 )
             }
@@ -180,7 +193,8 @@ class JournalEditorViewModel @Inject constructor(
         viewModelScope.launch {
             save(
                 occurredOn = state.occurredOn,
-                kind = state.kind,
+                kindId = state.kindId,
+                kindLabel = state.selectedKindLabel,
                 detail = state.detail.trim(),
                 attachmentIds = state.attachments.map { it.id }
             )
@@ -193,17 +207,45 @@ class JournalEditorViewModel @Inject constructor(
 
     private suspend fun save(
         occurredOn: LocalDate,
-        kind: EntryKind,
+        kindId: String,
+        kindLabel: String,
         detail: String,
         attachmentIds: List<Long>
     ): Result<Unit> = if (entryId != null) {
         // En edición los adjuntos ya pertenecen al registro: no hay reclamo.
-        updateJournalEntry(JournalEntry(id = entryId, occurredOn = occurredOn, kind = kind, detail = detail))
+        updateJournalEntry(
+            JournalEntry(id = entryId, occurredOn = occurredOn, kindId = kindId, kindLabel = kindLabel, detail = detail)
+        )
     } else {
         addJournalEntry(
-            NewJournalEntry(occurredOn = occurredOn, kind = kind, detail = detail),
+            NewJournalEntry(occurredOn = occurredOn, kindId = kindId, kindLabel = kindLabel, detail = detail),
             attachmentIds
         )
+    }
+
+    /**
+     * Catálogo publicado (P-68). Fallo o lista vacía → `kindsUnavailable`: el
+     * selector ofrece la opción neutra y la nota de reintento; nada se registra
+     * en logs (regla 4) y el formulario sigue utilizable.
+     */
+    private fun loadKinds() {
+        _uiState.update { it.copy(isLoadingKinds = true) }
+        viewModelScope.launch {
+            val kinds = loadEntryKinds().getOrDefault(emptyList())
+            _uiState.update {
+                // Si al crear se había elegido la opción neutra y ahora sí hay
+                // catálogo, el chip neutro desaparece: la elección se suelta
+                // para que la usuaria elija un tipo real (en edición se conserva).
+                val dropsNeutral = kinds.isNotEmpty() && it.kindId == UNSPECIFIED_KIND_ID && it.storedKindId == null
+                it.copy(
+                    kinds = kinds,
+                    isLoadingKinds = false,
+                    kindsUnavailable = kinds.isEmpty(),
+                    kindId = if (dropsNeutral) null else it.kindId,
+                    kindLabel = if (dropsNeutral) "" else it.kindLabel
+                )
+            }
+        }
     }
 
     private fun importAttachment(import: suspend () -> Result<*>) {
@@ -250,7 +292,10 @@ class JournalEditorViewModel @Inject constructor(
                             it.copy(
                                 isLoading = false,
                                 occurredOn = entry.occurredOn,
-                                kind = entry.kind,
+                                kindId = entry.kindId,
+                                kindLabel = entry.kindLabel,
+                                storedKindId = entry.kindId,
+                                storedKindLabel = entry.kindLabel,
                                 detail = entry.detail
                             )
                         }

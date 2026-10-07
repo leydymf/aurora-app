@@ -42,6 +42,7 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SheetCard
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
+import com.auroraclima.app.records.domain.model.ResolvedKind
 
 /**
  * Detalle de un registro (RF-34; mockup P20 / v2-22, sin estado de
@@ -115,12 +116,14 @@ internal fun JournalDetailScreen(
             onBack = onBack,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
+        val kind = state.kind
         when {
             state.isLoading -> V2LoadingState()
-            state.errorRes != null || state.entry == null ->
+            state.errorRes != null || state.entry == null || kind == null ->
                 V2ErrorState(messageRes = state.errorRes ?: R.string.common_error_generic, onRetry = onRetry)
             else -> JournalDetailContent(
                 entry = state.entry,
+                kind = kind,
                 attachments = state.attachments,
                 hasAudio = state.hasAudio,
                 onOpenAttachment = onOpenAttachment,
@@ -142,6 +145,7 @@ internal fun JournalDetailScreen(
 @Composable
 private fun JournalDetailContent(
     entry: JournalEntry,
+    kind: ResolvedKind,
     attachments: List<JournalAttachment>,
     hasAudio: Boolean,
     onOpenAttachment: (Long) -> Unit,
@@ -157,7 +161,7 @@ private fun JournalDetailContent(
         Spacer(modifier = Modifier.height(8.dp))
         // Cabecera de v2-22: insignia del tipo, fecha y el tipo como título.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val visual = entry.kind.visual()
+            val visual = kind.visual()
             AccentBadge(iconRes = visual.iconRes, accent = visual.accent)
             Spacer(modifier = Modifier.width(14.dp))
             Column {
@@ -167,7 +171,7 @@ private fun JournalDetailContent(
                     color = V2Palette.inkSecondary
                 )
                 Text(
-                    text = stringResource(entry.kind.labelRes()),
+                    text = kind.labelText(),
                     style = InteriorTypeVoice.screenTitle,
                     color = V2Palette.inkPrimary
                 )

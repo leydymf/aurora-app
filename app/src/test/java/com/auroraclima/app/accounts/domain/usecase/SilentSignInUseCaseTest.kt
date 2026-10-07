@@ -26,7 +26,9 @@ class SilentSignInUseCaseTest {
     private val syncKeys = FakeSyncKeyManager()
     private var restoreCalls = 0
     private val restorer = AccountDataRestorer { restoreCalls++ }
-    private val useCase = SilentSignInUseCase(repository, credentials, syncKeys, setOf(restorer))
+    private val cloudReconciliation = FakeCloudReconciliation()
+    private val useCase =
+        SilentSignInUseCase(repository, credentials, syncKeys, cloudReconciliation, setOf(restorer))
 
     private fun givenStoredCredentials() {
         credentials.save("usuaria@correo.co", "clave-segura-1")

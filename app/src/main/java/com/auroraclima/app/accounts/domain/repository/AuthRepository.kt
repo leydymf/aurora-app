@@ -2,6 +2,7 @@ package com.auroraclima.app.accounts.domain.repository
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.DeleteUserResult
+import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
@@ -33,4 +34,10 @@ interface AuthRepository {
 
     /** Cambia la contraseña de la sesión vigente. Nunca lanza (RF-39). */
     suspend fun updatePassword(newPassword: String): UpdatePasswordResult
+
+    /**
+     * Pide el correo de restablecimiento (RF-46). El desenlace NO distingue si
+     * la cuenta existe: ver [PasswordResetResult].
+     */
+    suspend fun sendPasswordReset(email: String): PasswordResetResult
 }

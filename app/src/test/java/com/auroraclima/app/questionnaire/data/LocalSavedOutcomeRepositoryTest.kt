@@ -31,7 +31,11 @@ class LocalSavedOutcomeRepositoryTest {
         database.close()
     }
 
-    private fun repositoryOf(source: GuidanceDatabaseSource) = LocalSavedOutcomeRepository(GuidanceStoreAccess(source))
+    private var nextDocId = 0
+
+    /** Fuente determinista de nombres de documento (ADR 2026-10-06). */
+    private fun repositoryOf(source: GuidanceDatabaseSource) =
+        LocalSavedOutcomeRepository(GuidanceStoreAccess(source)) { "doc-${++nextDocId}" }
 
     @Test
     fun `guarda fechado y devuelve el minimo consultable`() = runTest {

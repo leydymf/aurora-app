@@ -22,7 +22,7 @@ interface JournalSyncRepository {
     suspend fun push(entryId: Long): Result<Unit>
 
     /** Borra en la nube el registro [entryId] (RF-36/RF-20). */
-    suspend fun remove(entryId: Long): Result<Unit>
+    suspend fun remove(docId: String): Result<Unit>
 
     /**
      * Restauración multi-dispositivo (RF-39 criterio 1): descarga los
@@ -34,4 +34,12 @@ interface JournalSyncRepository {
      * silencio.
      */
     suspend fun restore(): Result<Unit>
+
+    /**
+     * Hace converger el historial con la nube (ADR 2026-10-06) sobre un
+     * dispositivo que ya tiene datos, y devuelve los ids LOCALES de los
+     * registros que desaparecieron de la nube —eliminados desde otro
+     * dispositivo— para que quien orquesta se lleve también sus adjuntos.
+     */
+    suspend fun reconcile(): Result<List<Long>>
 }

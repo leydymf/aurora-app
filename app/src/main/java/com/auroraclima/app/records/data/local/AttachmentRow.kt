@@ -30,5 +30,7 @@ data class AttachmentRow(
     val ref: String,
     val kind: String,
     @ColumnInfo(name = "created_at") val createdAt: Long,
-    @ColumnInfo(name = "synced_gen", defaultValue = "0") val syncedGeneration: Long = 0
+    @ColumnInfo(name = "synced_gen", defaultValue = "0") val syncedGeneration: Long = 0,
+    /** Generación en que una lectura del servidor lo vio: ver `JournalEntryRow.cloudSeenGeneration`. */
+    @ColumnInfo(name = "cloud_seen", defaultValue = "0") val cloudSeenGeneration: Long = 0
 )

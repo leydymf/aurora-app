@@ -35,6 +35,11 @@ exifinterface = "1.3.7"
 # de access (SharedPreferences) en la JVM
 robolectric = "4.15.1"
 androidxTestCore = "1.6.1"
+# Escritura del PDF cifrado de la exportación (RF-45). Port Apache 2.0 de
+# Apache PDFBox 2.0.27 sin java.awt; el cifrado AES-256 por contraseña usa solo
+# javax.crypto de la plataforma, así que BouncyCastle (≈11 MB) se excluye en
+# app/build.gradle.kts — ver ADR 2026-10-03 (RF-45) en docs/ARQUITECTURA.md
+pdfboxAndroid = "2.0.27.0"
 
 [libraries]
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
@@ -69,6 +74,7 @@ sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 [plugins]

@@ -38,8 +38,15 @@ class FakeJournalRepository : JournalRepository {
         return updateResult
     }
 
-    override suspend fun delete(id: Long): Result<Unit> {
+    /** Devuelve el nombre del documento en la nube, como el repositorio real. */
+    var deleteDocId: String = "doc-$DEFAULT_DOC"
+
+    override suspend fun delete(id: Long): Result<String> {
         deleteResult.onSuccess { deleted += id }
-        return deleteResult
+        return deleteResult.map { deleteDocId }
+    }
+
+    private companion object {
+        const val DEFAULT_DOC = "1"
     }
 }

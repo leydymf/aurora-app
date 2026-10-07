@@ -7,13 +7,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -40,6 +37,7 @@ import com.auroraclima.app.content.ui.TOPIC_ID_ARG
 import com.auroraclima.app.content.ui.TopicDetailRoute
 import com.auroraclima.app.content.ui.TopicsRoute
 import com.auroraclima.app.core.security.LocalSessionManager
+import com.auroraclima.app.core.security.RecentsThumbnailGuard
 import com.auroraclima.app.core.security.SearchGateResult
 import com.auroraclima.app.core.security.SecureBackStackGuard
 import com.auroraclima.app.core.security.SessionGuard
@@ -50,9 +48,11 @@ import com.auroraclima.app.core.ui.v2.V2TabBarHeight
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.questionnaire.ui.GuidanceHistoryRoute
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
+import com.auroraclima.app.records.ui.ENTRY_IDS_ARG
 import com.auroraclima.app.records.ui.ENTRY_ID_ARG
 import com.auroraclima.app.records.ui.JournalDetailRoute
 import com.auroraclima.app.records.ui.JournalEditorRoute
+import com.auroraclima.app.records.ui.JournalExportRoute
 import com.auroraclima.app.records.ui.JournalMediaRoute
 import com.auroraclima.app.records.ui.MEDIA_ID_ARG
 import com.auroraclima.app.weather.ui.ForecastRoute
@@ -77,21 +77,13 @@ fun AuroraApp(sessionManager: SessionManager) {
             navController = navController,
             startDestination = HOME_ROUTE
         ) {
-            composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) { entry ->
-                HomeRoute(navController = navController, entry = entry)
+            composable(HOME_ROUTE, popEnterTransition = { EnterTransition.None }) {
+                HomeRoute(navController = navController)
             }
             // Pronóstico extendido (RF-04): pantalla de la fachada, fuera del
             // grafo seguro — refuerza la credibilidad de la app de clima (RNF-05).
             composable(FORECAST_ROUTE) {
-                ForecastRoute(
-                    onBack = { navController.popBackStack() },
-                    // «Lugares» (D4): volver a P01 y abrir la búsqueda; la señal
-                    // viaja por el savedStateHandle del destino de la fachada.
-                    onOpenPlaces = {
-                        navController.previousBackStackEntry?.savedStateHandle?.set(FOCUS_SEARCH_KEY, true)
-                        navController.popBackStack()
-                    }
-                )
+                ForecastRoute(onBack = { navController.popBackStack() })
             }
             // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y
             // de recientes, botón nube de salida rápida y reporte de interacción
@@ -207,6 +199,11 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onAddJournalEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
                         onOpenJournalEntry = { entryId ->
                             navController.navigate("$JOURNAL_ROUTE/$entryId")
+                        },
+                        // Exportación selectiva (RF-45): solo ids opacos viajan
+                        // por la ruta; la pantalla vuelve a leer todo lo demás.
+                        onExportJournalEntries = { ids ->
+                            navController.navigate("$JOURNAL_EXPORT_BASE/${ids.joinToString(",")}")
                         }
                     )
                 }
@@ -288,6 +285,12 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // sin salir jamás del grafo seguro (RNF-02).
                 screen(JOURNAL_MEDIA_ROUTE) {
                     JournalMediaRoute(onBack = { navController.popBackStack() })
+                }
+                // Exportación a PDF con contraseña (RF-45): resumen, aviso,
+                // contraseña y salida por el selector del sistema. Dentro del
+                // grafo seguro: captura bloqueada y nube por construcción.
+                screen(JOURNAL_EXPORT_ROUTE) {
+                    JournalExportRoute(onBack = { navController.popBackStack() })
                 }
                 // Edición de un registro (RF-35, P19). El pop tras guardar
                 // regresa al detalle, que se refresca al volver a componerse.
@@ -399,21 +402,13 @@ fun AuroraApp(sessionManager: SessionManager) {
 
 /** Fachada de clima (RF-01..03) y puerta de búsqueda hacia el espacio interno (RF-12). */
 @Composable
-private fun HomeRoute(navController: NavHostController, entry: NavBackStackEntry) {
+private fun HomeRoute(navController: NavHostController) {
     val viewModel: WeatherViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
-    val searchFocus = remember { FocusRequester() }
-    // Señal de un solo uso de la pestaña «Lugares» del pronóstico (D4): al volver
-    // a la fachada se enfoca la barra — la misma puerta del código (RF-05/RF-12).
-    LaunchedEffect(entry) {
-        if (entry.savedStateHandle.remove<Boolean>(FOCUS_SEARCH_KEY) == true) {
-            searchFocus.requestFocus()
-        }
-    }
-    // Mejor esfuerzo: limpiar la barra en ON_PAUSE para que la miniatura de
-    // recientes no muestre un código a medio teclear (RF-14, auditoría M-03/M-04).
-    // El snapshot lo toma el sistema del último frame visible, así que ON_STOP
-    // llegaría tarde; la verificación en emulador queda en P-14 de PENDIENTES.md.
+    // Miniatura de recientes sin la barra mientras se busca (RF-14, ADR 2026-10-05).
+    RecentsThumbnailGuard(hidden = state.isSearchActive)
+    // Mejor esfuerzo complementario (y único recurso en API < 33): limpiar la
+    // barra en ON_PAUSE (RF-14, auditoría M-03/M-04).
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -439,16 +434,12 @@ private fun HomeRoute(navController: NavHostController, entry: NavBackStackEntry
             onSearchQueryChange = viewModel::onSearchQueryChange,
             onCitySelected = viewModel::onCitySelected,
             onSearchCancel = viewModel::onSearchCancel,
-            onOpenForecast = { navController.navigate(FORECAST_ROUTE) },
-            searchFocus = searchFocus
+            onOpenForecast = { navController.navigate(FORECAST_ROUTE) }
         )
     }
 }
 
 private const val HOME_ROUTE = "home"
-
-/** Señal de «Lugares» → fachada con la búsqueda abierta (D4); nombre neutro (RNF-05). */
-private const val FOCUS_SEARCH_KEY = "focus_search"
 private const val FORECAST_ROUTE = "forecast"
 private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"
@@ -473,6 +464,8 @@ private const val JOURNAL_EDIT_BASE = "journal_edit"
 private const val JOURNAL_EDIT_ROUTE = "$JOURNAL_EDIT_BASE/{$ENTRY_ID_ARG}"
 private const val JOURNAL_MEDIA_BASE = "journal_media"
 private const val JOURNAL_MEDIA_ROUTE = "$JOURNAL_MEDIA_BASE/{$MEDIA_ID_ARG}"
+private const val JOURNAL_EXPORT_BASE = "journal_export"
+private const val JOURNAL_EXPORT_ROUTE = "$JOURNAL_EXPORT_BASE/{$ENTRY_IDS_ARG}"
 private const val TOPICS_ROUTE = "topics"
 private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"

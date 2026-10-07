@@ -1,6 +1,7 @@
 package com.auroraclima.app.questionnaire.ui
 
 import com.auroraclima.app.R
+import com.auroraclima.app.accounts.domain.usecase.NoCloudReconciliation
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.questionnaire.domain.model.NewSavedOutcome
 import com.auroraclima.app.questionnaire.domain.model.SavedOutcome
@@ -35,7 +36,8 @@ class GuidanceHistoryViewModelTest {
     private fun viewModel() = GuidanceHistoryViewModel(
         repository = repository,
         questionnaireRepository = questionnaireRepository,
-        deleteSavedOutcome = DeleteSavedOutcomeUseCase(repository, sync)
+        deleteSavedOutcome = DeleteSavedOutcomeUseCase(repository, sync),
+        cloudReconciliation = NoCloudReconciliation
     )
 
     @Test
@@ -111,7 +113,7 @@ class GuidanceHistoryViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(listOf(2L), repository.deleted)
-        assertEquals(listOf(2L), sync.removed)
+        assertEquals(listOf("doc-2"), sync.removed)
         assertEquals(listOf(1L), state.outcomes.map { it.id })
         assertNull(state.detail)
         assertFalse(state.isConfirmingDelete)
@@ -131,7 +133,7 @@ class GuidanceHistoryViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.common_error_generic, state.deleteErrorRes)
         assertEquals(listOf(2L, 1L), state.outcomes.map { it.id })
-        assertEquals(emptyList<Long>(), sync.removed)
+        assertEquals(emptyList<String>(), sync.removed)
     }
 }
 
@@ -153,21 +155,23 @@ private class ListingSavedOutcomeRepository : SavedOutcomeRepository {
 
     override suspend fun outcome(id: Long): Result<SavedOutcome?> = Result.success(stored.firstOrNull { it.id == id })
 
-    override suspend fun delete(id: Long): Result<Unit> {
+    override suspend fun delete(id: Long): Result<String> {
         if (deleteResult.isSuccess) deleted += id
-        return deleteResult
+        return deleteResult.map { "doc-$id" }
     }
 }
 
 private class HistoryOutcomeSyncRepository : OutcomeSyncRepository {
-    val removed = mutableListOf<Long>()
+    val removed = mutableListOf<String>()
 
     override suspend fun push(outcomeId: Long): Result<Unit> = Result.success(Unit)
 
-    override suspend fun remove(outcomeId: Long): Result<Unit> {
-        removed += outcomeId
+    override suspend fun remove(docId: String): Result<Unit> {
+        removed += docId
         return Result.success(Unit)
     }
 
     override suspend fun restore(): Result<Unit> = Result.success(Unit)
+
+    override suspend fun reconcile(): Result<Unit> = Result.success(Unit)
 }
