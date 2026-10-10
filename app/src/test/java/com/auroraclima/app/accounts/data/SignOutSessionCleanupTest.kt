@@ -12,7 +12,7 @@ import org.junit.Test
 
 /**
  * Cierre de sesión explícito (RF-19): el «Cerrar sesión» de configuración
- * converge en la rutina única de cierre (quickExit → closeSession). Aquí se
+ * converge en la rutina única de cierre (closeNow → closeSession). Aquí se
  * prueba la cadena completa con el cleaner real de accounts: la sesión del
  * proveedor se cierra —el siguiente acceso exige credenciales (criterio 1)— y
  * el estado interno queda limpio; el pop a la fachada (criterio 2) lo hace
@@ -60,7 +60,7 @@ class SignOutSessionCleanupTest {
         }
         manager.startSession()
 
-        manager.quickExit()
+        manager.closeNow()
 
         // Criterio 1: sin sesión del proveedor, volver a entrar exige credenciales.
         assertEquals(1, service.signOutCalls)
@@ -81,8 +81,8 @@ class SignOutSessionCleanupTest {
         )
         manager.startSession()
 
-        manager.quickExit()
-        manager.quickExit()
+        manager.closeNow()
+        manager.closeNow()
 
         assertEquals(1, service.signOutCalls)
     }

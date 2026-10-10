@@ -24,7 +24,7 @@ class TutorialUiStateTest {
 
     @Test
     fun `paginas posteriores ofrecen atras en ambos modos`() {
-        for (step in listOf(TutorialStep.QUICK_EXIT, TutorialStep.AUTO_CLOSE)) {
+        for (step in listOf(TutorialStep.CLOSE_NOW, TutorialStep.AUTO_CLOSE)) {
             val state = TutorialUiState(step = step)
             assertTrue(state.showsBack(isReview = false))
             assertTrue(state.showsBack(isReview = true))
@@ -42,7 +42,7 @@ class TutorialUiStateTest {
     fun `repaso - no ofrece saltar`() {
         // Regresión RF-11: en repaso la vía de regreso sigue siendo «Atrás»;
         // «Saltar» no aparece ni en la primera página ni en las posteriores.
-        for (step in listOf(TutorialStep.ENTER, TutorialStep.QUICK_EXIT, TutorialStep.AUTO_CLOSE)) {
+        for (step in listOf(TutorialStep.ENTER, TutorialStep.CLOSE_NOW, TutorialStep.AUTO_CLOSE)) {
             val state = TutorialUiState(step = step)
             assertFalse(state.showsSkip(isReview = true))
         }

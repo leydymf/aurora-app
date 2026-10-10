@@ -212,13 +212,13 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(SETTINGS_ROUTE) {
                     // RF-19 con la opción C de P-31: el cierre explícito destruye
                     // primero el blob del reingreso silencioso (SignOutViewModel)
-                    // y después converge en la rutina única de cierre (quickExit):
+                    // y después converge en la rutina única de cierre (closeNow):
                     // AuthSessionCleaner cierra la sesión del proveedor —el
                     // siguiente acceso exige código + credenciales, criterio 1— y
                     // SessionGuard hace el pop a la fachada (criterio 2).
                     val signOutViewModel: SignOutViewModel = hiltViewModel()
                     LaunchedEffect(signOutViewModel) {
-                        signOutViewModel.doneEvents.collect { sessionManager.quickExit() }
+                        signOutViewModel.doneEvents.collect { sessionManager.closeNow() }
                     }
                     SettingsScreen(
                         onBack = { navController.popBackStack() },
@@ -239,7 +239,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(SETTINGS_ACCOUNT_ROUTE) {
                     DeleteAccountRoute(
                         onBack = { navController.popBackStack() },
-                        onDeleted = sessionManager::quickExit
+                        onDeleted = sessionManager::closeNow
                     )
                 }
                 // Cambio de la clave personal (RF-09, P21·b): guardar regresa a

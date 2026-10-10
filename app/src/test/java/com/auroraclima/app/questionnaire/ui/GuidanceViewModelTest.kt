@@ -332,7 +332,7 @@ class GuidanceViewModelTest {
         viewModel.onNext()
         viewModel.onOptionSelected("s1")
 
-        sessionManager.quickExit()
+        sessionManager.closeNow()
 
         val state = viewModel.uiState.value
         assertEquals(emptyMap<String, String>(), state.answers)
@@ -431,7 +431,7 @@ class GuidanceViewModelTest {
         sessionManager.startSession()
         viewModel.onSaveRequested()
 
-        sessionManager.quickExit()
+        sessionManager.closeNow()
 
         val state = viewModel.uiState.value
         assertFalse(state.isSaveSheetVisible)

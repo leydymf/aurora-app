@@ -66,7 +66,16 @@ class CreateSecretCodeUseCase @Inject constructor(
     }
 }
 
-/** Reglas visibles del mockup P06; cada una alimenta un renglón de la lista en vivo. */
+/**
+ * Reglas visibles del mockup P06; cada una alimenta un renglón de la lista en vivo.
+ *
+ * El nombre es deliberadamente soso y no debe «mejorarse» a algo más descriptivo.
+ * El compilador genera para toda `data class` un literal de `toString()` de la
+ * forma `Nombre(campo=`, y R8 **no** lo toca: el nombre anterior,
+ * `SecretCodeChecks`, viajaba legible en el DEX del release (hallazgo H-1 de la
+ * evaluación OWASP, P-89). Verlo exige sacar el APK, pero el vocabulario es lo
+ * que delata (RNF-05).
+ */
 data class CodeChecks(
     val hasMinLength: Boolean,
     val isNotRealCity: Boolean
