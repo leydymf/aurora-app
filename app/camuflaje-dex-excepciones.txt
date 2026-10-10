@@ -1,0 +1,26 @@
+# Línea base del guardián «verificarCamuflajeDex».
+#
+# Cadenas de Aurora que HOY aparecen en el DEX del release con un término vedado
+# y que se aceptan de forma explícita, cada una con su motivo y su pendiente.
+# El guardián falla ante cualquier cadena nueva que no esté aquí: su trabajo es
+# impedir que el problema CREZCA, no fingir que no existe.
+#
+# Para retirar una línea de aquí hay que arreglar la causa, no ampliar la lista.
+# Una línea por cadena, coincidencia exacta. Las líneas con # se ignoran.
+
+# --- P-78: plantillas de toString() de data class propias ---------------------
+# R8 renombra la clase pero no toca el literal que el compilador genera para
+# toString(). El rename de «questionnaire» a «form» y de «Consent*» a «Terms*»
+# los retira de un golpe; está planificado para antes del piloto.
+ConsentPoint(titleRes=
+ConsentUiState(isAccepted=
+Questionnaire(id=
+, questionnaire=
+
+# --- P-78 (ampliación A-4): rutas que conserva la reflexión de Room -----------
+# El `keep` que Room necesita para localizar la BD por reflexión conserva la
+# ruta completa del paquete. Desaparece con el mismo rename.
+?Lcom/auroraclima/app/questionnaire/data/local/GuidanceDatabase;
+DLcom/auroraclima/app/questionnaire/data/local/GuidanceDatabase_Impl;
+Noutcomes(com.auroraclima.app.questionnaire.data.local.OutcomeRow).
+Tremoved(com.auroraclima.app.questionnaire.data.local.RemovedOutcomeRow).

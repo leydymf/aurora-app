@@ -1,0 +1,48 @@
+# Términos vedados por el camuflaje (RNF-05, regla 6 de CLAUDE.md).
+# Fuente única para los dos guardianes que los vigilan:
+#   - CamouflageResourcesTest  -> recursos, manifest y fuentes de src/main
+#   - verificarCamuflajeDex    -> literales de cadena del DEX del APK release
+# Una línea por término, en minúscula. Las líneas que empiezan por # se ignoran.
+# No borrar un término sin discutirlo contra RNF-05.
+violencia
+violence
+víctima
+victima
+victim
+agresor
+agresión
+agresion
+abuser
+maltrato
+denuncia
+doble fondo
+revictimiz
+incidente
+incident
+evidencia
+evidence
+emergencia
+emergency
+auxilio
+ayuda
+sos
+pánico
+panico
+panic
+refugio
+shelter
+secreto
+secret
+oculto
+oculta
+hidden
+vault
+abuso
+abuse
+consentimiento
+consent
+cuestionario
+questionnaire
+salida rápida
+salida rapida
+modo seguro

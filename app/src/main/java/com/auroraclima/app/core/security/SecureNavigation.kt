@@ -36,7 +36,9 @@ import com.auroraclima.app.core.ui.v2.CloudReturnVisual
  * navegación raíz con la instancia inyectada por Hilt (no es un singleton manual).
  */
 val LocalSessionManager = staticCompositionLocalOf<SessionManager> {
-    error("LocalSessionManager sin proveer: envolver la NavHost raíz")
+    // Sin nombres propios a propósito: las cadenas de los mensajes de excepción
+    // sobreviven a R8 y quedan legibles en el DEX del release (H-1, P-89).
+    error("falta un proveedor requerido")
 }
 
 /**

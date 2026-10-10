@@ -25,9 +25,9 @@ class CreateSecretCodeUseCase @Inject constructor(
     private val cityDirectory: CityNameDirectory
 ) {
     /** Estado en vivo de las reglas visibles mientras la usuaria teclea (criterio 2). */
-    suspend fun check(code: String): SecretCodeChecks {
+    suspend fun check(code: String): CodeChecks {
         val candidate = code.trim()
-        return SecretCodeChecks(
+        return CodeChecks(
             hasMinLength = candidate.length >= ValidateSecretCodeUseCase.MIN_CODE_LENGTH,
             isNotRealCity = candidate.isNotEmpty() && !isRealCity(candidate)
         )
@@ -67,7 +67,7 @@ class CreateSecretCodeUseCase @Inject constructor(
 }
 
 /** Reglas visibles del mockup P06; cada una alimenta un renglón de la lista en vivo. */
-data class SecretCodeChecks(
+data class CodeChecks(
     val hasMinLength: Boolean,
     val isNotRealCity: Boolean
 ) {
@@ -79,7 +79,7 @@ sealed interface CreateSecretCodeResult {
     data object Created : CreateSecretCodeResult
 
     /** Alguna regla no se cumple; [checks] dice cuál para explicarla (criterio 2). */
-    data class Rejected(val checks: SecretCodeChecks) : CreateSecretCodeResult
+    data class Rejected(val checks: CodeChecks) : CreateSecretCodeResult
 
     /** Fallo interno de Keystore/almacenamiento: mensaje genérico en la UI. */
     data object StorageFailure : CreateSecretCodeResult
