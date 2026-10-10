@@ -10,8 +10,8 @@ import org.w3c.dom.Element
 /**
  * Auditoría del manifest declarado (RNF-04 minimización, RF-06 ausencia de indicios).
  *
- * - Permisos: exactamente los del inventario aprobado (solo INTERNET; esperable en
- *   una app de clima). Cualquier permiso nuevo debe justificarse contra un RF.
+ * - Permisos: exactamente los del inventario aprobado (INTERNET y ACCESS_NETWORK_STATE;
+ *   los dos esperables en una app de clima). Cualquier permiso nuevo debe justificarse contra un RF.
  * - Componentes: un único activity exportado (el launcher) y, desde RF-33, un único
  *   provider — el FileProvider NO exportado que recibe la captura de la cámara del
  *   sistema (EXTRA_OUTPUT); sus propiedades se auditan una a una abajo. Ningún

@@ -40,6 +40,26 @@ class SensitiveFieldsGuardTest {
 
     private fun kotlin(ruta: String) = File(mainDir, "java/com/auroraclima/app/$ruta")
 
+    /**
+     * Texto del archivo SIN comentarios. Es la pieza que hace que este guardia sirva
+     * de algo, y la añadió una verificación que demostró el agujero: bastaba quitar
+     * `SecureTextEntry {` del relato y dejar un comentario como
+     * `// pendiente: volver a envolver en SecureTextEntry { } al subir a Compose 1.8`
+     * para que el guardia siguiera verde con el hallazgo ALTO deshecho. Una línea, y
+     * además es el comentario que P-97 y la §10.1 del informe invitan a escribir.
+     *
+     * La variante con KDoc era igual de mala: al rebanar el cuerpo de un campo sin
+     * enmascarar se tragaba el KDoc del campo siguiente, y si ese KDoc mencionaba
+     * `KeyboardType.Password` el campo quedaba clasificado como enmascarado y
+     * excusado del envoltorio. Esa sobrecaptura ocurría ya hoy, sin consecuencias.
+     *
+     * Límite conocido: un `//` dentro de un literal de cadena se descontaría también.
+     * Ninguno de los archivos que este guardia mira tiene uno.
+     */
+    private fun codigoDe(file: File): String = file.readText()
+        .replace(Regex("""/\*(?:.|\n)*?\*/"""), "")
+        .replace(Regex("""//[^\n]*"""), "")
+
     /** El único archivo del kit que declara campos editables. */
     private val kit = "core/ui/v2/Fields.kt"
 
@@ -60,6 +80,22 @@ class SensitiveFieldsGuardTest {
      */
     private val constructorRegex = Regex(
         "(?<![A-Za-z0-9_])(" + constructores.joinToString("|") { Regex.escape(it) } + ")"
+    )
+
+    /**
+     * Tokens que, al principio de una línea, abren una declaración nueva y por tanto
+     * cierran el cuerpo de la anterior. `val` y `const` están por un motivo concreto:
+     * sin ellos, el cuerpo de un campo puede tragarse la declaración siguiente, y si
+     * esa fuera un campo enmascarado, el campo SIN enmascarar quedaría clasificado
+     * como enmascarado y excusado del envoltorio — un falso negativo en la prueba que
+     * vigila el hallazgo ALTO (A-3 de la revisión de arquitectura).
+     */
+    private val cierreDeCuerpo = Regex(
+        "\n(?:" + listOf(
+            "@", "fun ", "private ", "internal ", "public ", "class ", "object ",
+            "interface ", "sealed ", "data ", "enum ", "val ", "var ", "const ",
+            "typealias ", "abstract ", "open ", "inline ", "suspend "
+        ).joinToString("|") { Regex.escape(it) } + ")"
     )
 
     /** Lo que hay en el cuerpo antes de construir el campo; vacío si no hay campo. */
@@ -88,20 +124,14 @@ class SensitiveFieldsGuardTest {
         val inicio = texto.indexOf(firma)
         assertTrue("No se encontró «$firma»: ¿se renombró o se borró?", inicio >= 0)
         val resto = texto.substring(inicio + firma.length)
-        // `val` y `const` entran en la lista por un motivo concreto: sin ellos, el
-        // cuerpo de un campo puede tragarse la declaración siguiente, y si esa
-        // declaración fuera un campo enmascarado, el campo SIN enmascarar quedaría
-        // excusado del envoltorio — un falso negativo en la prueba que vigila el
-        // hallazgo ALTO (A-3 de la revisión de arquitectura).
-        val siguiente = Regex(
-            """\n(?:@|fun |private |internal |class |object |sealed |data |enum |val |const |typealias )"""
-        ).find(resto)?.range?.first ?: resto.length
+        val siguiente = cierreDeCuerpo.find(resto)?.range?.first ?: resto.length
         return resto.substring(0, siguiente)
     }
 
     /** Funciones de un archivo que construyen un campo de texto, con su firma. */
     private fun funcionesConCampo(texto: String): List<String> =
-        Regex("""(?:^|\n)(?:private |internal |public )?fun ([A-Za-z0-9_]+)\(""").findAll(texto)
+        Regex("""(?:^|\n)(?:(?:private|internal|public|inline|suspend|operator)\s+)*fun ([A-Za-z0-9_]+)\(""")
+            .findAll(texto)
             .map { it.groupValues[1] }
             .filter { nombre -> constructorRegex.containsMatchIn(cuerpoDe(texto, "fun $nombre(")) }
             .toList()
@@ -115,25 +145,30 @@ class SensitiveFieldsGuardTest {
         val infractores = fuentes()
             .filterNot { it.path.endsWith(kit) }
             .filterNot { f -> camposFueraDelKit.any { f.path.endsWith(it) } }
-            .filter { f -> constructorRegex.containsMatchIn(f.readText()) }
+            .filter { f -> constructorRegex.containsMatchIn(codigoDe(f)) }
             .map { it.name }
             .toList()
         assertTrue(
-            "Campos de texto creados fuera de core/ui/v2: $infractores. " +
-                "Todo campo editable debe usar el kit, que aplica las protecciones de H-7.",
+            "Campos de texto creados fuera del archivo del kit ($kit): $infractores. " +
+                "Todo campo editable debe declararse ahí, que es donde se aplican las " +
+                "protecciones de H-7. La exención es de ESE archivo y no de todo " +
+                "core/ui/v2, para que un segundo archivo del kit no quede invisible.",
             infractores.isEmpty()
         )
     }
 
     @Test
     fun `todo campo del kit que no enmascara esta envuelto en SecureTextEntry`() {
-        val fields = kotlin(kit).readText()
+        val fields = codigoDe(kotlin(kit))
         val campos = funcionesConCampo(fields)
         // Que la lista no se derive de una constante escrita a mano: si mañana
         // aparece un V2NumberField sin envolver, esta prueba lo ve sin tocarla.
         // Cualquier visibilidad, además: la primera versión solo casaba `fun` y
         // `private fun`, y un `internal fun` —que es la convención de este código
-        // para los composables de pantalla— se le escapaba (mutación M19).
+        // para los composables de pantalla— se le escapaba (mutación M19). Lo que
+        // fija es la visibilidad y los modificadores, no toda forma posible: un campo
+        // declarado como `val` de tipo función lambda se le escaparía, y eso no se
+        // cubre aquí sino en el guardián del DEX y en la comprobación manual.
         assertTrue(
             "El kit debería declarar al menos tres campos editables; se encontraron $campos. " +
                 "Si el regex dejó de casar, esta prueba estaría pasando sin mirar nada.",
@@ -159,7 +194,7 @@ class SensitiveFieldsGuardTest {
     @Test
     fun `las dos barras de busqueda estan envueltas`() {
         camposFueraDelKit.forEach { ruta ->
-            val texto = kotlin(ruta).readText()
+            val texto = codigoDe(kotlin(ruta))
             val barras = funcionesConCampo(texto)
             assertTrue("No se encontró ningún campo de texto en $ruta.", barras.isNotEmpty())
             barras.forEach { barra ->
@@ -176,7 +211,7 @@ class SensitiveFieldsGuardTest {
 
     @Test
     fun `el envoltorio conserva las dos protecciones`() {
-        val envoltorio = kotlin("core/security/SecureTextEntry.kt").readText()
+        val envoltorio = codigoDe(kotlin("core/security/SecureTextEntry.kt"))
 
         // 1. Que SecureTextEntry INSTALE las dos cosas, no que existan en el archivo.
         val cuerpo = cuerpoDe(envoltorio, "fun SecureTextEntry(")
@@ -212,7 +247,7 @@ class SensitiveFieldsGuardTest {
     @Test
     fun `el envoltorio vive solo en core-security`() {
         val definiciones = fuentes()
-            .filter { "fun SecureTextEntry(" in it.readText() }
+            .filter { "fun SecureTextEntry(" in codigoDe(it) }
             .map { it.path.substringAfter("com/auroraclima/app/") }
             .toList()
         assertEquals(

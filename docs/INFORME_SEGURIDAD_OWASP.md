@@ -1472,26 +1472,65 @@ Y no solo del DEX. La primera versión miraba únicamente `classes*.dex`, y
 `shrinkResources` y `optimizeResources` reescriben, y los recursos que traen las
 librerías no están en las fuentes de Aurora y por tanto nunca se miraban. El
 alcance ahora es todo lo que puede llevar texto propio: **DEX, `resources.arsc`,
-el manifiesto binario y `res/**`** — 113 entradas del APK. Quedan fuera a
-propósito `lib/*.so` y los assets de las dependencias (fuentes de PdfBox,
-`.proto` de Firestore, builtins de Kotlin): viajan byte a byte desde la
-dependencia, no pueden contener vocabulario de Aurora, y absorber su ruido
-exigiría 43 excepciones más, varias de ellas basura binaria que no es estable
-entre construcciones. Se barrieron a mano una vez y están limpios.
+el manifiesto binario, `res/**`, `META-INF/**` y `assets/**`** salvo las fuentes
+que PdfBox trae vendidas — **195 de las 322 entradas** del APK. Las dos últimas
+categorías se midieron antes de incluirlas y añaden **cero** ruido, así que
+entraron gratis.
+
+Conviene decirlo como lo que es: una **lista de permitidos**, y todo lo demás
+queda fuera. Lo que queda fuera son 127 entradas y todas viajan byte a byte desde
+una dependencia: `lib/**` (las librerías nativas de SQLCipher), `google/**` (los
+`.proto` de Firestore y gRPC), `kotlin/**`, `okhttp3/**`, las fuentes y listas de
+glifos de PdfBox bajo `assets/com/tom_roush/**`, y los `.properties` de metadatos
+de raíz. Juzgarlas exigiría **43 excepciones más**, varias de ellas basura binaria
+que no es estable entre construcciones.
+
+**Tres entradas del APK no vienen de ninguna dependencia** y por eso están
+DENTRO del alcance, no fuera: `assets/dexopt/baseline.prof` y su `.profm`, que se
+derivan de las clases de Aurora, y `META-INF/version-control-info.textproto`, que
+se deriva del repositorio. La versión anterior las excluía sin decirlo —el motivo
+escrito hablaba solo de librerías nativas y assets de dependencias cuando el
+filtro dejaba fuera 209 entradas de ocho familias—, y lo señaló la auditoría. Al
+medirlas resultó que incluirlas no cuesta nada: los perfiles están comprimidos y
+no tienen ni un nombre legible, y el `textproto` lleva solo la ruta raíz del
+proyecto y el hash del commit, sin nombre de rama.
+
+Y porque «se barrió a mano una vez» no es una garantía permanente, el guardián
+lleva además una **línea base de las categorías excluidas**: si mañana aparece en
+el APK una familia de entradas que nadie juzga —un `assets/` propio con un catálogo
+sembrado, por ejemplo, que es verosímil porque el proyecto ya siembra contenido—,
+la construcción del release **falla** y obliga a decidir si entra en alcance o se
+excluye con motivo. Es el mismo arreglo que el `upToDateWhen { false }`, un nivel
+más arriba: lo que no se mira, se declara.
 
 **Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
 el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
 `app-release.apk`, 23 952 390 B, SHA-256
-`666496173731d6eac8459768e790f424512548cc2aec8f5a0dec607f9c72e879`—: **193 967
-cadenas de 4 o más caracteres, 110 353 distintas, 0 hallazgos nuevos** y el
-autochequeo de canarios en 4/4.
+`2fcb191f321e4cb4fa241e0cfead6cab1db870d7ab33b76eef46a798f9f83e76`—: **194 494
+cadenas de 4 o más caracteres, 110 807 distintas, en 195 entradas, 0 hallazgos
+nuevos** y el autochequeo de canarios en 4/4.
 
-Las cifras van atadas al SHA-256 a propósito, igual que en §2, porque **el
-recuento de cadenas es propiedad de una construcción y no del commit**: durante
-la auditoría de esta rama dos construcciones del mismo commit dieron 167 564 y
-168 992 cadenas. Lo que no se mueve entre construcciones es el veredicto: 0
-hallazgos en todas ellas. Quien reejecute el comando debe esperar un número
-parecido, no idéntico.
+Las cifras van atadas al SHA-256 a propósito, igual que en §2, y conviene decir
+exactamente qué es reproducible y qué no, porque se midió:
+
+- **El APK no es reproducible byte a byte.** Dos construcciones limpias e
+  independientes del mismo commit, con el mismo JDK, dan hashes distintos
+  (se midieron cuatro: `666496…`, `731a2b…`, `a236e6…` y `2fcb19…`) con el **mismo
+  tamaño** de 23 952 390 B en todas. Es lo esperable
+  de R8 y de la firma.
+- **Las cifras del guardián sí son estables.** Tres construcciones limpias e
+  independientes —una propia y dos de la auditoría— dieron **los nueve números
+  idénticos al dígito** con tres hashes distintos. Es decir: el recuento es
+  propiedad del commit, y el hash no. (Las cifras que publica esta sección son
+  mayores porque después se amplió el alcance; con un alcance fijo no se movieron.)
+- **Lo que sí movió las cifras fue contaminación del entorno.** Antes de limpiar,
+  dos construcciones del mismo commit dieron 167 564 y 168 992 cadenas; la causa
+  era un demonio de Gradle bajo otro JDK construyendo en paralelo sobre el mismo
+  directorio. Dos demonios sobre el mismo `app/build` también corrompen el estado
+  incremental. **Para re-medir: detener los demonios, `clean`, y una sola
+  invocación.**
+
+Quien reejecute el comando obtendrá otro SHA-256 y las mismas cifras.
 
 El precio de juzgar todo es absorber el ruido de las librerías en la línea base, y
 eso es lo que hace creíble un «0 hallazgos»: **62 cadenas aceptadas, una por una y
@@ -1594,10 +1633,14 @@ KDoc que explica por qué el nombre es deliberadamente soso, para que un refacto
 ocurrencias (antes 2), `QUICK_EXIT` **0** (antes 1), y en su lugar `closeNow` (2)
 y `CLOSE_NOW` (1), que son vocabulario neutro. El guardián del DEX pasa con 0
 hallazgos. El nuevo caso de `CamouflageResourcesTest` sobre identificadores lo
-detiene en la forma de declaración actual —un enum con argumentos de constructor
-o anidado en una clase se le escapa, y por eso no se puede decir que «impide que
-vuelva»—; la red que no depende de la forma de escribir el código es el guardián
-del DEX, que mira el artefacto.
+detiene en las formas habituales de declararlo —incluidas la constante con
+argumentos de constructor y el enum anidado en una clase, las dos comprobadas—,
+pero no en todas: un cuerpo de enum escrito **en una sola línea**
+(`enum class Paso { ENTRAR, CLOSE_NOW }`) se le escapa, porque el barrido exige
+que la constante empiece una línea, y lo mismo una constante que no vaya en
+mayúsculas. Por eso no se puede decir que «impide que vuelva». La red que no
+depende de la forma de escribir el código es el guardián del DEX, que mira el
+artefacto.
 
 ### 10.6 Recuento tras las correcciones
 
@@ -1650,7 +1693,12 @@ el emulador B, 0 fallos — eran 45, y entran los 2 casos de `SecureTextEntryTes
 ktlint sin violaciones. `assembleDebug` y `assembleRelease` en verde, este último
 con el guardián del DEX pasando y su autochequeo de canarios en verde.
 
-La corrida es la del comando completo, sobre árbol limpio (`clean` previo) y con
-el JDK prescrito: `test ktlintCheck lint assembleDebug assembleRelease`. `lint`
+La corrida es la del comando completo, sobre árbol limpio y con el JDK prescrito:
+`test ktlintCheck lint assembleDebug assembleRelease`. **Procedimiento de
+aislamiento, que no es opcional:** detener los demonios de Gradle **y de Kotlin**,
+borrar `app/build`, y una **sola** invocación. No es ceremonia: dos construcciones
+concurrentes sobre el mismo directorio corrompen el estado incremental —se vio
+fallar en `kspReleaseKotlin` y en `processDebugResources`— y fueron la causa de las
+cifras irreproducibles que se corrigieron en §10.3. `lint`
 da 0 errores y 58 avisos, ninguno sobre los archivos nuevos. El APK release
 medido es el del SHA-256 de §10.3.

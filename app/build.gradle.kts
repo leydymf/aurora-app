@@ -235,13 +235,39 @@ val verificarCamuflajeDex by tasks.registering {
         // reescriben, y los recursos de las librerías no se miran nunca en las
         // fuentes (hallazgo F-8 de la auditoría).
         //
-        // Fuera de alcance a propósito: `lib/*.so` y los assets de las dependencias
-        // (fuentes de PdfBox, `.proto` de Firestore, builtins de Kotlin). Viajan byte
-        // a byte desde la dependencia, no pueden contener vocabulario de Aurora, y
-        // absorberlos exigiría 43 excepciones más —varias de ellas basura binaria que
-        // no es estable entre construcciones—. Se barrieron a mano una vez y están
-        // limpios; lo que queda vigilado por regla es lo que Aurora escribe.
-        val enAlcance = Regex("""classes\d*\.dex|resources\.arsc|AndroidManifest\.xml|res/.*""")
+        // Alcance: una lista de permitidos, y todo lo demás fuera. Entran además
+        // `META-INF/**` y `assets/**` salvo las fuentes y listas de glifos que
+        // PdfBox trae vendidas — se midió y las dos categorías añaden CERO ruido, así
+        // que entran gratis y cubren dos entradas que NO vienen de una dependencia:
+        // `assets/dexopt/baseline.prof*`, que se deriva de las clases de Aurora, y
+        // `META-INF/version-control-info.textproto`, que se deriva del repositorio.
+        //
+        // Lo que queda fuera viaja byte a byte desde una dependencia: `lib/*.so`, los
+        // `.proto` de Firestore y gRPC, los builtins de Kotlin, okhttp3 y los
+        // `.properties` de metadatos. Juzgarlos exigiría 43 excepciones más, varias de
+        // basura binaria que no es estable entre construcciones.
+        val enAlcance = Regex(
+            """classes\d*\.dex|resources\.arsc|AndroidManifest\.xml|res/.*|META-INF/.*""" +
+                """|assets/(?!com/tom_roush/).*"""
+        )
+        // La exclusión, declarada. «Se barrió a mano una vez» no es una garantía
+        // permanente: el día que aparezca en el APK una familia de entradas que nadie
+        // juzga —un `assets/` propio con un catálogo sembrado, por ejemplo— esto hace
+        // fallar el release y obliga a decidir si entra en alcance o se excluye con
+        // motivo. Es el mismo arreglo que `upToDateWhen { false }`, un nivel más
+        // arriba: lo que no se mira, se declara (hallazgo M-1 de la auditoría).
+        // Son, en orden: las librerías nativas de SQLCipher; los `.proto` de Firestore
+        // y gRPC; los builtins y metadatos del compilador de Kotlin; la lista de
+        // sufijos públicos de OkHttp; y las fuentes y listas de glifos que PdfBox
+        // trae vendidas.
+        val fueraDeAlcance = listOf(
+            "lib/",
+            "google/",
+            "kotlin/",
+            "okhttp3/",
+            "assets/com/tom_roush/"
+        )
+        val extensionesDeRaiz = listOf(".properties", ".bin", ".json")
         var total = 0
         var entradas = 0
         // Cadenas al estilo de `strings`, pero decodificando UTF-8: un byte de tilde
@@ -251,8 +277,37 @@ val verificarCamuflajeDex by tasks.registering {
         ZipFile(apk).use { zip ->
             val juzgables = Collections.list(zip.entries())
                 .filter { entrada: ZipEntry -> enAlcance.matches(entrada.name) }
+            // Pisos de no vacuidad. Los cuatro canarios ejercen la lógica de JUICIO;
+            // nada ejercía la de ALCANCE, que es justo donde creció el guardián al
+            // pasar de solo el DEX a arsc + manifiesto + res/. Sin esto, quien tocara
+            // `enAlcance` y dejara fuera los recursos vería 4/4 canarios y 0 hallazgos,
+            // y el guardián estaría mirando la mitad (hallazgo M-8 de la revisión).
             require(juzgables.any { it.name.endsWith(".dex") }) {
                 "No se encontró ningún classes*.dex en el APK: ¿cambió el formato?"
+            }
+            require(juzgables.any { it.name == "resources.arsc" }) {
+                "Falta resources.arsc en el alcance: ahí llegan los recursos de las librerías."
+            }
+            require(juzgables.any { it.name.startsWith("res/") }) {
+                "Falta res/ en el alcance: ahí viven los recursos propios."
+            }
+            require(juzgables.any { it.name.startsWith("META-INF/") }) {
+                "Falta META-INF/ en el alcance."
+            }
+            val sinDeclarar = Collections.list(zip.entries())
+                .map { entrada: ZipEntry -> entrada.name }
+                .filterNot { enAlcance.matches(it) }
+                .filterNot { nombre -> fueraDeAlcance.any { nombre.startsWith(it) } }
+                .filterNot { nombre ->
+                    "/" !in nombre && extensionesDeRaiz.any { nombre.endsWith(it) }
+                }
+            require(sinDeclarar.isEmpty()) {
+                "Entradas del APK que nadie juzga y que nadie declaró fuera de alcance: " +
+                    "$sinDeclarar. Decidir si entran en el alcance del guardián o se " +
+                    "excluyen con motivo escrito (RNF-05)."
+            }
+            require(juzgables.size >= 100) {
+                "Solo ${juzgables.size} entradas en alcance: el filtro se rompió."
             }
             entradas = juzgables.size
             for (entrada in juzgables) {
@@ -295,7 +350,7 @@ val verificarCamuflajeDex by tasks.registering {
                 appendLine("APK: ${apk.name} (${apk.length()} bytes)")
                 appendLine("Cadenas de 4 o más caracteres: $total (${cadenas.size} distintas)")
                 appendLine("Se juzgan TODAS, sin filtro de atribución.")
-                appendLine("Entradas del APK en alcance: $entradas (dex + arsc + manifiesto + res/)")
+                appendLine("Entradas del APK en alcance: $entradas (dex, arsc, manifiesto, res/, META-INF/, assets/)")
                 appendLine("Términos vedados comprobados: ${vedados.size}")
                 appendLine("Autochequeo de canarios: ${canarios.size}/${canarios.size} cazados, 0 falsos positivos")
                 appendLine("Excepciones documentadas en la línea base: ${aceptadas.size}")
