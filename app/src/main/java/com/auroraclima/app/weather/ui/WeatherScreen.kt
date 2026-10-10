@@ -249,8 +249,12 @@ private fun WeatherSearchBar(
                 }
             },
             singleLine = true,
-            // Sin autocorrección: evita que el IME aprenda o sugiera lo tecleado aquí,
-            // y es plausible en una búsqueda de nombres propios de ciudades.
+            // Sin autocorrección porque es plausible en una búsqueda de nombres
+            // propios de ciudades, y punto. NO protege de que el teclado aprenda:
+            // se midió el EditorInfo con `dumpsys input_method` y esta bandera solo
+            // RETIRA `TYPE_TEXT_FLAG_AUTO_CORRECT`; esta barra enviaba `inputType=0x1`
+            // pelado, sin nada que hable de aprendizaje. De que no aprenda se encarga
+            // `SecureTextEntry`, que envuelve esta barra (H-7, P-94).
             keyboardOptions = KeyboardOptions(
                 autoCorrectEnabled = false,
                 imeAction = ImeAction.Search

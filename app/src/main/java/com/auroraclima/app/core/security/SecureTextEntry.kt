@@ -28,6 +28,28 @@ import androidx.compose.ui.platform.TextToolbarStatus
  *
  * Vive en `core/security` por la misma razón que [SecureDialog]: es una política de
  * seguridad, no un detalle visual, y conviene que esté en un solo sitio auditable.
+ *
+ * **Se aplica DENTRO del componente del kit, no alrededor de la pantalla.** No es
+ * un detalle: un `Dialog` instala su propia [LocalTextToolbar], así que el campo de
+ * correo de RF-46, que vive dentro de un `SecureSheet`, perdería la protección si el
+ * envoltorio estuviera por fuera de la hoja. Quien mueva esto hacia arriba la rompe
+ * en silencio.
+ *
+ * **Lo que NO cierra**, y está declarado como residual en el informe (§10.1) y en
+ * `PENDIENTES.md`:
+ *
+ *  - las acciones semánticas `CopyText` y `SetSelection`, que un servicio de
+ *    accesibilidad puede invocar sin pasar por el menú, y la lectura del árbol de
+ *    accesibilidad, que `FLAG_SECURE` no cubre. No se tapan con
+ *    `clearAndSetSemantics` a propósito: dejaría al relato —el campo más largo de
+ *    la app— sin lector de pantalla, y ese precio no lo paga el modelo de amenaza.
+ *  - `Ctrl+C` con un teclado físico: Compose lo atiende en `TextFieldKeyInput`, que
+ *    no pasa por la barra de selección. En el teléfono del piloto no aplica.
+ *
+ * **Acoplado a Compose 1.7.** [InterceptPlatformTextInput] existe desde ahí, y en
+ * 1.8 `TextToolbar.showMenu` cambia de firma y la barra de selección se sustituye
+ * por la API de menú contextual nueva. Cualquier subida de Compose obliga a repetir
+ * la comprobación manual del menú (§10.1): esto no lo puede verificar una prueba.
  */
 
 /**
@@ -39,8 +61,8 @@ import androidx.compose.ui.platform.TextToolbarStatus
  * recibe: pasar `null` en una de ellas hace desaparecer esa opción. Por eso basta
  * con delegar en la barra real anulando dos.
  *
- * Límite conocido, declarado en el informe: esto quita las opciones del menú, no
- * intercepta un Ctrl+C de un teclado físico. En el teléfono del piloto no aplica.
+ * Alcance exacto: quita las dos opciones del MENÚ. Las otras vías —accesibilidad y
+ * `Ctrl+C`— están declaradas arriba y en el informe como residuales.
  */
 private class NoCopyTextToolbar(private val delegate: TextToolbar) : TextToolbar {
     override val status: TextToolbarStatus get() = delegate.status
@@ -86,13 +108,13 @@ private class NoCopyTextToolbar(private val delegate: TextToolbar) : TextToolbar
 private fun NoImeLearning(content: @Composable () -> Unit) {
     InterceptPlatformTextInput(
         interceptor = { request, nextHandler ->
-            val sinAprendizaje = PlatformTextInputMethodRequest { outAttributes ->
+            val noLearning = PlatformTextInputMethodRequest { outAttributes ->
                 request.createInputConnection(outAttributes).also {
                     outAttributes.imeOptions =
                         outAttributes.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
                 }
             }
-            nextHandler.startInputMethod(sinAprendizaje)
+            nextHandler.startInputMethod(noLearning)
         },
         content = content
     )
@@ -110,8 +132,8 @@ private fun NoImeLearning(content: @Composable () -> Unit) {
 @Composable
 fun SecureTextEntry(content: @Composable () -> Unit) {
     val toolbar = LocalTextToolbar.current
-    val sinCopiar = remember(toolbar) { NoCopyTextToolbar(toolbar) }
-    CompositionLocalProvider(LocalTextToolbar provides sinCopiar) {
+    val noCopy = remember(toolbar) { NoCopyTextToolbar(toolbar) }
+    CompositionLocalProvider(LocalTextToolbar provides noCopy) {
         NoImeLearning(content)
     }
 }

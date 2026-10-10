@@ -352,8 +352,10 @@ private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
                 )
             },
             singleLine = true,
-            // Como en la barra real: sin autocorrección, para que el IME no aprenda
-            // ni sugiera después la clave tecleada (RF-14, P-11).
+            // Como en la barra real: sin autocorrección. Que el IME no aprenda la
+            // clave tecleada aquí NO lo consigue esta bandera —solo retira la
+            // autocorrección, medido con `dumpsys input_method`— sino el envoltorio
+            // `SecureTextEntry` de alrededor (RF-14, P-11, H-7/P-94).
             keyboardOptions = KeyboardOptions(
                 autoCorrectEnabled = false,
                 imeAction = ImeAction.Search
