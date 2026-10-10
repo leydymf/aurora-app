@@ -1278,3 +1278,138 @@ para la auditoría, elegidas por ser únicas en el sistema, y ni la clave ni la
 contraseña reales se escribieron nunca en un archivo. La observación sí reveló un
 defecto de redacción, porque el texto permitía esa lectura, y se corrigió
 dejándolo explícito.
+
+---
+
+## 10. Re-verificación en v0.3.1
+
+> **Los resultados de las secciones 1 a 9 no se tocan.** Describen lo que se midió
+> sobre **v0.3.0-trl4** y deben quedar así, incluido el fallo de MASVS-STORAGE-2:
+> es el estado que tenía la aplicación cuando se evaluó. Esta sección registra qué
+> se corrigió después, cómo se verificó y cómo queda el recuento.
+
+Rama `fix/hallazgos-owasp`, cuatro commits, sobre el merge `9da851c`. Se abordan
+**H-2, H-7, H-1 y H-5**; **H-3 y H-4** quedan para antes del piloto, por decisión
+expresa.
+
+### 10.1 H-7 · El relato ya no sale por el portapapeles ni por el teclado
+
+**Qué se cambió.** `core/security/SecureTextField.kt` añade `SecureTextEntry`, un
+envoltorio que aplica dos protecciones a la vez para que no se pueda poner una y
+olvidar la otra: una barra de selección de texto que delega en la del sistema
+pasando `null` en «copiar» y «cortar» —«pegar» y «seleccionar todo» se
+conservan— y `IME_FLAG_NO_PERSONALIZED_LEARNING` sobre el `EditorInfo`, vía
+`InterceptPlatformTextInput`. Se aplica al relato, a los campos de correo y
+**también a las dos barras de búsqueda**.
+
+**Por qué no se usó `autoCorrect = false`, que era el plan inicial.** Porque se
+midió, y no sirve. El `EditorInfo` real, leído con `adb shell dumpsys
+input_method`:
+
+| Campo | `inputType` | `NO_SUGGESTIONS` | `NO_PERSONALIZED_LEARNING` |
+|---|---|---|---|
+| Relato, antes | `0x28001` = TEXT ∣ AUTO_CORRECT ∣ MULTI_LINE | no | no |
+| Barra de búsqueda, con `autoCorrect = false` | `0x1` = TEXT, pelado | no | no |
+
+Es decir: ese parámetro **solo retira** `TYPE_TEXT_FLAG_AUTO_CORRECT`; no añade
+`NO_SUGGESTIONS` ni nada que hable de aprendizaje. En el relato habría costado la
+autocorrección —en un campo de texto largo, donde más molesta— sin proteger nada.
+
+Hallazgo derivado, que conviene anotar: **las dos barras tampoco tenían
+protección mecánica contra el aprendizaje**. El comentario del código afirmaba
+que `autoCorrect = false` «evita que el IME aprenda», y eso no es lo que hace ese
+flag. La comprobación manual de H-6 salió bien, pero no por el motivo que el
+código daba por supuesto. Por eso el arreglo se extendió a las barras.
+
+**Verificación.** `EditorInfo` antes y después, sobre el emulador:
+
+| Campo | `imeOptions` antes | después | delta |
+|---|---|---|---|
+| Relato | `0x42000000` | `0x43000000` | `0x01000000` = el flag, y nada más |
+| Barra de la fachada | `0x2000003` | `0x3000003` | igual |
+
+El `inputType` del relato no cambia (`0x28001`): **la autocorrección se conserva**.
+
+`SensitiveFieldsGuardTest`, cinco casos, fija que ningún campo editable se cree
+fuera del kit salvo las dos barras exentas, que todo campo del kit que no
+enmascare esté envuelto, que el envoltorio conserve las dos protecciones y
+«pegar», y que viva en un único archivo. Barre 101 archivos de interfaz y
+encuentra los 3 que tienen campos: no pasa en vacío.
+
+**Lo que falta, y solo puede hacerlo una persona:** confirmar en pantalla que el
+menú de selección del relato ya no ofrece «copiar» ni «cortar» y sí «pegar».
+
+### 10.2 H-2 · La caída al salir con texto
+
+BOM de Compose de `2024.04.01` a `2025.02.00`, que lleva foundation y ui a
+**1.7.8**. Se verificó contra los fuentes de Maven en qué versión entró el
+arreglo: 1.7.2 y 1.7.3 no tienen las comprobaciones de nulidad, **1.7.4 en
+adelante sí**. Se elige 1.7.8, la última de la línea 1.7.x, para no abrir el
+frente de Kotlin 2.0 que obligaría 1.8.x.
+
+**Verificación:** la prueba que fallaba 6 de 9 veces se repitió **10 veces en la
+barra de la fachada y 10 en el campo del relato**: **0 caídas en las veinte**.
+
+### 10.3 H-1 · Vocabulario propio en el DEX
+
+`SecretCodeChecks` → `CodeChecks`, y el mensaje de `SecureNavigation.kt` pasa a
+uno sin nombres propios. Sobre el DEX del release reconstruido: «SecretCodeChecks»
+0 ocurrencias (antes 1), «LocalSessionManager» 0 (antes 1).
+
+**Guardián nuevo:** la tarea de Gradle `verificarCamuflajeDex`, encadenada a
+`assembleRelease`, de modo que entra sola en el comando de verificación habitual.
+No se amplió `CamouflageResourcesTest` como se había planteado: el APK release
+puede no existir cuando corren las pruebas de JVM, y un guardián que se salta en
+silencio es peor que ninguno.
+
+Juzga solo las cadenas **atribuibles a Aurora** —352 de las 89 479 del DEX: las
+que llevan la ruta del paquete o tienen la forma `Nombre(campo=` de un `toString()`
+generado—, porque las librerías usan «secret», «panic» o «hidden» con naturalidad
+y eso no dice nada del camuflaje. Lleva una línea base de **8 cadenas aceptadas
+con motivo y pendiente**, todas de P-78: su trabajo es impedir que el problema
+crezca, no fingir que no existe.
+
+Prueba negativa comprobada: la cadena original `SecretCodeChecks(hasMinLength=`
+habría hecho fallar el guardián.
+
+### 10.4 H-5 · Configuración de seguridad de red
+
+`res/xml/network_security_config.xml` con `cleartextTrafficPermitted="false"` y
+confianza solo en el almacén del sistema, declarado en el manifiesto y fijado por
+dos casos nuevos de `ManifestMinimizationTest`. Lo segundo no es rutina: en el
+modelo de amenaza de Aurora se asume acceso físico al teléfono, y una autoridad
+certificadora instalada a mano habría permitido leer el tráfico.
+
+Verificado sobre el APK release decodificado: el manifiesto fusionado lleva el
+atributo y el archivo viaja empaquetado. Y comprobado que la red sigue
+funcionando: la búsqueda de «Bucaramanga» devuelve resultados reales de
+Open-Meteo, con 0 errores de TLS en el registro.
+
+*Nota, porque ilustra que los guardianes del proyecto funcionan:* la primera
+versión de ese archivo fue rechazada por `CamouflageResourcesTest`, que detectó
+un término vedado en un comentario que había escrito la propia corrección.
+
+### 10.5 Recuento tras las correcciones
+
+| Resultado | v0.3.0 (medido) | v0.3.1 (tras corregir) |
+|---|---|---|
+| **Pasa** | 7 | **9** — entran STORAGE-2 y PLATFORM-3 |
+| **Pasa con observación** | 9 | **8** |
+| **Falla** | **1** (STORAGE-2) | **0** |
+| **No aplica** | 3 | 3 |
+
+Dos observaciones se reducen sin desaparecer: **MASVS-NETWORK-1** pierde la de la
+configuración implícita pero conserva la de P-12, y **MASVS-CODE-3** pierde el
+defecto concreto de Compose pero mantiene que 1.7.8 sigue por detrás de la línea
+estable actual y que PdfBox-Android continúa sin mantenimiento.
+
+**El 0 en «Falla» está pendiente de una comprobación manual**: la del menú de
+selección del relato (§10.1). Todo lo demás de esta sección se verificó con
+medición sobre el dispositivo o sobre el artefacto.
+
+### 10.6 Estado de la suite
+
+798 pruebas de JVM por variante, 0 fallos; 45 instrumentadas sobre el emulador B,
+0 fallos; ktlint sin violaciones; `assembleDebug` y `assembleRelease` en verde,
+este último con el guardián del DEX pasando.
+

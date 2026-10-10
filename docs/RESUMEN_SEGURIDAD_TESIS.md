@@ -175,3 +175,45 @@ Esa coincidencia entre lo que el equipo ya sabía sobre sus propios riesgos de
 datos y lo que una verificación sistemática encuentra es, en sí misma, un
 resultado: indica que el seguimiento de riesgos que se llevó durante el
 desarrollo fue acertado, y señala con precisión dónde ese seguimiento no llegaba.
+
+## Re-verificación en la versión siguiente (v0.3.1)
+
+Lo que se cuenta arriba es lo que se midió sobre la versión v0.3.0, y así debe
+leerse: es el estado que la aplicación tenía cuando se evaluó. Después se
+corrigieron cuatro de los siete hallazgos, y conviene dejar constancia de ello
+porque cambia el resultado final.
+
+**Se corrigió el hallazgo de gravedad alta.** El campo donde se escribe el relato
+ya no ofrece «copiar» ni «cortar» en su menú de texto —«pegar» se conserva,
+porque hace falta— y además le pide al teclado que no memorice lo que se escribe
+en él. Lo segundo se extendió también a los campos de correo y a la barra donde
+se teclea la clave de acceso.
+
+Ese segundo punto merece una nota, porque salió de una objeción bien puesta. El
+plan inicial era desactivar la corrección automática en el campo del relato, dando
+por hecho que eso impedía que el teclado aprendiera. Se midió qué le declara
+realmente la aplicación al teclado y resultó que no: desactivar la corrección solo
+quita la corrección, no dice nada sobre memorizar. Habría costado escribir sin
+autocorrección un texto largo y difícil, a cambio de nada. La solución que se
+aplicó usa la marca que el sistema define exactamente para no memorizar, y deja
+la autocorrección intacta. De paso se descubrió que la barra donde se teclea la
+clave tampoco tenía esa protección, pese a que un comentario del código afirmaba
+que sí.
+
+**Se corrigieron también los otros tres previstos:** la caída de la aplicación
+—se actualizó la librería de Google que la causaba y la prueba que fallaba seis
+de cada nueve veces pasó veinte veces seguidas sin caer—, los nombres internos que
+sobrevivían a la ofuscación —renombrados, y con una comprobación automática nueva
+que revisa el archivo instalable en cada compilación—, y la configuración de red,
+que ahora es explícita en vez de depender de un valor por defecto.
+
+**Quedan dos**, los dos de preparación para el despliegue: firmar el instalable
+con una clave propia y revisar dos componentes que arrastra la librería de
+autenticación. Se abordan antes del piloto.
+
+Con eso, el recuento pasa de diecinueve controles cumplidos y uno fallido, a
+**veinte cumplidos y ninguno fallido**: nueve sin salvedades, ocho con alguna
+observación anotada y tres que no aplican. Queda una sola comprobación por hacer
+a mano, la del menú de texto del relato, porque es de las que ningún método
+automático puede verificar.
+
