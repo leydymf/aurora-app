@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
+import com.auroraclima.app.core.security.SecureTextEntry
 import com.auroraclima.app.core.ui.components.BrandHeader
 import com.auroraclima.app.core.ui.v2.AccentPair
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
@@ -335,38 +336,40 @@ private fun PracticeContent(input: String, status: PracticeStatus, onInputChange
  */
 @Composable
 private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(width = 1.dp, color = V2Palette.controlOutline, shape = V2Corner.pill),
-        textStyle = InteriorTypeVoice.body.copy(color = V2Palette.inkPrimary),
-        leadingIcon = {
-            Icon(
-                painter = painterResource(R.drawable.ic_weather_search),
-                contentDescription = null,
-                tint = V2Palette.inkSecondary
+    SecureTextEntry {
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(width = 1.dp, color = V2Palette.controlOutline, shape = V2Corner.pill),
+            textStyle = InteriorTypeVoice.body.copy(color = V2Palette.inkPrimary),
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_weather_search),
+                    contentDescription = null,
+                    tint = V2Palette.inkSecondary
+                )
+            },
+            singleLine = true,
+            // Como en la barra real: sin autocorrección, para que el IME no aprenda
+            // ni sugiera después la clave tecleada (RF-14, P-11).
+            keyboardOptions = KeyboardOptions(
+                autoCorrectEnabled = false,
+                imeAction = ImeAction.Search
+            ),
+            shape = V2Corner.pill,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = V2Palette.cardSurface,
+                unfocusedContainerColor = V2Palette.cardSurface,
+                focusedTextColor = V2Palette.inkPrimary,
+                unfocusedTextColor = V2Palette.inkPrimary,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = V2Palette.inkPrimary
             )
-        },
-        singleLine = true,
-        // Como en la barra real: sin autocorrección, para que el IME no aprenda
-        // ni sugiera después la clave tecleada (RF-14, P-11).
-        keyboardOptions = KeyboardOptions(
-            autoCorrect = false,
-            imeAction = ImeAction.Search
-        ),
-        shape = V2Corner.pill,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = V2Palette.cardSurface,
-            unfocusedContainerColor = V2Palette.cardSurface,
-            focusedTextColor = V2Palette.inkPrimary,
-            unfocusedTextColor = V2Palette.inkPrimary,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = V2Palette.inkPrimary
         )
-    )
+    }
 }
 
 /** Ingreso de práctica logrado: visto en el verde de «listo» (regla 1). */

@@ -1,0 +1,117 @@
+package com.auroraclima.app.core.security
+
+import android.view.inputmethod.EditorInfo
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.InterceptPlatformTextInput
+import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.PlatformTextInputMethodRequest
+import androidx.compose.ui.platform.TextToolbar
+import androidx.compose.ui.platform.TextToolbarStatus
+
+/**
+ * Protecciones de los campos de texto del espacio interno (hallazgo H-7 de la
+ * evaluación OWASP, P-94). Van juntas porque cierran las dos vías por las que el
+ * contenido de un campo puede salir de la app sin que la app lo envíe:
+ *
+ *  1. el PORTAPAPELES, si la usuaria copia a mano desde el campo, y
+ *  2. el DICCIONARIO DEL TECLADO, si el IME aprende lo que se escribe y lo
+ *     sugiere después en otra aplicación.
+ *
+ * Los campos de contraseña ya estaban cubiertos por `KeyboardType.Password`, que
+ * hace las dos cosas de un golpe. El problema son los campos que la usuaria tiene
+ * que LEER mientras escribe —el relato de un registro, el correo—, donde enmascarar
+ * no es opción. Para esos está este archivo.
+ *
+ * Vive en `core/security` por la misma razón que [SecureDialog]: es una política de
+ * seguridad, no un detalle visual, y conviene que esté en un solo sitio auditable.
+ */
+
+/**
+ * Barra de selección de texto SIN «copiar» ni «cortar». «Pegar» y «seleccionar
+ * todo» se conservan: la usuaria necesita poder pegar en el relato, y seleccionar
+ * sin poder copiar no saca nada de la app.
+ *
+ * Compose dibuja el menú flotante a partir de las devoluciones de llamada que
+ * recibe: pasar `null` en una de ellas hace desaparecer esa opción. Por eso basta
+ * con delegar en la barra real anulando dos.
+ *
+ * Límite conocido, declarado en el informe: esto quita las opciones del menú, no
+ * intercepta un Ctrl+C de un teclado físico. En el teléfono del piloto no aplica.
+ */
+private class NoCopyTextToolbar(private val delegate: TextToolbar) : TextToolbar {
+    override val status: TextToolbarStatus get() = delegate.status
+
+    override fun hide() = delegate.hide()
+
+    override fun showMenu(
+        rect: Rect,
+        onCopyRequested: (() -> Unit)?,
+        onPasteRequested: (() -> Unit)?,
+        onCutRequested: (() -> Unit)?,
+        onSelectAllRequested: (() -> Unit)?
+    ) = delegate.showMenu(
+        rect = rect,
+        onCopyRequested = null,
+        onPasteRequested = onPasteRequested,
+        onCutRequested = null,
+        onSelectAllRequested = onSelectAllRequested
+    )
+}
+
+/**
+ * Añade [EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING] a lo que el campo le declara
+ * al teclado, para que el IME no incorpore a su diccionario personal lo que se
+ * escriba dentro.
+ *
+ * Por qué así y no con `autoCorrect = false`, que era lo primero que se intentó:
+ * se midió el `EditorInfo` real con `adb shell dumpsys input_method` y
+ * `autoCorrect = false` solo RETIRA `TYPE_TEXT_FLAG_AUTO_CORRECT` — no añade
+ * `TYPE_TEXT_FLAG_NO_SUGGESTIONS` ni nada que hable de aprendizaje. La barra de
+ * búsqueda, que lo usa, enviaba `inputType=0x1` pelado. Es decir: costaba la
+ * autocorrección y no protegía. El flag que Android define para esto es el de
+ * aquí, y Compose no lo expone en `KeyboardOptions`; la vía es interceptar el
+ * `EditorInfo` antes de que llegue al teclado, que es lo que permite
+ * [InterceptPlatformTextInput] desde Compose 1.7.
+ *
+ * La API es experimental y por eso se usa en un único sitio: si cambia, cambia
+ * aquí. `SensitiveFieldsGuardTest` vigila que los campos sensibles sigan pasando
+ * por este envoltorio.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun NoImeLearning(content: @Composable () -> Unit) {
+    InterceptPlatformTextInput(
+        interceptor = { request, nextHandler ->
+            val sinAprendizaje = PlatformTextInputMethodRequest { outAttributes ->
+                request.createInputConnection(outAttributes).also {
+                    outAttributes.imeOptions =
+                        outAttributes.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+                }
+            }
+            nextHandler.startInputMethod(sinAprendizaje)
+        },
+        content = content
+    )
+}
+
+/**
+ * Envoltorio único para los campos de texto del espacio interno que NO son de
+ * contraseña. Aplica las dos protecciones a la vez, para que no se pueda poner una
+ * y olvidar la otra.
+ *
+ * Toda pantalla interna con un campo editable debe usar un campo del kit de
+ * `core/ui/v2`, y todo campo del kit que no enmascare su contenido debe estar
+ * envuelto aquí. Lo fija `SensitiveFieldsGuardTest`.
+ */
+@Composable
+fun SecureTextEntry(content: @Composable () -> Unit) {
+    val toolbar = LocalTextToolbar.current
+    val sinCopiar = remember(toolbar) { NoCopyTextToolbar(toolbar) }
+    CompositionLocalProvider(LocalTextToolbar provides sinCopiar) {
+        NoImeLearning(content)
+    }
+}

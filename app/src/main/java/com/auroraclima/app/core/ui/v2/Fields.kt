@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.SecureTextEntry
 
 /**
  * Kit de formulario del sistema V2 (mockups v2-06/07/09): campo blanco con
@@ -53,7 +54,14 @@ fun V2FieldLabel(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Campo de una línea sin enmascarar (correo, textos cortos). */
+/**
+ * Campo de una línea sin enmascarar (correo, textos cortos).
+ *
+ * Envuelto en [SecureTextEntry] (H-7, P-94): al no enmascarar, no hereda las
+ * protecciones que `KeyboardType.Password` da a [V2SecretField], así que el menú
+ * de selección ofrecería «copiar» y el teclado aprendería lo escrito. Aquí eso
+ * alcanza al correo, que identifica la cuenta.
+ */
 @Composable
 fun V2PlainField(
     value: String,
@@ -62,7 +70,7 @@ fun V2PlainField(
     isError: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions()
-) {
+) = SecureTextEntry {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -81,6 +89,12 @@ fun V2PlainField(
  * Campo de párrafo (texto libre de una anotación, v2-21): mismos colores que el
  * resto del kit, placeholder en tinta secundaria, varias líneas y sin acción de
  * teclado — el salto de línea es escribir.
+ *
+ * Envuelto en [SecureTextEntry] (H-7, P-94). Es el campo que contiene el dato más
+ * sensible de la app y el único que no puede enmascararse, porque la usuaria tiene
+ * que releer lo que escribe. La autocorrección se conserva a propósito: escribir
+ * un relato largo sin ella es peor, y quitarla no habría protegido nada (ver la
+ * medición del EditorInfo en el comentario de SecureTextEntry).
  */
 @Composable
 fun V2ParagraphField(
@@ -89,7 +103,7 @@ fun V2ParagraphField(
     placeholder: String,
     modifier: Modifier = Modifier,
     isError: Boolean = false
-) {
+) = SecureTextEntry {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
