@@ -1,0 +1,197 @@
+EV-12 — Salidas crudas de los comandos dinámicos
+Respaldo literal de las comprobaciones que el informe cita en MASVS-STORAGE-2
+y MASVS-PLATFORM-3. Se añadió a petición de la auditoría interna, que señaló
+que esas afirmaciones se enunciaban sin el artefacto que las producía.
+Emulador A (emulator-5554). Los bloques [1], [1·bis], [2] y [3] son corridas
+contra el dispositivo y llevan su fecha; los bloques [4], [5] y [6] son
+búsquedas estáticas sobre el código fuente del commit 16ce199 y no dependen de
+la jornada.
+======================================================================
+
+[1] RESPALDOS — MASTG-TEST-0009 / 0216        (corrida del 2026-10-10)
+
+$ adb shell bmgr enabled
+Backup Manager currently disabled
+
+   Para poder forzar un respaldo real se habilitó temporalmente el gestor y
+   se seleccionó el transporte local; al terminar se restauró el estado
+   original (deshabilitado, transporte de GMS). Ambos pasos se muestran.
+
+$ adb shell bmgr enable true
+Backup Manager now enabled
+$ adb shell bmgr transport com.android.localtransport/.LocalTransport
+Selected transport com.android.localtransport/.LocalTransport (formerly com.google.android.gms/.backup.BackupTransportService)
+$ adb shell bmgr backupnow com.auroraclima.app        (dos veces seguidas)
+Running incremental backup for 1 requested packages.
+Package com.auroraclima.app with result: Backup is not allowed
+Backup finished with result: Success
+Running incremental backup for 1 requested packages.
+Package com.auroraclima.app with result: Backup is not allowed
+Backup finished with result: Success
+
+   <<< «Backup is not allowed» es la respuesta del propio sistema: no es que
+       el respaldo falle, es que el gestor se niega a intentarlo por la
+       declaración del manifiesto. >>>
+
+$ adb shell bmgr transport com.google.android.gms/.backup.BackupTransportService
+Selected transport com.google.android.gms/.backup.BackupTransportService (formerly com.android.localtransport/.LocalTransport)
+$ adb shell bmgr enable false
+Backup Manager now disabled
+$ adb shell bmgr enabled
+Backup Manager currently disabled
+
+   NOTA DE CRONOLOGÍA. Una primera ejecución de este bloque, el 2026-10-09,
+   devolvió «Package not found» en lugar de la respuesta de arriba: en ese
+   momento la app no estaba instalada, porque la corrida de pruebas
+   instrumentadas de ese mismo día la había desinstalado al terminar (ver
+   EV-05). Tras reinstalarla el 2026-10-10, el resultado es el de arriba y
+   es estable entre corridas.
+
+[1·bis] EVENTOS DEL MONITOR DE RESPALDO — historial COMPLETO
+
+   El volcado de dumpsys backup lista cada evento seguido, en la línea
+   SIGUIENTE e indentada, del paquete al que corresponde. Así se ve, en crudo
+   (últimas ocho líneas del bloque):
+
+      [2026-10-09 09:25:25.118] - Invoked restore at install
+      	Package: com.auroraclima.app.test
+      [2026-10-09 09:25:25.118] - Skip restore at install
+      	Package: com.auroraclima.app.test
+      [2026-10-10 09:11:36.916] - Invoked restore at install
+      	Package: com.auroraclima.app
+      [2026-10-10 09:11:36.916] - Skip restore at install
+      	Package: com.auroraclima.app
+
+   Ese es el formato que permite el emparejamiento. El comando con el que se
+   hizo, sobre la salida completa del bloque:
+
+      adb shell dumpsys backup \
+        | sed -n '/BACKUP MANAGER MONITOR EVENTS/,/END OF BACKUP/p' \
+        | python3 - <<'FIN'
+import sys, re, collections
+ev = None; pares = []
+for l in sys.stdin:
+    m = re.match(r"\[([\d\- :.]+)\] - (.+)", l.strip())
+    if m: ev = (m.group(1), m.group(2)); continue
+    m2 = re.match(r"Package: (\S+)", l.strip())
+    if m2 and ev: pares.append((ev[0], ev[1], m2.group(1))); ev = None
+aur = [p for p in pares if p[2] == "com.auroraclima.app"]
+print(len(pares), len(aur), collections.Counter(e for _, e, _ in aur))
+FIN
+
+   Resultado sobre los 80 eventos del monitor:
+
+      eventos totales del monitor ........... 80
+      de com.auroraclima.app ................ 42
+      de com.auroraclima.app.test (APK de pruebas) ... 38
+
+      Desglose de com.auroraclima.app:
+         Invoked restore at install       21
+         Skip restore at install          21
+
+      Es decir: 21 instalaciones registradas y 21 «Skip restore at install»,
+      correspondencia 1 a 1. Primeras y últimas, con su marca de tiempo:
+         [2026-08-13 06:31:10.170] Invoked restore at install
+         [2026-08-13 06:31:10.185] Skip restore at install
+         [2026-10-10 09:11:36.916] Invoked restore at install
+         [2026-10-10 09:11:36.916] Skip restore at install
+
+[2] BANDERAS DE LA VENTANA DE LA FACHADA — MASVS-PLATFORM-3   (2026-10-10)
+
+$ adb shell dumpsys window windows      (bloque de com.auroraclima.app)
+   mOwnerUid=10209 showForAllUsers=false package=com.auroraclima.app appop=NONE
+   mAttrs={(0,0)(fillxfill) sim={adjust=pan forwardNavigation} layoutInDisplayCutoutMode=always ty=BASE_APPLICATION wanim=0x1030309
+   fl=LAYOUT_IN_SCREEN LAYOUT_INSET_DECOR SPLIT_TOUCH HARDWARE_ACCELERATED DRAWS_SYSTEM_BAR_BACKGROUNDS
+   pfl=NO_MOVE_ANIMATION EDGE_TO_EDGE_ENFORCED FORCE_DRAW_STATUS_BAR_BACKGROUND FIT_INSETS_CONTROLLED
+
+   La lista 'fl=' NO contiene SECURE: la fachada es capturable, como debe
+   ser (una app de clima que no se dejara fotografiar sería un distinguidor).
+
+   Nota sobre el UID: aquí aparece mOwnerUid=10209, mientras que EV-11 [2]
+   registra uid=10207 en el mismo emulador. No es un error: Android asigna un
+   UID nuevo en cada instalación, y entre una evidencia y otra la app se
+   desinstaló y se reinstaló (EV-05). El cambio de 10207 a 10209 corrobora esa
+   cronología de forma independiente.
+   El volcado equivalente DENTRO del espacio interno, donde SECURE sí
+   aparece, está en EV-13 [1].
+
+[3] PORTAPAPELES — MASWE-0030                               (2026-10-10)
+
+   La evidencia SÓLIDA de este control es estática: la app no usa el
+   portapapeles en ninguna parte.
+
+$ grep -rnE 'ClipboardManager|ClipData|setPrimaryClip|LocalClipboardManager' --include='*.kt' app/src/main
+   [sin resultados: cero ocurrencias en todo el código de la app]
+
+   Lo dinámico NO se pudo establecer, y conviene dejarlo claro porque una
+   primera versión de esta evidencia lo interpretó mal:
+
+   · «adb shell dumpsys clipboard» devuelve SALIDA VACÍA con código 0. No hay
+     forma de saber si eso significa «el portapapeles está vacío» o «este dump
+     no imprime nada en este build»: no existe «cmd clipboard» («No shell
+     command implementation») para poner un valor de control y comparar.
+
+   · «adb shell service call clipboard 1» NO LEE el portapapeles. La
+     transacción 1 de IClipboard en API 35 es setPrimaryClip, es decir una
+     ESCRITURA. El Parcel que devuelve empieza con 0xfffffffd (= -3,
+     EX_ILLEGAL_ARGUMENT) y la cadena «No items», y a continuación trae 912
+     bytes de traza que lo delatan:
+
+        at com.android.server.clipboard.ClipboardService$ClipboardImpl
+             .checkAndSetPrimaryClip(ClipboardService.java:584)
+        at com.android.server.clipboard.ClipboardService$ClipboardImpl
+             .setPrimaryClip(ClipboardService.java:513)
+        at android.content.IClipboard$Stub.onTransact(IClipboard.java:191)
+
+     «No items» es el mensaje de la IllegalArgumentException que lanza el
+     servicio porque el ClipData que la propia sonda le pasó venía vacío. No
+     dice NADA sobre el contenido del portapapeles.
+
+   Conclusión que sí se sostiene: Aurora nunca escribe en el portapapeles
+   (grep de arriba), y los campos de clave y contraseña usan
+   PasswordVisualTransformation, que desactiva «copiar» en la barra de
+   selección. Lo que queda sin medir es si la usuaria, copiando a mano desde
+   el campo de relato, deja el texto expuesto; está declarado como observación
+   en el informe y como limitación 4.3.4.
+
+[4] OPCIONES DE TECLADO DE LOS CAMPOS — MASTG-TEST-0006 / 0258
+
+$ grep -rn 'autoCorrect' --include='*.kt' app/src/main
+   access/ui/TutorialScreen.kt:356:            autoCorrect = false,
+   weather/ui/WeatherScreen.kt:253:            autoCorrect = false,
+
+$ grep -nE 'KeyboardType\.Password|PasswordVisualTransformation' core/ui/v2/Fields.kt
+   25:import androidx.compose.ui.text.input.PasswordVisualTransformation
+   137:            PasswordVisualTransformation()
+   151:            keyboardType = KeyboardType.Password,
+
+$ grep -rn 'PlatformImeOptions' --include='*.kt' app/src/main
+   [sin resultados: IME_FLAG_NO_PERSONALIZED_LEARNING no se usa — residual P-11]
+
+[5] NOTIFICACIONES — MASTG-TEST-0315 / 0005
+$ grep -rnE 'NotificationManager|NotificationCompat|createNotificationChannel' --include='*.kt' app/src/main
+   [sin resultados: la app no emite notificaciones]
+
+[6] GRAFO SEGURO — toda ruta interna pasa por secureGraph
+$ grep -rn 'secureGraph' --include='*.kt' app/src/main
+   AuroraApp.kt:45:import com.auroraclima.app.core.security.secureGraph
+   AuroraApp.kt:91:            secureGraph(route = INNER_ROUTE, startDestination = INTRO_ROUTE) {
+   AuroraApp.kt:388:        secureGraphRoute = INNER_ROUTE,
+   AuroraApp.kt:398:        secureGraphRoute = INNER_ROUTE,
+   core/security/SecureNavigation.kt:54:fun NavGraphBuilder.secureGraph(route: String, startDestination: String, builder: SecureGraphScope.() -> Unit) {
+   core/security/SecureNavigation.kt:68: * Ámbito de declaración de rutas dentro de [secureGraph].
+   core/security/SecureNavigation.kt:89: * directamente, solo [secureGraph].
+   core/security/SessionGuard.kt:27:    secureGraphRoute: String,
+   core/security/SessionGuard.kt:30:    SyncSessionWithDestination(navController, sessionManager, secureGraphRoute)
+   core/security/SessionGuard.kt:31:    PopToFacadeOnSessionClose(navController, sessionManager, secureGraphRoute, facadeRoute)
+   core/security/SessionGuard.kt:49:    secureGraphRoute: String
+   core/security/SessionGuard.kt:54:            val insideSecureGraph = destination.hierarchy.any { it.route == secureGraphRoute }
+   core/security/SessionGuard.kt:70:    secureGraphRoute: String,
+   core/security/SessionGuard.kt:75:            navController.exitSecureGraph(secureGraphRoute, facadeRoute)
+   core/security/SecureBackStackGuard.kt:31:    secureGraphRoute: String,
+   core/security/SecureBackStackGuard.kt:45:            navController.exitSecureGraph(secureGraphRoute, facadeRoute)
+   core/security/SecureBackStackGuard.kt:52:            if (!suppressStopPop()) navController.exitSecureGraph(secureGraphRoute, facadeRoute)
+   core/security/SecureBackStackGuard.kt:58:internal fun NavController.exitSecureGraph(secureGraphRoute: String, facadeRoute: String) {
+   core/security/SecureBackStackGuard.kt:59:    val insideSecureGraph = currentDestination?.hierarchy?.any { it.route == secureGraphRoute } == true
+   Vigilado por NoTracesGuardTest; FLAG_SECURE se aplica en SecureScreen,
+   que es private: ninguna pantalla interna puede registrarse fuera del grafo.

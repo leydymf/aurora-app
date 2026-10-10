@@ -1,0 +1,112 @@
+EV-11 — Plataforma, privacidad y validación de entradas (análisis estático y sondeo)
+MASVS-PLATFORM-1/2 · MASVS-PRIVACY-1/2/3/4 · MASVS-CODE-4
+MASTG-TEST-0007, 0029, 0031-0033, 0037, 0355, 0357, 0364-0366, 0374, 0024, 0254, 0255, 0318, 0002, 0025, 0337, 0339
+Capturado el 2026-10-08.
+======================================================================
+
+[1] COMPONENTES EXPORTADOS: SONDEO REAL DESDE adb  (MASTG-TEST-0364/0366)
+   Propios de Aurora: UNO (MainActivity, exportada porque es el lanzador).
+   No recibe ningún dato: no declara ni esquemas ni extras, y abre siempre la
+   fachada. Lanzarla desde fuera es equivalente a tocar el icono.
+
+   Las otras cuatro exportadas vienen de librerías de Google (ver EV-02):
+      RevocationBoundService      protegido por permiso de GMS
+      ProfileInstallReceiver      protegido por android.permission.DUMP
+      GenericIdpActivity          firebase-auth, esquema genericidp://
+      RecaptchaActivity           firebase-auth, esquema recaptcha://
+
+   Sondeo ejecutado contra las dos últimas, que sí son alcanzables por
+   cualquier app o página web (filtro BROWSABLE):
+      adb shell am start -a android.intent.action.VIEW -d genericidp://firebase.auth/
+      adb shell am start -a android.intent.action.VIEW -d recaptcha://firebase.auth/
+   Resultado en ambos casos: la actividad en primer plano siguió siendo
+   com.auroraclima.app/.MainActivity, el proceso siguió vivo y no se registró
+   ninguna excepción. Terminan de inmediato porque no hay flujo de
+   autenticación federada en curso (Aurora solo usa correo y contraseña).
+
+[2] FILEPROVIDER  (MASTG-TEST-0357)
+   adb shell content read  --uri content://com.auroraclima.app.files/d/prueba.pdf
+   adb shell content query --uri content://com.auroraclima.app.files/
+   -> java.lang.SecurityException: Permission Denial: opening provider
+      androidx.core.content.FileProvider from (null) (uid=2000) that is not
+      exported from UID 10207
+   Solo se alcanza con el permiso puntual por URI que concede cada intent, y
+   solo expone dos carpetas temporales de la caché (media_pending/, doc_out/),
+   nunca el almacén cifrado. ManifestMinimizationTest fija exactamente esas dos.
+
+[3] INTENTS QUE LANZA LA APP  (MASTG-TEST-0374, que MASTG clasifica en
+    MASVS-CODE: «References to Implicit Intents Carrying Sensitive Extras»)
+   ACTION_DIAL con Uri «tel:<número>»  — content/ui/ContentElements.kt:30 y
+      questionnaire/ui/GuidanceScreen.kt:788. El número sale del contenido
+      PÚBLICO (entidades y líneas), no de datos de la usuaria. No marca solo
+      y no exige el permiso CALL_PHONE. Residual conocido: el número queda
+      pre-marcado y visible en el marcador y en su miniatura de recientes,
+      fuera del alcance de FLAG_SECURE (P-26, ya advertido en la propia UI).
+   ACTION_SEND del PDF — records/ui/JournalExportScreen.kt:110. Lleva como
+      único extra EXTRA_STREAM con una URI del FileProvider y la bandera
+      FLAG_GRANT_READ_URI_PERMISSION; el destino lo elige la usuaria en el
+      selector del sistema y el archivo va cifrado con AES-256 (EV-06 [7]).
+      No viaja ningún texto del registro en los extras.
+   Contratos del sistema sin permisos: CreateDocument, OpenDocument,
+      PickVisualMedia y TakePicture (este último con EXTRA_OUTPUT hacia el
+      FileProvider). Ninguno exige CAMERA ni permisos de almacenamiento.
+
+[4] WEBVIEWS  (MASVS-PLATFORM-2 — MASTG-TEST-0031/0032/0033/0037)
+   Código de Aurora: 0 ocurrencias de WebView, WebSettings, loadUrl o
+   addJavascriptInterface. NO APLICA.
+   En el DEX del release hay 3 referencias a android.webkit.WebView y 1 a
+   addJavascriptInterface, todas dentro de com.google.android.recaptcha
+   (verificado en el código descompilado: .../recaptcha/internal/zzil.java),
+   que entra como dependencia de firebase-auth. Es un WebView de Google que
+   Aurora no configura ni alimenta.
+
+[5] PERMISOS Y MINIMIZACIÓN  (MASVS-PRIVACY-1 — MASTG-TEST-0024/0254/0255)
+   Permisos del manifiesto fusionado del release: CUATRO, ninguno peligroso.
+      android.permission.INTERNET                      normal
+      android.permission.ACCESS_NETWORK_STATE          normal
+      com.google.android.providers.gsf…READ_GSERVICES  de GMS
+      com.auroraclima.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION  firma
+   Permisos PELIGROSOS declarados: CERO. Sin CAMERA (la cámara se usa por
+   intent al sistema), sin almacenamiento (SAF y selector de fotos), sin
+   ubicación (el clima se busca por nombre de ciudad), sin contactos, sin
+   micrófono, sin notificaciones. Los dos primeros son exactamente los que
+   una app de clima necesita: no hay ninguno que delate el propósito real.
+
+[6] TERCEROS Y TELEMETRÍA  (MASVS-PRIVACY-1/2 — MASTG-TEST-0318, 0004)
+   En el DEX del release no hay Crashlytics, Analytics, Ads, ni ningún SDK de
+   medición. Las únicas librerías que ven datos son Firebase Auth (correo y
+   contraseña, necesarios para la cuenta) y Firestore (ciphertext).
+   Identificadores: la app no lee el ID de publicidad, ni ANDROID_ID, ni IMEI.
+   Las referencias internas se generan con SecureRandomOpaqueIds (16 B).
+
+[7] CONTROL DE LA USUARIA SOBRE SUS DATOS  (MASVS-PRIVACY-3/4)
+   Transparencia: ConsentScreen (RF-17/RF-18) antes de crear la cuenta y
+   PrivacyScreen accesible desde Configuración, con la referencia a la Ley
+   1581. Ambas con textos redactados para no delatar el propósito.
+   Control efectivo, cada uno con prueba automática verde hoy (EV-05):
+      editar y eliminar un registro .......... RF-35/36
+      descartar el resultado del cuestionario  RF-31 (guardado opt-in)
+      cambiar la clave personal y la contraseña RF-09
+      exportar todo a PDF cifrado ............ RF-45 (portabilidad)
+      ELIMINAR la cuenta completa ............ RF-20, con re-autenticación,
+         purga remota confirmada por el servidor, borrado criptográfico de
+         las llaves del Keystore y marca durable para reanudar si el proceso
+         muere a medio camino
+
+[8] VALIDACIÓN DE ENTRADAS  (MASVS-CODE-4 — MASTG-TEST-0002/0025/0339)
+   SQL: todas las consultas son @Query de Room con parámetros ligados (:owner,
+      :id, :ref…). CERO @RawQuery, CERO SupportSQLiteQuery, CERO rawQuery.
+      Las dos únicas interpolaciones en una @Query usan $SINGLE_ROW_ID, que es
+      un «const val Int = 0» de Kotlin resuelto en tiempo de COMPILACIÓN, no
+      una entrada. execSQL solo aparece en las migraciones, con DDL literal.
+      No hay ContentProvider propio que exponga consultas: NO APLICA 0339.
+   Deserialización: kotlinx.serialization con Json { ignoreUnknownKeys = true }
+      sobre DTO con tipos fijos; no hay Serializable/ObjectInputStream de Java
+      ni deserialización polimórfica abierta (MASTG-TEST-0337: sin hallazgos).
+   Documentos de Firestore: parsing tolerante con validación de forma
+      (ContentDocumentParsingTest, QuestionnaireDocumentParsingTest: 9 y varios
+      casos) — un documento malformado degrada, no rompe.
+   Archivos adjuntos: AttachmentPolicy (6 pruebas) limita tipo, tamaño y
+      número; ImageImporter recodifica la imagen, lo que elimina los metadatos
+      EXIF (incluido GPS) y cualquier carga útil escondida en el contenedor
+      original (ImageImporterTest 5 + ImageImporterRejectionTest instrumentada).

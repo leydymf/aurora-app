@@ -1,0 +1,104 @@
+EV-00 — Versión vigente del estándar OWASP MAS (consulta del 2026-10-08)
+Respaldo de la §1 del informe, que fija la base normativa de toda la evaluación.
+======================================================================
+
+[1] MASVS — https://api.github.com/repos/OWASP/masvs/releases
+   v2.1.0     publicado 2024-01-18   v2.1.0
+   v2.0.0     publicado 2023-04-01   v2.0.0
+   v1.5.0     publicado 2023-01-31   v1.5.0
+   v1.4.2     publicado 2022-01-20   v1.4.2
+   v1.4.1     publicado 2022-01-19   v1.4.1
+   v1.4.0     publicado 2021-12-14   v1.4.0
+   -> La más reciente es v2.1.0 (18-ene-2024). No hay ninguna posterior.
+
+[2] MASTG — https://api.github.com/repos/OWASP/mastg/releases
+   v2.0.0     publicado 2026-06-30   v2.0.0
+   v1.9.0     publicado 2026-06-24   v1.9.0
+   v1.8.0     publicado 2026-06-24   v1.8.0
+   v1.7.0     publicado 2023-10-31   v1.7.0
+   -> La más reciente es v2.0.0 (30-jun-2026), primera versión estable del
+      refactor MASTG v2. Anuncio público: mas.owasp.org/news/2026/07/04/
+
+[3] ESTRUCTURA DE MASVS v2.1.0 — ocho categorías, 24 controles
+   Texto literal de cada control, descargado del repositorio oficial
+   OWASP/masvs, carpeta controls/:
+
+   MASVS-STORAGE-1      The app securely stores sensitive data.
+   MASVS-STORAGE-2      The app prevents leakage of sensitive data.
+   MASVS-CRYPTO-1       The app employs current strong cryptography and uses it according to industry best practices.
+   MASVS-CRYPTO-2       The app performs key management according to industry best practices.
+   MASVS-AUTH-1         The app uses secure authentication and authorization protocols and follows the relevant best practices.
+   MASVS-AUTH-2         The app performs local authentication securely according to the platform best practices.
+   MASVS-AUTH-3         The app secures sensitive operations with additional authentication.
+   MASVS-NETWORK-1      The app secures all network traffic according to the current best practices.
+   MASVS-NETWORK-2      The app performs identity pinning for all remote endpoints under the developer's control.
+   MASVS-PLATFORM-1     The app uses IPC mechanisms securely.
+   MASVS-PLATFORM-2     The app uses WebViews securely.
+   MASVS-PLATFORM-3     The app uses the user interface securely.
+   MASVS-CODE-1         The app requires an up-to-date platform version.
+   MASVS-CODE-2         The app has a mechanism for enforcing app updates.
+   MASVS-CODE-3         The app only uses software components without known vulnerabilities.
+   MASVS-CODE-4         The app validates and sanitizes all untrusted inputs.
+   MASVS-PRIVACY-1      The app minimizes access to sensitive data and resources.
+   MASVS-PRIVACY-2      The app prevents identification of the user.
+   MASVS-PRIVACY-3      The app is transparent about data collection and usage.
+   MASVS-PRIVACY-4      The app offers user control over their data.
+   MASVS-RESILIENCE-1   The app validates the integrity of the platform.
+   MASVS-RESILIENCE-2   The app implements anti-tampering mechanisms.
+   MASVS-RESILIENCE-3   The app implements anti-static analysis mechanisms.
+   MASVS-RESILIENCE-4   The app implements anti-dynamic analysis techniques.
+
+[4] CATÁLOGO DE PRUEBAS MASTG PARA ANDROID Y PRUEBAS CITADAS
+
+   Se descargó el catálogo completo del repositorio OWASP/mastg: 163 pruebas de
+   Android (51 portadas de la v1 + 112 nuevas de la v2), repartidas en las ocho
+   categorías.
+
+   Esta evaluación —el informe y sus evidencias— cita 87 identificadores
+   MASTG-TEST distintos. Muchos aparecen en listas abreviadas de las cabeceras
+   («MASTG-TEST-0010, 0289, 0291…»), así que el recuento se hizo validando cada
+   número de cuatro dígitos contra el catálogo descargado, no contando la forma
+   larga. Los 87 existen en el catálogo y están en la categoría con la que se
+   citan, con una sola excepción ya corregida: MASTG-TEST-0374 se citó primero
+   bajo MASVS-PLATFORM y pertenece a MASVS-CODE.
+
+   Una pareja merece explicación, porque parece redundante y no lo es: el
+   informe cita MASTG-TEST-0035 y MASTG-TEST-0340 juntos, en superposición de
+   ventanas. En el catálogo, 0035 («Testing for Overlay Attacks») figura con
+   «status: deprecated» y «covered_by: [MASTG-TEST-0340]», y 0340
+   («References to Overlay Attack Protections») es su sucesora de la v2. Se
+   citan las dos para que la trazabilidad funcione con cualquiera de las dos
+   versiones del estándar.
+
+   Lista completa, agrupada por la categoría oficial de cada prueba:
+
+      MASVS-STORAGE (17):
+         MASTG-TEST-0001  MASTG-TEST-0003  MASTG-TEST-0004  MASTG-TEST-0005  MASTG-TEST-0006  MASTG-TEST-0009  MASTG-TEST-0011  MASTG-TEST-0200
+         MASTG-TEST-0202  MASTG-TEST-0203  MASTG-TEST-0207  MASTG-TEST-0216  MASTG-TEST-0231  MASTG-TEST-0262  MASTG-TEST-0287  MASTG-TEST-0304
+         MASTG-TEST-0306
+      MASVS-CRYPTO (14):
+         MASTG-TEST-0013  MASTG-TEST-0014  MASTG-TEST-0015  MASTG-TEST-0016  MASTG-TEST-0204  MASTG-TEST-0205  MASTG-TEST-0208  MASTG-TEST-0212
+         MASTG-TEST-0221  MASTG-TEST-0232  MASTG-TEST-0307  MASTG-TEST-0308  MASTG-TEST-0309  MASTG-TEST-0312
+      MASVS-AUTH (7):
+         MASTG-TEST-0017  MASTG-TEST-0018  MASTG-TEST-0326  MASTG-TEST-0327  MASTG-TEST-0328  MASTG-TEST-0329  MASTG-TEST-0330
+      MASVS-NETWORK (12):
+         MASTG-TEST-0217  MASTG-TEST-0233  MASTG-TEST-0234  MASTG-TEST-0235  MASTG-TEST-0236  MASTG-TEST-0239  MASTG-TEST-0242  MASTG-TEST-0244
+         MASTG-TEST-0282  MASTG-TEST-0283  MASTG-TEST-0285  MASTG-TEST-0286
+      MASVS-PLATFORM (24):
+         MASTG-TEST-0007  MASTG-TEST-0008  MASTG-TEST-0010  MASTG-TEST-0024  MASTG-TEST-0028  MASTG-TEST-0029  MASTG-TEST-0031  MASTG-TEST-0032
+         MASTG-TEST-0033  MASTG-TEST-0035  MASTG-TEST-0037  MASTG-TEST-0258  MASTG-TEST-0289  MASTG-TEST-0291  MASTG-TEST-0292  MASTG-TEST-0294
+         MASTG-TEST-0315  MASTG-TEST-0340  MASTG-TEST-0355  MASTG-TEST-0357  MASTG-TEST-0364  MASTG-TEST-0365  MASTG-TEST-0366
+         MASTG-TEST-0393
+      MASVS-CODE (8):
+         MASTG-TEST-0002  MASTG-TEST-0025  MASTG-TEST-0245  MASTG-TEST-0272  MASTG-TEST-0274  MASTG-TEST-0337  MASTG-TEST-0339  MASTG-TEST-0374
+      MASVS-PRIVACY (3):
+         MASTG-TEST-0254  MASTG-TEST-0255  MASTG-TEST-0318
+      MASVS-RESILIENCE (2):
+         MASTG-TEST-0226  MASTG-TEST-0368
+
+[5] MASWE — enumeración de debilidades, repositorio OWASP/maswe
+   78 debilidades en las mismas ocho categorías. Se usan donde MASTG no
+   tiene prueba atómica propia; en esta evaluación: MASWE-0003 (llaves fuera
+   del almacén de la plataforma), MASWE-0004 (datos sensibles embebidos en el
+   paquete), MASWE-0014 (derivación de llave incorrecta), MASWE-0018 (falta de
+   autenticación o autorización) y MASWE-0030 (uso indebido del portapapeles).

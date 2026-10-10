@@ -1,0 +1,187 @@
+EV-06 — Inspección del almacenamiento privado de la app (emulador A)
+MASVS-STORAGE-1 / MASVS-STORAGE-2
+MASTG-TEST-0001, 0207, 0287, 0304, 0306, 0200, 0202, 0009
+Método: adb shell run-as com.auroraclima.app sobre la build DEBUG instalada
+        (la imagen del emulador es google_apis_playstore: no admite adb root).
+        El código de almacenamiento y cifrado vive íntegro en src/main, así que
+        es BIT A BIT el mismo en release; lo único que cambia en release es la
+        ofuscación de nombres, evaluada aparte en EV-03.
+Capturado el 2026-10-08, ANTES del borrado del sandbox que describe EV-05
+        (la corrida instrumentada del 2026-10-09). El bloque [7] se añadió el
+        2026-10-10 y lo indica en su propio encabezado.
+Cuenta: la cuenta de PRUEBA de la corrida manual del 2026-10-07. Contenido real
+        verificado en la caché: 5 registros (entries), 16 cabeceras de evidencia
+        (media) con 48 trozos (mediaparts), 2 resultados guardados del cuestionario
+        (outcomes) y 1 documento de metadatos; y 14 archivos de evidencia sellados
+        en el almacén local files/media_store.
+==========================================================================
+
+[1] CABECERA DE CADA BASE DE DATOS  (16 primeros bytes)
+   journal_store.db    2b 5f 5d dc 48 00 2f 73 …   -> NO es «SQLite format 3»: SQLCipher
+   guidance_store.db   a2 7f 29 d9 d8 66 bf df …   -> NO es «SQLite format 3»: SQLCipher
+   weather.db          «SQLite format 3\0»          -> SQLite plano (decisión de ADR:
+                                                       ciudad y clima no son datos sensibles)
+   firestore.…(default) «SQLite format 3\0»         -> SQLite plano (caché del SDK, residual P-22)
+
+[2] ENTROPÍA Y BÚSQUEDA DE TEXTO EN CLARO EN TODO EL SANDBOX
+   «palabras_es» cuenta coincidencias de un diccionario de 27 palabras de
+   contenido natural (que, para, cuando, dijo, miedo, golpe, amenaza, violencia,
+   incidente, …). Entropía 8,000 = indistinguible de ruido aleatorio.
+
+   archivo                                                        bytes entropía palabras_es
+   ------------------------------------------------------------------------------------------
+   databases/firestore.%5BDEFAULT….[PROYECTO].%28default%29     1994752    6.015         213
+   databases/firestore.%5BDEFAULT….[PROYECTO].%28default%29-journal         0        —           —
+   databases/guidance_store.db                                     4096    7.955           0
+   databases/guidance_store.db-shm                                32768    0.046           0
+   databases/guidance_store.db-wal                                53592    7.997           0
+   databases/journal_store.db                                      4096    7.951           0
+   databases/journal_store.db-shm                                 32768    0.107           0
+   databases/journal_store.db-wal                                346112    7.999           0
+   databases/weather.db                                            4096    0.093           0
+   databases/weather.db-shm                                       32768    0.044           0
+   databases/weather.db-wal                                       41232    0.477           0
+   cache/weather.db.lck                                               0        —           —
+   shared_prefs/FirebaseHeartBeat…[SUFIJO-REDACTADO].xml       532    4.990           0
+   shared_prefs/account_meta.xml                                    854    6.073           0
+   shared_prefs/backup_meta.xml                                     355    5.495           0
+   shared_prefs/com.google.fireba…[SUFIJO-REDACTADO].xml        65    4.734           0
+   shared_prefs/com.google.fireba…[SUFIJO-REDACTADO].xml       537    4.727           0
+   shared_prefs/search_index.xml                                    342    5.575           0
+   shared_prefs/store_meta.xml                                      214    5.478           0
+   shared_prefs/sync_meta.xml                                        65    4.734           0
+   files/profileInstalled                                            24    1.374           0
+   files/media_store/02361faa519eb824fb7df334f8789f45             30274    7.992           0
+   files/media_store/026f1ffe03e4dea979486d1a16bce8f2            299633    7.999           1
+   files/media_store/1d20ed018deb2b2104d04eb9aa62c307            101633    7.998           0
+   files/media_store/428b4c5af4d6bafe87a2d0d6babd1f3c             89221    7.998           0
+   files/media_store/553d1348cf0c43bddbb6b72bf5ded81d               416    7.454           0
+   files/media_store/646a961f376863dc295e055b3aedff4b             13174    7.983           0
+   files/media_store/657881290cd907890a8e65d081df1488            133991    7.999           1
+   files/media_store/8a2f489953ec19e5b80a4a25f835b926             38748    7.995           1
+   files/media_store/974b39d83546448b1771df2871f0a16b             28520    7.994           0
+   files/media_store/9e8713b59d422639c50ff3d5e8c4ed31            101415    7.998           0
+   files/media_store/b32a7599022a7a9cbfef8502ad0276f7            196597    7.999           0
+   files/media_store/b48f2eb287bb652ea3b32b49adc52a49             27888    7.994           0
+   files/media_store/b4ed35302446475cdb4d7b2afb1f247c             69695    7.998           0
+   files/media_store/bb8f61841f0f046656165e824a398ae4            146295    7.999           0
+
+   Lectura de la tabla:
+   · journal_store.db / guidance_store.db y sus -wal: entropía 7,95–8,00 y CERO
+     coincidencias. El WAL también está cifrado (es el archivo grande, 346 KB).
+   · files/media_store/*: las 14 evidencias, entropía 7,45–8,00, sin bytes mágicos
+     de JPEG (ff d8 ff) ni de PDF (%PDF). Nombre de archivo = 32 hex opacos.
+     El extremo bajo del rango (7,454) es el archivo de 416 bytes: con tan
+     pocas muestras sobre 256 símbolos posibles, ~7,45 es justo lo que da el
+     ruido aleatorio; los trece restantes están entre 7,98 y 8,00.
+     Las 3 «coincidencias» que aparecen son azar dentro del ciphertext: salen
+     con mayúsculas mezcladas ('cOn', 'QUe') y rodeadas de bytes no imprimibles.
+   · shared_prefs/*: CERO coincidencias en todos los archivos.
+   · weather.db: entropía baja porque es texto plano — nombres de ciudad y
+     temperaturas, que es exactamente lo que una app de clima debe tener.
+
+[3] CONTENIDO DE shared_prefs  (claves y FORMA del valor; valores no volcados)
+   --- account_meta.xml
+      string  a1         base64 de 704 caracteres (~528 bytes)
+      string  a0         base64 de 16 caracteres (~12 bytes)
+   --- backup_meta.xml
+      string  b2         base64 de 64 caracteres (~48 bytes)
+      long    b3         entero (1)
+      string  b4         base64 de 16 caracteres (~12 bytes)
+      string  b0         base64 de 28 caracteres (~21 bytes)
+      string  b1         base64 de 16 caracteres (~12 bytes)
+   --- search_index.xml
+      string  i0_h       base64 de 44 caracteres (~33 bytes)
+      string  i1_h       base64 de 44 caracteres (~33 bytes)
+      string  i0_s       base64 de 24 caracteres (~18 bytes)
+      string  i1_s       base64 de 24 caracteres (~18 bytes)
+   --- store_meta.xml
+      string  s0         base64 de 16 caracteres (~12 bytes)
+      string  s1         base64 de 64 caracteres (~48 bytes)
+   --- sync_meta.xml
+      (sin entradas: archivo de mapa vacío)
+
+   Interpretación de las formas (coincide con el diseño de los ADR):
+   · search_index.xml  i0_h/i1_h = 44 car. base64 = 32 B = HMAC-SHA256;
+                       i0_s/i1_s = 24 car. = 16 B de salt. DOS ranuras: el código
+                       de activación y la clave personal. Ningún código en claro.
+   · store_meta.xml    s1 = 48 B = passphrase de SQLCipher (32 B) + tag GCM (16 B),
+                       envuelta con local_store_key; s0 = IV.
+   · account_meta.xml  a1 = ~528 B = blob de credenciales cifrado con relleno fijo
+                       (P-31 C); a0 = IV. La contraseña NO está en claro.
+   · backup_meta.xml   b2 = 48 B = DEK envuelta; b3 = generación (1); resto IV/salt.
+   · sync_meta.xml     VACÍO.
+
+[4] SESIÓN DE FIREBASE EN DISCO
+   shared_prefs/com.google.firebase.auth.api.Store.…[REDACTADO].xml  ->  65 bytes, mapa VACÍO.
+   No queda ningún token de sesión del SDK en disco tras cerrar el espacio interno
+   (era el hallazgo «H-3» de una auditoría interna anterior sobre el reingreso
+   silencioso — sin relación con el H-3 de este informe OWASP, que es la firma
+   con clave de depuración; hoy la credencial vive cifrada en account_meta).
+
+[5] DOCUMENTOS DE LA USUARIA EN LA CACHÉ DE FIRESTORE  (SQLite plano)
+   documentos cacheados en total: 111  ·  de la usuaria: 72  ·  contenido público: 39
+   palabras de contenido natural en documentos DE LA USUARIA: 0
+   palabras de contenido natural en el contenido PÚBLICO:      213
+   nombres de campo legibles en los documentos de la usuaria: {'payload': 20, 'iv': 20}
+   (una primera medición solo vio «payload» porque el barrido exigía cadenas de
+   3 caracteres o más; repetida sin ese filtro aparecen los dos, uno por
+   documento: 4 en entries, 14 en media y 2 en outcomes)
+   -> El relato, el tipo y la fecha de cada registro viajan dentro de «payload»
+      cifrado, con su «iv» al lado: ni una palabra de contenido de la usuaria es
+      legible en la caché. Que esos dos nombres de campo sean visibles es el
+      residual P-48b, ya registrado: revelan que HAY cifrado, no qué se cifró.
+   -> Lo legible en claro es SOLO el contenido informativo público (tipos, rutas,
+      entidades, líneas, cuestionario), que es el residual P-22 ya aceptado:
+      es material público que cualquiera puede leer en la app sin autenticarse
+      en el doble fondo, y leerlo exige root o adb.
+   -> El identificador de la cuenta (uid de Firebase) sí aparece en las rutas de
+      la caché. Es un seudónimo opaco que no contiene datos personales. REDACTADO
+      en esta evidencia.
+
+[6] ALMACENAMIENTO EXTERNO  (MASTG-TEST-0200 / 0202)
+   /sdcard/Android/data/com.auroraclima.app  ->  NO EXISTE (la app nunca lo crea)
+   Permisos de almacenamiento externo declarados  ->  NINGUNO (ver EV-02)
+   Lo único que Aurora escribe fuera del sandbox es el PDF que la usuaria decide
+   exportar, por el selector del sistema (ACTION_CREATE_DOCUMENT), donde ella elija.
+
+[7] LOS PDF EXPORTADOS (RF-45) ESTÁN CIFRADOS — los siete
+    (medición del 2026-10-10; el resto de esta evidencia se capturó el
+     2026-10-08, antes del borrado del sandbox descrito en EV-05)
+
+   Se listó /sdcard/Download y se midieron TODOS los archivos que responden al
+   patrón de nombre con el que la app exporta (documento_AAAA-MM-DD[ (n)].pdf).
+   Son siete. La longitud de llave se leyó DENTRO del diccionario /Encrypt, no
+   del primer /Length del archivo (que es el de un stream cualquiera).
+
+   archivo                        bytes  cabecera  /Encrypt /Filter    V  R  AESV3 /Length palabras
+   ----------------------------- ------- --------- -------- ---------- -- -- ----- ------- --------
+   documento_2026-10-03.pdf        35 450 %PDF-1.4  sí       /Standard   5  6  sí    256     0
+   documento_2026-10-03 (1).pdf    35 450 %PDF-1.4  sí       /Standard   5  6  sí    256     0
+   documento_2026-10-05.pdf        19 156 %PDF-1.4  sí       /Standard   5  6  sí    256     0
+   documento_2026-10-05 (1).pdf   519 420 %PDF-1.4  sí       /Standard   5  6  sí    256     0
+   documento_2026-10-05 (2).pdf   524 770 %PDF-1.4  sí       /Standard   5  6  sí    256     0
+   documento_2026-10-07.pdf       326 418 %PDF-1.4  sí       /Standard   5  6  sí    256     0
+   documento_2026-10-07 (1).pdf     5 082 %PDF-1.4  sí       /Standard   5  6  sí    256     0
+
+   Los dos de ~520 KB son los interesantes: llevan los adjuntos embebidos
+   dentro del PDF (RF-45), y también van cifrados.
+
+   /V 5 con /R 6 y AESV3 es el cifrado AES-256 de PDF 2.0, el más fuerte del
+   estándar; NO es el RC4 de /R 2-4 que MASTG marca como débil. «palabras» es
+   el recuento de un diccionario de 10 palabras de contenido sobre el archivo
+   completo: cero en los siete, sin la contraseña.
+
+   En esa misma carpeta hay otros dos PDF que NO son exportaciones de la app y
+   por eso no entran en la tabla:
+      documento_prueba.pdf   388 B, del 2026-10-03 — fixture de prueba
+      documento_1.pdf        894 B, del 2026-10-05 — un adjunto EXTRAÍDO de un
+         PDF exportado, guardado por el visor de PDF del sistema cuando la
+         usuaria abrió el anexo y eligió conservarlo; el nombre sigue la
+         convención de RF-45 para los anexos («Documento adjunto 1»), no la de
+         los exportes. Está SIN cifrar, como cualquier archivo que una persona
+         decide extraer de un documento protegido y guardar aparte, y no
+         cambia el veredicto de STORAGE-1: no lo escribió Aurora, que solo
+         entrega el PDF cifrado al selector del sistema. Es, eso sí, la misma
+         familia de rastro que describe el residual P-60d.
+      Ninguno de los dos lo escribió Aurora en el almacenamiento compartido.

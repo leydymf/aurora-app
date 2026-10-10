@@ -1,0 +1,76 @@
+EV-02 — Manifiesto fusionado del APK RELEASE (apktool 3.0.3 · d -f)
+MASTG-TEST-0226 (debuggable), 0262/0009 (respaldos), 0235/0286 (red),
+0364/0365/0366 (componentes exportados), 0028/0393 (deep links), 0357 (FileProvider)
+Capturado el 2026-10-08.
+================================================================
+
+[1] BANDERAS DE DEPURACIÓN Y RESPALDO
+android:debuggable           -> 0 ocurrencias (0 = la bandera NO está presente)
+android:allowBackup          -> false
+android:dataExtractionRules  -> android:dataExtractionRules="@xml/data_extraction_rules"
+android:fullBackupContent    -> android:fullBackupContent="@xml/backup_rules"
+android:networkSecurityConfig-> 0 ocurrencias (0 = NO declarado; rige el default de targetSdk 35)
+android:usesCleartextTraffic -> 0 ocurrencias (0 = NO declarado)
+android:testOnly             -> 0 ocurrencias
+
+[2] PERMISOS DECLARADOS (manifiesto fusionado)
+  - android.permission.INTERNET
+  - android.permission.ACCESS_NETWORK_STATE
+  - com.google.android.providers.gsf.permission.READ_GSERVICES
+  - com.auroraclima.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+  (permiso propio declarado: DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION, protectionLevel=signature)
+
+[3] COMPONENTES EXPORTADOS (android:exported="true")
+  activity  com.auroraclima.app.MainActivity
+            permiso: NINGUNO
+  activity  com.google.firebase.auth.internal.GenericIdpActivity
+            permiso: NINGUNO
+  activity  com.google.firebase.auth.internal.RecaptchaActivity
+            permiso: NINGUNO
+  service   com.google.android.gms.auth.api.signin.RevocationBoundService
+            permiso: com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION
+  receiver  androidx.profileinstaller.ProfileInstallReceiver
+            permiso: android.permission.DUMP
+
+[4] COMPONENTES NO EXPORTADOS: 10
+
+[5] FILTROS DE INTENT CON ESQUEMA (deep links)
+  <data android:host="firebase.auth" android:path="/" android:scheme="genericidp">
+  <data android:host="firebase.auth" android:path="/" android:scheme="recaptcha">
+  (ninguno pertenece a com.auroraclima.app: los dos son de firebase-auth)
+
+[6] FILEPROVIDER — rutas compartibles (res/xml/file_paths.xml del APK)
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="m" path="media_pending/" />
+    <cache-path name="d" path="doc_out/" />
+</paths>
+
+[7] REGLAS DE RESPALDO EMPAQUETADAS
+--- data_extraction_rules.xml
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
+    </device-transfer>
+</data-extraction-rules>
+--- backup_rules.xml
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

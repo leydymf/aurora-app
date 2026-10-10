@@ -1,0 +1,109 @@
+EV-04 — Inventario criptográfico (análisis estático de src/main)
+MASVS-CRYPTO-1 / MASVS-CRYPTO-2
+MASTG-TEST-0013, 0014, 0208, 0212, 0221, 0232, 0309, 0312, 0016, 0204, 0205, 0015
+Herramienta: grep sobre el código fuente + pruebas automáticas del proyecto
+Capturado el 2026-10-08.
+======================================================================
+
+[1] TODAS LAS TRANSFORMACIONES DE CIFRADO DEL PROYECTO
+   Cipher.getInstance(...) aparece 16 veces en src/main (8 archivos x cifrar y
+   descifrar) y SIEMPRE con la misma constante:
+       TRANSFORMATION = "AES/GCM/NoPadding"
+   Las únicas otras cadenas de algoritmo del proyecto son tres KEY_ALGORITHM =
+   "AES", que son el nombre de algoritmo de un SecretKeySpec (no una
+   transformación: no seleccionan modo ni relleno). Ni un solo uso de ECB, de
+   CBC, de Cipher.getInstance("AES") a secas (que resolvería a ECB), ni de
+   DES/3DES/RC4/Blowfish. Cero APIs obsoletas. Tampoco se usa MessageDigest:
+   el hash del código secreto es un HMAC-SHA256 con llave del Keystore.
+       MASTG-TEST-0221 (algoritmos simétricos roto)  -> sin coincidencias
+       MASTG-TEST-0232 (modos simétricos roto)       -> sin coincidencias
+
+   Archivo (src/main/java/com/auroraclima/app/)        | Transformación | Tag | Nonce
+   ---------------------------------------------------- | -------------- | --- | -----
+   core/security/KeystorePayloadCipher.kt               | AES/GCM/NoPadding | 128 b | lo genera el Keystore
+   core/security/KeystoreMediaCipher.kt                 | AES/GCM/NoPadding | 128 b | 12 B (Keystore)
+   core/security/DekPayloadCipher.kt                    | AES/GCM/NoPadding | 128 b | 12 B SecureRandom por operación
+   core/security/DekMediaCipher.kt                      | AES/GCM/NoPadding | 128 b | 12 B SecureRandom por operación
+   core/security/PasswordKeyWrapper.kt                  | AES/GCM/NoPadding | 128 b | SecureRandom por sobre
+   core/security/LocalDekStore.kt                       | AES/GCM/NoPadding | 128 b | del Keystore
+   core/database/DatabaseKeyManager.kt                  | AES/GCM/NoPadding | 128 b | del Keystore
+   accounts/data/LocalCredentialStore.kt                | AES/GCM/NoPadding | 128 b | del Keystore
+
+[2] TAMAÑOS DE LLAVE   (MASTG-TEST-0208 «Insufficient Key Sizes»)
+   AES (Keystore, todas las llaves)      256 bits
+   DEK de sincronización (SecureRandom)  32 B = 256 bits
+   Passphrase de SQLCipher (SecureRandom) 32 B = 256 bits
+   PBKDF2 → llave derivada               256 bits
+   PDF cifrado (RF-45)                   encryptionKeyLength = 256 bits (AES-256)
+   HMAC-SHA256 del código secreto        llave del Keystore, salt de 16 B
+   -> Ninguna llave por debajo de 128 bits. Sin criptografía asimétrica propia:
+      MASTG-TEST-0307/0308 (pares de llaves para múltiples propósitos) NO APLICA.
+
+[3] NONCE / IV   (MASTG-TEST-0309 «Reused Initialization Vectors»)
+   En los dos cifradores que manejan el IV explícitamente (DekPayloadCipher y
+   DekMediaCipher) el nonce son 12 B nuevos de SecureRandom EN CADA llamada a
+   cifrar, y viaja junto al ciphertext; nunca hay un IV constante ni derivado
+   del contenido. En los cifradores sobre Keystore el IV lo genera el proveedor
+   de la plataforma (no se fija a mano, que es el error que busca el test).
+   -> Sin IV reutilizados. Fijado por DekPayloadCipherTest / DekMediaCipherTest.
+
+[4] ALEATORIEDAD   (MASTG-TEST-0016, 0204, 0205)
+   Único generador usado en todo src/main: java.security.SecureRandom
+       - KeystoreSecretCodeHasher.newSalt()      16 B
+       - DatabaseKeyManager  passphrase          32 B
+       - DefaultSyncKeyManager  DEK / revisión   32 B / 8 B
+       - PasswordKeyWrapper  salt                16 B
+       - DekPayloadCipher / DekMediaCipher nonce 12 B
+       - SecureRandomOpaqueIds  (identificadores opacos)  16 B
+       - AttachmentStore  ref de evidencia       16 B
+       - CaptureBuffer  nombre temporal           8 B
+   Ocurrencias de java.util.Random      -> 0
+   Ocurrencias de Math.random           -> 0
+   Ocurrencias de System.currentTimeMillis() como fuente de llave -> 0
+   -> Pasa. No hay ninguna fuente no criptográfica alimentando material de llave.
+
+[5] PROVEEDOR   (MASTG-TEST-0312 «Explicit Security Provider»)
+   Ningún Cipher.getInstance(..., "ProveedorXYZ"): todos usan el proveedor por
+   defecto de la plataforma. Las llaves del Keystore se piden al proveedor
+   "AndroidKeyStore", que es el correcto y el único explícito del proyecto.
+
+[6] DERIVACIÓN POR CONTRASEÑA   (RF-39 · MASWE-0014)
+   core/security/PasswordKeyDerivation.kt
+       algoritmo    PBKDF2WithHmacSHA256
+       iteraciones  600 000  (PasswordKeyWrapper.DEFAULT_ITERATIONS)
+       salt         16 B de SecureRandom, uno por sobre
+       salida       256 bits
+       higiene      spec.clearPassword() en un finally
+   600 000 iteraciones es exactamente la cifra que recomienda la OWASP Password
+   Storage Cheat Sheet para PBKDF2-HMAC-SHA256. Las iteraciones viajan junto al
+   sobre, así que el parámetro puede subir sin romper el material ya publicado.
+   Residual ya registrado: Argon2id descartado por peso (ADR 2026-07-26 · P-62).
+
+[7] GESTIÓN DE LLAVES   (MASVS-CRYPTO-2 · MASTG-TEST-0015 · MASWE-0003)
+   Seis alias en Android Keystore, todos con nombre neutro (RNF-05) y con un
+   propósito único cada uno — no hay una llave que firme Y cifre:
+       local_store_key    AES/GCM  ENCRYPT|DECRYPT  envuelve la passphrase de SQLCipher
+       local_sync_key     AES/GCM  ENCRYPT|DECRYPT  sella el payload de sincronización
+       local_media_key    AES/GCM  ENCRYPT|DECRYPT  sella las evidencias
+       local_backup_key   AES/GCM  ENCRYPT|DECRYPT  copia local de la DEK (RF-39)
+       local_account_key  AES/GCM  ENCRYPT|DECRYPT  blob de credenciales (P-31 C)
+       local_index_key    HMAC-SHA256  PURPOSE_SIGN  hash del código secreto
+   Ninguna llave, salt, passphrase o contraseña aparece en el código, en
+   BuildConfig, en los recursos ni en SharedPreferences en claro (ver EV-03 y
+   EV-05). Las llaves se generan en el dispositivo en el primer uso y no salen
+   del Keystore: el material cifrado que viaja a la nube se envuelve con la DEK,
+   y la DEK con la llave derivada de la contraseña (sobre doble, ADR RF-39).
+
+[8] CONSTANCIA EN TIEMPO CONSTANTE   (RF-13 · indistinguibilidad del código)
+   access/domain/security/ConstantTime.kt  constantTimeEquals(ByteArray, ByteArray)
+   recorre siempre la longitud completa acumulando XOR|OR — sin cortocircuito.
+   Compara HASHES de longitud fija, así que el chequeo previo de tamaño no
+   filtra nada. Fijado por access/domain/security/ConstantTimeTest.kt.
+
+[9] PRUEBAS AUTOMÁTICAS DEL PROYECTO QUE FIJAN LO ANTERIOR
+   JVM            DekPayloadCipherTest, DekMediaCipherTest, PasswordKeyWrapperTest,
+                  Pbkdf2PasswordKeyDerivationTest, DefaultSyncKeyManagerTest,
+                  DatabaseKeyManagerEraseTest, ConstantTimeTest
+   Instrumentadas KeystorePayloadCipherTest, KeystoreMediaCipherTest,
+                  LocalDekStoreTest, LocalCredentialStoreTest,
+                  KeystoreSecretCodeHasherTest, EncryptedDatabaseFactoryTest

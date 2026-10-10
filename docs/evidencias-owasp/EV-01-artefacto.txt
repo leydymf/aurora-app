@@ -1,0 +1,46 @@
+EV-01 — Identificación del artefacto bajo prueba
+Generado: 2026-10-08 14:30 -05
+Capturado el 2026-10-08.
+================================================================
+
+[1] VERSIÓN DEL CÓDIGO
+git describe --long : v0.3.0-trl4-0-g16ce199   (git describe a secas: v0.3.0-trl4)
+commit              : 16ce199cbda1d1566a060f0fc1f19e4c7b2ab23e
+tag anotado         : v0.3.0-trl4 -> 16ce199cbda1d1566a060f0fc1f19e4c7b2ab23e
+cambios no versionados al iniciar la auditoría: ninguno
+  (lo único sin versionar ahora es docs/evidencias-owasp/, creado por esta auditoría)
+
+[2] APK RELEASE BAJO PRUEBA
+ruta   : app/build/outputs/apk/release/app-release.apk
+tamaño : 23951586 bytes
+sha256 : 28b9a1ff07cd5e85d532977e872fb6c6f2f321149e03004c4004441dd54eeb42
+./gradlew assembleRelease -> BUILD SUCCESSFUL con TODAS las tareas de
+empaquetado UP-TO-DATE: el APK en disco corresponde exactamente a este commit.
+
+[3] IDENTIDAD DEL PAQUETE  (aapt2 dump badging | apkanalyzer manifest)
+package: name='com.auroraclima.app' versionCode='1' versionName='1.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+application-label:'Aurora'
+launchable-activity: name='com.auroraclima.app.MainActivity'  label='Aurora' icon=''
+native-code: 'arm64-v8a' 'armeabi-v7a' 'x86' 'x86_64'
+minSdkVersion    : 26
+targetSdkVersion : 35
+
+[4] FIRMA  (apksigner verify --print-certs)
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Number of signers: 1
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 2048
+
+[5] ENTORNO DINÁMICO
+Emulador A: Medium_Phone_API_35 (emulator-5554) — API 35, 4 núcleos, 3920 MB RAM
+Emulador B: Pixel_9_Pro_XL_API_35 (emulator-5556) — API 35
+Imagen de sistema: google_apis_playstore/arm64-v8a (build de usuario, release-keys)
+  -> 'adb root' NO disponible: la inspección del sandbox se hace con 'run-as'
+     sobre la build DEBUG instalada (ver limitaciones metodológicas del informe).
+Build instalada en A y B: debug (pkgFlags=[ DEBUGGABLE ... ]), lastUpdateTime 2026-10-06

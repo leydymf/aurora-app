@@ -1,0 +1,223 @@
+EV-13 — Verificación EN VIVO del espacio interno (doble fondo)
+MASVS-PLATFORM-3 (RNF-02), MASVS-AUTH-2 (RF-12/RF-16/RNF-03), MASVS-PRIVACY-3/4
+MASTG-TEST-0010, 0289, 0291, 0292, 0294, 0008
+Emulador A (emulator-5554), 2026-10-10
+======================================================================
+
+CONTEXTO. Las dos primeras jornadas de esta auditoría (8 y 9 de octubre) no
+pudieron entrar al espacio interno: la cuenta de prueba ya tenía clave personal y, por diseño (RF-12),
+el código de activación deja de abrir el acceso en cuanto esa clave existe.
+Tras la reinstalación descrita en EV-05, el sembrador de builds debug volvió
+a sembrar el código de activación, lo que permitió recorrer el flujo completo
+y verificar en vivo lo que antes se apoyaba solo en pruebas automáticas.
+
+MÉTODO DE MEDICIÓN DE LAS CAPTURAS. En vez de mirar un PNG, se pidió el búfer
+RGBA crudo (adb exec-out screencap, sin -p) y se contaron los píxeles no
+negros dentro de la REGIÓN DE LA APP (y de 110 a 2290), excluyendo la barra
+de estado y la de navegación, que son ventanas de SystemUI y no de Aurora.
+Muestreo: 1 de cada 3 píxeles en x y en y = 261 720 píxeles por captura.
+
+[1] FLAG_SECURE — BANDERAS DE LA VENTANA, ANTES Y DESPUÉS
+
+   Fachada (antes de entrar):
+      fl=LAYOUT_IN_SCREEN LAYOUT_INSET_DECOR SPLIT_TOUCH HARDWARE_ACCELERATED
+         DRAWS_SYSTEM_BAR_BACKGROUNDS
+      -> sin SECURE
+
+   Espacio interno (tras teclear la clave en la barra):
+      fl=LAYOUT_IN_SCREEN SECURE LAYOUT_INSET_DECOR SPLIT_TOUCH
+         HARDWARE_ACCELERATED DRAWS_SYSTEM_BAR_BACKGROUNDS
+      -> SECURE presente
+
+[2] CAPTURAS DE PANTALLA — MEDICIÓN
+
+   pantalla                                  píxeles  no negros   %
+   ---------------------------------------- --------  ---------  ------
+   Fachada (control, antes de entrar)         261 720    261 720  100,00
+   Consentimiento (RF-17/18)                  261 720          0    0,00
+   Panel del espacio interno                  261 720          0    0,00
+   Editor de registro                         261 720          0    0,00
+   Editor + SELECTOR DE FECHA abierto         261 720          0    0,00
+   Ajustes                                    261 720          0    0,00
+   Fachada tras la salida rápida              261 720    261 720  100,00
+
+   El caso del SELECTOR DE FECHA es el importante: es una VENTANA PROPIA
+   (SecureDayPicker), y las ventanas propias no heredan la bandera de la
+   Activity. Con el selector abierto la captura sigue siendo 0/261 720, así
+   que el envoltorio de core/security sí le aplica la bandera. Es la
+   verificación en vivo de la regla de ARQUITECTURA.md §4 sobre Dialog,
+   Popup, ModalBottomSheet y pickers.
+
+   Antes de fijar la máscara se hizo una medición exploratoria sobre TODA la
+   pantalla, con otro muestreo (un píxel de cada 37 recorridos linealmente
+   sobre el búfer, 70 055 muestras de los 2 592 000 píxeles): dio 179 no
+   negros. Al mapear sus coordenadas, los 179 caen en y<110 o en y>2290 — el
+   reloj y los iconos de la barra de estado y la barra de gestos, que son
+   ventanas de SystemUI. Ninguno dentro del área de Aurora. Esa comprobación
+   es la que motivó enmascarar las dos franjas y rehacer la medición con el
+   muestreo regular de 261 720 que se usa en la tabla de arriba.
+
+[3] MINIATURA DE RECIENTES DESDE EL ESPACIO INTERNO
+   Una tarjeta en blanco se ve igual tomada desde la fachada que desde dentro,
+   así que el contexto se fijó con dos comprobaciones en el instante ANTERIOR
+   a pulsar Inicio:
+
+      jerarquía de accesibilidad -> pantalla «Mi registro», «Todo guardado»,
+         «Lo que anotas queda solo para ti, protegido en tu espacio.»,
+         con 4 registros listados
+      dumpsys window windows -> fl=LAYOUT_IN_SCREEN SECURE LAYOUT_INSET_DECOR
+         SPLIT_TOUCH HARDWARE_ACCELERATED DRAWS_SYSTEM_BAR_BACKGROUNDS
+
+   Con ese estado confirmado: Inicio -> Recientes. La tarjeta de Aurora sale
+   EN BLANCO (EV-13a). Ni un fragmento de la lista de registros.
+
+   Las tres capturas de recientes (EV-07c, EV-07d y EV-13a) se publican TAL
+   COMO las devolvió «adb exec-out screencap -p», sin recortar ni retocar. Dos
+   consecuencias que conviene anticipar:
+
+   · Cada una es un archivo distinto (sha256 distintos) y se distinguen entre
+     sí por el reloj de la barra de estado: EV-07c marca 3:13, EV-07d marca
+     2:58 y EV-13a marca 9:55. Un recorte a
+     la tarjeta habría hecho que EV-07c y EV-13a quedaran idénticas byte a
+     byte —dos tarjetas en blanco con el mismo encuadre dan los mismos
+     píxeles—, y entonces ninguna probaría nada por sí sola.
+   · En el borde izquierdo de EV-07c y EV-13a asoma un fragmento de la tarjeta
+     de OTRA aplicación (se le ve una «X» y el texto «nces»). No es Aurora: el
+     mismo fragmento está en EV-07c, del 2026-10-08, y en EV-13a, del
+     2026-10-10, de modo que sobrevivió a la desinstalación del 2026-10-09, que
+     habría borrado cualquier tarea de Aurora de la lista. En EV-07d la ranura
+     la ocupa una tarjeta distinta (un gestor de documentos), lo que confirma
+     que ese espacio lo llena la última app usada, no Aurora.
+   · Un examinador que compare EV-07c y EV-13a píxel a píxel encontrará que
+     difieren en el 1,12 % de los píxeles, y que todas las diferencias están en
+     dos franjas: y<200 (el reloj y los iconos de estado) e y 2000-2200 (los
+     botones «Screenshot» y «Select» del selector de recientes). La zona de la
+     tarjeta es idéntica. Es lo esperable —dos tarjetas en blanco con el mismo
+     desplazamiento dan los mismos píxeles— y es justamente por lo que la
+     prueba no descansa en la imagen.
+
+   Aun así, una tarjeta en blanco no demuestra por sí misma DESDE DÓNDE se
+   tomó. Lo que fija eso son los dos volcados de contexto de arriba, no la
+   imagen.
+
+[4] SALIDA RÁPIDA (RF-16)
+   Se pulsa la nube flotante de la esquina inferior derecha.
+      pantalla resultante .............. la fachada del clima
+      pid del proceso antes / después .. 14776 / 14776 (el mismo: no es un
+                                          cierre del proceso, es una
+                                          transición de estado)
+      bandera SECURE ................... desaparece
+      captura de pantalla .............. vuelve a 261 720 / 261 720 visibles
+      tecla ATRÁS desde la fachada ..... sale al escritorio de Android; el
+                                          espacio interno NO está en la pila
+
+[5] CIERRE AL PASAR A OTRA APP
+   Estando en «Mi registro»: Inicio, y al volver a abrir Aurora la app
+   aterriza en la FACHADA, no en el espacio interno. El proceso seguía vivo
+   (mismo pid), así que no fue una muerte del proceso sino el pop del grafo
+   seguro en ON_STOP (SecureBackStackGuard).
+
+[5·bis] CIERRE POR INACTIVIDAD (RNF-03) — medido con reloj
+   Se entró al espacio interno (panel, bandera SECURE presente) y se dejó el
+   emulador QUIETO, sin un solo evento de entrada:
+      inicio de la espera ..... 09:24:02
+      fin de la espera ........ 09:29:42   (5 min 40 s)
+      pantalla al comprobar ... «Buscar ciudad…», «Hoy», «5 días» -> LA FACHADA
+      bandera SECURE .......... ausente
+   La app volvió SOLA al clima sin que nadie la tocara, que es exactamente lo
+   que la pantalla del tutorial promete («Si dejas tu espacio quieto unos cinco
+   minutos... vuelve sola al clima»). Hasta ahora esto solo estaba fijado por
+   SessionManagerTest con tiempo virtual.
+
+[6] REINGRESO SILENCIOSO (P-31 opción C)
+   Tras el cierre, teclear SOLO la clave personal en la barra devuelve
+   directamente al panel, sin volver a pedir correo ni contraseña.
+
+[7] RESTAURACIÓN MULTI-DISPOSITIVO (RF-39) — verificada sin buscarlo
+   La reinstalación borró todo el estado local. Al iniciar sesión con la
+   cuenta de prueba, «Mi registro» volvió a mostrar los registros con sus
+   adjuntos: 4 visibles sin desplazar, con 6, 3, 3 y 2 adjuntos. Esos 14
+   adjuntos vinieron de la NUBE, donde la cuenta tiene 16 cabeceras de
+   evidencia; que coincidan en número con los 14 archivos que EV-06 había
+   encontrado en el almacén local antes del borrado es consistente, pero no es
+   una inferencia: el almacén local se había borrado por completo.
+   La llave envuelta con la contraseña cumplió su función: los alias del
+   Keystore del dispositivo se habían destruido y aun así el contenido se
+   descifró. Es la primera verificación en vivo de RF-39 fuera de pruebas.
+
+[8] CONSENTIMIENTO Y CONTROL DE LA USUARIA — textos reales en pantalla
+   Consentimiento (RF-17/18), antes de crear la cuenta:
+      «Antes de empezar, decides tú.» · «Qué guardamos.» · «Qué no hacemos.»
+      · «Tus derechos.» · casilla «He leído y acepto el tratamiento de mis
+      datos personales.» · «Aceptar y continuar» / «No aceptar y volver al clima»
+   Ajustes -> control efectivo sobre los propios datos:
+      «Tu llave de entrada» · «Cambiar tu código de acceso» · «Cambiar tu
+      contraseña» · «Ver el tutorial otra vez» · «Tu privacidad» · «Qué
+      guardamos y por qué» · «Tu cuenta» · «Cerrar sesión» · «Eliminar todo
+      y salir»
+
+[9] REGLAS DE LA CLAVE Y DE LA CONTRASEÑA — lo que la app dice en pantalla
+   Clave personal: «Mínimo 6 caracteres» · «No puede ser el nombre de una
+      ciudad» · «Nunca se guarda en texto legible». Campo enmascarado.
+   Contraseña de la cuenta: «Mínimo 8 caracteres» y nada más. No hay
+      medidor de fortaleza ni lista de contraseñas comunes; el código lo
+      confirma (CreateAccountUseCase.kt:33 y :61, la única regla es
+      password.length < 8). Confirma en vivo el residual P-62a.
+
+[10] PORTAPAPELES — lo que se pudo y lo que no
+   Verificado y sólido: la app no usa ClipboardManager, ClipData ni
+   setPrimaryClip en ninguna parte del código.
+   NO verificable con las sondas disponibles: el estado del portapapeles. Ver
+   EV-12 [3], donde se explica por qué «dumpsys clipboard» (salida vacía sin
+   control) y «service call clipboard 1» (que en realidad es setPrimaryClip y
+   falla con «No items») no informan sobre su contenido.
+   NO verificado: no se logró forzar una copia manual desde el campo de
+   relato por adb (este build no admite «cmd clipboard» ni la combinación
+   de teclas de copiar, y el menú flotante de selección de texto no aparece
+   en el volcado de accesibilidad). Queda como observación: la usuaria SÍ
+   puede seleccionar y copiar el texto del relato a mano, y la vista previa
+   del portapapeles de Android 13+ es una ventana de SystemUI que
+   FLAG_SECURE no cubre.
+
+[11] LOGCAT DEL ESPACIO INTERNO — la prueba que faltaba  (2026-10-10)
+
+   La captura de logcat de EV-08 cubría solo la fachada, porque entonces no se
+   podía entrar. Con acceso, se repitió DENTRO. Recorrido ejercitado con el
+   búfer limpio (adb logcat -c -b all) antes de empezar:
+
+      abrir la app -> teclear la clave en la barra -> panel
+      -> pestaña «Guía» -> pestaña «Mi registro»
+      -> abrir un registro existente y volver
+      -> abrir el editor de registro nuevo y ESCRIBIR en «Qué pasó» una
+         SONDA INVENTADA («sondalogcat5150»), elegida por ser única en todo
+         el sistema; no es contenido real de la usuaria
+      -> volver al panel -> Ajustes -> salida rápida
+
+   Captura: adb logcat -d -b all -v threadtime  ->  1 515 líneas.
+
+   Búsqueda sobre esas 1 515 líneas:
+
+      «sondalogcat5150»  (lo tecleado en el relato) ....  0
+      la CLAVE PERSONAL de la cuenta (valor no reproducido aquí) ...  0
+      «Violencia» / «violencia» ........................  0
+      «registro» / «Mi registro» .......................  0
+      un texto de relleno de un registro de la cuenta de prueba ....  0
+      «payload» ........................................  0
+      «journal» / «guidance» ...........................  0
+      «SecretCode» .....................................  0
+      «SessionManager» .................................  10
+
+   Las 10 de «SessionManager» NO son de Aurora: las emite el pid 19059, que es
+   Gboard, sobre sus propias sesiones de entrada («Try to begin an already
+   begun session [INPUT_SESSION]», «Child session [IME_SESSION] is not ended»).
+   Del pid de Aurora (16877): 0 ocurrencias.
+
+   Lo único que el proceso de Aurora escribe con etiqueta propia sigue siendo
+   ruido del runtime ART: «Using CollectorTypeCMC GC.», «Late-enabling
+   -Xcheck:jni», «Compiler allocated …KB», «JNI critical lock held for …ms»,
+   «Accessing hidden method …». Sus líneas W son de ziparchive, HWUI,
+   InteractionJankMonitor y WindowOnBackDispatcher, todas del sistema.
+
+   -> Ni el relato que se teclea, ni la clave, ni el léxico del espacio interno
+      llegan al registro del sistema. Es la verificación dinámica que faltaba
+      para la regla 4 de CLAUDE.md, y se hace donde de verdad importa.
