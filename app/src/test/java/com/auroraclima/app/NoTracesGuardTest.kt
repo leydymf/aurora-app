@@ -213,6 +213,13 @@ class NoTracesGuardTest {
             "SessionManager",
             "SessionGuard"
         )
+        // Excepción deliberada y acotada, registrada en el ADR 2026-10-10 (c):
+        // `weather/ui/WeatherScreen` SÍ importa `core/security/SecureTextEntry`.
+        // No es mecanismo del doble fondo —es el envoltorio que impide que el
+        // teclado aprenda lo que se teclea en la barra, que es por donde se teclea
+        // la clave personal (RF-12, H-7/P-94)— y su nombre es neutro. Esta lista
+        // enumera TOKENS DE MECANISMO: no veda `core.security` bajo `weather/`, y
+        // no debe hacerlo, porque rompería la corrección de H-7.
         val violations = weatherDir.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .flatMap { file ->

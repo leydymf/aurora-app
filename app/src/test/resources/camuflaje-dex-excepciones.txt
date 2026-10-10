@@ -21,6 +21,12 @@
 # comparar, así que aquí las cadenas se escriben LIMPIAS. Antes se escribían con
 # el artefacto pegado y la excepción habría dejado de aplicar en silencio en
 # cuanto la cadena cambiara de longitud (hallazgo M-6 de la auditoría de la rama).
+#
+# Precisión sobre esa regla: MUTF-8 codifica el número de unidades UTF-16, y la
+# comprobación compara contra la longitud en bytes UTF-8. Para cadenas con tildes
+# los dos números difieren y el prefijo NO se quita. Yerra hacia el falso positivo
+# —la cadena se reporta en vez de silenciarse—, que es el lado seguro, pero quien
+# vea una excepción que no aplica a una cadena acentuada ya sabe por qué.
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DE AURORA — P-78. Todas desaparecen con el rename questionnaire->form y
@@ -115,3 +121,9 @@ Consent PendingIntent cannot be null
 # --- «incident» y «abuse»: kotlinx.coroutines y reCAPTCHA ----------------------
 . Please read KDoc to 'handleFatalException' method and report this incident to maintainers
 null cannot be cast to non-null type T of com.google.android.libraries.abuse.recaptcha.network.CaptchaFeConnection.getResponse
+
+# --- Fuera del DEX: resources.arsc -------------------------------------------
+# Recursos que llegan al arsc desde las librerías. `CamouflageResourcesTest` no
+# los ve: barre las FUENTES de Aurora, y estos no están ahí.
+Data non consentita: %1$s
+Theme.Hidden

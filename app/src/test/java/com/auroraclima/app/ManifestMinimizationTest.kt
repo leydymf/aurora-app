@@ -230,11 +230,11 @@ class ManifestMinimizationTest {
         val anclas = (0 until xml.getElementsByTagName("certificates").length)
             .map { (xml.getElementsByTagName("certificates").item(it) as Element).getAttribute("src") }
         assertEquals(
-            "Solo debe confiarse en el almacén del sistema: en el modelo de amenaza de " +
-                "Aurora, quien tiene el teléfono podría instalar una CA propia para leer " +
-                "el tráfico. Ojo con la redacción: desde API 24 este ya es el valor por " +
-                "defecto para targetSdk >= 24, así que declararlo no cerró un hueco " +
-                "abierto — impide que se pierda en silencio si alguien baja el targetSdk",
+            "Solo debe confiarse en el almacén del sistema. Esta declaración hace " +
+                "explícito el valor por defecto desde API 24 para targetSdk >= 24, de modo " +
+                "que no se pierda en silencio si alguien baja el targetSdk: no cerró un " +
+                "hueco abierto, impide que se abra uno. Con ella, una CA que la usuaria " +
+                "instale a mano no sirve para leer el tráfico de Aurora",
             listOf("system"),
             anclas
         )

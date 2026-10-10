@@ -1380,7 +1380,8 @@ en ninguna parte:
   prueba en §5.4. No se tapa con `clearAndSetSemantics` a propósito: dejaría al
   relato, el campo más largo de la app, sin lector de pantalla, y ese precio no lo
   paga el modelo de amenaza. Queda como **residual declarado (P-95)**, y es uno de
-  los dos motivos por los que MASVS-STORAGE-2 no queda en «Pasa» limpio (§10.5).
+  los dos motivos por los que MASVS-STORAGE-2 no queda en «Pasa» limpio, y el
+  único por el que MASVS-PLATFORM-3 tampoco (§10.6).
 - **`Ctrl+C` con teclado físico.** Compose lo atiende en `TextFieldKeyInput`, que
   no pasa por la barra de selección. En el teléfono del piloto no aplica. El
   comentario del código decía «declarado en el informe» cuando no lo estaba;
@@ -1439,6 +1440,13 @@ plantilla de `toString()`, una constante de enum, prosa en español y prosa con
 tilde— y exige cazar los cuatro, y juzga tres cadenas inocentes de la fachada y
 exige no marcar ninguna. Si el guardián deja de funcionar, se sabe entonces.
 
+«En cada corrida» es literal y hay que declarar por qué: la tarea lleva
+`outputs.upToDateWhen { false }`. Sin esa línea Gradle la marcaba UP-TO-DATE
+cuando el APK y las dos listas no habían cambiado y **se saltaba el cuerpo
+completo** —ni autochequeo, ni canarios, ni juicio—, de modo que esta misma
+afirmación era falsa. Lo encontró la revisión de arquitectura de la rama. La tarea
+tarda segundos: saltarla no compraba nada y costaba la garantía.
+
 **Qué juzga, y esto cambió por completo tras la revisión.** La primera versión
 miraba solo las cadenas «atribuibles a Aurora» —las que llevan la ruta del paquete
 o la forma `Nombre(campo=`—, y dos de los tres agentes demostraron que ese filtro
@@ -1453,20 +1461,49 @@ era insuficiente y que la cifra que se publicaba era inexacta:
   de excepción que H-1 denunció tampoco lo habría cazado**, porque es prosa en
   español sin ruta de paquete.
 
-Ahora **se juzgan TODAS las cadenas del DEX**: 167 564 (96 081 distintas), contra
-los **49 términos vedados**, decodificando UTF-8 para que los términos acentuados
-puedan coincidir — con el extractor anterior, que tomaba solo ASCII imprimible,
-una tilde cortaba la cadena y «víctima», «agresión», «pánico» y «salida rápida»
-estaban estructuralmente muertos. El precio de juzgar todo es absorber el ruido de
-las librerías en la línea base, y eso es lo que hace creíble un «0 hallazgos»:
-**60 cadenas aceptadas, una por una y con su causa escrita**. De ellas 9 son de
-Aurora y llevan pendiente (todas de P-78, y desaparecen con el rename
-`questionnaire`→`form` y `Consent*`→`Terms*`); las 51 restantes son de librería
-—`javax.crypto` para «secret», `ISOSpeed` de EXIF para «sos», gRPC para «panic»—
-y no hay nada que arreglar en código ajeno. El guardián informa además de las
-excepciones **que nunca se disparan**: una excepción muerta es o una causa ya
-arreglada, o el síntoma de que el guardián dejó de mirar donde esa excepción
-mira. Hoy son 0.
+Ahora **se juzgan TODAS las cadenas**, contra los **49 términos vedados** y
+decodificando UTF-8 para que los términos acentuados puedan coincidir — con el
+extractor anterior, que tomaba solo ASCII imprimible, una tilde cortaba la cadena
+y «víctima», «agresión», «pánico» y «salida rápida» estaban estructuralmente
+muertos.
+
+Y no solo del DEX. La primera versión miraba únicamente `classes*.dex`, y
+`resources.arsc` es justo donde `CamouflageResourcesTest` **no llega**:
+`shrinkResources` y `optimizeResources` reescriben, y los recursos que traen las
+librerías no están en las fuentes de Aurora y por tanto nunca se miraban. El
+alcance ahora es todo lo que puede llevar texto propio: **DEX, `resources.arsc`,
+el manifiesto binario y `res/**`** — 113 entradas del APK. Quedan fuera a
+propósito `lib/*.so` y los assets de las dependencias (fuentes de PdfBox,
+`.proto` de Firestore, builtins de Kotlin): viajan byte a byte desde la
+dependencia, no pueden contener vocabulario de Aurora, y absorber su ruido
+exigiría 43 excepciones más, varias de ellas basura binaria que no es estable
+entre construcciones. Se barrieron a mano una vez y están limpios.
+
+**Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
+el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
+`app-release.apk`, 23 952 390 B, SHA-256
+`666496173731d6eac8459768e790f424512548cc2aec8f5a0dec607f9c72e879`—: **193 967
+cadenas de 4 o más caracteres, 110 353 distintas, 0 hallazgos nuevos** y el
+autochequeo de canarios en 4/4.
+
+Las cifras van atadas al SHA-256 a propósito, igual que en §2, porque **el
+recuento de cadenas es propiedad de una construcción y no del commit**: durante
+la auditoría de esta rama dos construcciones del mismo commit dieron 167 564 y
+168 992 cadenas. Lo que no se mueve entre construcciones es el veredicto: 0
+hallazgos en todas ellas. Quien reejecute el comando debe esperar un número
+parecido, no idéntico.
+
+El precio de juzgar todo es absorber el ruido de las librerías en la línea base, y
+eso es lo que hace creíble un «0 hallazgos»: **62 cadenas aceptadas, una por una y
+con su causa escrita**. De ellas 9 son de Aurora y llevan pendiente (todas de
+P-78, y desaparecen con el rename `questionnaire`→`form` y `Consent*`→`Terms*`);
+las 53 restantes son de librería —`javax.crypto` para «secret», `ISOSpeed` de EXIF
+para «sos», gRPC para «panic», y dos recursos del arsc: una cadena italiana del
+selector de fecha de material3 y un estilo de `androidx.credentials`— y no hay
+nada que arreglar en código ajeno. El guardián informa además de las excepciones
+**que nunca se disparan**: una excepción muerta es o una causa ya arreglada, o el
+síntoma de que el guardián dejó de mirar donde esa excepción mira. Hoy son 0, y en
+la versión anterior había una.
 
 **Fuente única de términos, de verdad.** La primera versión creó
 `camuflaje-terminos-vedados.txt` declarando ser «fuente única para los dos
@@ -1556,32 +1593,48 @@ KDoc que explica por qué el nombre es deliberadamente soso, para que un refacto
 **Verificación**, sobre el DEX del release reconstruido: `quickExit` **0**
 ocurrencias (antes 2), `QUICK_EXIT` **0** (antes 1), y en su lugar `closeNow` (2)
 y `CLOSE_NOW` (1), que son vocabulario neutro. El guardián del DEX pasa con 0
-hallazgos, y el nuevo caso de `CamouflageResourcesTest` sobre identificadores
-impide que vuelva desde el código fuente.
+hallazgos. El nuevo caso de `CamouflageResourcesTest` sobre identificadores lo
+detiene en la forma de declaración actual —un enum con argumentos de constructor
+o anidado en una clase se le escapa, y por eso no se puede decir que «impide que
+vuelva»—; la red que no depende de la forma de escribir el código es el guardián
+del DEX, que mira el artefacto.
 
 ### 10.6 Recuento tras las correcciones
 
 | Resultado | v0.3.0 (medido) | v0.3.1 (tras corregir) |
 |---|---|---|
-| **Pasa** | 7 | **8** — entra PLATFORM-3 |
-| **Pasa con observación** | 9 | **9** — sale PLATFORM-3, entra STORAGE-2 |
+| **Pasa** | 7 | **7** |
+| **Pasa con observación** | 9 | **10** — entra STORAGE-2 |
 | **Falla** | **1** (STORAGE-2) | **0** |
 | **No aplica** | 3 | 3 |
 
-**MASVS-STORAGE-2 deja de fallar, pero no queda limpio.** La primera redacción de
-esta sección lo puso en «Pasa» y daba el recuento 9/8/0/3; la auditora demostró
-que contradecía el texto de este mismo informe: §5.1 declara **dos** observaciones
-vivas en ese control, y la primera es **P-22** —la caché persistente del SDK de
-Firestore es SQLite plano, sin SQLCipher—, que esta rama no toca. Solo la segunda
-era H-7. A eso se suma ahora el residual de accesibilidad de §10.1. Con la
-convención del propio informe, un control con observación viva es «Pasa con
-observación». **MASVS-PLATFORM-3** sí pasa limpio: su única observación era H-7.
+**Ningún control sube a «Pasa» limpio, y esta cifra ya se corrigió dos veces.** La
+primera redacción daba 9/8/0/3, poniendo en «Pasa» tanto STORAGE-2 como
+PLATFORM-3. La segunda daba 8/9/0/3, corrigiendo STORAGE-2 pero dejando
+PLATFORM-3 limpio. Las dos estaban mal, y las dos veces lo demostró la auditora
+contra el texto de este mismo informe:
 
-Tres observaciones se reducen sin desaparecer: **MASVS-NETWORK-1** pierde la de la
-configuración implícita pero conserva la de P-12; **MASVS-CODE-3** pierde el
+- **MASVS-STORAGE-2** tiene **dos** observaciones vivas según §5.1, y la primera
+  es **P-22** —la caché persistente del SDK de Firestore es SQLite plano, sin
+  SQLCipher—, que esta rama no toca. Solo la segunda era H-7. Se le suma el
+  residual de accesibilidad de §10.1. Queda en «Pasa con observación».
+- **MASVS-PLATFORM-3** tampoco queda limpio. Su única observación *registrada* era
+  H-7, sí, pero el residual de accesibilidad de §10.1 es materia suya: la lectura
+  del árbol de accesibilidad es exposición de la INTERFAZ, que es justo lo que
+  este control cubre —capturas, recientes, enmascaramiento— y lo que `FLAG_SECURE`
+  no alcanza. Cobrarse el mismo residual en STORAGE-2 y no en PLATFORM-3 era una
+  asimetría sin justificación. Queda también en «Pasa con observación».
+
+Con la convención del propio informe —un control con observación viva es «Pasa con
+observación»— el recuento de v0.3.1 es **7 · 10 · 0 · 3**. La cifra es menos
+lucida que las dos anteriores y es la que se sostiene.
+
+Cuatro observaciones se reducen sin desaparecer: **MASVS-NETWORK-1** pierde la de
+la configuración implícita pero conserva la de P-12; **MASVS-CODE-3** pierde el
 defecto concreto de Compose pero mantiene que 1.7.8 sigue por detrás de la línea
-estable actual y que PdfBox-Android continúa sin mantenimiento; y
-**MASVS-STORAGE-2** pierde H-7 pero conserva P-22 y el residual de accesibilidad.
+estable actual y que PdfBox-Android continúa sin mantenimiento; **MASVS-STORAGE-2**
+pierde H-7 pero conserva P-22 y el residual de accesibilidad; y **MASVS-PLATFORM-3**
+pierde H-7 y conserva ese mismo residual.
 
 **El 0 en «Falla» está pendiente de una comprobación manual**: la del menú de
 selección del relato (§10.1). Todo lo demás de esta sección se verificó con
@@ -1597,6 +1650,7 @@ el emulador B, 0 fallos — eran 45, y entran los 2 casos de `SecureTextEntryTes
 ktlint sin violaciones. `assembleDebug` y `assembleRelease` en verde, este último
 con el guardián del DEX pasando y su autochequeo de canarios en verde.
 
-La corrida es la del comando completo:
-`cleanTestDebugUnitTest cleanTestReleaseUnitTest test ktlintCheck lint
-assembleDebug assembleRelease`.
+La corrida es la del comando completo, sobre árbol limpio (`clean` previo) y con
+el JDK prescrito: `test ktlintCheck lint assembleDebug assembleRelease`. `lint`
+da 0 errores y 58 avisos, ninguno sobre los archivos nuevos. El APK release
+medido es el del SHA-256 de §10.3.

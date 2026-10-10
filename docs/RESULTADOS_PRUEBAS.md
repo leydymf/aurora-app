@@ -29,6 +29,15 @@ compilación, lint y los dos APK ya estaban al día de este mismo `HEAD`); en `a
 → todo en verde. Los tests unitarios se re-ejecutaron forzando la limpieza
 previa (mismo criterio anti-caché de las corridas v0.2.0 y v0.3.0).
 
+> **Cifra vigente al 2026-10-10 (rama `fix/hallazgos-owasp`, v0.3.1):** la tabla de
+> abajo es la instantánea del cierre de `mejoras-v3`. La corrida vigente es
+> **800 pruebas de JVM por variante en 106 clases y 47 instrumentadas en 12
+> clases**, 0 fallos, con el comando completo sobre árbol limpio. Suben de 720 a
+> 800 por los dos tramos de la evaluación OWASP: +71 en la rama `seguridad-owasp`
+> y +9 en esta. El detalle está en la §10.7 de
+> `docs/INFORME_SEGURIDAD_OWASP.md`, y el APK release medido va atado a su
+> SHA-256 en la §10.3 del mismo documento.
+
 | Métrica | v0.3.0 · V2 (2026-08-12) | Hoy (2026-10-05) |
 |---|---|---|
 | Pruebas unitarias JVM | 529 por variante (75 clases) | **720 por variante — debug y release, 1 440 ejecuciones, 0 fallos, 0 errores, 0 omitidas (100 clases)** |
@@ -310,8 +319,10 @@ para **una sola instalación en A** (bloques A y P encadenados sin reinstalar),
 **Montaje:** emulador **A** = `Medium_Phone_API_35` **relanzado con 4 núcleos y
 4 GB** (`emulator -avd Medium_Phone_API_35 -cores 4 -memory 4096`, P-82; con la
 configuración por defecto de 1 núcleo / 2 GB la app no completa el arranque),
-instalación limpia del **debug** de esta rama (`429f283`, Room v5 / payload v3) —
-`./gradlew installDebug` y comprobar `lastUpdateTime` antes de empezar;
+instalación limpia del **debug** de la rama vigente —para los bloques A/B/P/C,
+`429f283` (Room v5 / payload v3); **para el bloque S, el debug de v0.3.1**, que es
+el único que lleva las correcciones de la evaluación OWASP— con
+`./gradlew installDebug` y comprobando `lastUpdateTime` antes de empezar;
 proyecto real `aurora-31c37`; consola de Firebase y panel `admin/` (`npm run
 dev`) abiertos. Emulador **B** (segundo dispositivo) solo en el bloque B.
 **Regla de orden:** el APK v5 debe estar instalado ANTES de publicar t05/t06
@@ -473,6 +484,8 @@ emulador — `assembleDebug` no instala.
 | S4 | **P-11 — el teclado no aprende** (comprobación de la usuaria, repetible) | Escribir una **palabra inventada** en el relato y otra en la barra de la fachada; salir, abrir otra app con un campo de texto y empezar a teclear las primeras letras de cada una | Gboard no las sugiere. Esta es la comprobación que desmiente o confirma la corrección de P-11: antes las barras no tenían protección mecánica ninguna, pese a lo que decía el comentario del código |
 | S5 | **P-90 — confirmación corta de la caída** | Teclear en la barra y pulsar Inicio 3-4 veces; lo mismo en el relato | 0 caídas. Las 10+10 ya están anotadas; esto solo confirma el APK instalado |
 | S6 | **Regresión visual por material3 1.2.1 → 1.3.1** (no es seguridad; la trae la subida de BOM de H-2) | Mirar en pantalla: selector de fecha del registro (A7), casilla del consentimiento (A2), casilla y interruptor «Incluir adjuntos» de la exportación (A10), los indicadores circulares de carga, y los campos del kit en login, clave y exportación | Comparar con `docs/mockups-v2/` y con el contraste B8 (relleno blanco, contorno gris `#7E788E` que se engrosa con foco). Anotar diferencias de tamaño, color o separación: esa versión cambia métricas y colores por defecto de esos componentes |
+| S7 | **Re-smoke de la salida rápida y del tutorial tras el renombre de H-8** (RF-16, RNF-03, RF-10, RF-19) | Entrar con la clave → pulsar la nube desde Inicio, desde el detalle de un registro y desde el cuestionario, cronometrando → comprobar que «atrás» no regresa al espacio interno → Ajustes → «Ver el tutorial de nuevo» → práctica de ingreso con la clave real → nube → Ajustes → «Cerrar sesión» → reingreso | La nube devuelve al clima en menos de 1 s en los tres sitios, con la barra vacía; «atrás» no regresa; el tutorial completa su práctica; el reingreso exige clave y credenciales. **Por qué está aquí:** A2 y la transversal de RF-16 quedaron en ✅ el 2026-10-07, y el renombre `quickExit`→`closeNow` del 2026-10-10 tocó esa ruta después. El renombre está probado archivo por archivo como puro, así que esto es confirmación, no sospecha — pero una lista única no debe dejar un ✅ cuyo código cambió luego |
+| S8 | **La red sigue funcionando con la configuración nueva** (H-5, P-93) | Buscar una ciudad en la fachada y ver el pronóstico; entrar y comprobar que la nube sincroniza un registro nuevo | Clima real y sincronización en verde. Son 30 s, y conviene porque el archivo no lleva `<debug-overrides>`: si algo quedara mal declarado, se vería como un fallo de red y no como un fallo de configuración |
 
 ### Bloque C — Plataforma (recomendadas antes del tag, no encadenadas)
 

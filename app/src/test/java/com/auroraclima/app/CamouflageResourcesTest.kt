@@ -123,7 +123,12 @@ class CamouflageResourcesTest {
     fun `los identificadores que sobreviven a R8 no revelan el proposito real`() {
         // Las dos formas en que un nombre propio llega LEGIBLE al DEX pese a R8.
         val dataClassODataObject = Regex("""\bdata\s+(?:class|object)\s+([A-Za-z_][A-Za-z0-9_]*)""")
-        val constanteDeEnum = Regex("""^\s{4}([A-Z][A-Z0-9_]{2,})\s*(?:,|;|$)""", RegexOption.MULTILINE)
+        // Cualquier sangría y también la forma con argumentos de constructor: la
+        // primera versión exigía exactamente cuatro espacios y que al nombre le
+        // siguiera `,`, `;` o fin de línea, así que `CLOSE_NOW(R.string.x),` y los
+        // enum anidados en una clase se le escapaban — formas ordinarias en Kotlin
+        // (hallazgo F-4 de la auditoría).
+        val constanteDeEnum = Regex("""^[ \t]+([A-Z][A-Z0-9_]{2,})\s*(?:[,;(]|$)""", RegexOption.MULTILINE)
 
         val fuentes = mainDir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
         val identificadores = fuentes.flatMap { file ->

@@ -44,16 +44,19 @@ para una cobertura ligera.
 
 ## Cuántos controles pasaron
 
-El estándar tiene veinte controles, y **tres no aplican** a una aplicación con
-las características de Aurora: no usa páginas web embebidas, no tiene servidores
-propios a los que fijar certificados y no se distribuye por una tienda donde
-forzar actualizaciones tenga sentido. Quedan **diecisiete evaluables**, y de esos
-**dieciséis pasaron y uno falló**: siete pasaron sin salvedades, nueve pasaron con
-una observación anotada, y el que pide evitar la fuga de datos sensibles no se
-cumple. Más abajo se explica por qué y qué lo causa.
+El estándar tiene **veinticuatro controles**. Cuatro —los de la categoría de
+resiliencia— quedaron fuera de alcance de forma justificada, por el motivo que
+explica el apartado anterior. De los **veinte en alcance**, **tres no aplican** a
+una aplicación con las características de Aurora: no usa páginas web embebidas, no
+tiene servidores propios a los que fijar certificados y no se distribuye por una
+tienda donde forzar actualizaciones tenga sentido. Quedan **diecisiete
+evaluables**, y de esos **dieciséis pasaron y uno falló**: siete pasaron sin
+salvedades, nueve pasaron con una observación anotada, y el que pide evitar la
+fuga de datos sensibles no se cumple. Más abajo se explica por qué y qué lo causa.
 
-Conviene decirlo así y no «diecinueve de veinte», porque un control que no aplica
-no es un control aprobado: sumarlo a los cumplidos infla la cifra.
+Conviene decirlo así, con el denominador a la vista, y no «diecinueve de veinte»:
+un control que no aplica no es un control aprobado, y sumarlo a los cumplidos
+infla la cifra.
 
 Lo más importante es que los pilares del diseño resistieron la comprobación
 directa, no solo la revisión del código. Las bases de datos donde viven los
@@ -224,15 +227,25 @@ instalable con una clave propia y revisar dos componentes que arrastra la librer
 de autenticación. Se abordan antes del piloto.
 
 Con eso, de los diecisiete controles evaluables **los diecisiete pasan y ninguno
-falla**: ocho sin salvedades y nueve con alguna observación anotada. El control de
-fuga de datos deja de fallar, pero no queda limpio, y es importante decir por qué:
-la copia que la librería de Google mantiene en el teléfono para que la aplicación
-funcione sin conexión no está cifrada con la misma protección que el resto —es un
-riesgo ya registrado desde antes, que esta corrección no toca— y porque un servicio
-de accesibilidad del sistema, como el lector de pantalla, sí puede copiar el texto
-del relato sin pasar por el menú que se cerró. Lo segundo se dejó así a conciencia:
-bloquearlo habría dejado el campo más largo de la aplicación sin lector de
-pantalla, y ese precio no se paga.
+falla**: siete sin salvedades y diez con alguna observación anotada. Ninguno sube a
+«cumplido sin salvedades», y conviene explicar por qué, porque es la parte menos
+lucida y la más honesta del resultado.
+
+El control de fuga de datos deja de fallar, pero conserva dos observaciones. La
+primera es que la copia que la librería de Google mantiene en el teléfono para que
+la aplicación funcione sin conexión no está cifrada con la misma protección que el
+resto: es un riesgo ya registrado desde antes, que esta corrección no toca. La
+segunda es que un servicio de accesibilidad del sistema, como el lector de
+pantalla, sí puede copiar el texto del relato sin pasar por el menú que se cerró.
+Esa segunda observación afecta por igual al control que vigila el uso seguro de la
+interfaz, así que ese también queda con salvedad: el lector de pantalla puede leer
+el contenido de las pantallas protegidas, porque el bloqueo de capturas no alcanza
+a ese canal.
+
+Las dos se dejaron así a conciencia. Bloquear el lector de pantalla habría dejado
+el campo más largo de la aplicación —el relato de lo que pasó— inaccesible para
+quien lo necesite, y ese precio no se paga en una aplicación pensada para
+situaciones de vulnerabilidad.
 
 De seguridad queda una sola comprobación por hacer a mano, la del menú de texto
 del relato, porque es de las que ningún método automático puede verificar. Aparte

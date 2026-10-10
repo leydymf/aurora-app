@@ -165,6 +165,12 @@ val verificarCamuflajeDex by tasks.registering {
     inputs.file(terminosProv).withPropertyName("terminosVedados")
     inputs.file(excepcionesProv).withPropertyName("excepciones")
     outputs.file(informeProv).withPropertyName("informe")
+    // Sin esto, Gradle marca la tarea UP-TO-DATE cuando el APK y las dos listas no
+    // cambiaron, y se salta el `doLast` COMPLETO: ni autochequeo, ni canarios, ni
+    // juicio. El informe afirmaba «autochequeo en cada corrida» y con el UP-TO-DATE
+    // eso era literalmente falso (hallazgo A-1 de la revisión de arquitectura). La
+    // tarea tarda segundos: saltarla no compra nada y cuesta la garantía.
+    outputs.upToDateWhen { false }
 
     doLast {
         val apk = apkProv.get().asFile
@@ -223,15 +229,33 @@ val verificarCamuflajeDex by tasks.registering {
             "El guardián marca cadenas inocentes de la fachada: $falsosPositivos."
         }
 
-        // Cadenas del DEX, al estilo de `strings`, pero decodificando UTF-8: un
-        // byte de tilde no corta la cadena. Con el extractor anterior, solo ASCII,
-        // los términos acentuados de la lista no podían coincidir nunca.
+        // Alcance: TODO lo que puede llevar texto propio de Aurora. La primera
+        // versión miraba solo `classes*.dex`, y `resources.arsc` es justo donde
+        // `CamouflageResourcesTest` no llega: `shrinkResources` y `optimizeResources`
+        // reescriben, y los recursos de las librerías no se miran nunca en las
+        // fuentes (hallazgo F-8 de la auditoría).
+        //
+        // Fuera de alcance a propósito: `lib/*.so` y los assets de las dependencias
+        // (fuentes de PdfBox, `.proto` de Firestore, builtins de Kotlin). Viajan byte
+        // a byte desde la dependencia, no pueden contener vocabulario de Aurora, y
+        // absorberlos exigiría 43 excepciones más —varias de ellas basura binaria que
+        // no es estable entre construcciones—. Se barrieron a mano una vez y están
+        // limpios; lo que queda vigilado por regla es lo que Aurora escribe.
+        val enAlcance = Regex("""classes\d*\.dex|resources\.arsc|AndroidManifest\.xml|res/.*""")
         var total = 0
+        var entradas = 0
+        // Cadenas al estilo de `strings`, pero decodificando UTF-8: un byte de tilde
+        // no corta la cadena. Con el extractor anterior, solo ASCII, los términos
+        // acentuados de la lista no podían coincidir nunca.
         val cadenas = LinkedHashSet<String>()
         ZipFile(apk).use { zip ->
-            val dex = Collections.list(zip.entries())
-                .filter { entrada: ZipEntry -> entrada.name.matches(Regex("""classes\d*\.dex""")) }
-            for (entrada in dex) {
+            val juzgables = Collections.list(zip.entries())
+                .filter { entrada: ZipEntry -> enAlcance.matches(entrada.name) }
+            require(juzgables.any { it.name.endsWith(".dex") }) {
+                "No se encontró ningún classes*.dex en el APK: ¿cambió el formato?"
+            }
+            entradas = juzgables.size
+            for (entrada in juzgables) {
                 val bytes: ByteArray = zip.getInputStream(entrada).readBytes()
                 var inicio = -1
                 fun cerrar(fin: Int) {
@@ -252,7 +276,7 @@ val verificarCamuflajeDex by tasks.registering {
                 cerrar(bytes.size)
             }
         }
-        require(cadenas.isNotEmpty()) { "No se extrajo ninguna cadena del DEX: ¿cambió el formato del APK?" }
+        require(cadenas.isNotEmpty()) { "No se extrajo ninguna cadena: ¿cambió el formato del APK?" }
 
         val hallazgos = juzgar(cadenas)
 
@@ -271,6 +295,7 @@ val verificarCamuflajeDex by tasks.registering {
                 appendLine("APK: ${apk.name} (${apk.length()} bytes)")
                 appendLine("Cadenas de 4 o más caracteres: $total (${cadenas.size} distintas)")
                 appendLine("Se juzgan TODAS, sin filtro de atribución.")
+                appendLine("Entradas del APK en alcance: $entradas (dex + arsc + manifiesto + res/)")
                 appendLine("Términos vedados comprobados: ${vedados.size}")
                 appendLine("Autochequeo de canarios: ${canarios.size}/${canarios.size} cazados, 0 falsos positivos")
                 appendLine("Excepciones documentadas en la línea base: ${aceptadas.size}")

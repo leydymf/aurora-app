@@ -45,6 +45,14 @@ import androidx.compose.ui.platform.TextToolbarStatus
  *    la app— sin lector de pantalla, y ese precio no lo paga el modelo de amenaza.
  *  - `Ctrl+C` con un teclado físico: Compose lo atiende en `TextFieldKeyInput`, que
  *    no pasa por la barra de selección. En el teléfono del piloto no aplica.
+ *  - el AUTOLLENADO, que es una vía distinta del portapapeles y del diccionario del
+ *    IME sobre este mismo campo. Hoy está inerte —no hay `AutofillNode` registrado
+ *    ni `contentType` en el código, medido sobre el DEX— pero el andamiaje de
+ *    Compose ya viaja en el APK. NO se desactiva: `importantForAutofill` solo existe
+ *    a nivel de ventana, así que en la raíz dejaría sin autollenado los campos de
+ *    contraseña de la cuenta y rompería los gestores de contraseñas, que es una
+ *    pérdida de seguridad real; y Compose 1.7 no expone un equivalente por campo.
+ *    Se revisa al subir a 1.8 (P-97).
  *
  * **Acoplado a Compose 1.7.** [InterceptPlatformTextInput] existe desde ahí, y en
  * 1.8 `TextToolbar.showMenu` cambia de firma y la barra de selección se sustituye

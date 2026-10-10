@@ -8,18 +8,16 @@
     cleartextTrafficPermitted="false": nada de HTTP. Los dos extremos de la app
     son https (Open-Meteo y Firebase); no hay ninguno que lo necesite.
 
-    trust-anchors con solo "system": no se confía en las autoridades que se
-    hayan instalado en el dispositivo. Importa en el modelo de amenaza del
-    proyecto, donde se asume acceso físico al teléfono: una CA instalada a mano
-    permitiría leer el tráfico.
+    trust-anchors con solo "system": fija explícitamente el valor por defecto
+    para que no se pueda perder al bajar el targetSdk. Eso es TODO lo que hace,
+    y es el mismo motivo que la línea de arriba.
 
-    Lo que esta línea NO hizo es cerrar un hueco abierto. Desde Android 7 (API
-    24), una app con targetSdk >= 24 ya confía solo en el almacén del sistema;
-    con min 26 y target 35, las autoridades añadidas a mano nunca fueron de
-    confianza aquí. Las dos declaraciones de este archivo valen lo mismo y por
-    el mismo motivo: hacen explícito un valor por defecto para que no se pueda
-    perder en silencio al cambiar el targetSdk. Ni una ni otra mitigaron nada
-    que estuviera pasando.
+    Importa decirlo en este orden porque la primera redacción afirmaba que sin
+    esta línea una CA instalada a mano habría permitido leer el tráfico, y eso
+    es falso para esta app: desde Android 7 (API 24), una app con targetSdk >= 24
+    ya confía solo en el almacén del sistema, y Aurora es min 26 / target 35. Las
+    autoridades que la usuaria instale nunca fueron de confianza aquí. La
+    declaración no cerró ningún hueco; impide que se abra uno.
 
     Nota operativa: sin <debug-overrides>, una prueba legítima de interceptación
     TLS (MASVS-NETWORK-2) exige añadir ese bloque de forma temporal. Se deja
