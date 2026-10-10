@@ -197,4 +197,44 @@ class ManifestMinimizationTest {
             application.androidAttr("allowBackup")
         )
     }
+
+    @Test
+    fun `la configuracion de seguridad de red esta declarada`() {
+        val application = elements("application").single()
+        assertEquals(
+            "La app debe declarar networkSecurityConfig (H-5, P-93): sin él, el bloqueo " +
+                "del tráfico en claro depende del valor por defecto de targetSdk y " +
+                "desaparecería en silencio si alguien lo bajara",
+            "@xml/network_security_config",
+            application.androidAttr("networkSecurityConfig")
+        )
+    }
+
+    @Test
+    fun `la configuracion de red prohibe el trafico en claro y las CA de usuario`() {
+        val config = requireNotNull(
+            sequenceOf(
+                File("src/main/res/xml/network_security_config.xml"),
+                File("app/src/main/res/xml/network_security_config.xml")
+            ).firstOrNull { it.exists() }
+        ) { "Falta res/xml/network_security_config.xml (H-5, P-93)" }
+        val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(config)
+
+        val base = xml.getElementsByTagName("base-config").item(0) as Element
+        assertEquals(
+            "cleartextTrafficPermitted debe ser false: ningún extremo de Aurora usa HTTP",
+            "false",
+            base.getAttribute("cleartextTrafficPermitted")
+        )
+
+        val anclas = (0 until xml.getElementsByTagName("certificates").length)
+            .map { (xml.getElementsByTagName("certificates").item(it) as Element).getAttribute("src") }
+        assertEquals(
+            "Solo debe confiarse en el almacén del sistema: en el modelo de amenaza de " +
+                "Aurora, quien tiene el teléfono podría instalar una CA propia para leer " +
+                "el tráfico",
+            listOf("system"),
+            anclas
+        )
+    }
 }

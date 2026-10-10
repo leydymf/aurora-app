@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    Configuración de seguridad de red (H-5 de la evaluación OWASP, P-93).
+
+    Hasta ahora el bloqueo del tráfico en claro dependía del valor por defecto
+    de targetSdk 35. Funcionaba, pero era una garantía implícita: bajar el
+    targetSdk algún día lo habría desactivado en silencio. Aquí queda explícito.
+
+    cleartextTrafficPermitted="false": nada de HTTP. Los dos extremos de la app
+    son https (Open-Meteo y Firebase); no hay ninguno que lo necesite.
+
+    trust-anchors con solo "system": no se confía en las autoridades que se
+    hayan instalado en el dispositivo. Importa en el modelo de amenaza del
+    proyecto, donde se asume acceso físico al teléfono: con una CA instalada a
+    mano se podría leer el tráfico, y sin esta línea la app lo permitiría.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
