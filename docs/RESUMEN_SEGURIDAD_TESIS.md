@@ -44,11 +44,13 @@ para una cobertura ligera.
 
 ## Cuántos controles pasaron
 
-De los **veinte controles evaluados, ninguno falló**. Ocho pasaron sin
-salvedades, nueve pasaron con una observación anotada y tres no aplican a una
-aplicación con las características de Aurora: no usa páginas web embebidas, no
-tiene servidores propios a los que fijar certificados y no se distribuye por una
-tienda donde forzar actualizaciones tenga sentido.
+De los **veinte controles evaluados, diecinueve pasaron y uno falló**. Siete
+pasaron sin salvedades, nueve pasaron con una observación anotada, tres no
+aplican a una aplicación con las características de Aurora —no usa páginas web
+embebidas, no tiene servidores propios a los que fijar certificados y no se
+distribuye por una tienda donde forzar actualizaciones tenga sentido— y uno,
+el que pide evitar la fuga de datos sensibles, no se cumple. Más abajo se
+explica por qué y qué lo causa.
 
 Lo más importante es que los pilares del diseño resistieron la comprobación
 directa, no solo la revisión del código. Las bases de datos donde viven los
@@ -88,8 +90,28 @@ una cuenta administradora puede leer los datos de una usuaria.
 
 ## Qué hallazgos quedaron
 
-Quedaron **seis hallazgos, todos de gravedad media o menor, y ninguno expone
-datos de las usuarias**.
+Quedaron **siete hallazgos: uno de gravedad alta, dos de gravedad media, tres
+bajos y uno que la propia evaluación dejó cerrado**.
+
+**El de gravedad alta es el único que puede exponer datos de una usuaria, y
+conviene entenderlo bien.** Mientras se está escribiendo un registro, el texto
+del relato se puede seleccionar, copiar y pegar en cualquier otra aplicación del
+teléfono; una vez guardado el registro ya no se puede. La causa es sencilla: ese
+campo es el único del espacio privado que no está declarado como campo de
+contraseña, y esa declaración es precisamente la que, en todos los demás, hace
+desaparecer la opción «copiar» del menú de texto y le dice al teclado que no
+memorice lo que se escribe. Importa porque es el único camino que la evaluación
+encontró por el que el contenido de un registro puede salir del espacio
+protegido sin herramientas especiales: a quien tenga el teléfono le bastaría
+abrir otra aplicación y pegar. No es un fallo del cifrado ni del camuflaje —los
+registros siguen guardados y enviados cifrados—, sino una protección que no se
+aplicó a un campo. Se corrige en la versión siguiente.
+
+Esto se descubrió, además, de una manera que vale la pena contar: era una de las
+dos comprobaciones que ningún método automático podía hacer, porque escribir por
+cable no pasa por el teclado del teléfono y el emulador no deja forzar una copia.
+Las hizo una persona a mano. La otra salió bien: **el teclado no aprende la clave
+de acceso**, lo que cierra una duda que el proyecto arrastraba desde julio.
 
 Los dos de gravedad media son estos. El primero es que, al revisar el archivo
 instalable, se encontró que sobreviven a la ofuscación más nombres internos de
@@ -108,27 +130,32 @@ lo que parece: el sistema **no muestra ningún aviso de error**, porque la
 aplicación ya estaba en segundo plano, de modo que el camuflaje no se rompe; lo
 que se pierde es el texto no guardado.
 
-Los otros cuatro son higiene previa al piloto: el instalable todavía se firma con
-la clave de pruebas y no con una propia; el manifiesto arrastra dos componentes
-expuestos que vienen con la librería de autenticación y que Aurora no usa; falta
-declarar de forma explícita una configuración de red que hoy funciona por el
-valor por defecto del sistema; y quedan dos comprobaciones que ningún método
-automático puede hacer —si el teclado del teléfono aprende la clave que se
-teclea, y si copiar a mano el texto de un relato lo deja expuesto— que solo
-pueden cerrarse con una persona operando el teléfono.
+Los tres restantes son higiene previa al piloto: el instalable todavía se firma
+con la clave de pruebas y no con una propia; el manifiesto arrastra dos
+componentes expuestos que vienen con la librería de autenticación y que Aurora
+no usa; y falta declarar de forma explícita una configuración de red que hoy
+funciona por el valor por defecto del sistema.
 
-## Por qué son aceptables para un prototipo TRL 4
+## Qué significan estos resultados para un prototipo TRL 4
 
-Son aceptables por tres razones. Primero, porque **ninguno compromete la
-confidencialidad de los datos de las usuarias**, que es el requisito que da
-sentido a la aplicación: todo lo sensible sigue cifrado en reposo, aislado en la
-nube y ausente de los registros del sistema. Segundo, porque **ninguno rompe el
-camuflaje frente a la amenaza modelada**: los nombres que sobreviven en el
-archivo instalable solo son visibles para quien lo descompile, y la caída no
-produce ningún aviso en pantalla. Y tercero, porque los cuatro restantes son
-tareas de preparación conocidas, baratas y con una corrección concreta ya
-definida, que corresponden al paso del prototipo al piloto con usuarias reales,
-no a la validación técnica que este nivel de madurez exige.
+El hallazgo de gravedad alta **sí debe corregirse antes de poner la aplicación
+en manos de una usuaria**, y por eso se corrige de inmediato en la versión
+siguiente junto con otros tres. No era previsible desde el diseño: el proyecto
+había protegido deliberadamente todos los campos sensibles, y este quedó fuera
+precisamente por ser el único que necesita escribirse largo y no tiene forma de
+contraseña. Encontrarlo es, en sí mismo, el resultado que justifica haber hecho
+la evaluación.
+
+Los seis restantes sí son aceptables en este nivel de madurez, por tres razones.
+Primero, porque **ninguno compromete la confidencialidad de los datos**: todo lo
+sensible sigue cifrado en reposo, aislado en la nube y ausente de los registros
+del sistema. Segundo, porque **ninguno rompe el camuflaje frente a la amenaza
+modelada**: los nombres que sobreviven en el archivo instalable solo son
+visibles para quien lo descompile, y la caída de la aplicación no produce ningún
+aviso en pantalla. Y tercero, porque los tres de higiene son tareas de
+preparación conocidas, baratas y con una corrección ya definida, que
+corresponden al paso del prototipo al piloto con usuarias reales y no a la
+validación técnica que TRL 4 exige.
 
 Conviene añadir una precisión sobre lo que la evaluación encontró y lo que no.
 **No apareció ningún riesgo nuevo sobre los datos de las usuarias**: todo lo que
@@ -136,9 +163,14 @@ toca cifrado, aislamiento o confidencialidad ya estaba previsto y documentado en
 el registro de pendientes del proyecto, y lo que esta prueba aportó fue medirlo
 —dos de esos riesgos quedaron acotados con cifras exactas que antes solo se
 describían en palabras, y uno resultó ser mayor de lo registrado, lo que dio
-origen al primer hallazgo—. De los cinco hallazgos restantes, cuatro sí son
-nuevos y no estaban en ese registro —son de preparación para el despliegue, no
-de diseño—, y el sexto es el pendiente ya anotado sobre el teclado.
+origen a uno de los hallazgos—. Los otros cinco sí son nuevos y no estaban en
+ese registro: cuatro de preparación para el despliegue, y el de gravedad alta,
+que nadie había previsto y que apareció solo cuando una persona se sentó a
+probar la aplicación a mano. Esa es, quizá, la lección más útil del ejercicio:
+la automatización cubrió muchísimo terreno —ochenta y siete pruebas del
+estándar, medición de píxeles, entropía, registros del sistema, reglas de la
+nube— pero el gesto más cotidiano, seleccionar un texto y copiarlo, quedó fuera
+de su alcance.
 Esa coincidencia entre lo que el equipo ya sabía sobre sus propios riesgos de
 datos y lo que una verificación sistemática encuentra es, en sí misma, un
 resultado: indica que el seguimiento de riesgos que se llevó durante el

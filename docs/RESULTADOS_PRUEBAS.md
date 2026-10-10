@@ -119,7 +119,13 @@ legible; quedan 23 clases `a`…`l` bajo tres paquetes `documentinterchange`
 `com.tom_roush.*` con nombre de clase original.
 
 **Estado (2026-10-05, APK final de la rama, con las correcciones de §9.2):
-VERIFICADO — ningún símbolo nuevo legible en el DEX.** Residual **A-4 → P-78**:
+VERIFICADO — ningún NOMBRE DE CLASE nuevo legible en el DEX.** La verificación
+se hizo con `apkanalyzer dex packages --defined-only`, que enumera clases
+declaradas y **no ve los literales de cadena**; por eso el alcance de la frase
+es el que dice y no más. La evaluación OWASP del 2026-10-08 barrió además los
+literales y encontró 109 plantillas de `toString()` legibles, incluida una con
+«Secret» — ver **P-89** y `docs/INFORME_SEGURIDAD_OWASP.md` §6 H-1.
+Residual **A-4 → P-78**:
 el `keep` de reflexión de Room conserva la RUTA del paquete, de modo que
 `com/auroraclima/app/questionnaire/data/local/GuidanceDatabase` deja legible el
 segmento `questionnaire` — término que `CamouflageResourcesTest` sí veda en

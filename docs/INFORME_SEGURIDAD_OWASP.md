@@ -8,7 +8,9 @@
 > alcance acordado y deja, por cada uno, qué se probó, cómo, el resultado y la
 > evidencia que lo respalda.
 >
-> Fechas de la evaluación: **8, 9 y 10 de octubre de 2026**.
+> Fechas de la evaluación: **8, 9 y 10 de octubre de 2026**, más las dos
+> comprobaciones manuales de la desarrolladora del **10 de octubre** que cierran
+> P-11 y abren el hallazgo H-7 (EV-14).
 > Evidencias en `docs/evidencias-owasp/` (referenciadas como EV-NN).
 >
 > Este documento pasó por una auditoría interna que lo **rechazó** en una primera
@@ -150,17 +152,17 @@ Lo que ninguna prueba cubría se probó de cero.
    intercepción, así que `MASTG-TEST-0236` (tráfico en claro observado en la red)
    y `MASTG-TEST-0244` (ausencia de pinning observada en la red) no se ejecutaron.
    Era lo acordado para una cobertura ligera.
-3. **P-11 (si el teclado aprende lo tecleado) no es verificable por adb.**
+3. **Dos comprobaciones no eran verificables por `adb`, y se hicieron a mano.**
    `adb shell input text` inyecta el texto directamente en la conexión de
-   entrada, **sin pasar por el teclado**, así que Gboard nunca ve lo tecleado y no
-   puede aprenderlo. Probarlo exige que una persona escriba en el teclado en
-   pantalla. P-11 sigue abierto; lo que sí se verificó es la configuración
-   estática de los campos (sección 5.1).
-4. **Tampoco se pudo forzar una copia manual al portapapeles.** Este build del
-   emulador no admite `cmd clipboard` ni la combinación de teclas de copiar, y el
-   menú flotante de selección de texto no aparece en el volcado de accesibilidad.
-   Lo verificable sí se verificó (sección 5.1).
-5. **El recorrido del espacio interno se hizo el tercer día, tras un incidente.**
+   entrada, **sin pasar por el teclado**, así que Gboard nunca ve lo tecleado y
+   no puede aprenderlo; y este build del emulador no admite `cmd clipboard` ni
+   la combinación de teclas de copiar, ni expone el menú flotante de selección
+   en el volcado de accesibilidad. Las dos las ejecutó **a mano la
+   desarrolladora sobre el emulador** el 2026-10-10, y sus resultados están
+   incorporados: el teclado no aprende la clave personal (cierra **P-11**) y el
+   relato sí se puede copiar en modo edición (hallazgo **H-7**). Evidencia:
+   EV-14.
+4. **El recorrido del espacio interno se hizo el tercer día, tras un incidente.**
    Las dos primeras jornadas (8 y 9 de octubre) la auditoría no pudo entrar: la
    cuenta de prueba ya
    tenía clave personal y, por diseño (RF-12), el código de activación deja de
@@ -247,7 +249,7 @@ ausencia. El veredicto se rebaja a «con observación» por eso.
 (EV-05) · ADR 2026-07-10 (SQLCipher) y 2026-07-24 (evidencias) de
 `docs/ARQUITECTURA.md`.
 
-#### MASVS-STORAGE-2 · «La app evita la fuga de datos sensibles» — **Pasa con observación**
+#### MASVS-STORAGE-2 · «La app evita la fuga de datos sensibles» — **Falla**
 
 **Qué se probó.** Registros del sistema, respaldos, caché del teclado,
 portapapeles, terceros y notificaciones.
@@ -275,26 +277,29 @@ portapapeles, terceros y notificaciones.
   `com.auroraclima.app`, y se reparten en **21 «Invoked restore at install» y 21
   «Skip restore at install»** — correspondencia 1 a 1 desde agosto. Salidas
   literales en EV-12 [1] y [1·bis]. ✅
-- **Portapapeles** (MASWE-0030). La app **nunca** usa `ClipboardManager`,
-  `ClipData` ni `setPrimaryClip`: **cero ocurrencias en todo el código**, que es
-  la evidencia que sostiene el control. El *estado* del portapapeles, en cambio,
-  no se pudo medir con las sondas disponibles: `dumpsys clipboard` devuelve
-  salida vacía sin que exista un control que acredite qué significa, y
-  `service call clipboard 1` no es una lectura sino `setPrimaryClip` —una
-  escritura que el servicio rechaza—, de modo que su «No items» es el mensaje
-  de una excepción de la propia sonda y no dice nada del contenido. EV-12 [3]
-  lo documenta con el Parcel y su traza. Los campos de clave y
-  contraseña usan `V2SecretField`, con `KeyboardType.Password` y
-  `PasswordVisualTransformation`, que además desactiva «copiar» en la barra de
-  selección de texto. Lo que **no** se pudo probar está en la limitación 4.3.4 y
-  en la observación de abajo. ✅ parcial
-- **Caché del teclado** (MASTG-TEST-0006, 0258). Los campos secretos usan
-  `KeyboardType.Password`, que impide el aprendizaje del IME. Las dos barras de
-  búsqueda —la real de la fachada, `WeatherScreen.kt:253`, y la de práctica del
-  tutorial, `TutorialScreen.kt:356`— usan `autoCorrect = false`, pero **no**
-  `IME_FLAG_NO_PERSONALIZED_LEARNING` (0 usos de `PlatformImeOptions` en todo el
-  código). Es el pendiente **P-11**, que no se pudo cerrar aquí por la limitación
-  4.3.3. ⚠️
+- **Portapapeles** (MASWE-0030). ⚠️ **Aquí está el fallo.** La app nunca
+  *escribe* en el portapapeles —`ClipboardManager`, `ClipData` y
+  `setPrimaryClip`: cero ocurrencias en todo el código— pero **sí deja que la
+  usuaria copie el relato de un registro mientras lo escribe**, y de ahí puede
+  pegarse en cualquier otra aplicación. Verificado a mano sobre el emulador. Es
+  el hallazgo **H-7**. El *estado* del portapapeles no se pudo medir con las
+  sondas disponibles: `dumpsys clipboard` devuelve salida vacía sin un control
+  que acredite qué significa, y `service call clipboard 1` no es una lectura
+  sino `setPrimaryClip` —una escritura que el servicio rechaza—, de modo que su
+  «No items» es el mensaje de una excepción de la propia sonda. EV-12 [3] lo
+  documenta con el Parcel y su traza. Los campos de clave y contraseña sí están
+  bien: `V2SecretField`, con `KeyboardType.Password` y
+  `PasswordVisualTransformation`, desactiva «copiar» en la barra de selección.
+  El del relato no. ❌
+- **Caché del teclado** (MASTG-TEST-0006, 0258). Resultado mixto. Los campos
+  secretos usan `KeyboardType.Password`, que impide el aprendizaje del IME, y
+  las dos barras de búsqueda usan `autoCorrect = false`
+  (`WeatherScreen.kt:253`, `TutorialScreen.kt:356`): **la verificación manual
+  confirmó que el teclado NO aprende la clave personal**, lo que cierra el
+  pendiente **P-11**. ✅ Pero el campo del relato, `V2ParagraphField`, **no
+  declara ningún `keyboardOptions`** —ni `autoCorrect = false` ni ninguna otra
+  protección—, así que para él la prueba no se cumple: es la segunda vía de
+  H-7. ❌
 - **Terceros y notificaciones** (MASTG-TEST-0004, 0005, 0315). Sin Crashlytics,
   sin Analytics, sin SDK de publicidad ni de medición en el DEX. 0 usos de
   `NotificationManager`: la app no emite notificaciones. ✅
@@ -303,7 +308,13 @@ portapapeles, terceros y notificaciones.
   P-62c: la clave y la contraseña viven como `String` inmutable, que en la JVM no
   se puede poner a cero).
 
-**Observaciones.** Dos.
+**Veredicto.** El control pide que la app «evite la fuga de datos sensibles…
+donde quien desarrolla tiene una forma de impedirlo». Aquí la tiene —es lo que
+ya hace con todos los demás campos— y no la aplicó al campo que contiene el
+dato más sensible de la app. Por eso **Falla**, aunque todo lo demás de este
+control esté bien resuelto: registros, respaldos, terceros y notificaciones.
+
+**Observaciones que se mantienen.** Dos.
 
 La primera: la caché persistente del SDK de Firestore es **SQLite plano**, sin
 SQLCipher. Es el residual **P-22**, y esta auditoría lo acota con número exacto:
@@ -317,15 +328,12 @@ casi todos trozos de evidencia, no exponen ninguno). Es exactamente el residual
 relato, el tipo y la fecha viajan dentro del ciphertext. Leer esa caché exige
 root o `adb`, que ya están fuera del modelo de amenaza.
 
-La segunda: la usuaria **sí puede** seleccionar y copiar a mano el texto del
-campo de relato, que no es un campo de contraseña. Si lo hace, el texto entra al
-portapapeles del sistema, y la vista previa del portapapeles de Android 13+ es
-una ventana de SystemUI que `FLAG_SECURE` no cubre. No se pudo reproducir por
-automatización (limitación 4.3.4), así que se deja como observación y no como
-hallazgo.
+La segunda ya no es observación sino el hallazgo H-7, y es la que hace fallar
+el control.
 
 **Evidencia.** EV-06 · EV-08 · **EV-13 [11]** (logcat del espacio interno) ·
-EV-12 · EV-02 · `NoTracesGuardTest` (9), `StoredCredentialsTest` (2).
+EV-12 · EV-02 · **EV-14** (las dos comprobaciones manuales) ·
+`NoTracesGuardTest` (9), `StoredCredentialsTest` (2).
 
 ---
 
@@ -394,7 +402,7 @@ borrado criptográfico de RF-20 destruye los alias, y está fijado por
 `DatabaseKeyManagerEraseTest`.
 
 Hubo además una comprobación no planificada del ciclo de vida: al desinstalar la
-app (incidente de la limitación 4.3.5) los alias del Keystore se destruyeron con
+app (incidente de la limitación 4.3.4) los alias del Keystore se destruyeron con
 ella, y sin embargo la cuenta se restauró al reinstalar e iniciar sesión. Es
 exactamente el comportamiento que RF-39 diseñó —la DEK se recupera del sobre
 envuelto con la contraseña— y confirma que las llaves no sobreviven a la
@@ -587,7 +595,7 @@ Es un WebView de Google que Aurora no configura ni alimenta.
 
 **Evidencia.** EV-11 [4].
 
-#### MASVS-PLATFORM-3 · «Uso seguro de la interfaz» — **Pasa**
+#### MASVS-PLATFORM-3 · «Uso seguro de la interfaz» — **Pasa con observación**
 
 **Qué se probó.** Bloqueo de capturas, miniatura de recientes, enmascaramiento de
 campos y notificaciones.
@@ -641,7 +649,10 @@ clima que no se dejara fotografiar sería, ella misma, un distinguidor.
 **Campos sensibles**: `V2SecretField` aplica `PasswordVisualTransformation` y
 `KeyboardType.Password` en inicio de sesión, creación de cuenta, clave personal,
 cambio de contraseña, eliminación de cuenta y exportación; en pantalla se vieron
-enmascarados. **Notificaciones**: ninguna. **Superposición** (MASTG-TEST-0035,
+enmascarados. **Observación (MASWE-0030):** la excepción es el campo del relato,
+cuyo menú de selección sí ofrece «copiar» y «cortar» — es el hallazgo H-7, que
+se califica en MASVS-STORAGE-2 por ser una fuga de datos, pero que nace de una
+decisión de interfaz y por eso rebaja también este control. **Notificaciones**: ninguna. **Superposición** (MASTG-TEST-0035,
 0340): no hay protección explícita, coherente con que MASVS-RESILIENCE quede
 fuera y con que el modelo de amenaza no contemple una app maliciosa instalada a
 propósito.
@@ -887,8 +898,51 @@ coherente con TRL 4, pero antes del piloto debe resolverse. Ver hallazgo **H-3**
 
 ## 6. Hallazgos, ordenados por gravedad
 
-No se encontró ningún hallazgo **crítico ni alto**. Ninguno de los siguientes
-expone datos de las usuarias.
+Siete hallazgos: **uno alto** (H-7), dos medios, tres bajos y uno que la
+verificación manual dejó cerrado. Ninguno es **crítico**. H-7 es el único por el
+que puede salir contenido de una usuaria del espacio protegido; los demás no
+exponen datos. Las etiquetas H-n siguen el orden en que se encontraron, no la
+gravedad; aquí van ordenados de mayor a menor.
+
+### H-7 · Alta · El relato de un registro puede salir del espacio protegido por el portapapeles
+
+**Qué.** Mientras el registro se está escribiendo, el campo «Qué pasó» permite
+seleccionar, **copiar y cortar** su contenido y pegarlo en cualquier otra
+aplicación. Verificado a mano. Ya guardado el registro, la vista de detalle no
+lo permite, así que la ventana es la de la edición.
+
+**Por qué el código lo permite.** El campo es `V2ParagraphField`
+(`core/ui/v2/Fields.kt:86`), y es **el único campo de texto del espacio interno
+que no es de contraseña**: no declara `keyboardOptions` de ningún tipo. Todos
+los demás campos sensibles usan `V2SecretField`, que aplica
+`PasswordVisualTransformation` y `KeyboardType.Password`, y eso desactiva
+«copiar» y «cortar» en la barra de selección de Compose y le dice al teclado que
+no aprenda. El campo del relato no hereda nada de eso. Los campos de correo
+(`V2PlainField` con `KeyboardType.Email`) están en el mismo caso, en menor
+grado: el correo identifica la cuenta pero no describe lo ocurrido.
+
+**Por qué es alta, y no media como el resto.** Es el **único hallazgo de esta
+evaluación por el que el contenido de un registro —el dato más sensible de la
+app— puede salir del espacio protegido hacia una superficie que el agresor del
+modelo de amenaza alcanza sin root, sin descompilar y sin conocer la clave**:
+basta con que tenga el teléfono, abra cualquier aplicación con un campo de texto
+y pegue. A eso se suman dos agravantes:
+
+- La **vista previa del portapapeles de Android 13+** es una ventana de SystemUI
+  que `FLAG_SECURE` **no cubre**: aparece sola al copiar, en la esquina
+  inferior, mostrando un fragmento del texto.
+- El campo tampoco pide al teclado que no aprenda, de modo que el **diccionario
+  personal del IME** puede quedarse con palabras del relato y sugerirlas después
+  en otras aplicaciones. Esta segunda vía no se verificó —el teclado no aprendió
+  la clave porque la barra sí lleva `autoCorrect = false`, protección que el
+  relato no tiene— pero la diferencia en el código es la misma que explica el
+  resultado de la barra.
+
+**Corrección propuesta.** Retirar «copiar» y «cortar» del menú de selección en
+`V2ParagraphField` —dejando «pegar», que la usuaria necesita—, y declarar en ese
+campo que el teclado no debe aprender. Extender ambas cosas a los campos de
+correo. Añadir una prueba que fije el contrato para que no se pierda en un
+refactor.
 
 ### H-1 · Media · El DEX del release conserva más vocabulario propio del registrado, incluida la palabra «Secret»
 
@@ -1012,16 +1066,24 @@ alguien bajara el `targetSdk`, el bloqueo desaparecería en silencio.
 declararlo en el manifiesto. Son cinco líneas, no pesa nada y hace explícita una
 propiedad de la que depende la confidencialidad en tránsito.
 
-### H-6 · Informativa · Dos comprobaciones no son verificables con automatización
+### H-6 · Informativa · **Cerrado** · Las dos comprobaciones que la automatización no podía hacer, hechas a mano
 
-`adb shell input text` no pasa por el teclado, así que no puede probar si Gboard
-aprende lo tecleado en la barra: **P-11** sigue abierto y solo puede cerrarse con
-una persona escribiendo en el teclado en pantalla. La mitigación barata ya
-identificada (`IME_FLAG_NO_PERSONALIZED_LEARNING` vía `PlatformImeOptions`, en
-**ambas** barras) puede aplicarse sin esperar a la verificación.
+Las dos vías que esta evaluación describió pero no pudo medir —`adb shell input
+text` no pasa por el teclado, y este build del emulador no permite forzar una
+copia— las verificó **a mano la desarrolladora sobre el emulador**, el
+2026-10-10, y dieron resultados opuestos:
 
-Tampoco se pudo forzar una copia manual al portapapeles desde el campo de relato
-(ver limitación 4.3.4), así que esa vía queda descrita pero no medida.
+- **El teclado NO aprende la clave personal.** Tecleada en la barra de la
+  fachada, Gboard no la ofrece después como sugerencia en otras aplicaciones.
+  Esto **cierra el pendiente P-11**, abierto desde la auditoría D2: el
+  `autoCorrect = false` de las dos barras (`WeatherScreen.kt:253` y
+  `TutorialScreen.kt:356`) basta en la práctica, sin necesidad de
+  `IME_FLAG_NO_PERSONALIZED_LEARNING`.
+- **El relato SÍ se puede copiar.** En modo edición, el texto del campo «Qué
+  pasó» se selecciona, se copia y se pega en otra aplicación. Una vez guardado
+  el registro, la vista de detalle ya no lo permite.
+
+El segundo resultado deja de ser una observación y pasa a ser el hallazgo H-7.
 
 ---
 
@@ -1050,16 +1112,18 @@ previa al piloto.
 | **P-12** · el texto tecleado viaja al geocoding | **Incorporado** a AUTH-2 y NETWORK-1; la mitigación (verificación offline, mínimo 6 caracteres, sin nombres de ciudad) se cobra como fortaleza. |
 | **P-20** · código de activación único del piloto | Relevante para AUTH-2: una filtración erosionaría el camuflaje de toda la flota. Mitigado por entrega en persona. |
 | **P-55 / P-56** · restos y reingreso tras eliminar la cuenta | **Motivan la observación de PRIVACY-4**; P-56(b) se observó sin buscarlo (`sync_meta.xml` vacío). P-55 sigue pendiente de ratificación. |
-| **P-11** · aprendizaje del teclado | **Sigue abierto**, y ahora se sabe por qué no puede cerrarse con automatización (H-6). |
+| **P-11** · aprendizaje del teclado | **CERRADO.** La verificación manual del 2026-10-10 confirmó que el teclado no aprende la clave personal: el `autoCorrect = false` de las dos barras basta. El campo del relato, que no lo lleva, pasa a ser parte de H-7. |
 | **CP-37** · pruebas de `firestore.rules` | **CERRADA.** Ejecutadas por primera vez: 8 de 8 en verde. |
 | **P-14** · miniatura de recientes | **Verificado en vivo** con prueba de control, desde la fachada y desde el espacio interno. |
 | **RF-39** · recuperación multi-dispositivo | **Verificada en vivo** por accidente: tras perder el estado local, la cuenta se restauró desde la nube con solo la contraseña. |
 
+| **Ninguno** · fuga del relato por el portapapeles | **Hallazgo nuevo, H-7, y no estaba previsto.** Es el único camino encontrado por el que contenido de un registro puede salir del espacio protegido dentro del modelo de amenaza. |
+
 **Hallazgos nuevos que conviene registrar en `PENDIENTES.md`:** H-1 (como
 ampliación de P-78), H-2 (crash de Compose 1.7.2), H-3 (firma de producción, la
 entrada que el comentario del `build.gradle.kts` daba por existente), H-4
-(actividades exportadas de `firebase-auth`) y H-5 (configuración de red
-explícita).
+(actividades exportadas de `firebase-auth`), H-5 (configuración de red
+explícita) y **H-7** (copiar el relato al portapapeles).
 
 ---
 
@@ -1070,16 +1134,17 @@ v2.0.0:
 
 | Resultado | Controles |
 |---|---|
-| **Pasa** | 8 — CRYPTO-1, AUTH-1, AUTH-2, AUTH-3, PLATFORM-3, PRIVACY-1, PRIVACY-3, CODE-4 |
-| **Pasa con observación** | 9 — STORAGE-1, STORAGE-2, CRYPTO-2, PLATFORM-1, PRIVACY-2, PRIVACY-4, NETWORK-1, CODE-1, CODE-3 |
+| **Pasa** | 7 — CRYPTO-1, AUTH-1, AUTH-2, AUTH-3, PRIVACY-1, PRIVACY-3, CODE-4 |
+| **Pasa con observación** | 9 — STORAGE-1, CRYPTO-2, PLATFORM-1, PLATFORM-3, PRIVACY-2, PRIVACY-4, NETWORK-1, CODE-1, CODE-3 |
+| **Falla** | **1** — STORAGE-2 |
 | **No aplica** | 3 — PLATFORM-2, NETWORK-2, CODE-2 |
-| **Falla** | **0** |
 
 Los cuatro controles de MASVS-RESILIENCE quedan fuera de alcance, declarados
 **No aplica** con la justificación de la sección 3.
 
-Los dos pilares del diseño —el cifrado en reposo y el aislamiento de los datos en
-la nube— resisten la verificación directa: las bases sensibles y sus registros de
+Conviene leer ese único fallo en su contexto, porque no toca los cimientos. Los
+dos pilares del diseño —el cifrado en reposo y el aislamiento de los datos en la
+nube— resisten la verificación directa: las bases sensibles y sus registros de
 escritura anticipada son indistinguibles de ruido aleatorio, las evidencias
 adjuntas están selladas, las preferencias solo guardan base64 bajo claves
 neutras, los siete PDF exportados llevan AES-256, no queda ningún token de
@@ -1098,11 +1163,22 @@ devuelve a la fachada sin dejar el espacio interno en la pila de navegación; y
 el espacio interno se cierra solo tras cinco minutos sin actividad, verificado
 con reloj.
 
-Los seis hallazgos son de gravedad **media o inferior** y **ninguno expone datos
-de las usuarias**. Dos tocan el camuflaje y la robustez —vocabulario propio que
-sobrevive a la ofuscación, y una caída heredada de una versión vieja de Jetpack
-Compose— y cuatro son higiene previa al piloto. Todos tienen una corrección
-concreta y acotada.
+**El fallo del único control que no pasa, y lo que significa.** MASVS-STORAGE-2
+falla por H-7: el campo donde se escribe el relato de un registro permite
+copiarlo al portapapeles, desde donde puede pegarse en cualquier otra
+aplicación. Es el único camino que esta evaluación encontró por el que contenido
+de una usuaria puede salir del espacio protegido **dentro del modelo de
+amenaza** —sin root, sin descompilar, sin conocer la clave—, y por eso se
+califica como el hallazgo de mayor gravedad. No es un defecto de diseño del
+cifrado ni del camuflaje: es un campo al que no se le aplicó la misma protección
+que a todos los demás, y la corrección cabe en unas pocas líneas.
+
+De los siete hallazgos, uno es **alto** (H-7), dos **medios** —vocabulario propio
+que sobrevive a la ofuscación, y una caída heredada de una versión vieja de
+Jetpack Compose—, tres **bajos** de higiene previa al piloto, y uno quedó
+**cerrado** por la verificación manual. Todos tienen una corrección concreta y
+acotada, y cuatro de ellos (H-1, H-2, H-5 y H-7) se abordan en la versión
+siguiente.
 
 ---
 
@@ -1179,6 +1255,21 @@ identificador y se dejaba fuera las listas abreviadas de las cabeceras; la cifra
 correcta, validada número a número contra el catálogo, es 87— y, sobre todo, **la captura de logcat dentro del
 espacio interno**, que cierra MASVS-STORAGE-2 con evidencia dinámica donde
 antes solo había la de la fachada.
+
+**Verificación manual posterior.** Con el informe ya aprobado, la desarrolladora
+ejecutó a mano las dos comprobaciones que ninguna automatización podía hacer, y
+el resultado cambió el veredicto de un control. El teclado **no** aprende la
+clave personal, lo que cierra P-11 y confirma que `autoCorrect = false` basta
+en la práctica. Pero el relato de un registro **sí** se puede copiar al
+portapapeles mientras se edita, lo que convirtió una observación en el hallazgo
+H-7, hizo **fallar** MASVS-STORAGE-2 y rebajó MASVS-PLATFORM-3. Es el único
+control que no pasa, y se corrige en la versión siguiente.
+
+Que un hallazgo de este calado apareciera solo cuando una persona se sentó
+delante del teléfono dice algo que vale la pena anotar en el capítulo de método:
+la automatización cubrió mucho terreno —ochenta y siete pruebas del estándar,
+medición de píxeles, entropía, logcat, reglas de la nube— pero el gesto más
+cotidiano, seleccionar un texto y copiarlo, quedó fuera de su alcance.
 
 Un punto de la primera pasada se revisó y **no** se aceptó como se planteó: señalaba
 como crítico que EV-08 publicara la clave personal y la contraseña de la cuenta

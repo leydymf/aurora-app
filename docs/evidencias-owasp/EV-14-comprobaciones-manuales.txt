@@ -1,0 +1,101 @@
+EV-14 — Las dos comprobaciones manuales que la automatización no podía hacer
+MASVS-STORAGE-2 (MASTG-TEST-0006, MASWE-0030) · MASVS-PLATFORM-3
+Ejecutadas por la desarrolladora sobre el emulador el 2026-10-10.
+======================================================================
+
+POR QUÉ A MANO. La limitación 4.3.3 del informe explica las dos razones:
+«adb shell input text» inyecta el texto directamente en la conexión de entrada
+y NO pasa por el teclado, así que el IME nunca ve lo tecleado y no puede
+aprenderlo; y este build del emulador no admite «cmd clipboard», no acepta la
+combinación de teclas de copiar y no expone el menú flotante de selección de
+texto en el volcado de accesibilidad. Las dos pruebas exigen que una persona
+escriba y toque la pantalla.
+
+----------------------------------------------------------------------
+[1] ¿EL TECLADO APRENDE LA CLAVE PERSONAL?   ->   NO.  PASA.
+----------------------------------------------------------------------
+
+   Procedimiento: teclear la clave personal en la barra «Buscar ciudad…» de la
+   fachada, usando el teclado en pantalla, y comprobar después si el teclado la
+   ofrece como sugerencia al escribir en campos de texto de OTRAS aplicaciones.
+
+   Resultado: el teclado NO la sugiere. No quedó en el diccionario personal.
+
+   Esto CIERRA el pendiente P-11, abierto desde la auditoría D2 (2026-07) y
+   reabierto en D6 para la barra de práctica del tutorial. La conclusión
+   práctica es que el «autoCorrect = false» que llevan las dos barras basta:
+
+      weather/ui/WeatherScreen.kt:253    autoCorrect = false
+      access/ui/TutorialScreen.kt:356    autoCorrect = false
+
+   No hace falta añadir IME_FLAG_NO_PERSONALIZED_LEARNING vía
+   PlatformImeOptions, que era la mitigación que P-11 dejaba apuntada.
+
+----------------------------------------------------------------------
+[2] ¿SE PUEDE COPIAR EL RELATO DE UN REGISTRO?   ->   SÍ.  FALLA.
+----------------------------------------------------------------------
+
+   Procedimiento: escribir texto en el campo «Qué pasó» del editor de registro,
+   seleccionarlo con el menú de texto del sistema, copiarlo, y pegarlo en otra
+   aplicación. Después, repetir sobre el mismo registro ya GUARDADO.
+
+   Resultado:
+      · en modo EDICIÓN ...... el texto se selecciona, se copia y se pega en
+                               otra aplicación sin ningún impedimento
+      · ya GUARDADO .......... la vista de detalle no permite copiarlo
+
+   La ventana de exposición es, por tanto, la de la edición del registro.
+
+   QUÉ LO PERMITE, EN EL CÓDIGO. El campo es V2ParagraphField
+   (core/ui/v2/Fields.kt:86) y es el ÚNICO campo de texto del espacio interno
+   que no es de contraseña. Su declaración no incluye «keyboardOptions» de
+   ningún tipo:
+
+      OutlinedTextField(
+          value = value,
+          onValueChange = onValueChange,
+          modifier = modifier.fillMaxWidth(),
+          textStyle = InteriorTypeVoice.body.copy(color = V2Palette.inkPrimary),
+          minLines = 4,
+          isError = isError,
+          shape = V2Corner.control,
+          placeholder = { … },
+          colors = v2FieldColors()
+      )
+
+   Comparación con el resto de campos del espacio interno (inventario completo):
+
+      campo                        composable usado   ¿copiar?  ¿aprende el IME?
+      ---------------------------- ------------------ --------- ----------------
+      clave personal (crear)       V2SecretField      no        no
+      clave personal (cambiar)     V2SecretField      no        no
+      contraseña (login/crear/     V2SecretField      no        no
+        cambiar/eliminar/exportar)
+      correo (login y crear)       V2PlainField con   SÍ        sí
+                                   KeyboardType.Email
+      RELATO del registro          V2ParagraphField   SÍ        sí
+                                   (sin keyboardOptions)
+
+   V2SecretField aplica PasswordVisualTransformation y KeyboardType.Password, y
+   eso es lo que desactiva «copiar» y «cortar» en la barra de selección de
+   Compose y le indica al teclado que no aprenda. El relato no hereda nada.
+
+   DOS VÍAS DE FUGA, UNA VERIFICADA Y OTRA NO:
+      (a) VERIFICADA — el portapapeles. El texto copiado queda disponible para
+          cualquier aplicación. Agravante: la vista previa del portapapeles de
+          Android 13+ es una ventana de SystemUI que FLAG_SECURE no cubre, y
+          aparece sola al copiar mostrando un fragmento del texto.
+      (b) NO VERIFICADA — el diccionario del teclado. El campo tampoco pide al
+          IME que no aprenda, así que puede quedarse con palabras del relato y
+          sugerirlas en otras aplicaciones. No se probó; se infiere de que la
+          barra SÍ lleva la protección y el resultado de [1] fue favorable.
+
+   POR QUÉ ES EL HALLAZGO MÁS GRAVE DE LA EVALUACIÓN. Es el único camino
+   encontrado por el que el contenido de un registro —el dato más sensible de
+   la app— puede salir del espacio protegido hacia una superficie que el
+   agresor del modelo de amenaza alcanza SIN root, SIN descompilar y SIN
+   conocer la clave: le basta tener el teléfono, abrir cualquier aplicación con
+   un campo de texto y pegar.
+
+   Queda registrado como hallazgo H-7 (gravedad alta). Hace FALLAR
+   MASVS-STORAGE-2 y rebaja MASVS-PLATFORM-3 a «Pasa con observación».
