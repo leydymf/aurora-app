@@ -1,0 +1,89 @@
+EV-09 — Red y dependencias (cobertura ligera)
+MASVS-NETWORK-1/2 · MASVS-CODE-1/3
+MASTG-TEST-0235, 0233, 0217, 0234, 0239, 0282, 0283, 0285, 0286, 0242, 0272, 0274, 0245
+Capturado el 2026-10-08.
+======================================================================
+
+[1] CONFIGURACIÓN DE RED DEL APK RELEASE  (MASTG-TEST-0235)
+   android:usesCleartextTraffic   NO declarado
+   android:networkSecurityConfig  NO declarado
+   targetSdkVersion               35
+   -> Desde API 28 la plataforma deniega el tráfico en claro por defecto, así
+      que con targetSdk 35 y sin anulaciones el tráfico HTTP está bloqueado.
+      No hay un archivo de configuración de red propio: la app se apoya en el
+      valor por defecto (ver observación del informe).
+   minSdkVersion 26 (MASTG-TEST-0285): las CA instaladas por la usuaria NO son
+      de confianza por defecto para apps con targetSdk >= 24, que es el caso.
+
+[2] BÚSQUEDA ESTÁTICA DE DEBILIDADES DE TLS EN src/main
+   Ocurrencias en TODO el código fuente de la app:
+      TrustManager / X509TrustManager ......... 0   (MASTG-TEST-0282)
+      HostnameVerifier / setHostnameVerifier .. 0   (MASTG-TEST-0234, 0283)
+      SSLContext / SSLSocket / sslSocketFactory 0   (MASTG-TEST-0217)
+      ConnectionSpec (downgrade de TLS) ....... 0
+      Socket( — sockets de bajo nivel ......... 0   (MASTG-TEST-0239)
+      "http://" en el código .................. 0   (MASTG-TEST-0233)
+   -> La app no desactiva ni reimplementa ninguna defensa de TLS: usa el
+      cliente por defecto de OkHttp a través de Retrofit, sin interceptores.
+      core/network/NetworkModule.kt no añade ningún interceptor de logging.
+
+[3] EXTREMOS DE RED REALES
+   https://api.open-meteo.com/            pronóstico (weather/data/remote/ForecastApi.kt:22)
+   https://geocoding-api.open-meteo.com/  geocodificación (GeocodingApi.kt:18)
+   Firebase Auth y Firestore              SDK de Google, HTTPS/gRPC-TLS
+   En el DEX del release no aparece NINGUNA URL http:// que sea un extremo
+   real: las tres coincidencias son espacios de nombres XML/XMP y un literal
+   'http://localhost' de librería (ver EV-03).
+
+[4] FIJACIÓN DE CERTIFICADO  (MASVS-NETWORK-2 · MASTG-TEST-0242)
+   No hay pinning: ni en configuración de red ni con CertificatePinner.
+   MASVS-NETWORK-2 exige pinning para «todos los extremos remotos BAJO EL
+   CONTROL DE LA PERSONA DESARROLLADORA». Aurora no tiene ninguno: Open-Meteo
+   es un tercero público y Firebase es infraestructura de Google, que rota
+   certificados y desaconseja el pinning sobre sus dominios.
+
+[5] DEPENDENCIAS CON VULNERABILIDADES CONOCIDAS  (MASTG-TEST-0272 / 0274)
+   Método: se extrajo el classpath COMPLETO de ejecución del release
+   (./gradlew app:dependencies --configuration releaseRuntimeClasspath), se
+   resolvieron las versiones finales y se consultó cada coordenada Maven
+   contra la API de OSV.dev (base que agrega GHSA, CVE y los avisos de
+   Google para Maven).
+
+   Artefactos consultados: 166
+   Con vulnerabilidad conocida: 0
+   Sin respuesta tras reintentos: 0
+
+   Versiones resueltas de las dependencias de interés:
+      androidx.compose.foundation:foundation   1.7.2
+      androidx.compose.ui:ui                   1.7.2
+      androidx.navigation:navigation-compose   2.8.9
+      androidx.room:room-runtime               2.6.1
+      com.google.dagger:hilt-android           2.51.1
+      com.google.firebase:firebase-auth        23.2.1
+      com.google.firebase:firebase-firestore   25.1.4
+      com.squareup.okhttp3:okhttp              4.12.0
+      com.squareup.retrofit2:retrofit          2.11.0
+      org.jetbrains.kotlinx:kotlinx-serialization-json 1.6.3
+      net.zetetic:sqlcipher-android            4.9.0
+      com.tom-roush:pdfbox-android             2.0.27.0
+      androidx.exifinterface:exifinterface     1.3.7
+
+   LIMITACIÓN HONESTA DE ESTE RESULTADO: la cobertura de OSV para artefactos
+   de AndroidX y de Google en Maven es parcial — Google no publica allí todos
+   sus avisos. Un 0 significa «ninguna coincidencia en la base», no «ninguna
+   vulnerabilidad». Por eso se añade el criterio de actualidad:
+      · androidx.compose.* 1.7.2 es de septiembre de 2024; la línea estable
+        actual va por 1.12/1.13. Esa distancia es la que explica el fallo
+        reproducible de EV-08 (corregido en la librería el 2024-10-01).
+      · com.tom-roush:pdfbox-android 2.0.27.0 no publica versiones desde
+        enero de 2023 (riesgo ya registrado en P-75). Mitigado porque Aurora
+        solo ESCRIBE PDF y excluye BouncyCastle: no ejecuta el analizador
+        sintáctico, que es donde viven los CVE históricos de PDFBox.
+
+[6] VERSIÓN DE PLATAFORMA  (MASVS-CODE-1 · MASTG-TEST-0245)
+   minSdk 26 (Android 8.0, 2017) · targetSdk 35 (Android 15)
+   El targetSdk es el más reciente, que es lo que determina las defensas que
+   aplica la plataforma. El minSdk bajo amplía el alcance del piloto a
+   teléfonos de gama baja (criterio A2-1), a cambio de que entre API 26 y 32
+   no exista setRecentsScreenshotEnabled: ahí la protección de la miniatura
+   degrada a mejor esfuerzo. Ese residual ya está registrado como P-84.

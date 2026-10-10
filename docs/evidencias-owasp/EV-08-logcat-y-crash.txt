@@ -1,0 +1,116 @@
+EV-08 — logcat: ausencia de fugas y una excepción fatal reproducible
+MASVS-STORAGE-2 (MASTG-TEST-0003, 0231, 0203) y hallazgo de robustez
+Método: adb logcat -d -b all tras ejercitar la fachada en el emulador A
+Capturado el 2026-10-08 (bloque [2] ampliado el 2026-10-09).
+======================================================================
+
+[1] ¿LA APP ESCRIBE ALGO EN LOGCAT?  (MASTG-TEST-0003 / 0231)
+   Captura de 25 181 líneas de todos los búferes durante un ciclo completo:
+   arranque en frío, foco en la barra, tecleo, búsqueda, Inicio, recientes,
+   reapertura y navegación entre las pestañas Hoy / 5 días.
+
+   Líneas que mencionan com.auroraclima.app: 315, TODAS de componentes del
+   sistema (ActivityManager, WindowManager, ImeTracker, ziparchive,
+   nativeloader, input_focus): el registro de ciclo de vida que Android
+   produce para cualquier app.
+
+   Líneas emitidas POR el proceso con su propia etiqueta — las 20 son del
+   runtime ART, ninguna de código de Aurora:
+      3  Using CollectorTypeCMC GC.
+      3  Late-enabling -Xcheck:jni
+      3  Compiler allocated …KB to compile ViewRootImpl.performTraversals()
+      2  Background concurrent mark compact GC freed …
+      …  (verificación, suspensión de hilos, ProfileSaver)
+
+   Búsqueda del texto tecleado durante la sesión. Las cuatro cadenas siguientes
+   son SONDAS INVENTADAS para esta auditoría — NO son la clave personal ni la
+   contraseña de la cuenta de prueba, que no se escribieron en esta sesión ni
+   aparecen en ningún archivo de evidencia. (La clave sí se teclea en la barra
+   dos días después, al entrar al espacio interno: ver EV-13; su valor tampoco
+   se reproduce allí.) Se eligieron precisamente por ser únicas en
+   todo el sistema, de modo que cualquier coincidencia en el registro sería
+   atribuible a la app:
+      «clave-de-prueba-9x»  -> 0 coincidencias en todo el logcat
+      «zorrovioleta77»      -> 0
+      «Bucaramanga»         -> 0   (una búsqueda de ciudad real)
+      «clave»               -> 0
+   -> El texto de la barra es el que ocupa el lugar de la clave personal cuando
+      la usuaria la teclea, así que lo que se demuestra es que ESE campo no
+      llega al registro del sistema. Coherente con NoTracesGuardTest y con
+      -assumenosideeffects de proguard-rules.pro.
+
+[2] HALLAZGO: EXCEPCIÓN FATAL REPRODUCIBLE AL DEJAR LA FACHADA TECLEANDO
+
+   Secuencia: abrir Aurora -> tocar la barra -> teclear -> Inicio.
+   El proceso muere con:
+
+      FATAL EXCEPTION: main
+      Process: com.auroraclima.app
+      java.lang.NullPointerException
+        at androidx.compose.foundation.text.input.internal
+             .LegacyCursorAnchorInfoController.updateCursorAnchorInfo(…:141)
+        at …LegacyCursorAnchorInfoController.updateTextLayoutResult(…:115)
+        at …LegacyTextInputMethodRequest.updateTextLayoutResult(…:403)
+        at …AndroidLegacyPlatformTextInputServiceAdapter.updateTextLayoutResult(…:180)
+        at androidx.compose.ui.text.input.TextInputSession.updateTextLayoutResult(…:224)
+        at androidx.compose.foundation.text.TextFieldDelegate$Companion
+             .updateTextLayoutResult$foundation_release(TextFieldDelegate.kt:252)
+        at androidx.compose.foundation.text.CoreTextFieldKt$CoreTextField
+             $onPositionedModifier$1$1.invoke(CoreTextField.kt:449)
+        … (pase de layout -> AndroidComposeView.dispatchDraw -> ViewRootImpl.draw)
+
+   TASA DE REPRODUCCIÓN medida (emulador A, API 35), contando solo las
+   corridas en que el resultado fue inequívoco:
+      sin tocar nada + Inicio ................ 0 caídas de 1 corrida
+      foco en la barra SIN teclear + Inicio .. 0 caídas de 1 corrida
+      foco + TECLEAR + Inicio ................ 6 caídas de 9 corridas
+   (se descartó una décima corrida en la que el proceso había desaparecido pero
+   el volcado de logcat no alcanzó a registrar la traza).
+   Es una carrera: depende de si llega un pase de dibujo después de que la
+   sesión de entrada invalidó sus datos, por eso no cae siempre.
+
+   CAUSA — NO es código de Aurora. Es un defecto conocido de la librería:
+   el proyecto resuelve androidx.compose.foundation a 1.7.2 (el BOM declara
+   2024.04.01 = 1.6.6, pero navigation-compose 2.8.9 lo eleva a 1.7.2).
+   En esa versión updateCursorAnchorInfo desreferencia textFieldValue,
+   offsetMapping y textLayoutResult sin comprobar nulidad, y invalidate()
+   los pone en null al pausarse. El commit «Prevent NPE in
+   LegacyCursorAnchorInfoController» entró en androidx-main el 2024-10-01,
+   DESPUÉS de 1.7.2 (septiembre de 2024); la rama actual ya trae las seis
+   comprobaciones de nulidad al inicio del método. Otros proyectos reportan
+   el mismo crash con 1.7.x.
+
+   ALCANCE: el fallo está en la ruta de entrada de texto heredada (BTF1), que
+   es la que usan TODOS los TextField/OutlinedTextField de Material3 — es
+   decir, también los campos del espacio interno (inicio de sesión, relato
+   del registro, contraseña de exportación), no solo la barra de la fachada.
+   Solo se verificó en la barra porque, en el momento de esta prueba, la
+   auditoría aún no había podido entrar al doble fondo; lo hizo dos días
+   después (EV-13) pero no repitió este caso allí.
+
+   QUÉ VE LA USUARIA — comprobado con captura inmediatamente después de una
+   caída: NADA. El sistema NO muestra el diálogo «Aurora se detuvo» porque la
+   app ya estaba en segundo plano cuando cayó (Android solo lo muestra para
+   procesos en primer plano). La pantalla de inicio queda limpia y
+   dumpsys activity no registra ningún AppErrorDialog. El camuflaje NO se ve
+   comprometido: desde fuera es indistinguible de que el sistema haya liberado
+   la app por memoria, algo que pasa con cualquier aplicación.
+
+   LO QUE ADEMÁS FUNCIONÓ BIEN: no hay Crashlytics ni ningún reportador de
+   fallos, así que la traza se queda en el dispositivo y no viaja a ningún
+   servidor (regla 4 de CLAUDE.md). Y el proceso muere, lo que destruye el
+   estado sensible en memoria — en la práctica hace lo mismo que la salida
+   rápida.
+
+   EL EFECTO REAL, ENTONCES, ES PÉRDIDA DE ESTADO, NO EXPOSICIÓN:
+      · en la fachada: al volver, arranque en frío (≈11 s en este emulador);
+      · en el espacio interno (no verificado aquí, misma ruta de código): si la
+        carrera se diera mientras se escribe un relato largo en «Mi registro»,
+        el texto no guardado se perdería al morir el proceso.
+
+[3] NOTA METODOLÓGICA IMPORTANTE
+   La primera captura de la miniatura de recientes se tomó en una corrida en
+   la que la app SÍ se había caído, así que la tarjeta en blanco podía ser
+   efecto del crash y no del guardián. La prueba se repitió hasta obtener una
+   corrida con el proceso VIVO y sin FATAL EXCEPTION: la tarjeta sigue en
+   blanco (EV-07c). La conclusión de RF-14 se sostiene sobre esa corrida.

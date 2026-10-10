@@ -1,0 +1,67 @@
+EV-05 — Corrida de la suite automática de Aurora durante esta auditoría
+Evidencia reutilizada para STORAGE-1/2, CRYPTO-1/2, AUTH-2/3, PLATFORM-1/3, CODE-4
+Comando (JVM): ./gradlew cleanTestDebugUnitTest cleanTestReleaseUnitTest test ktlintCheck
+JDK: Android Studio JBR 21.0.4 (Gradle 8.10.2 no corre sobre el JDK 27 del PATH)
+Resultado: BUILD SUCCESSFUL
+======================================================================
+
+[DEBUG]  791 pruebas en 105 clases · fallos 0 · errores 0 · omitidas 0
+[RELEASE]  791 pruebas en 105 clases · fallos 0 · errores 0 · omitidas 0
+
+Clases con relevancia directa para los controles MASVS evaluados:
+   AttachmentPolicyTest                  6  CODE-4 · validación de adjuntos
+   CamouflageResourcesTest               2  PRIVACY/RNF-05 · términos vedados en recursos
+   ChangePasswordUseCaseTest            10  AUTH-3 · re-autenticación
+   ChangeSecretCodeUseCaseTest           5  AUTH-3 · exige la clave vigente
+   ConstantTimeTest                      4  AUTH-2 · comparación en tiempo constante (RF-13)
+   CreateSecretCodeUseCaseTest           9  AUTH-2 · reglas de la clave personal
+   DatabaseKeyManagerEraseTest           1  CRYPTO-2 · destrucción de la llave
+   DefaultSyncKeyManagerTest            13  CRYPTO-2 · ciclo de vida de la DEK
+   DekMediaCipherTest                    7  CRYPTO-1 · cifrado por stream de evidencias
+   DekPayloadCipherTest                  6  CRYPTO-1 · AES-GCM, nonce por operación
+   DeleteAccountUseCaseTest              9  AUTH-3 / PRIVACY-4 · borrado con re-autenticación
+   ExportPolicyTest                      5  AUTH-3 / CODE-4 · política de exportación
+   GuidanceDatabaseMigrationTest         2  STORAGE-1 · migración de la BD cifrada
+   ImageImporterTest                     5  CODE-4 · saneado de imágenes
+   JournalDatabaseMigrationTest          8  STORAGE-1 · migración de la BD cifrada
+   JournalMediaEraserTest                1  PRIVACY-4 · purga de evidencias
+   JournalRemoteEraserTest               2  PRIVACY-4 · purga remota
+   LoginViewModelTest                   13  AUTH-2 · bloqueo temporal tras 5 fallos
+   ManifestMinimizationTest              8  PRIVACY-1 / PLATFORM-1 · permisos y FileProvider
+   NoTracesGuardTest                     9  STORAGE-2 / PLATFORM-3 · sin logs y sin ventanas fuera del grafo seguro
+   OutcomeErasersTest                    2  PRIVACY-4 · cascada de borrado
+   PasswordKeyWrapperTest                8  CRYPTO-2 · sobre doble de la DEK
+   Pbkdf2PasswordKeyDerivationTest       4  CRYPTO-1 · PBKDF2-HMAC-SHA256
+   PrefsPendingErasureFlagTest           1  PRIVACY-4 · marca durable del borrado
+   RecentsThumbnailGuardTest             6  PLATFORM-3 · miniatura de recientes
+   SecureFlagLedgerTest                  5  PLATFORM-3 · contabilidad de FLAG_SECURE
+   SessionManagerTest                   20  AUTH-2 · inactividad y salida rápida limpian estado
+   SignInUseCaseTest                    16  AUTH-1/2 · mensajes idénticos en todos los rechazos
+   StoredCredentialsTest                 2  STORAGE-2 · toString sin campos sensibles
+   ValidateSecretCodeUseCaseTest        10  AUTH-2 · indistinguibilidad del código secreto
+
+PRUEBAS INSTRUMENTADAS — también ejecutadas en esta auditoría (2026-10-09)
+Comando: ANDROID_SERIAL=emulator-5554 ./gradlew connectedDebugAndroidTest
+Resultado del ejecutor: «Starting 45 tests on Medium_Phone_API_35(AVD) - 15»
+                        «Finished 45 tests» · 0 skipped · 0 failed · BUILD SUCCESSFUL
+
+   EncryptedDatabaseFactoryTest          3   STORAGE-1 · la BD no abre sin la passphrase; cabecera != SQLite
+   KeystorePayloadCipherTest             5   CRYPTO-1/2 · sellado con llave del Keystore
+   KeystoreMediaCipherTest               6   CRYPTO-1 · cifrado por stream de evidencias
+   KeystoreSecretCodeHasherTest          5   AUTH-2 · HMAC del código con llave del Keystore
+   LocalDekStoreTest                     6   CRYPTO-2 · DEK envuelta, ida y vuelta
+   LocalCredentialStoreTest             11   STORAGE-1 · blob de credenciales, adulteración, relleno fijo
+   JournalExportPipelineTest             2   AUTH-3 · Keystore -> PDF -> FileProvider -> barrido
+   ImageImporterRejectionTest            2   CODE-4 · rechazo de archivos que no son imagen
+   QuickAccessRowHeightTest              3   (interfaz)
+   WeatherSearchBarFocusTest             1   (fachada)
+   ExampleInstrumentedTest               1   (plantilla)
+
+ADVERTENCIA METODOLÓGICA REGISTRADA: esta corrida tuvo un efecto colateral. Al
+terminar, Gradle DESINSTALA la app y el APK de pruebas del dispositivo, lo que
+borró el estado local de la cuenta de prueba en el emulador A (bases cifradas,
+evidencias selladas, preferencias y alias del Keystore). No se perdió nada en la
+nube. La cuenta se restauró al día siguiente (2026-10-10 09:11, según el
+monitor de respaldos del sistema en EV-12 [1·bis]) reinstalando la build debug
+e iniciando sesión, y esa restauración sirvió a su vez como verificación en
+vivo de RF-39 (ver EV-13).

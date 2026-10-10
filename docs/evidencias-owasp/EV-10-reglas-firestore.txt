@@ -1,0 +1,115 @@
+EV-10 — Reglas de seguridad de Firestore
+MASVS-AUTH-1 (autorización en el extremo remoto) · MASVS-STORAGE-1 (datos en la nube)
+MASWE-0018 (falta de autenticación/autorización en componentes)
+Archivo: firestore.rules (raíz del repo, versionado — RNF-06)
+Capturado el 2026-10-08.
+======================================================================
+
+[1] SUPERFICIE TOTAL DE LA BASE DE DATOS
+   Siete bloques match y un comodín final. No hay ninguna otra ruta.
+
+   RUTA                      LECTURA                 ESCRITURA
+   ------------------------- ----------------------- -----------------------
+   /topics/{doc}             auth != null            admin==true
+   /routes/{doc}             auth != null            admin==true
+   /agencies/{doc}           auth != null            admin==true
+   /lines/{doc}              auth != null            admin==true
+   /forms/{doc}              auth != null            admin==true
+   /drafts/{doc}             admin==true             admin==true
+   /users/{uid}/{doc=**}     auth.uid == uid         auth.uid == uid
+   /{document=**}            DENEGADO                DENEGADO
+
+[2] ANÁLISIS CONTROL POR CONTROL
+
+   (a) Aislamiento por usuaria — el control central de MASVS-AUTH-1.
+       La condición es  request.auth != null && request.auth.uid == uid,
+       donde {uid} es el segmento REAL de la ruta del recurso. No se compara
+       contra un campo del documento (que el cliente podría falsificar), ni
+       contra un token personalizado, ni se usa get() sobre otra colección.
+       Es la forma canónica y la más difícil de equivocar.
+       El comodín {document=**} que sigue al uid hace que la regla cubra
+       TODAS las subcolecciones (entries, media, mediaparts, outcomes, meta)
+       sin que ninguna quede fuera por olvido al añadirla — se verificó en
+       la caché del dispositivo que esas cinco existen (EV-06).
+
+   (b) El rol administrativo NO alcanza los datos de las usuarias (RNF-06).
+       isAdmin() solo aparece en los bloques de contenido y de borradores.
+       En /users la única condición es la igualdad de uid, así que un token
+       con admin==true y otro uid queda denegado por la misma regla que
+       cualquier extraña. Es una separación estructural, no una exclusión
+       explícita que pudiera olvidarse al añadir una colección nueva.
+
+   (c) Contenido informativo: solo lectura y solo autenticadas.
+       Ninguna usuaria puede escribir contenido; la administradora no puede
+       escribir sin el claim. El claim lo asigna únicamente
+       tools/admin/create-admin.mjs con la llave de servicio.
+       Pedir auth != null para LEER contenido público no protege el contenido
+       (es público por naturaleza) pero sí evita que un tercero enumere la
+       base sin cuenta, y encaja con el camuflaje.
+
+   (d) Borradores del panel: ni lectura autenticada.
+       /drafts es el único sitio donde vive contenido sin publicar. La app
+       nunca lo consulta, así que la regla no le concede lectura a las
+       usuarias: principio de mínimo privilegio aplicado correctamente.
+
+   (e) Denegación por defecto.
+       El bloque final /{document=**} con  allow read, write: if false
+       es redundante en Firestore (lo no permitido ya está denegado), pero
+       es defensa en profundidad y documenta la intención.
+
+   (f) Lo que las reglas NO pueden hacer, y por qué aquí no importa.
+       No validan el CONTENIDO de los documentos (no hay request.resource.data
+       con comprobaciones de forma ni de tamaño). Una usuaria autenticada
+       puede escribir cualquier cosa dentro de su propio espacio y llenar su
+       cuota. No es un riesgo de confidencialidad — solo puede hacerlo sobre
+       SUS propios datos — y el contenido viaja cifrado desde el cliente, así
+       que el servidor no podría validarlo aunque quisiera. El límite de
+       cuota ya está registrado como residual operativo en P-62(j).
+
+[3] DEFENSA EN PROFUNDIDAD: CIFRADO EXTREMO A EXTREMO
+   Aunque las reglas fallaran, o aunque alguien con acceso al proyecto de
+   Firebase mirara la consola, lo que hay en /users/{uid}/** es ciphertext:
+   verificado en EV-06, los documentos de la usuaria solo exponen dos nombres
+   de campo, «payload» e «iv» —que es el residual P-48b: revelan que hay
+   cifrado, no qué se cifró— y CERO palabras de contenido natural.
+
+[4] VERIFICACIÓN EJECUTADA — CP-37 CORRIDA POR PRIMERA VEZ
+
+   firestore/rules.test.mjs nunca se había ejecutado: el entorno no tenía el
+   emulador de Firestore (así lo dice firestore/README.md). En esta auditoría se
+   instaló firebase-tools 15.33.0 en una carpeta temporal FUERA del repositorio,
+   se levantó el emulador local (127.0.0.1:8080, proyecto demo offline) y se
+   ejecutaron los ocho casos contra una copia BYTE A BYTE de las reglas del repo.
+
+   Comprobación de que se probaron las reglas reales (sha256):
+      firestore.rules (repo)  32c47dfa9a0c37e1d14035ef5ef4ccfc6d869e2b7676ec7da162dc988b9dc701
+      copia usada             32c47dfa9a0c37e1d14035ef5ef4ccfc6d869e2b7676ec7da162dc988b9dc701
+      rules.test.mjs (repo)   b73fbade6d013a724c2bc68934da1b10d8905916ca770ffb05c2fbc5e0a4c91c
+      copia usada             b73fbade6d013a724c2bc68934da1b10d8905916ca770ffb05c2fbc5e0a4c91c
+   Ni las reglas ni la prueba se modificaron. El emulador es local y offline: el
+   proyecto real de Firebase no se tocó en ningún momento.
+
+   Comando:
+      firebase emulators:start --only firestore --project demo-aurora
+      FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node --test rules.test.mjs
+
+   RESULTADO (salida TAP literal):
+
+      ok 1 - anónima no puede leer el contenido
+      ok 2 - autenticada lee el contenido pero no lo escribe
+      ok 3 - la administradora (claim admin) sí escribe el contenido (RF-40/41-44)
+      ok 4 - los borradores del panel son exclusivos de la administradora (RF-44)
+      ok 5 - la administradora NO puede leer ni escribir datos de usuarias (RNF-06)
+      ok 6 - la usuaria lee y escribe sus propios registros
+      ok 7 - nadie puede leer los registros de otra usuaria (RNF-06)
+      ok 8 - todo lo demás está negado
+      # tests 8
+      # suites 0
+      # pass 8
+      # fail 0
+      # skipped 0
+      # duration_ms 784.762208
+
+   Los ocho casos cubren la matriz completa de la sección [1], incluido el caso
+   decisivo de RNF-06: un token con admin==true NO lee ni escribe en /users.
+   **CP-37 queda cerrada.**
