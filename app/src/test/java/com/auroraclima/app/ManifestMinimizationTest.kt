@@ -232,9 +232,35 @@ class ManifestMinimizationTest {
         assertEquals(
             "Solo debe confiarse en el almacén del sistema: en el modelo de amenaza de " +
                 "Aurora, quien tiene el teléfono podría instalar una CA propia para leer " +
-                "el tráfico",
+                "el tráfico. Ojo con la redacción: desde API 24 este ya es el valor por " +
+                "defecto para targetSdk >= 24, así que declararlo no cerró un hueco " +
+                "abierto — impide que se pierda en silencio si alguien baja el targetSdk",
             listOf("system"),
             anclas
+        )
+    }
+
+    @Test
+    fun `ningun bloque de la configuracion de red permite trafico en claro`() {
+        val config = requireNotNull(
+            sequenceOf(
+                File("src/main/res/xml/network_security_config.xml"),
+                File("app/src/main/res/xml/network_security_config.xml")
+            ).firstOrNull { it.exists() }
+        ) { "Falta res/xml/network_security_config.xml (H-5, P-93)" }
+        val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(config)
+
+        // El caso de arriba solo mira `base-config`. Un `domain-config` para un
+        // dominio concreto puede reabrir HTTP sin tocarlo, así que aquí se barre
+        // el archivo entero: ningún elemento, de ningún tipo, puede permitirlo.
+        val permisivos = (0 until xml.getElementsByTagName("*").length)
+            .map { xml.getElementsByTagName("*").item(it) as Element }
+            .filter { it.getAttribute("cleartextTrafficPermitted") == "true" }
+            .map { it.tagName }
+        assertTrue(
+            "Elementos que permiten tráfico en claro: $permisivos. Ningún extremo de " +
+                "Aurora usa HTTP (RNF-04)",
+            permisivos.isEmpty()
         )
     }
 }

@@ -10,8 +10,20 @@
 
     trust-anchors con solo "system": no se confía en las autoridades que se
     hayan instalado en el dispositivo. Importa en el modelo de amenaza del
-    proyecto, donde se asume acceso físico al teléfono: con una CA instalada a
-    mano se podría leer el tráfico, y sin esta línea la app lo permitiría.
+    proyecto, donde se asume acceso físico al teléfono: una CA instalada a mano
+    permitiría leer el tráfico.
+
+    Lo que esta línea NO hizo es cerrar un hueco abierto. Desde Android 7 (API
+    24), una app con targetSdk >= 24 ya confía solo en el almacén del sistema;
+    con min 26 y target 35, las autoridades añadidas a mano nunca fueron de
+    confianza aquí. Las dos declaraciones de este archivo valen lo mismo y por
+    el mismo motivo: hacen explícito un valor por defecto para que no se pueda
+    perder en silencio al cambiar el targetSdk. Ni una ni otra mitigaron nada
+    que estuviera pasando.
+
+    Nota operativa: sin <debug-overrides>, una prueba legítima de interceptación
+    TLS (MASVS-NETWORK-2) exige añadir ese bloque de forma temporal. Se deja
+    fuera a propósito: en este modelo de amenaza es lo correcto.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
