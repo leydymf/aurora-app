@@ -299,7 +299,9 @@ Todo lo manual que resta está aquí y solo aquí. Reemplaza las §8 de v0.2.0 y
 v0.3.0 e integra **P-71** (reingreso silencioso), **P-73(c)** (tipos conectados a
 la Guía y al registro), **CP-38** (exportación), **CP-19** (RF-31), las dos
 pruebas que dejó el ADR 2026-10-05 (arranque en frío ×3 en C1 y regresión H-1
-en A14) y la verificación visual V2 que seguía pendiente. Los pasos numerados
+en A14), la verificación visual V2 que seguía pendiente y el **bloque S**, que es
+lo que dejaron las correcciones de la evaluación OWASP (v0.3.1): **S1 es
+bloqueante del tag v0.3.1**. Los pasos numerados
 completos de cada P-xx están en su entrada de `docs/PENDIENTES.md`; aquí va el
 resumen ejecutable, el resultado esperado y el orden. El orden está pensado
 para **una sola instalación en A** (bloques A y P encadenados sin reinstalar),
@@ -412,7 +414,7 @@ llave de depuración (decisión TRL 4 vigente, ver `docs/PENDIENTES.md`), 23 951
 
 | # | Qué correr | Resultado esperado |
 |---|---|---|
-| 0 | `./gradlew connectedDebugAndroidTest` | **42/42** en 10 clases. Cubre Keystore, SQLCipher (incluido el centinela `label` de la migración v5 — P-73c), cifrado de payload/media, foco de la barra, **`LocalCredentialStoreTest` (P-71 paso 8)** y **`JournalExportPipelineTest` (CP-38)**. Después: `./gradlew installDebug` limpio en A |
+| 0 | `./gradlew connectedDebugAndroidTest` | **47/47** en 12 clases (eran 42 en 10; entran `ImageImporterRejectionTest`, `QuickAccessRowHeightTest` y los 2 casos de `SecureTextEntryTest`). Cubre Keystore, SQLCipher (incluido el centinela `label` de la migración v5 — P-73c), cifrado de payload/media, foco de la barra, **`LocalCredentialStoreTest` (P-71 paso 8)** y **`JournalExportPipelineTest` (CP-38)**. Después: `./gradlew installDebug` limpio en A |
 
 ### Bloque A — Instalación A (una sola cuenta, encadenado sin reinstalar)
 
@@ -453,6 +455,24 @@ llave de depuración (decisión TRL 4 vigente, ver `docs/PENDIENTES.md`), 23 951
 | # | Qué correr | Pasos (resumen) | Resultado esperado |
 |---|---|---|---|
 | A14 | **RF-20 con todas las cascadas** — P-54 regresión · P-71 (5) · P-59 (8) · RF-31 · CP-12 · **regresión H-1 (ADR 2026-10-05)** · Device Explorer #5 | **Primero la regresión H-1:** con sesión abierta y datos apagados (no modo avión total, P-82), «Eliminar todo y salir» con la doble confirmación → la parte remota falla y la marca queda izada → cerrar la app → datos encendidos → reabrir y reingresar. **Luego la eliminación real:** Ajustes → «Eliminar tu cuenta y tus datos» → dos confirmaciones → contraseña (probar primero sin red y con contraseña incorrecta) → éxito. Device Explorer completo. Reabrir la app | **H-1:** al reingresar no queda ningún registro, resultado ni adjunto local y la marca baja en el siguiente arranque (sin «failed to complete startup»). Sin red / incorrecta: «Nada se ha eliminado todavía» y consola intacta; con éxito: consola sin `entries`/`media`/`mediaparts`/`outcomes`/`meta` y sin la cuenta en Auth; **`account_meta.xml` inexistente**, `media_store`/`media_view`/`media_pending`/`doc_out` inexistentes, `journal_store.db` y **`guidance_store.db`** ausentes; la app vuelve a ser solo clima (en debug el código de activación se resiembra; en release exigiría reinstalar — P-55) |
+
+### Bloque S — Seguridad y regresión visual de v0.3.1 (rama `fix/hallazgos-owasp`)
+
+Lo que dejaron las correcciones de la evaluación OWASP. **S1 es bloqueante del tag
+v0.3.1**: es la única verificación de H-7 que ninguna prueba automática puede
+hacer, porque comprueba el menú que dibuja el sistema operativo, no lo que Compose
+le pasa (eso ya lo fija `SecureTextEntryTest` en las instrumentadas). Instalar
+primero: `./gradlew installDebug` y comprobar `lastUpdateTime` antes de mirar el
+emulador — `assembleDebug` no instala.
+
+| # | Qué correr | Pasos | Resultado esperado |
+|---|---|---|---|
+| S1 | **P-94 (H-7) — el menú del relato** · **bloqueante del tag** | Espacio interno → Mi registro → «Agregar» → escribir 3-4 palabras en «Qué pasó». Provocar el menú de selección de **tres** formas: mantener pulsado sobre el texto, doble toque sobre una palabra, y arrastrar los tiradores de selección; repetir con «Seleccionar todo» aplicado. Hacerlo con los gestos del emulador, **no** con Cmd/Ctrl+C del teclado del equipo, que no pasa por el menú (residual declarado en P-95) | En las cuatro formas el menú ofrece **«Pegar» y «Seleccionar todo»** y **NO** ofrece «Copiar», «Cortar» ni «Compartir». Si apareciera «Copiar» en alguna de las cuatro, la corrección de H-7 no está cerrada y el tag no sale |
+| S2 | **P-94 — «pegar» sigue disponible** (usabilidad: la corrección no debía costarla) | Copiar cualquier texto en otra app del emulador y pegarlo en: «Qué pasó», el correo de inicio de sesión, el de crear cuenta y el de «¿Olvidaste tu contraseña?» (RF-46) | Los cuatro campos pegan. El de RF-46 importa aparte: vive dentro de una hoja, que instala su propia barra de selección |
+| S3 | **P-94 — las dos barras** (RF-12/RF-14) | Teclear en la barra de la fachada y en la de práctica del tutorial; mantener pulsado el texto en cada una. Comprobar también que escribir y borrar sigue fluido | Sin «Copiar» ni «Cortar», con «Pegar». El foco no se pierde al teclear (lo cubre `WeatherSearchBarFocusTest`, esto solo confirma el APK instalado) |
+| S4 | **P-11 — el teclado no aprende** (comprobación de la usuaria, repetible) | Escribir una **palabra inventada** en el relato y otra en la barra de la fachada; salir, abrir otra app con un campo de texto y empezar a teclear las primeras letras de cada una | Gboard no las sugiere. Esta es la comprobación que desmiente o confirma la corrección de P-11: antes las barras no tenían protección mecánica ninguna, pese a lo que decía el comentario del código |
+| S5 | **P-90 — confirmación corta de la caída** | Teclear en la barra y pulsar Inicio 3-4 veces; lo mismo en el relato | 0 caídas. Las 10+10 ya están anotadas; esto solo confirma el APK instalado |
+| S6 | **Regresión visual por material3 1.2.1 → 1.3.1** (no es seguridad; la trae la subida de BOM de H-2) | Mirar en pantalla: selector de fecha del registro (A7), casilla del consentimiento (A2), casilla y interruptor «Incluir adjuntos» de la exportación (A10), los indicadores circulares de carga, y los campos del kit en login, clave y exportación | Comparar con `docs/mockups-v2/` y con el contraste B8 (relleno blanco, contorno gris `#7E788E` que se engrosa con foco). Anotar diferencias de tamaño, color o separación: esa versión cambia métricas y colores por defecto de esos componentes |
 
 ### Bloque C — Plataforma (recomendadas antes del tag, no encadenadas)
 

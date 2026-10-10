@@ -15,6 +15,14 @@ activityCompose = "1.8.0"
 # 1.7.x a propósito: 1.8.x obligaría a revisar el emparejamiento con Kotlin 2.0,
 # el mismo motivo por el que el BOM de Firebase está fijado en 33.16.0.
 # Hallazgo H-2 de la evaluación OWASP (P-90).
+#
+# El BOM arrastra además **material3 de 1.2.1 a 1.3.1** (verificado en el árbol de
+# `releaseRuntimeClasspath`): no es solo foundation/ui. No abre superficie —el
+# manifiesto fusionado del release cambia en una sola línea, la de H-5, y el APK
+# crece 804 B— pero sí cambia métricas y colores por defecto de componentes que la
+# app usa: DatePicker, Checkbox, Switch, CircularProgressIndicator y los campos del
+# kit. De ahí el paso §8-S6 de verificación visual. Peso y gama baja (A2-1): sin
+# dependencias nuevas, +804 B sobre 23,95 MB.
 composeBom = "2025.02.00"
 googleServices = "4.5.0"
 # BOM 34.x requiere Kotlin >= 2.2 (metadata 2.3); 33.16.0 es la última compatible con Kotlin 2.0

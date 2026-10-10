@@ -44,13 +44,16 @@ para una cobertura ligera.
 
 ## Cuántos controles pasaron
 
-De los **veinte controles evaluados, diecinueve pasaron y uno falló**. Siete
-pasaron sin salvedades, nueve pasaron con una observación anotada, tres no
-aplican a una aplicación con las características de Aurora —no usa páginas web
-embebidas, no tiene servidores propios a los que fijar certificados y no se
-distribuye por una tienda donde forzar actualizaciones tenga sentido— y uno,
-el que pide evitar la fuga de datos sensibles, no se cumple. Más abajo se
-explica por qué y qué lo causa.
+El estándar tiene veinte controles, y **tres no aplican** a una aplicación con
+las características de Aurora: no usa páginas web embebidas, no tiene servidores
+propios a los que fijar certificados y no se distribuye por una tienda donde
+forzar actualizaciones tenga sentido. Quedan **diecisiete evaluables**, y de esos
+**dieciséis pasaron y uno falló**: siete pasaron sin salvedades, nueve pasaron con
+una observación anotada, y el que pide evitar la fuga de datos sensibles no se
+cumple. Más abajo se explica por qué y qué lo causa.
+
+Conviene decirlo así y no «diecinueve de veinte», porque un control que no aplica
+no es un control aprobado: sumarlo a los cumplidos infla la cifra.
 
 Lo más importante es que los pilares del diseño resistieron la comprobación
 directa, no solo la revisión del código. Las bases de datos donde viven los
@@ -207,13 +210,33 @@ sobrevivían a la ofuscación —renombrados, y con una comprobación automátic
 que revisa el archivo instalable en cada compilación—, y la configuración de red,
 que ahora es explícita en vez de depender de un valor por defecto.
 
-**Quedan dos**, los dos de preparación para el despliegue: firmar el instalable
-con una clave propia y revisar dos componentes que arrastra la librería de
-autenticación. Se abordan antes del piloto.
+**Y apareció uno nuevo mientras se corregían**, que es lo que se espera de una
+comprobación automática que antes no existía. Al ampliar la lista de palabras que
+el guardián vigila, el archivo instalable resultó contener la expresión inglesa
+que nombra, en las aplicaciones de este campo, el botón de salida rápida. Era la
+palabra más delatora que podía quedar ahí. Se renombró, y el instalable
+reconstruido ya no la contiene: ahora dice «cerrar ahora», que no señala nada. Se
+dejó escrito en el código por qué ese nombre es deliberadamente soso, para que una
+limpieza futura no lo deshaga.
 
-Con eso, el recuento pasa de diecinueve controles cumplidos y uno fallido, a
-**veinte cumplidos y ninguno fallido**: nueve sin salvedades, ocho con alguna
-observación anotada y tres que no aplican. Queda una sola comprobación por hacer
-a mano, la del menú de texto del relato, porque es de las que ningún método
-automático puede verificar.
+**Quedan dos previstos**, los dos de preparación para el despliegue: firmar el
+instalable con una clave propia y revisar dos componentes que arrastra la librería
+de autenticación. Se abordan antes del piloto.
+
+Con eso, de los diecisiete controles evaluables **los diecisiete pasan y ninguno
+falla**: ocho sin salvedades y nueve con alguna observación anotada. El control de
+fuga de datos deja de fallar, pero no queda limpio, y es importante decir por qué:
+la copia que la librería de Google mantiene en el teléfono para que la aplicación
+funcione sin conexión no está cifrada con la misma protección que el resto —es un
+riesgo ya registrado desde antes, que esta corrección no toca— y porque un servicio
+de accesibilidad del sistema, como el lector de pantalla, sí puede copiar el texto
+del relato sin pasar por el menú que se cerró. Lo segundo se dejó así a conciencia:
+bloquearlo habría dejado el campo más largo de la aplicación sin lector de
+pantalla, y ese precio no se paga.
+
+De seguridad queda una sola comprobación por hacer a mano, la del menú de texto
+del relato, porque es de las que ningún método automático puede verificar. Aparte
+de ella, y ya no por seguridad sino por prudencia, la actualización de la librería
+de Google obliga a repasar en pantalla los formularios y el selector de fecha: esa
+versión cambia medidas y colores por defecto de esos componentes.
 
