@@ -1,0 +1,117 @@
+# Línea base del guardián «verificarCamuflajeDex».
+#
+# El guardián juzga TODAS las cadenas del DEX del release contra los 49 términos
+# vedados, sin filtro previo de atribución. Eso es lo correcto —una cadena propia
+# que no lleve la ruta del paquete sería invisible para cualquier heurística— pero
+# obliga a absorber aquí, una por una y con su causa escrita, el ruido de las
+# librerías: javax.crypto usa «secret», EXIF usa «ISOSpeed», gRPC usa «panic».
+#
+# Dos reglas:
+#   1. El guardián falla ante CUALQUIER cadena que no esté en esta lista. Su
+#      trabajo es impedir que el problema crezca, no fingir que no existe.
+#   2. Para retirar una línea de aquí hay que arreglar la causa, no ampliar la
+#      lista. Las de Aurora llevan pendiente; las de librería, no (no hay nada
+#      que arreglar en código ajeno).
+#
+# Coincidencia exacta, para que una excepción no tape de rebote una cadena nueva.
+# El DEX guarda cada cadena precedida de su longitud en MUTF-8, y ese byte a veces
+# resulta imprimible y se pega al principio («?Lcom/...», «Dio.perfmark...»). El
+# guardián lo detecta por regla —el primer carácter es prefijo de longitud si su
+# valor coincide con la longitud en bytes del resto— y lo descarta antes de
+# comparar, así que aquí las cadenas se escriben LIMPIAS. Antes se escribían con
+# el artefacto pegado y la excepción habría dejado de aplicar en silencio en
+# cuanto la cadena cambiara de longitud (hallazgo M-6 de la auditoría de la rama).
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DE AURORA — P-78. Todas desaparecen con el rename questionnaire->form y
+# Consent*->Terms*, planificado para antes del piloto.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Plantillas de toString() de data class: R8 renombra la clase pero no toca el
+# literal que el compilador genera para toString().
+ConsentPoint(titleRes=
+ConsentUiState(isAccepted=
+Questionnaire(id=
+, questionnaire=
+
+# Rutas que conserva la reflexión de Room: el `keep` que Room necesita para
+# localizar la BD conserva la ruta completa del paquete.
+Lcom/auroraclima/app/questionnaire/data/local/GuidanceDatabase;
+Lcom/auroraclima/app/questionnaire/data/local/GuidanceDatabase_Impl;
+Noutcomes(com.auroraclima.app.questionnaire.data.local.OutcomeRow).
+Tremoved(com.auroraclima.app.questionnaire.data.local.RemovedOutcomeRow).
+
+# Nombre de campo que conserva la factoría generada por Hilt para el ViewModel.
+# Lo encontró la auditoría de la rama (hallazgo B-2): el filtro de atribución
+# anterior no lo juzgaba porque no lleva ruta de paquete ni forma de toString().
+questionnaireRepository
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RUIDO DE LIBRERÍA — no hay nada que arreglar: son términos que el estándar, la
+# plataforma o una dependencia usan con toda naturalidad. Verificadas una por una.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# --- «secret»: javax.crypto, Tink (dentro de firebase-auth), perfmark, OAuth ----
+Ljavax/crypto/SecretKey;
+Ljavax/crypto/SecretKeyFactory;
+Ljavax/crypto/spec/SecretKeySpec;
+generateSecret
+secret
+sharedSecretKey
+shared_secret
+shared secret is out of range
+SecretKeyAccess cannot be null
+SecretKeyAccess is required
+SecretKeyAccess required
+HPKE private key cannot be constructed without secret
+ECIES private key cannot be constructed without secret
+io.perfmark.impl.SecretPerfMarkImpl$PerfMarkImpl
+sun.misc.SharedSecrets
+oauthTokenSecret
+oauth_token_secret=
+
+# --- «escape»: kotlinx.serialization (escapes de JSON) y android.database -------
+escape
+appendEscapedSQLString
+appendWhereEscapeString
+sqlEscapeString
+Invalid escape sequence
+Invalid escaped char '
+Unterminated escape sequence
+Unexpected EOF during unicode escape
+' in unicode escape
+Trailing escape character is not allowed
+Expected escape sequence to continue, got EOF
+string escape sequence '\'
+
+# --- «panic»: gRPC (dentro de firebase-firestore) ------------------------------
+panicPickResult
+Panic! This is a bug!
+PANIC! Entering TRANSIENT_FAILURE
+Refused to enqueue task after panic
+] Uncaught exception in the SynchronizationContext. Panic!
+
+# --- «sos»: coincide dentro de «ISOSpeed», etiquetas EXIF de androidx ----------
+ISOSpeed
+ISOSpeedRatings
+ISOSpeedLatitudeyyy
+ISOSpeedLatitudezzz
+
+# --- «hidden»: androidx.credentials, material3 y android.view ------------------
+hidden
+Hidden
+HIDDEN
+, Hidden=
+mHidden=
+Landroidx/credentials/playservices/HiddenActivity;
+
+# --- «consent»: Google Play Services (auth y SMS Retriever) --------------------
+user_consent
+NEED_REMOTE_CONSENT
+NeedRemoteConsent
+startSmsUserConsent
+Consent PendingIntent cannot be null
+
+# --- «incident» y «abuse»: kotlinx.coroutines y reCAPTCHA ----------------------
+. Please read KDoc to 'handleFatalException' method and report this incident to maintainers
+null cannot be cast to non-null type T of com.google.android.libraries.abuse.recaptcha.network.CaptchaFeConnection.getResponse

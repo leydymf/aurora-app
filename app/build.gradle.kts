@@ -136,21 +136,30 @@ dependencies {
 // La §2 de docs/RESULTADOS_PRUEBAS.md verificaba el camuflaje del release con
 // `apkanalyzer dex packages`, que enumera NOMBRES DE CLASE y no ve los literales
 // de cadena. La evaluación OWASP barrió los literales y encontró vocabulario
-// propio que R8 no toca: plantillas de `toString()` de data class y mensajes de
-// excepción. Este guardián cierra ese hueco.
+// propio que R8 no toca: plantillas de `toString()` de data class, nombres de
+// constantes de enum y mensajes de excepción. Este guardián cierra ese hueco.
 //
-// Es una tarea de Gradle y no una prueba de JVM a propósito: el APK release
-// puede no existir cuando corren los tests, y un guardián que se salta solo es
-// peor que ninguno. Aquí corre donde el artefacto existe de verdad, encadenada a
-// assembleRelease, así que entra en el comando de verificación habitual sin que
-// nadie tenga que acordarse de ella.
+// Es una tarea de Gradle y no una prueba de JVM a propósito: el APK release puede
+// no existir cuando corren los tests, y un guardián que se salta solo es peor que
+// ninguno. Corre en cada construcción de release —`assembleRelease` y
+// `bundleRelease`—, así que ningún artefacto sale del entorno sin pasar por él.
+// Ojo: el comando de verificación habitual de CLAUDE.md (`assembleDebug lint
+// test`) NO construye el release; el que sí lo hace, y por tanto lo ejecuta, es
+// el de la §1 de docs/RESULTADOS_PRUEBAS.md, que termina en `assembleRelease`.
+//
+// Qué juzga: TODAS las cadenas del DEX, sin filtro previo de atribución. La
+// primera versión solo miraba las que llevaban la ruta del paquete o forma de
+// `toString()`, y por eso dejaba pasar `questionnaireRepository` y el propio
+// mensaje de excepción que H-1 denunció. El precio de juzgar todo es tener que
+// absorber el ruido de las librerías en la línea base, una por una y con su
+// causa escrita, y eso es lo que hace creíble un «0 hallazgos».
 val verificarCamuflajeDex by tasks.registering {
     group = "verification"
     description = "Falla si el DEX del APK release contiene términos vedados por el camuflaje (RNF-05)."
 
     val apkProv = layout.buildDirectory.file("outputs/apk/release/app-release.apk")
-    val terminosProv = layout.projectDirectory.file("camuflaje-terminos-vedados.txt")
-    val excepcionesProv = layout.projectDirectory.file("camuflaje-dex-excepciones.txt")
+    val terminosProv = layout.projectDirectory.file("src/test/resources/camuflaje-terminos-vedados.txt")
+    val excepcionesProv = layout.projectDirectory.file("src/test/resources/camuflaje-dex-excepciones.txt")
     val informeProv = layout.buildDirectory.file("reports/camuflaje/dex-release.txt")
     inputs.file(apkProv).withPropertyName("apkRelease")
     inputs.file(terminosProv).withPropertyName("terminosVedados")
@@ -162,62 +171,111 @@ val verificarCamuflajeDex by tasks.registering {
         val informe = informeProv.get().asFile
         fun leerLista(f: java.io.File) = f.readLines()
             .map { it.trim() }
-            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .filter { it.isNotEmpty() && !it.startsWith("#") && !it.startsWith("[") }
         val vedados = leerLista(terminosProv.asFile)
         val aceptadas = leerLista(excepcionesProv.asFile).toSet()
-        require(vedados.isNotEmpty()) { "La lista de términos vedados está vacía." }
+        require(vedados.size >= 40) { "La lista de términos vedados parece incompleta: ${vedados.size}." }
 
-        // Cadenas imprimibles del DEX, al estilo de `strings`: es lo que R8 deja
-        // legible y lo que un `strings app-release.apk` enseñaría.
-        val cadenas = mutableListOf<String>()
+        // El DEX precede cada cadena de su longitud en MUTF-8, y ese byte a veces
+        // resulta imprimible y se pega al principio. Se descarta por regla, no a
+        // ojo: es prefijo si su valor coincide con la longitud en bytes del resto.
+        fun sinPrefijoDeLongitud(cadena: String): String {
+            if (cadena.length < 2) return cadena
+            val resto = cadena.substring(1)
+            return if (cadena[0].code == resto.toByteArray(Charsets.UTF_8).size) resto else cadena
+        }
+
+        // La coincidencia con la línea base es exacta —una excepción no debe tapar
+        // de rebote una cadena nueva— con una sola tolerancia: se prueba también la
+        // forma recortada, porque el archivo de excepciones no puede expresar un
+        // espacio al principio (se recortan al leerlo) y en el DEX hay cadenas así.
+        fun aceptada(cadena: String) = cadena in aceptadas || cadena.trim() in aceptadas
+
+        fun juzgar(candidatas: Collection<String>): List<Pair<String, String>> = candidatas.mapNotNull { bruta ->
+            val cadena = sinPrefijoDeLongitud(bruta)
+            if (aceptada(cadena)) return@mapNotNull null
+            vedados.firstOrNull { cadena.contains(it, ignoreCase = true) }?.let { it to cadena }
+        }
+
+        // Autochequeo: la lógica de juicio se ejerce en CADA corrida contra cuatro
+        // canarios —uno por cada forma en que el vocabulario sobrevive a R8— y
+        // contra tres cadenas inocentes. Si el guardián deja de cazar o empieza a
+        // ladrar de más, se sabe aquí y no dentro de un año. Los cuatro canarios
+        // son, en orden: plantilla de `toString()` (la forma de H-1), constante de
+        // enum (la de H-8), prosa en español y prosa con tilde —esta última solo
+        // la caza un extractor que decodifique UTF-8—.
+        val canarios = listOf(
+            "SecretCodeChecks(hasMinLength=",
+            "QUICK_EXIT",
+            "no se pudo descifrar la evidencia",
+            "agresión del día"
+        )
+        val cazados = juzgar(canarios).map { it.second }.toSet()
+        val perdidos = canarios.filterNot { it in cazados }
+        if (perdidos.isNotEmpty()) {
+            throw GradleException(
+                "El guardián del camuflaje dejó de funcionar: no cazó $perdidos. " +
+                    "Revisar la lista de términos y la lógica de juicio antes de confiar en el resultado."
+            )
+        }
+        val falsosPositivos = juzgar(listOf("Bucaramanga", "temperatura mínima", "pronóstico de 5 días"))
+        require(falsosPositivos.isEmpty()) {
+            "El guardián marca cadenas inocentes de la fachada: $falsosPositivos."
+        }
+
+        // Cadenas del DEX, al estilo de `strings`, pero decodificando UTF-8: un
+        // byte de tilde no corta la cadena. Con el extractor anterior, solo ASCII,
+        // los términos acentuados de la lista no podían coincidir nunca.
+        var total = 0
+        val cadenas = LinkedHashSet<String>()
         ZipFile(apk).use { zip ->
             val dex = Collections.list(zip.entries())
                 .filter { entrada: ZipEntry -> entrada.name.matches(Regex("""classes\d*\.dex""")) }
             for (entrada in dex) {
                 val bytes: ByteArray = zip.getInputStream(entrada).readBytes()
-                val actual = StringBuilder()
+                var inicio = -1
+                fun cerrar(fin: Int) {
+                    if (inicio >= 0 && fin - inicio >= 4) {
+                        total++
+                        cadenas += String(bytes, inicio, fin - inicio, Charsets.UTF_8)
+                    }
+                    inicio = -1
+                }
                 for (indice in bytes.indices) {
                     val c = bytes[indice].toInt() and 0xFF
-                    if (c in 0x20..0x7E) {
-                        actual.append(c.toChar())
+                    if (c in 0x20..0x7E || c >= 0x80) {
+                        if (inicio < 0) inicio = indice
                     } else {
-                        if (actual.length >= 4) cadenas += actual.toString()
-                        actual.setLength(0)
+                        cerrar(indice)
                     }
                 }
-                if (actual.length >= 4) cadenas += actual.toString()
+                cerrar(bytes.size)
             }
         }
         require(cadenas.isNotEmpty()) { "No se extrajo ninguna cadena del DEX: ¿cambió el formato del APK?" }
 
-        // Solo se juzgan las cadenas ATRIBUIBLES A AURORA. Las librerías usan
-        // «secret», «panic» o «hidden» con toda naturalidad (javax.crypto.SecretKey,
-        // ISOSpeed de EXIF, panicPickResult de gRPC) y eso no dice nada del
-        // camuflaje. Las dos formas en que el vocabulario propio sobrevive a R8,
-        // que son las que midió la evaluación OWASP, sí:
-        //   a) cadenas con la ruta del paquete, que conserva la reflexión de Room
-        //      y los descriptores de kotlinx.serialization;
-        //   b) las plantillas «Nombre(campo=» que el compilador genera para el
-        //      toString() de las data class.
-        val plantillaToString = Regex("""[A-Z][A-Za-z0-9_]{2,}\(\w+=""")
-        val propias = cadenas.asSequence()
-            .filter { it.contains("auroraclima") || plantillaToString.containsMatchIn(it) }
-            .distinct()
-            .toList()
+        val hallazgos = juzgar(cadenas)
 
-        val hallazgos = propias.flatMap { cadena ->
-            vedados.filter { cadena.contains(it, ignoreCase = true) }.map { it to cadena }
-        }.filterNot { (_, cadena) -> cadena in aceptadas }
+        // Una excepción que nunca se dispara es, o una causa ya arreglada —y
+        // entonces sobra—, o el síntoma de que el guardián dejó de mirar donde
+        // mira esa excepción. Las dos cosas hay que verlas; no fallan el build.
+        val normalizadas = cadenas.map { sinPrefijoDeLongitud(it) }
+            .flatMap { listOf(it, it.trim()) }
+            .toSet()
+        val muertas = aceptadas.filterNot { it in normalizadas }
 
         informe.parentFile.mkdirs()
         informe.writeText(
             buildString {
                 appendLine("Camuflaje del DEX del release")
                 appendLine("APK: ${apk.name} (${apk.length()} bytes)")
-                appendLine("Cadenas de 4 o más caracteres en el DEX: ${cadenas.size}")
-                appendLine("De ellas, atribuibles a Aurora: ${propias.size}")
+                appendLine("Cadenas de 4 o más caracteres: $total (${cadenas.size} distintas)")
+                appendLine("Se juzgan TODAS, sin filtro de atribución.")
                 appendLine("Términos vedados comprobados: ${vedados.size}")
+                appendLine("Autochequeo de canarios: ${canarios.size}/${canarios.size} cazados, 0 falsos positivos")
                 appendLine("Excepciones documentadas en la línea base: ${aceptadas.size}")
+                appendLine("De ellas, sin disparar (revisar si sobran): ${muertas.size}")
+                muertas.forEach { appendLine("  $it") }
                 appendLine("Hallazgos nuevos: ${hallazgos.size}")
                 hallazgos.forEach { (termino, cadena) -> appendLine("  «$termino» en: ${cadena.take(120)}") }
             }
@@ -227,23 +285,29 @@ val verificarCamuflajeDex by tasks.registering {
             throw GradleException(
                 buildString {
                     appendLine(
-                        "El DEX del release tiene ${hallazgos.size} cadena(s) propia(s) " +
+                        "El DEX del release tiene ${hallazgos.size} cadena(s) " +
                             "con términos vedados (RNF-05, H-1/P-89):"
                     )
                     hallazgos.forEach { (termino, cadena) -> appendLine("  «$termino» en: ${cadena.take(120)}") }
                     appendLine("Informe: $informe")
                     appendLine("Arreglar la causa (renombrar el símbolo o neutralizar el mensaje).")
-                    appendLine("Aceptarla solo con motivo y pendiente, en app/camuflaje-dex-excepciones.txt.")
+                    appendLine("Aceptarla solo con motivo y pendiente, en la línea base de excepciones.")
                 }
             )
         }
         logger.lifecycle(
-            "Camuflaje del DEX: ${propias.size} cadenas propias de ${cadenas.size}, " +
-                "${vedados.size} términos, ${aceptadas.size} excepciones documentadas, 0 hallazgos nuevos."
+            "Camuflaje del DEX: $total cadenas (${cadenas.size} distintas), ${vedados.size} términos, " +
+                "${aceptadas.size} excepciones documentadas, canarios en verde, 0 hallazgos nuevos."
         )
     }
 }
 
-tasks.matching { it.name == "assembleRelease" }.configureEach {
+// Encadenado a las DOS formas de construir un release. `bundleRelease` (el AAB)
+// no dispara `assembleRelease`, así que sin esta segunda entrada una publicación
+// futura se saltaría el guardián. El `dependsOn` hace la tarea autosuficiente
+// —`./gradlew verificarCamuflajeDex` construye lo que necesita— y, de paso,
+// evita que juzgue un APK viejo: si la construcción falla, el guardián no corre.
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
     finalizedBy(verificarCamuflajeDex)
 }
+verificarCamuflajeDex { dependsOn("assembleRelease") }

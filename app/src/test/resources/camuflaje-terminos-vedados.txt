@@ -1,0 +1,85 @@
+# Términos vedados por el camuflaje (RNF-05, regla 6 de CLAUDE.md).
+#
+# FUENTE ÚNICA, de verdad: los dos guardianes leen este archivo y ninguno tiene
+# copia propia. Si divergieran en silencio, el camuflaje se degradaría sin que
+# nadie se enterara, que es justo lo que RNF-05 no puede permitirse.
+#   - CamouflageResourcesTest  -> recursos, manifest, identificadores y literales
+#                                 de las fuentes de src/main
+#   - verificarCamuflajeDex    -> cadenas del DEX del APK release
+#
+# Dos ámbitos, marcados con una línea de sección:
+#
+#   [todo]       Prohibidos en CUALQUIER archivo de src/main, código Kotlin
+#                incluido: son palabras que jamás serían un identificador
+#                legítimo ni un texto de una app de clima.
+#
+#   [recursos]   Prohibidos además en recursos (XML bajo res/), manifest, DEX e
+#                identificadores de Kotlin. Son palabras que en inglés o en
+#                abstracto podrían ser legítimas en una librería (secret, panic,
+#                sos) pero no en algo que Aurora escriba.
+#
+# Los DOS ámbitos se aplican al DEX y a los identificadores: la premisa de que
+# «R8 protege los nombres internos» es falsa para los enum, las `data class` y
+# las `data object`, y eso es precisamente lo que descubrió el hallazgo H-1.
+#
+# Nota sobre las tildes: el DEX guarda sus cadenas en MUTF-8 y el guardián las
+# decodifica como UTF-8, así que los términos acentuados SÍ pueden coincidir.
+# Antes no: el extractor tomaba solo ASCII imprimible y una tilde cortaba la
+# cadena, de modo que «víctima», «agresión», «pánico» y «salida rápida» estaban
+# estructuralmente muertos (hallazgo A-3 de la auditoría de la rama).
+#
+# Una línea por término, en minúscula; la comparación no distingue mayúsculas.
+# No borrar un término sin discutirlo contra RNF-05.
+
+[todo]
+violencia
+violence
+víctima
+victima
+victim
+agresor
+agresión
+agresion
+abuser
+maltrato
+denuncia
+doble fondo
+revictimiz
+
+[recursos]
+incidente
+incident
+evidencia
+evidence
+emergencia
+emergency
+auxilio
+ayuda
+sos
+pánico
+panico
+panic
+refugio
+shelter
+secreto
+secret
+oculto
+oculta
+hidden
+vault
+abuso
+abuse
+consentimiento
+consent
+cuestionario
+questionnaire
+salida rápida
+salida rapida
+modo seguro
+barra de búsqueda
+barra de busqueda
+espacio seguro
+quick_exit
+quick exit
+quickexit
+escape
