@@ -1833,10 +1833,33 @@ donde `isPassword` es falso siempre, así que el titular de §10.1 hay que leerl
 acotado al menú táctil. Y conviene saber que **en Compose 1.8 esa vía deja de
 necesitar un ratón**, porque el menú contextual pasa a ser el camino principal.
 
+**Medición del `EditorInfo` sobre el campo enmascarado real**, que faltaba —en §10.1
+solo estaban medidos el relato y la barra— y que cierra la pregunta de si envolver un
+campo de contraseña pisa algo. Hecha sobre el emulador, en «Cambiar tu código de
+acceso», con `adb shell dumpsys input_method`:
+
+| Estado del ojo | `inputType` | `imeOptions` | Árbol de accesibilidad |
+|---|---|---|---|
+| Cerrado | `0x8081` | `0x3000005` | `text="••••••"`, `password=true` |
+| **Abierto** | `0x8081` | `0x3000005` | **`text="abc123"`**, `password=false` |
+
+Dos lecturas, las dos importantes:
+
+1. **El envoltorio no pisa nada.** `0x8081` conserva la variación de contraseña
+   (`0x80`), e `imeOptions` lleva el `0x01000000` del envoltorio junto a la acción
+   `NEXT`. Y es **idéntico con el ojo abierto y cerrado**: la mitad del teclado es
+   incondicional, como decía la medición del bytecode.
+2. **Y confirma el residual de accesibilidad de forma empírica**, no inferida: al
+   abrir el ojo, el árbol pasa de `••••••` a **el texto en claro** y `password` de
+   `true` a `false`. Lo que hasta ahora era un argumento sobre dónde se instalan las
+   acciones semánticas es ahora una observación: con el ojo abierto, un servicio de
+   accesibilidad lee la clave personal. Está en P-95.
+
 **Lo que falta, y solo puede hacerlo una persona:** el paso **§8-S1b**, que comprueba
-el menú de un campo enmascarado **con el ojo abierto**. Ninguna prueba automática
+el **menú** de un campo enmascarado con el ojo abierto. Ninguna prueba automática
 puede verlo: la instrumentada compone el envoltorio con una barra falsa, no un campo
-real con la máscara apagada.
+real con la máscara apagada, y la medición de arriba mide el `EditorInfo`, no el
+menú.
 
 ### 10.7 Recuento tras las correcciones
 
