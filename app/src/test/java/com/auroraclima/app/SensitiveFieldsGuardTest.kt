@@ -224,7 +224,12 @@ class SensitiveFieldsGuardTest {
         // tipo función lambda, o la que se invente mañana—: ya no hay que enumerarla.
         // El caso `todo campo de texto cae dentro de una funcion reconocida` cuenta los
         // campos del archivo y los atribuidos, y si no cuadran, cae. Eso cierra la
-        // especie en vez de la forma.
+        // especie de las formas de DECLARACIÓN, y conviene no afirmar más: la
+        // identificación del CONSTRUCTOR sigue siendo una lista enumerada, así que un
+        // `import … OutlinedTextField as Campo` o una API de campo que no esté en la
+        // lista —`OutlinedSecureTextField` de material3, por ejemplo— se le escapan a
+        // los dos casos por igual. Las APIs nuevas de ese tipo enmascaran, así que el
+        // riesgo es bajo, pero es una lista y hay que mantenerla.
         //
         // Y un aviso, porque estuvo escrito al contrario: el respaldo de este guardia
         // NO es el guardián del DEX. R8 borra `SecureTextEntry`, `NoCopyTextToolbar` y
@@ -237,16 +242,25 @@ class SensitiveFieldsGuardTest {
             campos.size >= 3
         )
 
-        val sinProteger = campos.filter { (_, cuerpo) ->
-            val enmascara = "KeyboardType.Password" in cuerpo && "PasswordVisualTransformation" in cuerpo
-            // Enmascarar ya hace las dos cosas de un golpe; si no enmascara, TODOS
-            // los campos del cuerpo tienen que estar dentro de la lambda.
-            !enmascara && !estaEnvuelto(cuerpo)
-        }.map { (nombre, _) -> nombre }
+        // UNA regla y ninguna excepción: TODOS los campos del kit van envueltos,
+        // enmascaren o no. La versión anterior excusaba del envoltorio al campo
+        // enmascarado con la premisa de que «enmascarar ya hace las dos cosas de un
+        // golpe», y la premisa es CONDICIONAL: se midió el bytecode de Compose 1.7.8
+        // y `TextFieldSelectionManager` anula «copiar» y «cortar» solo mientras la
+        // transformación visual ES de contraseña. `V2SecretField` la cambia a `None`
+        // al pulsar el ojo, así que con el ojo abierto el menú sí ofrecía copiar — en
+        // la clave personal, en las contraseñas de cuenta y en la de exportación
+        // (hallazgo H-9). Quitar la excepción es, además, lo que deja esta prueba sin
+        // un perdón calculado del texto: lo calculado puede ser el juicio, nunca la
+        // exención.
+        val sinProteger = campos
+            .filterNot { (_, cuerpo) -> estaEnvuelto(cuerpo) }
+            .map { (nombre, _) -> nombre }
         assertTrue(
-            "Campos del kit que no enmascaran y no están envueltos en SecureTextEntry: " +
-                "$sinProteger. Su contenido podría copiarse al portapapeles y el teclado " +
-                "podría aprenderlo (H-7).",
+            "Campos del kit que no están envueltos en SecureTextEntry: $sinProteger. Su " +
+                "contenido podría copiarse al portapapeles y el teclado podría aprenderlo " +
+                "(H-7, H-9). Enmascarar NO basta: Compose solo quita «copiar» mientras la " +
+                "transformación visual es de contraseña, y el ojo la desactiva.",
             sinProteger.isEmpty()
         )
     }

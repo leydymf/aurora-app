@@ -350,6 +350,21 @@ val verificarCamuflajeDex by tasks.registering {
         }
         require(cadenas.isNotEmpty()) { "No se extrajo ninguna cadena: ¿cambió el formato del APK?" }
 
+        // El envoltorio de los campos sensibles NO debe sobrevivir a R8. No es una
+        // curiosidad: durante la evaluación se escribió en el código que el guardián
+        // del DEX servía de respaldo de `SensitiveFieldsGuardTest`, y era falso
+        // precisamente porque R8 borra estos tres nombres, de modo que este guardián
+        // no puede ver un campo sin envolver. Esto convierte esa medición en una
+        // aserción permanente y avisará el día que R8 deje de borrarlos — que es el
+        // día en que habría que revisar aquella frase (mejora M-3 de la revisión).
+        val envoltorioEnElArtefacto = listOf("SecureTextEntry", "NoCopyTextToolbar", "NoImeLearning")
+            .filter { nombre -> cadenas.any { nombre in it } }
+        require(envoltorioEnElArtefacto.isEmpty()) {
+            "R8 dejó de borrar del artefacto $envoltorioEnElArtefacto. No es un fallo de " +
+                "camuflaje por sí mismo, pero invalida el alcance declarado de " +
+                "SensitiveFieldsGuardTest: revisar su comentario y el §10.1 del informe."
+        }
+
         val hallazgos = juzgar(cadenas)
 
         // Una excepción que nunca se dispara es, o una causa ya arreglada —y

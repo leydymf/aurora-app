@@ -135,7 +135,7 @@ fun V2SecretField(
     keyboardActions: KeyboardActions,
     toggleDescription: String,
     modifier: Modifier = Modifier
-) {
+) = SecureTextEntry {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
