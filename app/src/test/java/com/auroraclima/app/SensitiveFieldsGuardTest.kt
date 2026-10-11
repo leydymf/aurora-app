@@ -174,7 +174,7 @@ class SensitiveFieldsGuardTest {
      * campo que repusiera el piso de no vacuidad.
      */
     private val firmaDeFuncion = Regex(
-        """(?:^|\n)(?:(?:private|internal|public|inline|suspend|operator)\s+)*""" +
+        """(?:^|\n)(?:@[A-Za-z0-9_]+\s+)*(?:(?:private|internal|public|inline|suspend|operator)\s+)*""" +
             """fun\s*(?:<[^>]*>\s*)?(?:[A-Za-z0-9_]+\.)?([A-Za-z0-9_]+)\("""
     )
 
@@ -220,15 +220,17 @@ class SensitiveFieldsGuardTest {
         // extensión: todas esas formas se le escapaban a versiones anteriores y se
         // cerraron una por una con mutaciones.
         //
-        // Lo que SIGUE escapándose, dicho sin adornos: un campo declarado como `val`
-        // de tipo función lambda (`val V2X: @Composable () -> Unit = { ... }`), que no
-        // es una firma `fun`. El respaldo de eso **no** es el guardián del DEX —R8
-        // borra `SecureTextEntry`, `NoCopyTextToolbar` y `NoImeLearning` del artefacto,
-        // así que ese guardián no puede ver un campo sin envolver; medido: 0
-        // ocurrencias de los tres—. El respaldo real son dos cosas: el piso de no
-        // vacuidad de aquí abajo, que obliga a que el kit siga declarando sus tres
-        // campos, y la comprobación manual §8-S1. Una versión anterior de este
-        // comentario atribuía el respaldo al guardián del DEX, y era falso.
+        // Qué pasa con una forma de declaración que el regex NO reconozca —el `val` de
+        // tipo función lambda, o la que se invente mañana—: ya no hay que enumerarla.
+        // El caso `todo campo de texto cae dentro de una funcion reconocida` cuenta los
+        // campos del archivo y los atribuidos, y si no cuadran, cae. Eso cierra la
+        // especie en vez de la forma.
+        //
+        // Y un aviso, porque estuvo escrito al contrario: el respaldo de este guardia
+        // NO es el guardián del DEX. R8 borra `SecureTextEntry`, `NoCopyTextToolbar` y
+        // `NoImeLearning` del artefacto —medido: 0 ocurrencias de los tres—, así que
+        // ese guardián no puede ver un campo sin envolver. El respaldo es la
+        // comprobación manual §8-S1.
         assertTrue(
             "El kit debería declarar al menos tres campos editables; se encontraron $campos. " +
                 "Si el regex dejó de casar, esta prueba estaría pasando sin mirar nada.",
@@ -299,6 +301,39 @@ class SensitiveFieldsGuardTest {
                 "IME_FLAG_NO_PERSONALIZED_LEARNING en el cuerpo del interceptor.",
             "IME_FLAG_NO_PERSONALIZED_LEARNING" in interceptor
         )
+    }
+
+    /**
+     * Cierra la ESPECIE, no una forma.
+     *
+     * Las cuatro rondas anteriores fueron un juego del topo: cada revisión encontraba
+     * una declaración que el regex de firmas no reconocía —`internal fun`, receptor de
+     * extensión, parámetro de tipo, anotación en la misma línea— y el campo quedaba
+     * sin vigilar con el guardia en verde, porque el piso de no vacuidad lo siguen
+     * cumpliendo los tres campos reales.
+     *
+     * Esto lo zanja por construcción: cada campo de texto del kit tiene que caer
+     * DENTRO de alguna función reconocida. Si una declaración se le escapa al regex,
+     * sus campos no se atribuyen a nadie y la cuenta no cuadra — sin que haya que
+     * enumerar la forma. Se lleva por delante también el `val` de tipo función lambda,
+     * que era el residual declarado, y cualquier forma futura.
+     */
+    @Test
+    fun `todo campo de texto cae dentro de una funcion reconocida`() {
+        (listOf(kit) + camposFueraDelKit).forEach { ruta ->
+            val texto = codigoDe(kotlin(ruta))
+            val enElArchivo = camposDe(texto).size
+            val atribuidos = funcionesConCampo(texto).sumOf { (_, cuerpo) -> camposDe(cuerpo).size }
+            assertEquals(
+                "$ruta: hay $enElArchivo campos de texto y solo $atribuidos caen dentro de una " +
+                    "función que el guardia reconozca. Los que faltan no se vigilan: su envoltorio " +
+                    "no se comprueba (H-7). Pasa si la declaración usa una forma que el regex de " +
+                    "firmas no casa — y si eso ocurre, hay que ensanchar el regex, no la lista de " +
+                    "residuales.",
+                enElArchivo,
+                atribuidos
+            )
+        }
     }
 
     @Test

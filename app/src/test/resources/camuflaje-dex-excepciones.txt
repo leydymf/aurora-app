@@ -1,8 +1,10 @@
 # Línea base del guardián «verificarCamuflajeDex».
 #
 # El guardián juzga TODAS las cadenas del artefacto release contra los 49 términos
-# vedados, sin filtro previo de atribución. El alcance no es solo el DEX: también
-# `resources.arsc`, el manifiesto binario y `res/**` — de ahí la última sección. Eso es lo correcto —una cadena propia
+# vedados, sin filtro previo de atribución. El alcance no es solo el DEX: son las 197
+# entradas del APK que este build puede escribir —`resources.arsc`, el manifiesto
+# binario, `res/**`, `META-INF/**`, `assets/**` sin las fuentes vendidas de PdfBox, y
+# los dos archivos de raíz que genera el propio build—, de ahí la última sección. Eso es lo correcto —una cadena propia
 # que no lleve la ruta del paquete sería invisible para cualquier heurística— pero
 # obliga a absorber aquí, una por una y con su causa escrita, el ruido de las
 # librerías: javax.crypto usa «secret», EXIF usa «ISOSpeed», gRPC usa «panic».

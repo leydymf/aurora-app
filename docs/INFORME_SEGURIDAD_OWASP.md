@@ -1352,10 +1352,10 @@ que el envoltorio instale sus dos protecciones y conserve «pegar», y que viva 
 un único archivo. La lista de campos **se deriva de `Fields.kt`**, no se escribe a
 mano, así que un `V2NumberField` futuro sin envolver caería sin tocar la prueba.
 
-**Esa prueba se endureció cuatro veces, y conviene contarlo porque es el hallazgo
-más grave de la evaluación y su guardián falló tres veces por el mismo motivo:
-afirmaba sobre texto.** Cada ronda la rompió una revisión con mutaciones, no un
-razonamiento.
+**Esa prueba se endureció cinco veces, y conviene contarlo porque es el hallazgo
+más grave de la evaluación y su guardián falló cuatro veces por el mismo motivo:
+enumeraba formas en vez de cerrar la especie.** Cada ronda la rompió una revisión
+con mutaciones, no un razonamiento.
 
 1. **Primera versión:** buscaba literales en todo el archivo. Bastaba vaciar
    `SecureTextEntry` —`NoCopyTextToolbar` seguía ahí, huérfana, y el `grep` la
@@ -1382,17 +1382,25 @@ razonamiento.
    la firma admite receptor y genéricos, y el rango de la lambda se calcula contando
    llaves, exigiendo que **todos** los campos del cuerpo caigan dentro.
 
-Cada una de las mutaciones de las cuatro rondas se reprodujo contra la versión
+5. **Quinta, y la que zanja el asunto.** La cuarta revisión encontró **otra** forma
+   —un campo con la anotación en la **misma línea** de la firma,
+   `@Composable fun V2NoteField(…)`, que ktlint permite— y lo demostró con un campo
+   real sin envolver y el guardián en verde. A esa altura era evidente que enumerar
+   formas no converge. Arreglo de fondo: una **aserción de atribución**. Cada campo
+   de texto del archivo tiene que caer DENTRO de alguna función que el guardián
+   reconozca; si una declaración se le escapa al regex, sus campos no se atribuyen a
+   nadie y la cuenta no cuadra. Eso cierra la **especie** en vez de la forma, y se
+   lleva por delante el `val` de tipo función lambda que hasta entonces figuraba
+   como residual declarado. Comprobado con las dos mutaciones.
+
+Cada una de las mutaciones de las cinco rondas se reprodujo contra la versión
 siguiente, y todas caen, con la rama sin mutar en verde.
 
-**Lo que sigue escapándose, dicho sin adornos:** un campo declarado como `val` de
-tipo función lambda, que no es una firma `fun`. Y hay que corregir aquí una
-afirmación que estuvo escrita en el código: el respaldo de eso **no** es el
-guardián del DEX. R8 borra `SecureTextEntry`, `NoCopyTextToolbar` y `NoImeLearning`
-del artefacto —medido: 0 ocurrencias de los tres—, así que ese guardián no puede
-ver un campo sin envolver. El respaldo real son dos cosas: el piso de no vacuidad
-que obliga a que el kit siga declarando sus tres campos, y la comprobación manual
-§8-S1.
+**Y hay que corregir aquí una afirmación que estuvo escrita en el código:** el
+respaldo de lo que este guardián no vea **no** es el guardián del DEX. R8 borra
+`SecureTextEntry`, `NoCopyTextToolbar` y `NoImeLearning` del artefacto —medido: 0
+ocurrencias de los tres—, así que ese guardián no puede ver un campo sin envolver.
+El respaldo es la comprobación manual **§8-S1**, y nada más.
 
 El comportamiento, en el emulador, con `SecureTextEntryTest` (nueva, 2 casos):
 compone el envoltorio, pide el menú de selección desde dentro y comprueba qué
@@ -1548,7 +1556,7 @@ más arriba: lo que no se mira, se declara.
 **Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
 el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
 `app-release.apk`, 23 952 390 B, SHA-256
-`243c6ab4f1ae1d41a39361b0677f6e489b11168076dfd48dd9036ab603dc8865`—: **390 690
+`fea9e90094f8c5cc594931759b73e56101c10c384979ab5a44da1b14f3eff0bd`—: **390 690
 cadenas de 3 o más caracteres, 148 586 distintas, en 197 entradas, 0 hallazgos
 nuevos** y el autochequeo de canarios en 4/4.
 
@@ -1563,12 +1571,12 @@ exactamente qué es reproducible y qué no, porque se midió:
 
 - **El APK no es reproducible byte a byte.** Dos construcciones limpias e
   independientes del mismo commit, con el mismo JDK, dan hashes distintos
-  (se midieron cuatro: `666496…`, `731a2b…`, `a236e6…` y `2fcb19…`) con el **mismo
-  tamaño** de 23 952 390 B en todas. Es lo esperable
+  (se midieron **seis** a lo largo de la evaluación, el último `fea9e9…`) con el
+  **mismo tamaño** de 23 952 390 B en todas. Es lo esperable
   de R8 y de la firma.
-- **Las cifras del guardián sí son estables.** Tres construcciones limpias e
-  independientes —una propia y dos de la auditoría— dieron **los nueve números
-  idénticos al dígito** con tres hashes distintos. Es decir: el recuento es
+- **Las cifras del guardián sí son estables.** Cinco construcciones limpias e
+  independientes —propias, de la auditoría y de la verificación— dieron **los nueve
+  números idénticos al dígito** con cinco hashes distintos. Es decir: el recuento es
   propiedad del commit, y el hash no. (Las cifras que publica esta sección son
   mayores porque después se amplió el alcance; con un alcance fijo no se movieron.)
 - **Lo que sí movió las cifras fue contaminación del entorno.** Antes de limpiar,
@@ -1748,10 +1756,11 @@ medición sobre el dispositivo o sobre el artefacto.
 
 ### 10.7 Estado de la suite
 
-**800 pruebas de JVM** por variante en 106 clases, 0 fallos, 0 ignoradas — eran
-798 antes de esta ronda, y entran el tercer caso de `CamouflageResourcesTest`
-(identificadores que sobreviven a R8) y el tercero de `ManifestMinimizationTest`
-(ningún bloque permite tráfico en claro). **47 instrumentadas** en 12 clases sobre
+**801 pruebas de JVM** por variante en 106 clases, 0 fallos, 0 ignoradas — eran
+798 al empezar, y entran el tercer caso de `CamouflageResourcesTest`
+(identificadores que sobreviven a R8), el tercero de `ManifestMinimizationTest`
+(ningún bloque permite tráfico en claro) y el sexto de `SensitiveFieldsGuardTest`
+(la aserción de atribución de §10.1). **47 instrumentadas** en 12 clases sobre
 el emulador B, 0 fallos — eran 45, y entran los 2 casos de `SecureTextEntryTest`.
 ktlint sin violaciones y `lint` con 0 errores. `assembleDebug` y `assembleRelease`
 en verde, este último con el guardián del DEX pasando —390 690 cadenas juzgadas,
