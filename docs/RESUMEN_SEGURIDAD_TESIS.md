@@ -113,6 +113,12 @@ abrir otra aplicación y pegar. No es un fallo del cifrado ni del camuflaje —l
 registros siguen guardados y enviados cifrados—, sino una protección que no se
 aplicó a un campo. Se corrige en la versión siguiente.
 
+Una revisión posterior, ya durante la corrección, descubrió que esa declaración
+protege menos de lo que se creía: la opción «copiar» desaparece solo mientras el
+texto se muestra oculto, y la aplicación tiene un ojo para mostrarlo. Con el ojo
+abierto, también la clave de acceso y las contraseñas podían copiarse. Se cuenta
+más abajo.
+
 Esto se descubrió, además, de una manera que vale la pena contar: era una de las
 dos comprobaciones que ningún método automático podía hacer, porque escribir por
 cable no pasa por el teclado del teléfono y el emulador no deja forzar una copia.
@@ -221,6 +227,32 @@ palabra más delatora que podía quedar ahí. Se renombró, y el instalable
 reconstruido ya no la contiene: ahora dice «cerrar ahora», que no señala nada. Se
 dejó escrito en el código por qué ese nombre es deliberadamente soso, para que una
 limpieza futura no lo deshaga.
+
+**Y apareció un segundo hallazgo nuevo, este de gravedad alta, que llevaba ahí
+desde el principio.** Los campos donde se escribe la clave de acceso y las
+contraseñas ocultan el texto con puntos, y se daba por sentado que esa ocultación
+era lo que impedía copiarlos. Al verificar esa suposición en el código compilado de
+la librería de Google —en vez de creerla— resultó que la protección vale **solo
+mientras el texto está oculto**: la aplicación tiene un ojo para mostrarlo, y con el
+ojo abierto la clave y las contraseñas se podían copiar al portapapeles, igual que
+el relato. Es el mismo camino del hallazgo alto anterior, sobre el dato que protege
+todo lo demás. Se corrigió aplicando a esos campos la misma protección que al
+relato, con lo que la aplicación queda con una sola regla y ninguna excepción.
+
+Tiene un coste que se aceptó a conciencia: tampoco se podrá copiar la contraseña que
+la usuaria elige para cifrar el archivo exportado. El motivo es que copiarla para
+enviarla es justamente lo que la pondría en el portapapeles, que es lo que se está
+cerrando. Pegar sigue funcionando en todos los campos.
+
+**Los dos hallazgos nuevos se encontraron de maneras distintas, y la diferencia dice
+algo del método.** El primero apareció porque una comprobación automática se volvió
+más estricta: la herramienta lo encontró sola. El segundo llevaba ahí desde la
+versión evaluada y **ninguna herramienta lo vio**, porque todas daban por buena la
+misma suposición escrita en el código; lo encontró una persona leyendo el código
+compilado de la librería. Es la segunda vez en esta corrección que una medición
+desmiente un comentario del propio código —la primera fue la de la corrección
+automática del teclado—, y es el aprendizaje que más vale llevarse: una afirmación
+escrita no es una verificación.
 
 **Quedan dos previstos**, los dos de preparación para el despliegue: firmar el
 instalable con una clave propia y revisar dos componentes que arrastra la librería

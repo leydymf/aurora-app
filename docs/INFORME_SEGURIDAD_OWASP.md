@@ -291,6 +291,14 @@ portapapeles, terceros y notificaciones.
   bien: `V2SecretField`, con `KeyboardType.Password` y
   `PasswordVisualTransformation`, desactiva «copiar» en la barra de selección.
   El del relato no. ❌
+  > **Errata (2026-10-10, H-9).** Las dos últimas frases son falsas, y lo eran ya
+  > en v0.3.0. Compose anula «copiar» solo **mientras** la transformación visual
+  > ES de contraseña (`instanceof PasswordVisualTransformation` en
+  > `TextFieldSelectionManager.showSelectionToolbar`, medido en el bytecode de
+  > foundation 1.7.8), y `V2SecretField` la cambia a `None` al pulsar el ojo. Con
+  > el ojo abierto, los campos de clave y contraseña ofrecían «copiar» igual que el
+  > relato. El párrafo no se reescribe porque es lo que la evaluación concluyó; el
+  > hallazgo y su corrección están en §10.8.
 - **Caché del teclado** (MASTG-TEST-0006, 0258). Resultado mixto. Los campos
   secretos usan `KeyboardType.Password`, que impide el aprendizaje del IME, y
   las dos barras de búsqueda usan `autoCorrect = false`
@@ -649,7 +657,14 @@ clima que no se dejara fotografiar sería, ella misma, un distinguidor.
 **Campos sensibles**: `V2SecretField` aplica `PasswordVisualTransformation` y
 `KeyboardType.Password` en inicio de sesión, creación de cuenta, clave personal,
 cambio de contraseña, eliminación de cuenta y exportación; en pantalla se vieron
-enmascarados. **Observación (MASWE-0030):** la excepción es el campo del relato,
+enmascarados.
+> **Errata (2026-10-10, H-9).** «La excepción» de la frase siguiente es inexacta:
+> los campos enmascarados también ofrecían «copiar» **con el ojo de visibilidad
+> abierto**, porque la anulación de Compose es condicional a la máscara. Lo que la
+> evaluación midió —que en pantalla se vieron enmascarados— se sostiene; lo que no
+> es que el relato fuera la única excepción. Ver §10.8.
+
+**Observación (MASWE-0030):** la excepción es el campo del relato,
 cuyo menú de selección sí ofrece «copiar» y «cortar» — es el hallazgo H-7, que
 se califica en MASVS-STORAGE-2 por ser una fuga de datos, pero que nace de una
 decisión de interfaz y por eso rebaja también este control. **Notificaciones**: ninguna. **Superposición** (MASTG-TEST-0035,
@@ -917,7 +932,14 @@ que no es de contraseña**: no declara `keyboardOptions` de ningún tipo. Todos
 los demás campos sensibles usan `V2SecretField`, que aplica
 `PasswordVisualTransformation` y `KeyboardType.Password`, y eso desactiva
 «copiar» y «cortar» en la barra de selección de Compose y le dice al teclado que
-no aprenda. El campo del relato no hereda nada de eso. Los campos de correo
+no aprenda. El campo del relato no hereda nada de eso.
+> **Errata (2026-10-10, H-9).** Esta frase se parte en dos y solo una mitad es
+> cierta. La del teclado **sí**: `KeyboardType.Password` es incondicional y el
+> método que decide el menú no consulta el tipo de teclado en ninguna rama
+> (verificado: cero referencias a `KeyboardType`/`inputType`/`imeOptions` en
+> `showSelectionToolbar`). La de «copiar» y «cortar» **no**: la da
+> `PasswordVisualTransformation` y solo mientras está activa, y el ojo la apaga.
+> Ver §10.8. Los campos de correo
 (`V2PlainField` con `KeyboardType.Email`) están en el mismo caso, en menor
 grado: el correo identifica la cuenta pero no describe lo ocurrido.
 
@@ -1306,7 +1328,7 @@ envoltorio que aplica dos protecciones a la vez para que no se pueda poner una y
 olvidar la otra: una barra de selección de texto que delega en la del sistema
 pasando `null` en «copiar» y «cortar» —«pegar» y «seleccionar todo» se
 conservan— y `IME_FLAG_NO_PERSONALIZED_LEARNING` sobre el `EditorInfo`, vía
-`InterceptPlatformTextInput`. Se aplica al relato, a los campos de correo y
+`InterceptPlatformTextInput`. Se aplica a **los tres campos del kit** —relato, correo y el enmascarado— y
 **también a las dos barras de búsqueda**.
 
 El envoltorio se aplica **dentro del componente del kit**, no alrededor de la
@@ -1347,7 +1369,7 @@ El `inputType` del relato no cambia (`0x28001`): **la autocorrección se conserv
 
 **Lo que fijan las pruebas, en dos niveles.** La estructura, en la JVM, con
 `SensitiveFieldsGuardTest`: que ningún campo editable se cree fuera del kit salvo
-las dos barras exentas, que todo campo del kit que no enmascare esté envuelto,
+las dos barras exentas, que todo campo del kit esté envuelto, enmascare o no,
 que el envoltorio instale sus dos protecciones y conserve «pegar», y que viva en
 un único archivo. La lista de campos **se deriva de `Fields.kt`**, no se escribe a
 mano, así que un `V2NumberField` futuro sin envolver caería sin tocar la prueba.
@@ -1416,16 +1438,33 @@ en ninguna parte:
   las acciones semánticas: `CopyText` y `SetSelection` están en el DEX del release
   y el delegado de accesibilidad de Compose las expone, así que la cadena
   seleccionar → copiar sigue disponible para un servicio de accesibilidad sin
-  pasar por la barra. La lectura del árbol de accesibilidad tampoco la cubre
+  pasar por la barra. **Alcance exacto, medido en la pasada final:** en
+  `CoreTextField` esas acciones se instalan detrás del mismo booleano de
+  enmascaramiento, así que en los 13 campos enmascarados aparecen **justo cuando el
+  ojo se abre** — y en ese mismo instante el árbol de accesibilidad pasa de leer
+  viñetas a leer el texto en claro. Es decir, el residual alcanza también a la clave
+  personal y a las contraseñas, no solo a los campos que no pueden enmascararse. La lectura del árbol de accesibilidad tampoco la cubre
   `FLAG_SECURE` — este mismo informe se apoya en ese árbol como instrumento de
   prueba en §5.4. No se tapa con `clearAndSetSemantics` a propósito: dejaría al
   relato, el campo más largo de la app, sin lector de pantalla, y ese precio no lo
   paga el modelo de amenaza. Queda como **residual declarado (P-95)**, y es uno de
   los dos motivos por los que MASVS-STORAGE-2 no queda en «Pasa» limpio, y el
-  único por el que MASVS-PLATFORM-3 tampoco (§10.6).
+  único por el que MASVS-PLATFORM-3 tampoco (§10.7).
+- **El menú contextual por clic derecho**, que no estaba declarado en ninguna
+  parte y lo encontró la pasada final. `CoreTextField` envuelve el campo en
+  `ContextMenuArea`, que en 1.7.8 **ya está cableado en Android**, dibuja su propio
+  menú **sin consultar `LocalTextToolbar`** y decide su «Copiar» con el mismo
+  booleano de enmascaramiento. El envoltorio no lo cubre. Solo lo dispara el botón
+  secundario, así que hace falta un ratón y con el dedo es inalcanzable; en el
+  teléfono del piloto no aplica. Pero alcanza al relato siempre, así que **el título
+  de esta sección hay que leerlo acotado al menú táctil**. Y en Compose 1.8 esa vía
+  deja de necesitar un ratón (§10.6).
 - **`Ctrl+C` con teclado físico.** Compose lo atiende en `TextFieldKeyInput`, que
-  no pasa por la barra de selección. En el teléfono del piloto no aplica. El
-  comentario del código decía «declarado en el informe» cuando no lo estaba;
+  llama a `copy()` **sin consultar la máscara**: o sea que en los campos
+  enmascarados nunca estuvo bloqueado, ni con el ojo cerrado — un matiz que la
+  pasada final corrigió y que refuerza la raíz de H-9. En el teléfono del piloto no
+  aplica. El comentario del código decía «declarado en el informe» cuando no lo
+  estaba;
   ahora lo está (P-95).
 
 **Acoplamiento de versión.** `InterceptPlatformTextInput` existe desde Compose
@@ -1556,8 +1595,8 @@ más arriba: lo que no se mira, se declara.
 **Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
 el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
 `app-release.apk`, 23 952 390 B, SHA-256
-`fea9e90094f8c5cc594931759b73e56101c10c384979ab5a44da1b14f3eff0bd`—: **390 690
-cadenas de 3 o más caracteres, 148 586 distintas, en 197 entradas, 0 hallazgos
+`b21ea4e1daad2d545c189427ba654a6bf4b250027f195038b7da977c9182a6c1`—: **390 430
+cadenas de 3 o más caracteres, 148 569 distintas, en 197 entradas, 0 hallazgos
 nuevos** y el autochequeo de canarios en 4/4.
 
 El piso es de **3** caracteres y no de 4 por un motivo concreto: de los 49
@@ -1571,7 +1610,7 @@ exactamente qué es reproducible y qué no, porque se midió:
 
 - **El APK no es reproducible byte a byte.** Dos construcciones limpias e
   independientes del mismo commit, con el mismo JDK, dan hashes distintos
-  (se midieron **seis** a lo largo de la evaluación, el último `fea9e9…`) con el
+  (se midieron **ocho** a lo largo de la evaluación, el último `b21ea4…`) con el
   **mismo tamaño** de 23 952 390 B en todas. Es lo esperable
   de R8 y de la firma.
 - **Las cifras del guardián sí son estables.** Cinco construcciones limpias e
@@ -1586,7 +1625,8 @@ exactamente qué es reproducible y qué no, porque se midió:
   incremental. **Para re-medir: detener los demonios, `clean`, y una sola
   invocación.**
 
-Quien reejecute el comando obtendrá otro SHA-256 y las mismas cifras.
+Quien reejecute el comando **sobre el mismo commit** obtendrá otro SHA-256 y las
+mismas cifras. Si el código cambia, las cifras se mueven — y eso es lo correcto.
 
 El precio de juzgar todo es absorber el ruido de las librerías en la línea base, y
 eso es lo que hace creíble un «0 hallazgos»: **62 cadenas aceptadas, una por una y
@@ -1713,7 +1753,92 @@ mayúsculas. Por eso no se puede decir que «impide que vuelva». La red que no
 depende de la forma de escribir el código es el guardián del DEX, que mira el
 artefacto.
 
-### 10.6 Recuento tras las correcciones
+### 10.6 H-9 · Hallazgo nuevo · Alta · Los campos enmascarados sí se podían copiar con el ojo abierto
+
+No es un hallazgo de la evaluación sobre v0.3.0 **y tampoco es una regresión de esta
+rama: estaba ahí desde v0.3.0 y la evaluación no lo vio.** Conviene decirlo así,
+porque es un resultado sobre el método tanto como sobre la app.
+
+**Qué.** `V2SecretField` —el campo enmascarado del kit, con 13 usos: clave personal,
+contraseñas de cuenta y contraseña de exportación— ofrecía «copiar» y «cortar» en su
+menú de selección **mientras el ojo de visibilidad estuviera abierto**. Es la vía (a)
+de H-7, el portapapeles, sobre los datos que gobiernan el acceso al espacio interno.
+
+**Por qué, medido y no inferido.** Se desensambló
+`TextFieldSelectionManager.showSelectionToolbar` de foundation 1.7.8: en el
+desplazamiento 36 lee `visualTransformation`, en el 39 hace
+`instanceof PasswordVisualTransformation`, y solo si eso es cierto salta a
+`aconst_null` para «copiar» (74) y para «cortar» (114). Es decir: Compose no anula
+nada por el `KeyboardType`, lo anula **mientras la transformación visual ES de
+contraseña**. Y `V2SecretField` la cambia a `VisualTransformation.None` al pulsar el
+ojo. Dos comprobaciones colaterales de la misma medición:
+
+- **«pegar» nunca consulta ese booleano** —su rama arranca en `getEditable` y
+  `hasText`—, así que conservarlo no depende de nada frágil;
+- el método **no consulta el tipo de teclado en ninguna rama**, lo que confirma que
+  la mitad del IME sí se sostenía: `keyboardOptions` fija `KeyboardType.Password`
+  sin condición.
+
+**Lo que agrava el dato.** El portapapeles de Compose escribe con
+`ClipData.newPlainText` **sin `EXTRA_IS_SENSITIVE`**, así que lo copiado entraba sin
+marca: queda a la vista en la previsualización de SystemUI de Android 13+ —ventana
+que `FLAG_SECURE` no cubre, el mismo argumento de H-7— y en el historial del
+teclado.
+
+**Gravedad: Alta**, en la misma escala que H-7 y por los mismos motivos. Alcanzable
+con el dedo, sin herramientas ni periféricos; sobre la clave personal, que es la
+credencial que protege todo lo demás; y en la contraseña de exportación, copiar era
+incluso la acción **esperada**. Atenúa que exige una acción deliberada de la usuaria
+y haber pasado la clave, pero eso valía igual para H-7.
+
+**Cómo se encontró, que es la parte que interesa al método.** Verificando una
+premisa en vez de creerla. La premisa estaba escrita en el código —«los campos de
+contraseña ya estaban cubiertos por `KeyboardType.Password`, que hace las dos cosas
+de un golpe»— y de ella colgaba, además, la **exención** con que
+`SensitiveFieldsGuardTest` perdonaba del envoltorio al único campo del kit que no lo
+tenía. Es la **segunda** vez en esta rama que una medición desmiente un comentario
+del código: la primera fue `autoCorrect = false` en §10.1. Y hay una diferencia que
+vale anotar: **H-8 apareció porque un guardián se volvió más estricto; H-9 llevaba
+ahí desde v0.3.0 y ninguna herramienta lo vio.** Lo vio una persona leyendo
+bytecode.
+
+**Corrección.** `V2SecretField` pasa también por `SecureTextEntry`, que anula copiar
+y cortar **sin leer ningún estado**, con el ojo abierto o cerrado. El kit queda con
+una regla y ninguna excepción. Dos apoyos de que es el mecanismo canónico: el propio
+`BasicSecureTextField` de Compose compila a la misma forma
+—`showMenu(rect, null, paste, null, selectAll)`— y el menú de Compose no tiene otros
+platos que esos cuatro, porque no inyecta «Compartir» ni actividades `PROCESS_TEXT`
+como el `EditText` del framework de vistas.
+
+Y el guardián pierde su único perdón calculado. La lección, que trasciende el caso:
+**lo calculado puede ser el juicio, nunca la exención** — una exención se escribe
+como dato con su causa, para que alguien pueda preguntarle «¿siempre?».
+
+**Coste aceptado, por decisión expresa:** tampoco se podrá copiar la contraseña de
+exportación que la usuaria elige. El argumento, suyo: copiarla para enviarla es justo
+lo que la pondría en el portapapeles. «Pegar» se conserva en los 13 campos, así que
+un gestor de contraseñas sigue pudiendo rellenar. Queda un corolario de usabilidad
+registrado en **P-105**: sin «copiar», transcribir una contraseña larga empuja a
+elegirla más corta.
+
+**Residual nuevo que el envoltorio NO cubre, y que no estaba declarado:** el **menú
+contextual por clic derecho**. `CoreTextField` envuelve el campo en `ContextMenuArea`
+y en 1.7.8 eso **ya está cableado en Android** —no es un no-op: se verificó que
+`classes.dex` conserva sus cadenas, que R8 habría borrado si fuera inalcanzable—.
+Dibuja su propio menú **sin consultar `LocalTextToolbar`**, con el «Copiar» colgando
+del mismo `!isPassword`. Solo lo dispara el botón secundario
+(`awaitFirstRightClickDown`), así que hace falta un ratón y con el dedo es
+inalcanzable; en el teléfono del piloto no aplica. Pero alcanza también al relato,
+donde `isPassword` es falso siempre, así que el titular de §10.1 hay que leerlo
+acotado al menú táctil. Y conviene saber que **en Compose 1.8 esa vía deja de
+necesitar un ratón**, porque el menú contextual pasa a ser el camino principal.
+
+**Lo que falta, y solo puede hacerlo una persona:** el paso **§8-S1b**, que comprueba
+el menú de un campo enmascarado **con el ojo abierto**. Ninguna prueba automática
+puede verlo: la instrumentada compone el envoltorio con una barra falsa, no un campo
+real con la máscara apagada.
+
+### 10.7 Recuento tras las correcciones
 
 | Resultado | v0.3.0 (medido) | v0.3.1 (tras corregir) |
 |---|---|---|
@@ -1731,13 +1856,23 @@ contra el texto de este mismo informe:
 - **MASVS-STORAGE-2** tiene **dos** observaciones vivas según §5.1, y la primera
   es **P-22** —la caché persistente del SDK de Firestore es SQLite plano, sin
   SQLCipher—, que esta rama no toca. Solo la segunda era H-7. Se le suma el
-  residual de accesibilidad de §10.1. Queda en «Pasa con observación».
+  residual de accesibilidad de §10.1, y **H-9** con su propio residual del clic
+  derecho (§10.6). Queda en «Pasa con observación».
 - **MASVS-PLATFORM-3** tampoco queda limpio. Su única observación *registrada* era
   H-7, sí, pero el residual de accesibilidad de §10.1 es materia suya: la lectura
   del árbol de accesibilidad es exposición de la INTERFAZ, que es justo lo que
   este control cubre —capturas, recientes, enmascaramiento— y lo que `FLAG_SECURE`
   no alcanza. Cobrarse el mismo residual en STORAGE-2 y no en PLATFORM-3 era una
-  asimetría sin justificación. Queda también en «Pasa con observación».
+  asimetría sin justificación. **H-9 cae igualmente en los dos**, por el mismo
+  motivo que H-7: es fuga de datos y nace de una decisión de interfaz. Queda también
+  en «Pasa con observación».
+
+**Y una aclaración que el lector va a pedir: H-9 es ALTO y el recuento no se mueve.**
+No es contradicción. El recuento cuenta **controles**, no hallazgos; los dos controles
+que H-9 toca ya estaban en «Pasa con observación» por observaciones ajenas a él
+(P-22, el residual de accesibilidad); y H-9 se **corrige en esta misma rama**, igual
+que H-8 en §10.5. Lo que sí cambia es que el 0 en «Falla» cuelga ahora de dos
+comprobaciones manuales y no de una.
 
 Con la convención del propio informe —un control con observación viva es «Pasa con
 observación»— el recuento de v0.3.1 es **7 · 10 · 0 · 3**. La cifra es menos
@@ -1750,11 +1885,13 @@ estable actual y que PdfBox-Android continúa sin mantenimiento; **MASVS-STORAGE
 pierde H-7 pero conserva P-22 y el residual de accesibilidad; y **MASVS-PLATFORM-3**
 pierde H-7 y conserva ese mismo residual.
 
-**El 0 en «Falla» está pendiente de una comprobación manual**: la del menú de
-selección del relato (§10.1). Todo lo demás de esta sección se verificó con
+**El 0 en «Falla» está pendiente de DOS comprobaciones manuales**, y tras H-9 está
+más condicionado que antes, no menos: la del menú de selección del relato (§8-S1) y
+la del **campo enmascarado con el ojo abierto** (§8-S1b). Si la segunda fallara,
+MASVS-STORAGE-2 volvería a «Falla». Todo lo demás de esta sección se verificó con
 medición sobre el dispositivo o sobre el artefacto.
 
-### 10.7 Estado de la suite
+### 10.8 Estado de la suite
 
 **801 pruebas de JVM** por variante en 106 clases, 0 fallos, 0 ignoradas — eran
 798 al empezar, y entran el tercer caso de `CamouflageResourcesTest`
@@ -1763,9 +1900,12 @@ medición sobre el dispositivo o sobre el artefacto.
 (la aserción de atribución de §10.1). **47 instrumentadas** en 12 clases sobre
 el emulador B, 0 fallos — eran 45, y entran los 2 casos de `SecureTextEntryTest`.
 ktlint sin violaciones y `lint` con 0 errores. `assembleDebug` y `assembleRelease`
-en verde, este último con el guardián del DEX pasando —390 690 cadenas juzgadas,
-148 586 distintas, en 197 entradas, 62 excepciones, 0 muertas, canarios 4/4, 0
-hallazgos— sobre el APK cuyo SHA-256 cita §10.3.
+en verde, este último con el guardián del DEX pasando —390 430 cadenas juzgadas,
+148 569 distintas, en 197 entradas, 62 excepciones, 0 muertas, canarios 4/4, 0
+hallazgos— sobre el APK cuyo SHA-256 cita §10.3. Las cifras bajan ligeramente
+respecto a la ronda anterior (−260 cadenas) porque H-9 cambió el código, no por
+indeterminismo: con el alcance y el código fijos, cinco construcciones
+independientes dieron los nueve números idénticos.
 
 La corrida es la del comando completo, sobre árbol limpio y con el JDK prescrito:
 `test ktlintCheck lint assembleDebug assembleRelease`. **Procedimiento de

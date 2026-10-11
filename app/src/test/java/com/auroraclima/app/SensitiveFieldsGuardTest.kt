@@ -17,9 +17,11 @@ import org.junit.Test
  *
  *  1. Ningún campo de texto editable se construye fuera del kit `core/ui/v2`, salvo
  *     las dos barras de búsqueda, que tienen su propia forma y están envueltas.
- *  2. Todo campo del kit que NO enmascare su contenido está envuelto en
- *     `SecureTextEntry`, el envoltorio de `core/security` que quita copiar y cortar
- *     y pide al teclado que no aprenda.
+ *  2. **Todo** campo del kit está envuelto en `SecureTextEntry`, el envoltorio de
+ *     `core/security` que quita copiar y cortar y pide al teclado que no aprenda.
+ *     Sin excepciones: la primera versión eximía al campo enmascarado, y H-9
+ *     demostró que enmascarar protege solo mientras la máscara está puesta — el ojo
+ *     la apaga.
  *  3. El envoltorio sigue haciendo las dos cosas: si alguien borra una de las dos
  *     protecciones, el test cae.
  *
@@ -211,7 +213,7 @@ class SensitiveFieldsGuardTest {
     }
 
     @Test
-    fun `todo campo del kit que no enmascara esta envuelto en SecureTextEntry`() {
+    fun `todo campo del kit esta envuelto en SecureTextEntry`() {
         val fields = codigoDe(kotlin(kit))
         val campos = funcionesConCampo(fields)
         // Que la lista no se derive de una constante escrita a mano: si mañana

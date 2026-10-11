@@ -21,10 +21,24 @@ import androidx.compose.ui.platform.TextToolbarStatus
  *  2. el DICCIONARIO DEL TECLADO, si el IME aprende lo que se escribe y lo
  *     sugiere después en otra aplicación.
  *
- * Los campos de contraseña ya estaban cubiertos por `KeyboardType.Password`, que
- * hace las dos cosas de un golpe. El problema son los campos que la usuaria tiene
- * que LEER mientras escribe —el relato de un registro, el correo—, donde enmascarar
- * no es opción. Para esos está este archivo.
+ * **Cubre TODOS los campos del kit, enmascaren o no.** La primera versión cubría
+ * solo los que no enmascaran, con la premisa de que los de contraseña «ya estaban
+ * cubiertos por `KeyboardType.Password`, que hace las dos cosas de un golpe». Esa
+ * frase estuvo aquí escrita y era falsa; se midió el bytecode de Compose 1.7.8:
+ *
+ *  - de las dos cosas, `KeyboardType.Password` solo hace una, la del teclado, y esa
+ *    sí sin condición;
+ *  - la de copiar y cortar la hacía `PasswordVisualTransformation`, y **solo
+ *    mientras está activa**: `TextFieldSelectionManager.showSelectionToolbar`
+ *    decide con un `instanceof` de esa clase. [V2SecretField] la cambia a `None` al
+ *    pulsar el ojo, así que con el ojo abierto el menú ofrecía «copiar» en la clave
+ *    personal y en las contraseñas (hallazgo H-9);
+ *  - y nunca cubrió `Ctrl+C`: `TextFieldKeyInput` llama a `copy()` sin consultar
+ *    nada de la máscara.
+ *
+ * De ahí la regla de ahora, que es una y no tiene excepciones: **todo campo de
+ * texto del kit va envuelto**. Si alguien cree que un campo enmascarado es
+ * redundante aquí, esto es lo que tiene que leer antes de quitarlo.
  *
  * Vive en `core/security` por la misma razón que [SecureDialog]: es una política de
  * seguridad, no un detalle visual, y conviene que esté en un solo sitio auditable.
@@ -44,7 +58,16 @@ import androidx.compose.ui.platform.TextToolbarStatus
  *    `clearAndSetSemantics` a propósito: dejaría al relato —el campo más largo de
  *    la app— sin lector de pantalla, y ese precio no lo paga el modelo de amenaza.
  *  - `Ctrl+C` con un teclado físico: Compose lo atiende en `TextFieldKeyInput`, que
- *    no pasa por la barra de selección. En el teléfono del piloto no aplica.
+ *    llama a `copy()` sin consultar la máscara. O sea que en los campos enmascarados
+ *    **nunca** estuvo bloqueado, ni con el ojo cerrado. En el teléfono del piloto no
+ *    aplica.
+ *  - el **menú contextual por clic derecho**. `CoreTextField` envuelve el campo en
+ *    `ContextMenuArea`, que en 1.7.8 **ya está cableado en Android** —no es un
+ *    no-op— y dibuja su propio menú sin consultar [LocalTextToolbar], con el
+ *    «Copiar» colgando del mismo `!isPassword` que H-9 falsificó. Lo dispara solo el
+ *    botón secundario (`awaitFirstRightClickDown`), así que hace falta un ratón: con
+ *    el dedo es inalcanzable. En el teléfono del piloto no aplica, pero el envoltorio
+ *    NO lo cubre y conviene no creer lo contrario.
  *  - el AUTOLLENADO, que es una vía distinta del portapapeles y del diccionario del
  *    IME sobre este mismo campo. Hoy está inerte —no hay `AutofillNode` registrado
  *    ni `contentType` en el código, medido sobre el DEX— pero el andamiaje de
@@ -55,9 +78,12 @@ import androidx.compose.ui.platform.TextToolbarStatus
  *    Se revisa al subir a 1.8 (P-97).
  *
  * **Acoplado a Compose 1.7.** [InterceptPlatformTextInput] existe desde ahí, y en
- * 1.8 `TextToolbar.showMenu` cambia de firma y la barra de selección se sustituye
- * por la API de menú contextual nueva. Cualquier subida de Compose obliga a repetir
- * la comprobación manual del menú (§10.1): esto no lo puede verificar una prueba.
+ * 1.8 `TextToolbar.showMenu` cambia de firma y el menú contextual —que en 1.7.8 ya
+ * viaja cableado, aunque solo lo alcance un clic derecho— pasa a ser el camino
+ * principal. Es decir: en 1.8 la vía que hoy este envoltorio NO cubre deja de
+ * necesitar un ratón. Cualquier subida de Compose obliga a repetir la comprobación
+ * manual del menú (§10.1) y a reconsiderar esa vía: esto no lo puede verificar una
+ * prueba.
  */
 
 /**
@@ -129,13 +155,13 @@ private fun NoImeLearning(content: @Composable () -> Unit) {
 }
 
 /**
- * Envoltorio único para los campos de texto del espacio interno que NO son de
- * contraseña. Aplica las dos protecciones a la vez, para que no se pueda poner una
- * y olvidar la otra.
+ * Envoltorio único para los campos de texto del espacio interno. Aplica las dos
+ * protecciones a la vez, para que no se pueda poner una y olvidar la otra.
  *
  * Toda pantalla interna con un campo editable debe usar un campo del kit de
- * `core/ui/v2`, y todo campo del kit que no enmascare su contenido debe estar
- * envuelto aquí. Lo fija `SensitiveFieldsGuardTest`.
+ * `core/ui/v2`, y **todo** campo del kit debe estar envuelto aquí, enmascare o no
+ * (H-9: enmascarar no exime, porque el ojo apaga la máscara). Lo fija
+ * `SensitiveFieldsGuardTest`.
  */
 @Composable
 fun SecureTextEntry(content: @Composable () -> Unit) {

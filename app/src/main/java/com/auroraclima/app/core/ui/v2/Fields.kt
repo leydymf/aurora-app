@@ -57,10 +57,10 @@ fun V2FieldLabel(text: String, modifier: Modifier = Modifier) {
 /**
  * Campo de una línea sin enmascarar (correo, textos cortos).
  *
- * Envuelto en [SecureTextEntry] (H-7, P-94): al no enmascarar, no hereda las
- * protecciones que `KeyboardType.Password` da a [V2SecretField], así que el menú
- * de selección ofrecería «copiar» y el teclado aprendería lo escrito. Aquí eso
- * alcanza al correo, que identifica la cuenta.
+ * Envuelto en [SecureTextEntry], como los otros dos campos del kit: la regla es una
+ * y no tiene excepciones (H-7/P-94, y H-9 para el enmascarado). Sin el envoltorio,
+ * el menú de selección ofrecería «copiar» y el teclado aprendería lo escrito; aquí
+ * eso alcanza al correo, que identifica la cuenta.
  */
 @Composable
 fun V2PlainField(
@@ -123,7 +123,16 @@ fun V2ParagraphField(
     )
 }
 
-/** Campo enmascarado con ojo de visibilidad (contraseñas y clave personal). */
+/**
+ * Campo enmascarado con ojo de visibilidad (contraseñas y clave personal).
+ *
+ * Envuelto en [SecureTextEntry] como los otros dos, y **no es copia-pega**: el
+ * enmascaramiento NO exime. Compose quita «copiar» y «cortar» del menú solo mientras
+ * la transformación visual es de contraseña, y el ojo de este campo la apaga — con el
+ * ojo abierto, la clave personal y las contraseñas podían copiarse al portapapeles
+ * (hallazgo H-9, medido en el bytecode de foundation 1.7.8). Quitar el envoltorio de
+ * aquí por creerlo redundante reabre esa vía.
+ */
 @Composable
 fun V2SecretField(
     value: String,
