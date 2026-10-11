@@ -54,7 +54,9 @@ class SensitiveFieldsGuardTest {
      * excusado del envoltorio. Esa sobrecaptura ocurría ya hoy, sin consecuencias.
      *
      * Límite conocido: un `//` dentro de un literal de cadena se descontaría también.
-     * Ninguno de los archivos que este guardia mira tiene uno.
+     * Los archivos del kit y del envoltorio no tienen ninguno; las dos constantes
+     * `BASE_URL` de `weather/data/remote` sí, y ahí el recorte no alcanza a nada que
+     * este guardia busque.
      */
     private fun codigoDe(file: File): String = file.readText()
         .replace(Regex("""/\*(?:.|\n)*?\*/"""), "")
@@ -98,9 +100,44 @@ class SensitiveFieldsGuardTest {
         ).joinToString("|") { Regex.escape(it) } + ")"
     )
 
-    /** Lo que hay en el cuerpo antes de construir el campo; vacío si no hay campo. */
-    private fun antesDelCampo(cuerpo: String): String =
-        constructorRegex.find(cuerpo)?.let { cuerpo.substring(0, it.range.first) } ?: ""
+    /** Dónde empieza cada campo construido en este cuerpo. */
+    private fun camposDe(cuerpo: String): List<Int> = constructorRegex.findAll(cuerpo)
+        .map { it.range.first }
+        .toList()
+
+    /**
+     * Rango de la lambda que abre `apertura`, contando llaves hasta la que cierra.
+     *
+     * Hace falta para comprobar que el campo está DENTRO del envoltorio y no
+     * simplemente DESPUÉS de que el envoltorio abra. La versión anterior miraba si
+     * el literal aparecía antes de la primera coincidencia, y una auditoría demostró
+     * que eso deja pasar dos formas: `SecureTextEntry { Spacer(...) }` con el campo
+     * a continuación, y un envoltorio correcto con un SEGUNDO campo después de que
+     * la lambda cierre. Las dos dejaban el relato o un campo nuevo sin proteger.
+     */
+    private fun rangoDeLambda(cuerpo: String, apertura: String): IntRange? {
+        val inicio = cuerpo.indexOf(apertura)
+        if (inicio < 0) return null
+        var profundidad = 0
+        for (indice in (inicio + apertura.length - 1) until cuerpo.length) {
+            when (cuerpo[indice]) {
+                '{' -> profundidad++
+                '}' -> {
+                    profundidad--
+                    if (profundidad == 0) return (inicio + apertura.length)..indice
+                }
+            }
+        }
+        return null
+    }
+
+    /** Todos los campos de este cuerpo están dentro de la lambda de `SecureTextEntry`. */
+    private fun estaEnvuelto(cuerpo: String): Boolean {
+        val campos = camposDe(cuerpo)
+        if (campos.isEmpty()) return true
+        val rango = rangoDeLambda(cuerpo, "SecureTextEntry {") ?: return false
+        return campos.all { it in rango }
+    }
 
     /**
      * Las dos barras de búsqueda viven fuera del kit porque su forma es de la fachada
@@ -128,13 +165,29 @@ class SensitiveFieldsGuardTest {
         return resto.substring(0, siguiente)
     }
 
-    /** Funciones de un archivo que construyen un campo de texto, con su firma. */
-    private fun funcionesConCampo(texto: String): List<String> =
-        Regex("""(?:^|\n)(?:(?:private|internal|public|inline|suspend|operator)\s+)*fun ([A-Za-z0-9_]+)\(""")
-            .findAll(texto)
-            .map { it.groupValues[1] }
-            .filter { nombre -> constructorRegex.containsMatchIn(cuerpoDe(texto, "fun $nombre(")) }
-            .toList()
+    /**
+     * Firma de una función de nivel superior, con cualquier combinación de
+     * modificadores, parámetro de tipo y receptor de extensión. Las dos últimas
+     * formas las añadió una auditoría: `fun ColumnScope.V2ParagraphField(` y
+     * `fun <T> V2ParagraphField(` no eran campos para la versión anterior, así que
+     * el relato podía quedar desnudo en verde en cuanto el kit tuviera un cuarto
+     * campo que repusiera el piso de no vacuidad.
+     */
+    private val firmaDeFuncion = Regex(
+        """(?:^|\n)(?:(?:private|internal|public|inline|suspend|operator)\s+)*""" +
+            """fun\s*(?:<[^>]*>\s*)?(?:[A-Za-z0-9_]+\.)?([A-Za-z0-9_]+)\("""
+    )
+
+    /** Nombre y cuerpo de cada función del archivo que construye un campo de texto. */
+    private fun funcionesConCampo(texto: String): List<Pair<String, String>> = firmaDeFuncion
+        .findAll(texto)
+        .map { coincidencia ->
+            val resto = texto.substring(coincidencia.range.last + 1)
+            val hasta = cierreDeCuerpo.find(resto)?.range?.first ?: resto.length
+            coincidencia.groupValues[1] to resto.substring(0, hasta)
+        }
+        .filter { (_, cuerpo) -> constructorRegex.containsMatchIn(cuerpo) }
+        .toList()
 
     @Test
     fun `ningun campo de texto editable se crea fuera del kit v2`() {
@@ -163,26 +216,31 @@ class SensitiveFieldsGuardTest {
         val campos = funcionesConCampo(fields)
         // Que la lista no se derive de una constante escrita a mano: si mañana
         // aparece un V2NumberField sin envolver, esta prueba lo ve sin tocarla.
-        // Cualquier visibilidad, además: la primera versión solo casaba `fun` y
-        // `private fun`, y un `internal fun` —que es la convención de este código
-        // para los composables de pantalla— se le escapaba (mutación M19). Lo que
-        // fija es la visibilidad y los modificadores, no toda forma posible: un campo
-        // declarado como `val` de tipo función lambda se le escaparía, y eso no se
-        // cubre aquí sino en el guardián del DEX y en la comprobación manual.
+        // Cualquier visibilidad, modificador, parámetro de tipo o receptor de
+        // extensión: todas esas formas se le escapaban a versiones anteriores y se
+        // cerraron una por una con mutaciones.
+        //
+        // Lo que SIGUE escapándose, dicho sin adornos: un campo declarado como `val`
+        // de tipo función lambda (`val V2X: @Composable () -> Unit = { ... }`), que no
+        // es una firma `fun`. El respaldo de eso **no** es el guardián del DEX —R8
+        // borra `SecureTextEntry`, `NoCopyTextToolbar` y `NoImeLearning` del artefacto,
+        // así que ese guardián no puede ver un campo sin envolver; medido: 0
+        // ocurrencias de los tres—. El respaldo real son dos cosas: el piso de no
+        // vacuidad de aquí abajo, que obliga a que el kit siga declarando sus tres
+        // campos, y la comprobación manual §8-S1. Una versión anterior de este
+        // comentario atribuía el respaldo al guardián del DEX, y era falso.
         assertTrue(
             "El kit debería declarar al menos tres campos editables; se encontraron $campos. " +
                 "Si el regex dejó de casar, esta prueba estaría pasando sin mirar nada.",
             campos.size >= 3
         )
 
-        val sinProteger = campos.filter { campo ->
-            val cuerpo = cuerpoDe(fields, "fun $campo(")
+        val sinProteger = campos.filter { (_, cuerpo) ->
             val enmascara = "KeyboardType.Password" in cuerpo && "PasswordVisualTransformation" in cuerpo
-            // Enmascarar ya hace las dos cosas de un golpe; si no enmascara, el
-            // envoltorio tiene que abrir el cuerpo, antes de construir el campo.
-            val envuelto = "SecureTextEntry {" in antesDelCampo(cuerpo)
-            !enmascara && !envuelto
-        }
+            // Enmascarar ya hace las dos cosas de un golpe; si no enmascara, TODOS
+            // los campos del cuerpo tienen que estar dentro de la lambda.
+            !enmascara && !estaEnvuelto(cuerpo)
+        }.map { (nombre, _) -> nombre }
         assertTrue(
             "Campos del kit que no enmascaran y no están envueltos en SecureTextEntry: " +
                 "$sinProteger. Su contenido podría copiarse al portapapeles y el teclado " +
@@ -197,13 +255,12 @@ class SensitiveFieldsGuardTest {
             val texto = codigoDe(kotlin(ruta))
             val barras = funcionesConCampo(texto)
             assertTrue("No se encontró ningún campo de texto en $ruta.", barras.isNotEmpty())
-            barras.forEach { barra ->
-                val cuerpo = cuerpoDe(texto, "fun $barra(")
+            barras.forEach { (barra, cuerpo) ->
                 assertTrue(
-                    "$ruta: la función $barra construye un campo de texto sin envolverlo en " +
-                        "SecureTextEntry. Por esa barra se teclea la clave personal (RF-12): " +
+                    "$ruta: la función $barra construye un campo de texto fuera de la lambda " +
+                        "de SecureTextEntry. Por esa barra se teclea la clave personal (RF-12): " +
                         "el teclado no debe aprenderla.",
-                    "SecureTextEntry {" in antesDelCampo(cuerpo)
+                    estaEnvuelto(cuerpo)
                 )
             }
         }

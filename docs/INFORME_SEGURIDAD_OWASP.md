@@ -1352,14 +1352,47 @@ que el envoltorio instale sus dos protecciones y conserve «pegar», y que viva 
 un único archivo. La lista de campos **se deriva de `Fields.kt`**, no se escribe a
 mano, así que un `V2NumberField` futuro sin envolver caería sin tocar la prueba.
 
-Esa prueba se endureció tras la revisión. La primera versión afirmaba sobre el
-**texto del archivo**, y la verificadora demostró con mutaciones que se podía
-deshacer la corrección dejándola en verde: bastaba vaciar `SecureTextEntry`
-—`NoCopyTextToolbar` seguía en el archivo, huérfana, y el `grep` la encontraba— o
-borrar el flag del IME del código, porque el KDoc lo menciona. Ahora las
-aserciones rebanan el **cuerpo** de cada función. Las cinco mutaciones se
-reprodujeron una por una contra la versión nueva: **las cinco la hacen caer, y la
-rama tal cual queda en verde**.
+**Esa prueba se endureció cuatro veces, y conviene contarlo porque es el hallazgo
+más grave de la evaluación y su guardián falló tres veces por el mismo motivo:
+afirmaba sobre texto.** Cada ronda la rompió una revisión con mutaciones, no un
+razonamiento.
+
+1. **Primera versión:** buscaba literales en todo el archivo. Bastaba vaciar
+   `SecureTextEntry` —`NoCopyTextToolbar` seguía ahí, huérfana, y el `grep` la
+   encontraba— o borrar el flag del IME, porque el KDoc lo menciona.
+2. **Segunda:** las aserciones pasaron a rebanar el **cuerpo** de cada función, y
+   la lista de campos a derivarse de `Fields.kt`. Caían las cinco mutaciones
+   anteriores, pero seguían pasando tres formas: un campo `internal fun` —que es
+   la convención de este código para los composables de pantalla—, un segundo
+   archivo en el kit, y la exención por ruta en vez de por archivo.
+3. **Tercera:** y aquí está la peor. Bastaba **una línea de comentario**: quitar
+   `SecureTextEntry {` del relato y escribir
+   `// pendiente: volver a envolver en SecureTextEntry { } al subir a Compose 1.8`
+   dejaba el relato desnudo con el guardián en verde. Es exactamente el comentario
+   que P-97 y esta misma sección invitan a escribir. La variante con KDoc era igual
+   de mala: al rebanar el cuerpo de un campo sin enmascarar se tragaba el KDoc del
+   siguiente, y si ese KDoc mencionaba `KeyboardType.Password`, el campo quedaba
+   clasificado como enmascarado y excusado. Arreglo: `codigoDe()` descuenta los
+   comentarios de bloque y de línea **antes** de analizar.
+4. **Cuarta:** quedaban dos formas estructurales. Un composable con **receptor de
+   extensión** o con **parámetro de tipo** no era una firma reconocible, y la
+   comprobación del envoltorio miraba si abría *antes* del campo, no si el campo
+   estaba *dentro* de su lambda — así que `SecureTextEntry { Spacer(...) }` con el
+   campo a continuación, o un segundo campo tras cerrar la lambda, pasaban. Arreglo:
+   la firma admite receptor y genéricos, y el rango de la lambda se calcula contando
+   llaves, exigiendo que **todos** los campos del cuerpo caigan dentro.
+
+Cada una de las mutaciones de las cuatro rondas se reprodujo contra la versión
+siguiente, y todas caen, con la rama sin mutar en verde.
+
+**Lo que sigue escapándose, dicho sin adornos:** un campo declarado como `val` de
+tipo función lambda, que no es una firma `fun`. Y hay que corregir aquí una
+afirmación que estuvo escrita en el código: el respaldo de eso **no** es el
+guardián del DEX. R8 borra `SecureTextEntry`, `NoCopyTextToolbar` y `NoImeLearning`
+del artefacto —medido: 0 ocurrencias de los tres—, así que ese guardián no puede
+ver un campo sin envolver. El respaldo real son dos cosas: el piso de no vacuidad
+que obliga a que el kit siga declarando sus tres campos, y la comprobación manual
+§8-S1.
 
 El comportamiento, en el emulador, con `SecureTextEntryTest` (nueva, 2 casos):
 compone el envoltorio, pide el menú de selección desde dentro y comprueba qué
@@ -1426,8 +1459,12 @@ uno sin nombres propios. Sobre el DEX del release reconstruido: «SecretCodeChec
 0 ocurrencias (antes 1), «LocalSessionManager» 0 (antes 1).
 
 **Guardián nuevo:** la tarea de Gradle `verificarCamuflajeDex`. Corre en cada
-construcción de release —`assembleRelease` y `bundleRelease`—, así que ningún
-artefacto sale del entorno sin pasar por él. Conviene ser exacto sobre cuándo:
+construcción de release —`assembleRelease` y `bundleRelease`—. Precisión que pidió
+la auditoría: lo que abre es siempre el **APK**, que `bundleRelease` construye al
+lado por el `dependsOn`; el `.aab` no se abre, porque su `resources.arsc` va
+troceado por configuración. Con minificación los dos artefactos toman el DEX del
+mismo R8, así que hoy es equivalente, pero la frase exacta es «se juzga el APK del
+release», no «ningún artefacto sale sin pasar por él». Conviene ser exacto sobre cuándo:
 el comando corto de `CLAUDE.md` (`assembleDebug lint test`) **no** construye el
 release y por tanto no lo ejecuta; el comando de verificación completa de la §1
 de `docs/RESULTADOS_PRUEBAS.md`, que termina en `assembleRelease`, sí.
@@ -1472,28 +1509,33 @@ Y no solo del DEX. La primera versión miraba únicamente `classes*.dex`, y
 `shrinkResources` y `optimizeResources` reescriben, y los recursos que traen las
 librerías no están en las fuentes de Aurora y por tanto nunca se miraban. El
 alcance ahora es todo lo que puede llevar texto propio: **DEX, `resources.arsc`,
-el manifiesto binario, `res/**`, `META-INF/**` y `assets/**`** salvo las fuentes
-que PdfBox trae vendidas — **195 de las 322 entradas** del APK. Las dos últimas
-categorías se midieron antes de incluirlas y añaden **cero** ruido, así que
-entraron gratis.
+el manifiesto binario, `res/**`, `META-INF/**`, `assets/**`** salvo las fuentes
+que PdfBox trae vendidas, **más los dos archivos de raíz que genera este build** —
+**197 de las 322 entradas** del APK. Cada categoría se midió antes de incluirla y
+todas añaden **cero** ruido, así que entraron gratis.
 
-Conviene decirlo como lo que es: una **lista de permitidos**, y todo lo demás
-queda fuera. Lo que queda fuera son 127 entradas y todas viajan byte a byte desde
-una dependencia: `lib/**` (las librerías nativas de SQLCipher), `google/**` (los
-`.proto` de Firestore y gRPC), `kotlin/**`, `okhttp3/**`, las fuentes y listas de
-glifos de PdfBox bajo `assets/com/tom_roush/**`, y los `.properties` de metadatos
-de raíz. Juzgarlas exigiría **43 excepciones más**, varias de ellas basura binaria
-que no es estable entre construcciones.
+Conviene decirlo como lo que es: una **lista de permitidos**, y el criterio es
+«todo lo que este build pueda escribir», no «todo lo que no sea una librería». La
+diferencia la encontró una auditoría con un `cmp`: la frase anterior decía que
+todo lo excluido viajaba byte a byte desde una dependencia, y
+`kotlin-tooling-metadata.json` es byte-idéntico al que el plugin de Kotlin genera
+en `build/kotlinToolingMetadata/` a partir de la configuración de este proyecto.
+Lo que queda fuera —125 entradas— sí viene de una dependencia: `lib/**` (las
+librerías nativas de SQLCipher), `google/**` (los `.proto` de Firestore y gRPC),
+`kotlin/**`, `okhttp3/**`, las fuentes y listas de glifos de PdfBox bajo
+`assets/com/tom_roush/**`, y los `.properties` de metadatos que cada librería deja
+en la raíz. Juzgarlas exigiría **43 excepciones más**, varias de ellas basura
+binaria que no es estable entre construcciones.
 
-**Tres entradas del APK no vienen de ninguna dependencia** y por eso están
+**Cuatro entradas del APK no vienen de ninguna dependencia** y por eso están
 DENTRO del alcance, no fuera: `assets/dexopt/baseline.prof` y su `.profm`, que se
-derivan de las clases de Aurora, y `META-INF/version-control-info.textproto`, que
-se deriva del repositorio. La versión anterior las excluía sin decirlo —el motivo
-escrito hablaba solo de librerías nativas y assets de dependencias cuando el
-filtro dejaba fuera 209 entradas de ocho familias—, y lo señaló la auditoría. Al
-medirlas resultó que incluirlas no cuesta nada: los perfiles están comprimidos y
-no tienen ni un nombre legible, y el `textproto` lleva solo la ruta raíz del
-proyecto y el hash del commit, sin nombre de rama.
+derivan de las clases de Aurora; `META-INF/version-control-info.textproto`, que se
+deriva del repositorio; y `kotlin-tooling-metadata.json`. Las dos primeras
+versiones del filtro las excluían sin decirlo, y hicieron falta dos auditorías
+para enumerarlas. Al medirlas resultó que incluirlas no cuesta nada: los perfiles
+están comprimidos y no tienen ni un nombre legible, el `textproto` lleva solo la
+ruta raíz del proyecto y el hash del commit sin nombre de rama, y el `.json` solo
+versiones de Gradle y de Kotlin.
 
 Y porque «se barrió a mano una vez» no es una garantía permanente, el guardián
 lleva además una **línea base de las categorías excluidas**: si mañana aparece en
@@ -1506,9 +1548,15 @@ más arriba: lo que no se mira, se declara.
 **Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
 el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
 `app-release.apk`, 23 952 390 B, SHA-256
-`2fcb191f321e4cb4fa241e0cfead6cab1db870d7ab33b76eef46a798f9f83e76`—: **194 494
-cadenas de 4 o más caracteres, 110 807 distintas, en 195 entradas, 0 hallazgos
+`243c6ab4f1ae1d41a39361b0677f6e489b11168076dfd48dd9036ab603dc8865`—: **390 690
+cadenas de 3 o más caracteres, 148 586 distintas, en 197 entradas, 0 hallazgos
 nuevos** y el autochequeo de canarios en 4/4.
+
+El piso es de **3** caracteres y no de 4 por un motivo concreto: de los 49
+términos vedados, «sos» mide 3, así que con el piso anterior una cadena que fuera
+exactamente «sos» era estructuralmente inalcanzable — la misma especie de hueco
+que el de los términos acentuados. Bajarlo duplica el recuento y cuesta **0
+hallazgos nuevos**, medido.
 
 Las cifras van atadas al SHA-256 a propósito, igual que en §2, y conviene decir
 exactamente qué es reproducible y qué no, porque se midió:
@@ -1567,10 +1615,25 @@ protege, lo que P-05 verificó: `ValidateSecretCodeUseCase` es legítimo.
 DEX y la corrección de fondo —el rename de P-78— sigue pendiente. El guardián
 impide que el problema crezca; no lo resuelve.
 
-**Lo que el guardián no cubre.** Caza vocabulario vedado, no nombres propios
-internos: la segunda cadena de H-1, `LocalSessionManager sin proveer…`, no la
-habría detenido, porque «LocalSessionManager» no es un término de la lista. Ese
-caso se arregló a mano y la categoría queda sin guardián automático.
+**Lo que el guardián no cubre.** Dos cosas, y la segunda es la mayor exposición
+de vocabulario que queda en el artefacto.
+
+La primera: caza vocabulario vedado, no **nombres propios internos**. La segunda
+cadena de H-1, `LocalSessionManager sin proveer…`, no la habría detenido, porque
+«LocalSessionManager» no es un término de la lista. Ese caso se arregló a mano y la
+categoría queda sin guardián automático. Tampoco puede ver un campo de texto sin
+envolver, porque R8 borra el envoltorio del artefacto (§10.1).
+
+La segunda: **la prosa de la interfaz del espacio interno, que no contiene ningún
+término vedado pero sí es vocabulario del dominio.** Lo encontró la cuarta auditoría
+barriendo el APK con un léxico más amplio que los 49 términos: `strings` sobre el
+artefacto devuelve «Rutas de atención», «Salud · Protección · Justicia», «Qué pasó»
+y las cadenas de «tu clave personal». Ninguna rompe una regla escrita —todas las
+afirmaciones de este informe están acotadas a los 49 términos— y no es una
+regresión de esta rama, pero en Colombia esa prosa **es** del dominio y nadie la
+había registrado. Queda como **P-100**, con la pregunta de producto que abre: si las
+etiquetas más específicas deberían venir del catálogo remoto, como ya viene el resto
+del contenido de RF-24/25, en vez de vivir en `strings.xml` y viajar en el APK.
 
 ### 10.4 H-5 · Configuración de seguridad de red
 
@@ -1690,8 +1753,10 @@ medición sobre el dispositivo o sobre el artefacto.
 (identificadores que sobreviven a R8) y el tercero de `ManifestMinimizationTest`
 (ningún bloque permite tráfico en claro). **47 instrumentadas** en 12 clases sobre
 el emulador B, 0 fallos — eran 45, y entran los 2 casos de `SecureTextEntryTest`.
-ktlint sin violaciones. `assembleDebug` y `assembleRelease` en verde, este último
-con el guardián del DEX pasando y su autochequeo de canarios en verde.
+ktlint sin violaciones y `lint` con 0 errores. `assembleDebug` y `assembleRelease`
+en verde, este último con el guardián del DEX pasando —390 690 cadenas juzgadas,
+148 586 distintas, en 197 entradas, 62 excepciones, 0 muertas, canarios 4/4, 0
+hallazgos— sobre el APK cuyo SHA-256 cita §10.3.
 
 La corrida es la del comando completo, sobre árbol limpio y con el JDK prescrito:
 `test ktlintCheck lint assembleDebug assembleRelease`. **Procedimiento de

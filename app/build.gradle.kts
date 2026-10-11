@@ -235,20 +235,28 @@ val verificarCamuflajeDex by tasks.registering {
         // reescriben, y los recursos de las librerías no se miran nunca en las
         // fuentes (hallazgo F-8 de la auditoría).
         //
-        // Alcance: una lista de permitidos, y todo lo demás fuera. Entran además
-        // `META-INF/**` y `assets/**` salvo las fuentes y listas de glifos que
-        // PdfBox trae vendidas — se midió y las dos categorías añaden CERO ruido, así
-        // que entran gratis y cubren dos entradas que NO vienen de una dependencia:
-        // `assets/dexopt/baseline.prof*`, que se deriva de las clases de Aurora, y
-        // `META-INF/version-control-info.textproto`, que se deriva del repositorio.
+        // Alcance: una lista de permitidos, y todo lo demás fuera. El criterio es
+        // «todo lo que este build pueda escribir», no «todo lo que no sea una
+        // librería», y la diferencia importa: se midió cada categoría antes de
+        // incluirla y las que entraron añaden CERO ruido, así que entraron gratis.
         //
-        // Lo que queda fuera viaja byte a byte desde una dependencia: `lib/*.so`, los
-        // `.proto` de Firestore y gRPC, los builtins de Kotlin, okhttp3 y los
-        // `.properties` de metadatos. Juzgarlos exigiría 43 excepciones más, varias de
-        // basura binaria que no es estable entre construcciones.
+        // Cuatro entradas no vienen de ninguna dependencia y por eso están DENTRO:
+        // `assets/dexopt/baseline.prof` y su `.profm`, derivados de las clases de
+        // Aurora; `META-INF/version-control-info.textproto`, derivado del repositorio;
+        // y `kotlin-tooling-metadata.json`, que lo genera el plugin de Kotlin a partir
+        // de la configuración de este build (es byte-idéntico al de
+        // `build/kotlinToolingMetadata/`). Las tres primeras las señaló una auditoría;
+        // la cuarta, la siguiente, al falsificar con un `cmp` la frase «todo lo
+        // excluido viaja byte a byte desde una dependencia».
+        //
+        // Lo que queda fuera sí viaja byte a byte desde una dependencia: `lib/*.so`,
+        // los `.proto` de Firestore y gRPC, los builtins de Kotlin, okhttp3, las
+        // fuentes de PdfBox y los `.properties` de metadatos de cada librería.
+        // Juzgarlos exigiría 43 excepciones más, varias de basura binaria que no es
+        // estable entre construcciones.
         val enAlcance = Regex(
             """classes\d*\.dex|resources\.arsc|AndroidManifest\.xml|res/.*|META-INF/.*""" +
-                """|assets/(?!com/tom_roush/).*"""
+                """|assets/(?!com/tom_roush/).*|kotlin-tooling-metadata\.json|DebugProbesKt\.bin"""
         )
         // La exclusión, declarada. «Se barrió a mano una vez» no es una garantía
         // permanente: el día que aparezca en el APK una familia de entradas que nadie
@@ -267,7 +275,10 @@ val verificarCamuflajeDex by tasks.registering {
             "okhttp3/",
             "assets/com/tom_roush/"
         )
-        val extensionesDeRaiz = listOf(".properties", ".bin", ".json")
+        // Solo `.properties`: son los metadatos que cada librería deja en la raíz, y
+        // crecen con cada dependencia nueva. `.bin` y `.json` salieron de aquí porque
+        // sus dos únicos casos los genera este build y ahora están en alcance.
+        val extensionesDeRaiz = listOf(".properties")
         var total = 0
         var entradas = 0
         // Cadenas al estilo de `strings`, pero decodificando UTF-8: un byte de tilde
@@ -313,8 +324,14 @@ val verificarCamuflajeDex by tasks.registering {
             for (entrada in juzgables) {
                 val bytes: ByteArray = zip.getInputStream(entrada).readBytes()
                 var inicio = -1
+
+                // Piso de 3 y no de 4: de los 49 términos, «sos» mide 3, así que con
+                // el piso anterior una cadena que fuera exactamente «sos» era
+                // estructuralmente inalcanzable para el guardián — la misma especie de
+                // hueco que el de los acentuados. Bajarlo cuesta 0 hallazgos nuevos,
+                // medido (hallazgo A-6 de la auditoría).
                 fun cerrar(fin: Int) {
-                    if (inicio >= 0 && fin - inicio >= 4) {
+                    if (inicio >= 0 && fin - inicio >= 3) {
                         total++
                         cadenas += String(bytes, inicio, fin - inicio, Charsets.UTF_8)
                     }
@@ -348,7 +365,7 @@ val verificarCamuflajeDex by tasks.registering {
             buildString {
                 appendLine("Camuflaje del DEX del release")
                 appendLine("APK: ${apk.name} (${apk.length()} bytes)")
-                appendLine("Cadenas de 4 o más caracteres: $total (${cadenas.size} distintas)")
+                appendLine("Cadenas de 3 o más caracteres: $total (${cadenas.size} distintas)")
                 appendLine("Se juzgan TODAS, sin filtro de atribución.")
                 appendLine("Entradas del APK en alcance: $entradas (dex, arsc, manifiesto, res/, META-INF/, assets/)")
                 appendLine("Términos vedados comprobados: ${vedados.size}")
