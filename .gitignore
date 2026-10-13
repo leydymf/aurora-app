@@ -50,3 +50,15 @@ admin/.env.*.local
 *.swp
 *.swo
 *~
+
+# Capturas y archivos exportados de las corridas manuales en emulador — llevan
+# contenido del espacio interno, y los PDF llevan registros reales. La ruta
+# canónica es el directorio temporal de la sesión FUERA del repo; esto es doble
+# barrera por si alguna se copia aquí para mirarla.
+# Va por carpeta y por prefijo A PROPÓSITO, no con `*.png`: las imágenes que SÍ
+# se versionan son docs/mockups/, docs/mockups-v2/, docs/evidencias-owasp/ y
+# docs/manual-de-marca.pdf, y ninguna cae en estos patrones.
+/evidencias-corrida/
+capturas-api*/
+captura-*.png
+export-*.pdf
