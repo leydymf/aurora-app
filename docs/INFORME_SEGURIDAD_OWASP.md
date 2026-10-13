@@ -1101,6 +1101,13 @@ copia— las verificó **a mano la desarrolladora sobre el emulador**, el
   `autoCorrect = false` de las dos barras (`WeatherScreen.kt:253` y
   `TutorialScreen.kt:356`) basta en la práctica, sin necesidad de
   `IME_FLAG_NO_PERSONALIZED_LEARNING`.
+  > **Errata (2026-10-13, H-10).** Esta conclusión era falsa y su comprobación
+  > miraba en el sitio equivocado. El teclado **sí** había aprendido la clave: lo
+  > que no hacía era sugerirla *en otras aplicaciones*, que es donde se miró. La
+  > sugería **dentro de Aurora**, en el buscador del clima, y así apareció cuatro
+  > días después. `autoCorrect = false` no protege de nada —se midió en §10.1— y el
+  > flag sí hacía falta. No se reescribe el párrafo porque es lo que la evaluación
+  > concluyó; el hallazgo, su medición y la lección de método están en §10.7.
 - **El relato SÍ se puede copiar.** En modo edición, el texto del campo «Qué
   pasó» se selecciona, se copia y se pega en otra aplicación. Una vez guardado
   el registro, la vista de detalle ya no lo permite.
@@ -1595,7 +1602,7 @@ más arriba: lo que no se mira, se declara.
 **Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
 el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
 `app-release.apk`, 23 952 390 B, SHA-256
-`1c46315528e86cbb0badf2cb805f9a67dda80d81678e4f9a49c7a295745b3867`—: **390 627
+`36bff7a36aaa63d836e3b9d18245ef2f503f3fea4ce36e2e895133fdd31673d2`—: **390 627
 cadenas de 3 o más caracteres, 148 364 distintas, en 197 entradas, 0 hallazgos
 nuevos** y el autochequeo de canarios en 4/4.
 
@@ -1904,8 +1911,11 @@ palabra aprendida **antes**.
 barras— entró ese mismo día a las **14:37** (commit `a329245`). En la ventana
 intermedia, la barra enviaba al teclado `inputType=0x1` e `imeOptions=0x2000003`:
 sin el flag, es decir aprendiendo. Y la barra es, por diseño, el sitio donde la
-clave se teclea cada vez que se entra (RF-12). Entre medias, además, la usuaria
-tecleó la clave a mano varias veces para la comprobación manual de H-6 —que era,
+clave se teclea cada vez que se entra (RF-12). Y el tecleo que la enseñó fue **manual**, no de la
+automatización: la §6 de este informe ya había medido que `adb shell input text` no
+pasa por el teclado, así que las entradas por `adb` de la evaluación no pudieron
+enseñarle nada a Gboard. Lo que sí pasó por el teclado fueron las veces que la
+usuaria tecleó la clave a mano, entre ellas la comprobación manual de H-6 —que era,
 irónicamente, «comprobar que el teclado no aprende la clave»—. Aquella
 comprobación salió bien porque se miró **en otra aplicación**; la palabra ya
 estaba aprendida y se ofrecía dentro de Aurora.
@@ -1935,6 +1945,18 @@ global del emulador:
 
 **Ningún campo de Aurora puede enseñarle nada a Gboard**, y lo dice Gboard. El
 control de la última fila es el que lo hace una medición y no una creencia.
+
+**Límite declarado de esta medición: vale para Gboard y solo para Gboard.**
+`IncognitoMode` es un campo del registro **de Gboard**, no de Android. Lo que
+Aurora declara es estándar —`IME_FLAG_NO_PERSONALIZED_LEARNING` y
+`TYPE_TEXT_FLAG_NO_SUGGESTIONS` son de la plataforma, no de Google— pero **honrarlo
+es decisión de cada teclado**, y la medición solo demuestra que Gboard lo honra. No
+se verificaron el teclado de Samsung, SwiftKey ni ningún otro, y en un teléfono del
+piloto es perfectamente posible que el teclado de fábrica sea otro. Dos
+consecuencias prácticas: un teclado que ignore esos flags podría aprender y sugerir
+igual, y eso Aurora no lo puede impedir —ni detectar—; y si el piloto se hace sobre
+teléfonos de una marca concreta, conviene repetir §8-S4 y §8-S4b con **su** teclado
+antes de entregar. Queda en **P-107**.
 
 **Corrección.** `TYPE_TEXT_FLAG_NO_SUGGESTIONS` en **las dos barras y solo en
 ellas**, por la vía que ya existía: el `EditorInfo` se intercepta en
@@ -1966,10 +1988,21 @@ Atenúa que el vector de aprendizaje llevaba cerrado desde H-7 y que la correcci
 de hoy cierra también el de la sugerencia; pero el hecho ocurrió sobre una clave
 real y lo encontró una persona usando la app, no un análisis.
 
-**Y una lección sobre el método, que es la tercera de la misma familia.** H-6 se
-dio por bueno comprobando en **otra** aplicación que el teclado no sugería la
-clave. Era la comprobación correcta para la pregunta equivocada: medía si la
-palabra había salido de Aurora, no si Aurora la mostraba. Las tres veces que esta
+**Y una lección sobre el método, que es la tercera de la misma familia, y la que
+más conviene que quede escrita porque afecta a cómo se diseñan las comprobaciones
+manuales.** H-6 —«el teclado no aprende la clave personal»— se dio por **cerrado**
+el 2026-10-10 con una comprobación manual que consistió en teclear la clave en la
+barra y después mirar, **en otra aplicación**, si el teclado la sugería. No la
+sugería, y se anotó como pasa.
+
+Era la comprobación correcta para la pregunta equivocada. Medía **si la palabra
+había salido de Aurora**; la pregunta que importaba era **si Aurora la mostraba**.
+Y la mostraba: cuatro meses de uso después, al escribir «aud» en el buscador del
+clima, ahí estaba. El error no fue de ejecución —la comprobación se hizo bien— sino
+de **diseño del criterio**: se eligió el sitio de observación más lejano al riesgo.
+La regla que deja: **una comprobación de fuga se mira donde el dato haría daño, no
+donde sería inocuo.** Para una credencial de Aurora, ese sitio es la fachada de
+Aurora, no WhatsApp. Las tres veces que esta
 evaluación falló de fondo fue por creer una premisa en vez de medirla —el
 `autoCorrect = false` de §10.1, el enmascaramiento de §10.6 y esta—, y las tres
 las desmintió una medición: dos de bytecode y una de una persona mirando la
@@ -2028,9 +2061,10 @@ pierde H-7 y conserva ese mismo residual.
 usuaria el 2026-10-13: el menú de selección del relato (§8-S1) y el del campo
 enmascarado con el ojo abierto (§8-S1b, los tres tramos) — las dos **pasan**: solo
 dejan pegar y seleccionar, nunca copiar ni cortar, ni con el ojo abierto ni con
-«Seleccionar todo» aplicado. Queda **§8-S4b**, que es la que H-10 abre: confirmar en
-pantalla que las dos barras ya no ofrecen sugerencias del teclado. Si fallara, lo
-que no se cierra es la exposición de una clave aprendida antes, no el aprendizaje. Todo lo demás de esta sección se verificó con
+«Seleccionar todo» aplicado. Y **§8-S4b**, la que H-10 abrió, también
+está hecha y **pasa**: ni en la barra del clima ni en la de práctica apareció la
+palabra que el teclado había aprendido en otra aplicación. **Con eso el 0 en
+«Falla» deja de estar pendiente de ninguna comprobación manual.** Todo lo demás de esta sección se verificó con
 medición sobre el dispositivo o sobre el artefacto.
 
 ### 10.9 Estado de la suite

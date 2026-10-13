@@ -258,12 +258,18 @@ en las horas previas a esa corrección. Se cerró pidiéndole al teclado que no 
 sugerencias en las dos barras de búsqueda —y solo en ellas, para no perder la
 corrección automática al escribir el relato—.
 
-Hay una parte que la aplicación no puede arreglar, y es honesto decirla: la palabra
-ya está en el diccionario del teclado del teléfono, y seguirá apareciendo en otras
+Hay dos límites que es honesto decir. El primero: la palabra ya está en el
+diccionario del teclado del teléfono, y seguirá apareciendo en otras
 aplicaciones. Lo que se consigue es que deje de aparecer dentro de Aurora, que es
 donde delata: una palabra extraña sugerida en un buscador de ciudades es un indicio;
 la misma palabra en un chat no significa nada. El resto se resuelve borrando esa
 palabra del teclado y cambiando la clave.
+
+El segundo límite: todo esto se comprobó con **el teclado de Google**, que es el
+que trae el emulador. Lo que la aplicación le pide al teclado es estándar de
+Android, pero obedecerlo es decisión de cada teclado, y no se probaron los de otras
+marcas. Si el piloto se hace sobre teléfonos de una marca concreta, hay que repetir
+esa comprobación con el teclado que traigan de fábrica.
 
 **Los tres hallazgos nuevos se encontraron de maneras distintas, y la diferencia dice
 algo del método.** El primero apareció porque una comprobación automática se volvió
