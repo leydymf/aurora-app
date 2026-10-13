@@ -25,7 +25,7 @@ class ChangeSecretCodeUseCase @Inject constructor(
     private val createSecretCode: CreateSecretCodeUseCase
 ) {
     /** Estado en vivo de las reglas de RF-08 sobre la clave nueva (criterio 2). */
-    suspend fun check(newCode: String): SecretCodeChecks = createSecretCode.check(newCode)
+    suspend fun check(newCode: String): CodeChecks = createSecretCode.check(newCode)
 
     suspend operator fun invoke(currentCode: String, newCode: String): ChangeSecretCodeResult {
         // Un fallo interno de la puerta degrada a PassThrough y por tanto a
@@ -49,7 +49,7 @@ sealed interface ChangeSecretCodeResult {
     data object CurrentCodeMismatch : ChangeSecretCodeResult
 
     /** La clave nueva no cumple las reglas de RF-08; [checks] dice cuál (criterio 2). */
-    data class Rejected(val checks: SecretCodeChecks) : ChangeSecretCodeResult
+    data class Rejected(val checks: CodeChecks) : ChangeSecretCodeResult
 
     /** Fallo interno de Keystore/almacenamiento: mensaje genérico en la UI. */
     data object StorageFailure : ChangeSecretCodeResult

@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
  * fondo está desbloqueado y único dueño de la rutina de limpieza de estado sensible.
  *
  * Todos los caminos de cierre convergen en [closeSession] — la misma rutina para:
- * - la salida rápida ([quickExit], RF-16),
+ * - la salida rápida ([closeNow], RF-16),
  * - los 5 minutos de inactividad (RNF-03),
  * - el paso a segundo plano prolongado ([appMovedToBackground]),
  * - y los cierres que se sumen después (p. ej. descarte del cuestionario, RF-28).
@@ -157,8 +157,17 @@ class SessionManager @Inject constructor(
         }
     }
 
-    /** Salida rápida (RF-16): mismo cierre que el automático, disparado por la nube. */
-    fun quickExit() {
+    /**
+     * Salida rápida (RF-16): mismo cierre que el automático, disparado por la nube.
+     *
+     * El nombre es deliberadamente neutro y no debe «mejorarse». El anterior,
+     * `quickExit`, sobrevivía a R8 y quedaba legible en el DEX del release —medido
+     * sobre el APK—, y «quick exit» es el nombre canónico en inglés de los botones
+     * de escape en las apps de este dominio, es decir el distinguidor más directo
+     * que puede dejarse en un artefacto (RNF-05; hallazgo H-8 de la evaluación
+     * OWASP). `closeNow` dice lo mismo y no señala nada.
+     */
+    fun closeNow() {
         closeSession()
     }
 

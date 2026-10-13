@@ -291,6 +291,14 @@ portapapeles, terceros y notificaciones.
   bien: `V2SecretField`, con `KeyboardType.Password` y
   `PasswordVisualTransformation`, desactiva «copiar» en la barra de selección.
   El del relato no. ❌
+  > **Errata (2026-10-10, H-9).** Las dos últimas frases son falsas, y lo eran ya
+  > en v0.3.0. Compose anula «copiar» solo **mientras** la transformación visual
+  > ES de contraseña (`instanceof PasswordVisualTransformation` en
+  > `TextFieldSelectionManager.showSelectionToolbar`, medido en el bytecode de
+  > foundation 1.7.8), y `V2SecretField` la cambia a `None` al pulsar el ojo. Con
+  > el ojo abierto, los campos de clave y contraseña ofrecían «copiar» igual que el
+  > relato. El párrafo no se reescribe porque es lo que la evaluación concluyó; el
+  > hallazgo y su corrección están en §10.8.
 - **Caché del teclado** (MASTG-TEST-0006, 0258). Resultado mixto. Los campos
   secretos usan `KeyboardType.Password`, que impide el aprendizaje del IME, y
   las dos barras de búsqueda usan `autoCorrect = false`
@@ -649,7 +657,14 @@ clima que no se dejara fotografiar sería, ella misma, un distinguidor.
 **Campos sensibles**: `V2SecretField` aplica `PasswordVisualTransformation` y
 `KeyboardType.Password` en inicio de sesión, creación de cuenta, clave personal,
 cambio de contraseña, eliminación de cuenta y exportación; en pantalla se vieron
-enmascarados. **Observación (MASWE-0030):** la excepción es el campo del relato,
+enmascarados.
+> **Errata (2026-10-10, H-9).** «La excepción» de la frase siguiente es inexacta:
+> los campos enmascarados también ofrecían «copiar» **con el ojo de visibilidad
+> abierto**, porque la anulación de Compose es condicional a la máscara. Lo que la
+> evaluación midió —que en pantalla se vieron enmascarados— se sostiene; lo que no
+> es que el relato fuera la única excepción. Ver §10.8.
+
+**Observación (MASWE-0030):** la excepción es el campo del relato,
 cuyo menú de selección sí ofrece «copiar» y «cortar» — es el hallazgo H-7, que
 se califica en MASVS-STORAGE-2 por ser una fuga de datos, pero que nace de una
 decisión de interfaz y por eso rebaja también este control. **Notificaciones**: ninguna. **Superposición** (MASTG-TEST-0035,
@@ -917,7 +932,14 @@ que no es de contraseña**: no declara `keyboardOptions` de ningún tipo. Todos
 los demás campos sensibles usan `V2SecretField`, que aplica
 `PasswordVisualTransformation` y `KeyboardType.Password`, y eso desactiva
 «copiar» y «cortar» en la barra de selección de Compose y le dice al teclado que
-no aprenda. El campo del relato no hereda nada de eso. Los campos de correo
+no aprenda. El campo del relato no hereda nada de eso.
+> **Errata (2026-10-10, H-9).** Esta frase se parte en dos y solo una mitad es
+> cierta. La del teclado **sí**: `KeyboardType.Password` es incondicional y el
+> método que decide el menú no consulta el tipo de teclado en ninguna rama
+> (verificado: cero referencias a `KeyboardType`/`inputType`/`imeOptions` en
+> `showSelectionToolbar`). La de «copiar» y «cortar» **no**: la da
+> `PasswordVisualTransformation` y solo mientras está activa, y el ojo la apaga.
+> Ver §10.8. Los campos de correo
 (`V2PlainField` con `KeyboardType.Email`) están en el mismo caso, en menor
 grado: el correo identifica la cuenta pero no describe lo ocurrido.
 
@@ -1079,6 +1101,13 @@ copia— las verificó **a mano la desarrolladora sobre el emulador**, el
   `autoCorrect = false` de las dos barras (`WeatherScreen.kt:253` y
   `TutorialScreen.kt:356`) basta en la práctica, sin necesidad de
   `IME_FLAG_NO_PERSONALIZED_LEARNING`.
+  > **Errata (2026-10-13, H-10).** Esta conclusión era falsa y su comprobación
+  > miraba en el sitio equivocado. El teclado **sí** había aprendido la clave: lo
+  > que no hacía era sugerirla *en otras aplicaciones*, que es donde se miró. La
+  > sugería **dentro de Aurora**, en el buscador del clima, y así apareció cuatro
+  > días después. `autoCorrect = false` no protege de nada —se midió en §10.1— y el
+  > flag sí hacía falta. No se reescribe el párrafo porque es lo que la evaluación
+  > concluyó; el hallazgo, su medición y la lección de método están en §10.7.
 - **El relato SÍ se puede copiar.** En modo edición, el texto del campo «Qué
   pasó» se selecciona, se copia y se pega en otra aplicación. Una vez guardado
   el registro, la vista de detalle ya no lo permite.
@@ -1278,3 +1307,789 @@ para la auditoría, elegidas por ser únicas en el sistema, y ni la clave ni la
 contraseña reales se escribieron nunca en un archivo. La observación sí reveló un
 defecto de redacción, porque el texto permitía esa lectura, y se corrigió
 dejándolo explícito.
+
+---
+
+## 10. Re-verificación en v0.3.1
+
+> **Los resultados de las secciones 1 a 9 no se tocan.** Describen lo que se midió
+> sobre **v0.3.0-trl4** y deben quedar así, incluido el fallo de MASVS-STORAGE-2:
+> es el estado que tenía la aplicación cuando se evaluó. Esta sección registra qué
+> se corrigió después, cómo se verificó y cómo queda el recuento.
+
+Rama `fix/hallazgos-owasp`, sobre el merge `9da851c`. Se abordan **H-2, H-7, H-1 y
+H-5**; **H-3 y H-4** quedan para antes del piloto, por decisión expresa.
+
+Esta sección va en su segunda redacción. La primera pasó por los tres agentes de
+revisión del proyecto y **los tres la rechazaron**, con razón: el recuento no
+cuadraba con el texto del propio informe, el guardián nuevo del DEX se podía
+dejar en verde con la corrección deshecha, y el guardián de H-7 también. Lo que
+se corrigió a raíz de esas tres revisiones está marcado abajo. El detalle del
+procedimiento está en §9, que describe el mismo mecanismo aplicado al informe de
+v0.3.0.
+
+### 10.1 H-7 · El relato ya no sale por el portapapeles ni por el teclado
+
+**Qué se cambió.** `core/security/SecureTextEntry.kt` añade `SecureTextEntry`, un
+envoltorio que aplica dos protecciones a la vez para que no se pueda poner una y
+olvidar la otra: una barra de selección de texto que delega en la del sistema
+pasando `null` en «copiar» y «cortar» —«pegar» y «seleccionar todo» se
+conservan— y `IME_FLAG_NO_PERSONALIZED_LEARNING` sobre el `EditorInfo`, vía
+`InterceptPlatformTextInput`. Se aplica a **los tres campos del kit** —relato, correo y el enmascarado— y
+**también a las dos barras de búsqueda**.
+
+El envoltorio se aplica **dentro del componente del kit**, no alrededor de la
+pantalla. No es un detalle de estilo: un `Dialog` instala su propia barra de
+selección, así que el campo de correo de RF-46, que vive dentro de una hoja, se
+quedaría sin protección si el envoltorio estuviera por fuera de la hoja.
+
+**Por qué no se usó `autoCorrect = false`, que era el plan inicial.** Porque se
+midió, y no sirve. El `EditorInfo` real, leído con `adb shell dumpsys
+input_method`:
+
+| Campo | `inputType` | `NO_SUGGESTIONS` | `NO_PERSONALIZED_LEARNING` |
+|---|---|---|---|
+| Relato, antes | `0x28001` = TEXT ∣ AUTO_CORRECT ∣ MULTI_LINE | no | no |
+| Barra de búsqueda, con `autoCorrect = false` | `0x1` = TEXT, pelado | no | no |
+
+Es decir: ese parámetro **solo retira** `TYPE_TEXT_FLAG_AUTO_CORRECT`; no añade
+`NO_SUGGESTIONS` ni nada que hable de aprendizaje. En el relato habría costado la
+autocorrección —en un campo de texto largo, donde más molesta— sin proteger nada.
+
+Hallazgo derivado, que conviene anotar: **las dos barras tampoco tenían
+protección mecánica contra el aprendizaje**. El comentario del código afirmaba
+que `autoCorrect = false` «evita que el IME aprenda», y eso no es lo que hace ese
+flag. La comprobación manual de H-6 salió bien, pero no por el motivo que el
+código daba por supuesto. Por eso el arreglo se extendió a las barras, y por eso
+los dos comentarios que afirmaban lo contrario se corrigieron donde estaban
+—seguían en pie en la primera redacción de esta sección, y la resolución de P-11
+también—.
+
+**Verificación.** `EditorInfo` antes y después, sobre el emulador:
+
+| Campo | `imeOptions` antes | después | delta |
+|---|---|---|---|
+| Relato | `0x42000000` | `0x43000000` | `0x01000000` = el flag, y nada más |
+| Barra de la fachada | `0x2000003` | `0x3000003` | igual |
+
+El `inputType` del relato no cambia (`0x28001`): **la autocorrección se conserva**.
+
+**Lo que fijan las pruebas, en dos niveles.** La estructura, en la JVM, con
+`SensitiveFieldsGuardTest`: que ningún campo editable se cree fuera del kit salvo
+las dos barras exentas, que todo campo del kit esté envuelto, enmascare o no,
+que el envoltorio instale sus dos protecciones y conserve «pegar», y que viva en
+un único archivo. La lista de campos **se deriva de `Fields.kt`**, no se escribe a
+mano, así que un `V2NumberField` futuro sin envolver caería sin tocar la prueba.
+
+**Esa prueba se endureció cinco veces, y conviene contarlo porque es el hallazgo
+más grave de la evaluación y su guardián falló cuatro veces por el mismo motivo:
+enumeraba formas en vez de cerrar la especie.** Cada ronda la rompió una revisión
+con mutaciones, no un razonamiento.
+
+1. **Primera versión:** buscaba literales en todo el archivo. Bastaba vaciar
+   `SecureTextEntry` —`NoCopyTextToolbar` seguía ahí, huérfana, y el `grep` la
+   encontraba— o borrar el flag del IME, porque el KDoc lo menciona.
+2. **Segunda:** las aserciones pasaron a rebanar el **cuerpo** de cada función, y
+   la lista de campos a derivarse de `Fields.kt`. Caían las cinco mutaciones
+   anteriores, pero seguían pasando tres formas: un campo `internal fun` —que es
+   la convención de este código para los composables de pantalla—, un segundo
+   archivo en el kit, y la exención por ruta en vez de por archivo.
+3. **Tercera:** y aquí está la peor. Bastaba **una línea de comentario**: quitar
+   `SecureTextEntry {` del relato y escribir
+   `// pendiente: volver a envolver en SecureTextEntry { } al subir a Compose 1.8`
+   dejaba el relato desnudo con el guardián en verde. Es exactamente el comentario
+   que P-97 y esta misma sección invitan a escribir. La variante con KDoc era igual
+   de mala: al rebanar el cuerpo de un campo sin enmascarar se tragaba el KDoc del
+   siguiente, y si ese KDoc mencionaba `KeyboardType.Password`, el campo quedaba
+   clasificado como enmascarado y excusado. Arreglo: `codigoDe()` descuenta los
+   comentarios de bloque y de línea **antes** de analizar.
+4. **Cuarta:** quedaban dos formas estructurales. Un composable con **receptor de
+   extensión** o con **parámetro de tipo** no era una firma reconocible, y la
+   comprobación del envoltorio miraba si abría *antes* del campo, no si el campo
+   estaba *dentro* de su lambda — así que `SecureTextEntry { Spacer(...) }` con el
+   campo a continuación, o un segundo campo tras cerrar la lambda, pasaban. Arreglo:
+   la firma admite receptor y genéricos, y el rango de la lambda se calcula contando
+   llaves, exigiendo que **todos** los campos del cuerpo caigan dentro.
+
+5. **Quinta, y la que zanja el asunto.** La cuarta revisión encontró **otra** forma
+   —un campo con la anotación en la **misma línea** de la firma,
+   `@Composable fun V2NoteField(…)`, que ktlint permite— y lo demostró con un campo
+   real sin envolver y el guardián en verde. A esa altura era evidente que enumerar
+   formas no converge. Arreglo de fondo: una **aserción de atribución**. Cada campo
+   de texto del archivo tiene que caer DENTRO de alguna función que el guardián
+   reconozca; si una declaración se le escapa al regex, sus campos no se atribuyen a
+   nadie y la cuenta no cuadra. Eso cierra la **especie** en vez de la forma, y se
+   lleva por delante el `val` de tipo función lambda que hasta entonces figuraba
+   como residual declarado. Comprobado con las dos mutaciones.
+
+Cada una de las mutaciones de las cinco rondas se reprodujo contra la versión
+siguiente, y todas caen, con la rama sin mutar en verde.
+
+**Y hay que corregir aquí una afirmación que estuvo escrita en el código:** el
+respaldo de lo que este guardián no vea **no** es el guardián del DEX. R8 borra
+`SecureTextEntry`, `NoCopyTextToolbar` y `NoImeLearning` del artefacto —medido: 0
+ocurrencias de los tres—, así que ese guardián no puede ver un campo sin envolver.
+El respaldo es la comprobación manual **§8-S1**, y nada más.
+
+El comportamiento, en el emulador, con `SecureTextEntryTest` (nueva, 2 casos):
+compone el envoltorio, pide el menú de selección desde dentro y comprueba qué
+recibe la barra real — «copiar» y «cortar» llegan en `null`, «pegar» y
+«seleccionar todo» no. El segundo caso es el control: **sin** el envoltorio,
+«copiar» sí llega, lo que demuestra que la protección es del envoltorio y no del
+montaje de la prueba.
+
+**Residuales que esta corrección NO cierra**, y que antes no estaban declarados
+en ninguna parte:
+
+- **Servicios de accesibilidad.** El envoltorio quita las opciones del menú, no
+  las acciones semánticas: `CopyText` y `SetSelection` están en el DEX del release
+  y el delegado de accesibilidad de Compose las expone, así que la cadena
+  seleccionar → copiar sigue disponible para un servicio de accesibilidad sin
+  pasar por la barra. **Alcance exacto, medido en la pasada final:** en
+  `CoreTextField` esas acciones se instalan detrás del mismo booleano de
+  enmascaramiento, así que en los 13 campos enmascarados aparecen **justo cuando el
+  ojo se abre** — y en ese mismo instante el árbol de accesibilidad pasa de leer
+  viñetas a leer el texto en claro. Es decir, el residual alcanza también a la clave
+  personal y a las contraseñas, no solo a los campos que no pueden enmascararse. La lectura del árbol de accesibilidad tampoco la cubre
+  `FLAG_SECURE` — este mismo informe se apoya en ese árbol como instrumento de
+  prueba en §5.4. No se tapa con `clearAndSetSemantics` a propósito: dejaría al
+  relato, el campo más largo de la app, sin lector de pantalla, y ese precio no lo
+  paga el modelo de amenaza. Queda como **residual declarado (P-95)**, y es uno de
+  los dos motivos por los que MASVS-STORAGE-2 no queda en «Pasa» limpio, y el
+  único por el que MASVS-PLATFORM-3 tampoco (§10.8).
+- **El menú contextual por clic derecho**, que no estaba declarado en ninguna
+  parte y lo encontró la pasada final. `CoreTextField` envuelve el campo en
+  `ContextMenuArea`, que en 1.7.8 **ya está cableado en Android**, dibuja su propio
+  menú **sin consultar `LocalTextToolbar`** y decide su «Copiar» con el mismo
+  booleano de enmascaramiento. El envoltorio no lo cubre. Solo lo dispara el botón
+  secundario, así que hace falta un ratón y con el dedo es inalcanzable; en el
+  teléfono del piloto no aplica. Pero alcanza al relato siempre, así que **el título
+  de esta sección hay que leerlo acotado al menú táctil**. Y en Compose 1.8 esa vía
+  deja de necesitar un ratón (§10.6).
+- **`Ctrl+C` con teclado físico.** Compose lo atiende en `TextFieldKeyInput`, que
+  llama a `copy()` **sin consultar la máscara**: o sea que en los campos
+  enmascarados nunca estuvo bloqueado, ni con el ojo cerrado — un matiz que la
+  pasada final corrigió y que refuerza la raíz de H-9. En el teléfono del piloto no
+  aplica. El comentario del código decía «declarado en el informe» cuando no lo
+  estaba;
+  ahora lo está (P-95).
+
+**Acoplamiento de versión.** `InterceptPlatformTextInput` existe desde Compose
+1.7 y es API experimental; en 1.8 la firma de `showMenu` cambia y la barra de
+selección se sustituye por la API de menú contextual nueva. **Cualquier subida de
+Compose obliga a repetir la comprobación manual del menú**: ninguna prueba puede
+verificar que el menú que dibuja el sistema operativo obedezca.
+
+**Lo que falta, y solo puede hacerlo una persona:** confirmar en pantalla que el
+menú de selección del relato ya no ofrece «copiar» ni «cortar» y sí «pegar».
+
+### 10.2 H-2 · La caída al salir con texto
+
+BOM de Compose de `2024.04.01` a `2025.02.00`, que lleva foundation y ui a
+**1.7.8** y **material3 de 1.2.1 a 1.3.1** — este segundo salto no estaba
+declarado en la primera redacción y lo señalaron dos de los tres agentes. Se
+verificó contra los fuentes de Maven en qué versión entró el arreglo: 1.7.2 y
+1.7.3 no tienen las comprobaciones de nulidad, **1.7.4 en adelante sí**. Se elige
+1.7.8, la última de la línea 1.7.x, para no abrir el frente de Kotlin 2.0 que
+obligaría 1.8.x.
+
+**Verificación:** la prueba que fallaba 6 de 9 veces se repitió **10 veces en la
+barra de la fachada y 10 en el campo del relato**: **0 caídas en las veinte**.
+
+**Superficie:** el manifiesto fusionado del release tiene **una sola línea de
+diferencia real** frente a `main` —el atributo de H-5— y **cero permisos y cero
+componentes nuevos**; el APK crece 804 bytes. La subida no abre superficie de
+seguridad. Lo que sí trae es **riesgo de regresión visual**: material3 1.3.1
+cambia métricas y colores por defecto de componentes que la app usa —selector de
+fecha, casillas de consentimiento y de exportación, interruptor, indicadores de
+carga, y los campos del kit, que son justo las superficies que H-7 toca—. Por eso
+entra una pasada visual en la lista de corridas manuales (§8 de
+`docs/RESULTADOS_PRUEBAS.md`).
+
+### 10.3 H-1 · Vocabulario propio en el DEX
+
+`SecretCodeChecks` → `CodeChecks`, y el mensaje de `SecureNavigation.kt` pasa a
+uno sin nombres propios. Sobre el DEX del release reconstruido: «SecretCodeChecks»
+0 ocurrencias (antes 1), «LocalSessionManager» 0 (antes 1).
+
+**Guardián nuevo:** la tarea de Gradle `verificarCamuflajeDex`. Corre en cada
+construcción de release —`assembleRelease` y `bundleRelease`—. Precisión que pidió
+la auditoría: lo que abre es siempre el **APK**, que `bundleRelease` construye al
+lado por el `dependsOn`; el `.aab` no se abre, porque su `resources.arsc` va
+troceado por configuración. Con minificación los dos artefactos toman el DEX del
+mismo R8, así que hoy es equivalente, pero la frase exacta es «se juzga el APK del
+release», no «ningún artefacto sale sin pasar por él». Conviene ser exacto sobre cuándo:
+el comando corto de `CLAUDE.md` (`assembleDebug lint test`) **no** construye el
+release y por tanto no lo ejecuta; el comando de verificación completa de la §1
+de `docs/RESULTADOS_PRUEBAS.md`, que termina en `assembleRelease`, sí.
+
+Es una tarea de Gradle y no una prueba de JVM porque el APK release puede no
+existir cuando corren las pruebas, y un guardián que se salta en silencio es peor
+que ninguno. A cambio, la lógica de juicio no sería ejecutable por un test, así
+que **la tarea se autochequea en cada corrida**: juzga cuatro canarios —una
+plantilla de `toString()`, una constante de enum, prosa en español y prosa con
+tilde— y exige cazar los cuatro, y juzga tres cadenas inocentes de la fachada y
+exige no marcar ninguna. Si el guardián deja de funcionar, se sabe entonces.
+
+«En cada corrida» es literal y hay que declarar por qué: la tarea lleva
+`outputs.upToDateWhen { false }`. Sin esa línea Gradle la marcaba UP-TO-DATE
+cuando el APK y las dos listas no habían cambiado y **se saltaba el cuerpo
+completo** —ni autochequeo, ni canarios, ni juicio—, de modo que esta misma
+afirmación era falsa. Lo encontró la revisión de arquitectura de la rama. La tarea
+tarda segundos: saltarla no compraba nada y costaba la garantía.
+
+**Qué juzga, y esto cambió por completo tras la revisión.** La primera versión
+miraba solo las cadenas «atribuibles a Aurora» —las que llevan la ruta del paquete
+o la forma `Nombre(campo=`—, y dos de los tres agentes demostraron que ese filtro
+era insuficiente y que la cifra que se publicaba era inexacta:
+
+- de las 352 cadenas que la primera versión llamaba «atribuibles a Aurora», solo
+  **24** llevaban la ruta del paquete; las otras 328 entraban por la plantilla
+  genérica y en su mayoría eran de AndroidX y Compose. Presentar 352 como
+  vocabulario propio de Aurora era, simplemente, falso;
+- y el filtro dejaba fuera cadenas propias de verdad: `questionnaireRepository`
+  está en el DEX, contiene un término vedado y no se juzgaba. **El propio mensaje
+  de excepción que H-1 denunció tampoco lo habría cazado**, porque es prosa en
+  español sin ruta de paquete.
+
+Ahora **se juzgan TODAS las cadenas**, contra los **49 términos vedados** y
+decodificando UTF-8 para que los términos acentuados puedan coincidir — con el
+extractor anterior, que tomaba solo ASCII imprimible, una tilde cortaba la cadena
+y «víctima», «agresión», «pánico» y «salida rápida» estaban estructuralmente
+muertos.
+
+Y no solo del DEX. La primera versión miraba únicamente `classes*.dex`, y
+`resources.arsc` es justo donde `CamouflageResourcesTest` **no llega**:
+`shrinkResources` y `optimizeResources` reescriben, y los recursos que traen las
+librerías no están en las fuentes de Aurora y por tanto nunca se miraban. El
+alcance ahora es todo lo que puede llevar texto propio: **DEX, `resources.arsc`,
+el manifiesto binario, `res/**`, `META-INF/**`, `assets/**`** salvo las fuentes
+que PdfBox trae vendidas, **más los dos archivos de raíz que genera este build** —
+**197 de las 322 entradas** del APK. Cada categoría se midió antes de incluirla y
+todas añaden **cero** ruido, así que entraron gratis.
+
+Conviene decirlo como lo que es: una **lista de permitidos**, y el criterio es
+«todo lo que este build pueda escribir», no «todo lo que no sea una librería». La
+diferencia la encontró una auditoría con un `cmp`: la frase anterior decía que
+todo lo excluido viajaba byte a byte desde una dependencia, y
+`kotlin-tooling-metadata.json` es byte-idéntico al que el plugin de Kotlin genera
+en `build/kotlinToolingMetadata/` a partir de la configuración de este proyecto.
+Lo que queda fuera —125 entradas— sí viene de una dependencia: `lib/**` (las
+librerías nativas de SQLCipher), `google/**` (los `.proto` de Firestore y gRPC),
+`kotlin/**`, `okhttp3/**`, las fuentes y listas de glifos de PdfBox bajo
+`assets/com/tom_roush/**`, y los `.properties` de metadatos que cada librería deja
+en la raíz. Juzgarlas exigiría **43 excepciones más**, varias de ellas basura
+binaria que no es estable entre construcciones.
+
+**Cuatro entradas del APK no vienen de ninguna dependencia** y por eso están
+DENTRO del alcance, no fuera: `assets/dexopt/baseline.prof` y su `.profm`, que se
+derivan de las clases de Aurora; `META-INF/version-control-info.textproto`, que se
+deriva del repositorio; y `kotlin-tooling-metadata.json`. Las dos primeras
+versiones del filtro las excluían sin decirlo, y hicieron falta dos auditorías
+para enumerarlas. Al medirlas resultó que incluirlas no cuesta nada: los perfiles
+están comprimidos y no tienen ni un nombre legible, el `textproto` lleva solo la
+ruta raíz del proyecto y el hash del commit sin nombre de rama, y el `.json` solo
+versiones de Gradle y de Kotlin.
+
+Y porque «se barrió a mano una vez» no es una garantía permanente, el guardián
+lleva además una **línea base de las categorías excluidas**: si mañana aparece en
+el APK una familia de entradas que nadie juzga —un `assets/` propio con un catálogo
+sembrado, por ejemplo, que es verosímil porque el proyecto ya siembra contenido—,
+la construcción del release **falla** y obliga a decidir si entra en alcance o se
+excluye con motivo. Es el mismo arreglo que el `upToDateWhen { false }`, un nivel
+más arriba: lo que no se mira, se declara.
+
+**Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
+el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
+`app-release.apk`, 23 952 390 B, SHA-256
+`36bff7a36aaa63d836e3b9d18245ef2f503f3fea4ce36e2e895133fdd31673d2`—: **390 627
+cadenas de 3 o más caracteres, 148 364 distintas, en 197 entradas, 0 hallazgos
+nuevos** y el autochequeo de canarios en 4/4.
+
+El piso es de **3** caracteres y no de 4 por un motivo concreto: de los 49
+términos vedados, «sos» mide 3, así que con el piso anterior una cadena que fuera
+exactamente «sos» era estructuralmente inalcanzable — la misma especie de hueco
+que el de los términos acentuados.
+
+**Y ese cambio hubo que corregirlo, lo que vale la pena contar.** Se midió sobre
+una construcción y se concluyó «cuesta 0 hallazgos»; lo que costaba no era
+hallazgos, era **estabilidad**: un término de tres letras casa dentro de casi
+cualquier cosa —«sos» vive en «ISOSpeed» y en basura binaria como `\sOSUpPS9`— y
+esas cadenas cambian entre construcciones, así que el release empezó a fallar al
+azar. La regla de ahora: **un término de tres letras solo cuenta si no está pegado
+a otra letra**. Con eso «SOS» suelto se caza, «ISOSpeed» no, y las cuatro
+excepciones que hacían falta por esa causa se retiraron — de 62 a **58**. El
+precio, dicho claro: un `sosBoton` propio se le escaparía a ESTE guardián, pero no
+queda sin vigilar, porque `CamouflageResourcesTest` aplica los dos ámbitos a los
+identificadores y literales de las fuentes, que es donde ese nombre nacería.
+
+De paso se afinó el detector de excepciones innecesarias, que medía *presencia* en
+vez de *necesidad*: ahora comprueba si, quitándola, el guardián reportaría algo. Sin
+ese afinado, las cuatro de `ISOSpeed` habrían seguido contando como vivas.
+
+Las cifras van atadas al SHA-256 a propósito, igual que en §2, y conviene decir
+exactamente qué es reproducible y qué no, porque se midió:
+
+- **El APK no es reproducible byte a byte.** Dos construcciones limpias e
+  independientes del mismo commit, con el mismo JDK, dan hashes distintos
+  (se midieron **ocho** a lo largo de la evaluación, el último `b21ea4…`) con el
+  **mismo tamaño** de 23 952 390 B en todas. Es lo esperable
+  de R8 y de la firma.
+- **Las cifras del guardián sí son estables.** Cinco construcciones limpias e
+  independientes —propias, de la auditoría y de la verificación— dieron **los nueve
+  números idénticos al dígito** con cinco hashes distintos. Es decir: el recuento es
+  propiedad del commit, y el hash no. (Las cifras que publica esta sección son
+  mayores porque después se amplió el alcance; con un alcance fijo no se movieron.)
+- **Lo que sí movió las cifras fue contaminación del entorno.** Antes de limpiar,
+  dos construcciones del mismo commit dieron 167 564 y 168 992 cadenas; la causa
+  era un demonio de Gradle bajo otro JDK construyendo en paralelo sobre el mismo
+  directorio. Dos demonios sobre el mismo `app/build` también corrompen el estado
+  incremental. **Para re-medir: detener los demonios, `clean`, y una sola
+  invocación.**
+
+Quien reejecute el comando **sobre el mismo commit** obtendrá otro SHA-256 y las
+mismas cifras. Si el código cambia, las cifras se mueven — y eso es lo correcto.
+
+El precio de juzgar todo es absorber el ruido de las librerías en la línea base, y
+eso es lo que hace creíble un «0 hallazgos»: **58 cadenas aceptadas, una por una y
+con su causa escrita**. De ellas 9 son de Aurora y llevan pendiente (todas de
+P-78, y desaparecen con el rename `questionnaire`→`form` y `Consent*`→`Terms*`);
+las 49 restantes son de librería —`javax.crypto` para «secret», `ISOSpeed` de EXIF
+para «sos», gRPC para «panic», y dos recursos del arsc: una cadena italiana del
+selector de fecha de material3 y un estilo de `androidx.credentials`— y no hay
+nada que arreglar en código ajeno. El guardián informa además de las excepciones
+**que nunca se disparan**: una excepción muerta es o una causa ya arreglada, o el
+síntoma de que el guardián dejó de mirar donde esa excepción mira. Hoy son 0, y en
+la versión anterior había una.
+
+**Fuente única de términos, de verdad.** La primera versión creó
+`camuflaje-terminos-vedados.txt` declarando ser «fuente única para los dos
+guardianes», y no lo era: `CamouflageResourcesTest` conservaba su lista embebida.
+Las dos **ya habían divergido**: 49 términos en el test, 42 en el archivo. Los
+siete que faltaban eran precisamente los más propios del proyecto —entre ellos
+«quick exit»—, y de ahí salió el hallazgo H-8 de más abajo. Ahora el test lee el
+archivo y nadie tiene copia; los dos ámbitos (`[todo]` y `[recursos]`) van
+marcados en el propio archivo. Las dos listas se movieron a
+`app/src/test/resources/`, fuera de la vista al abrir el módulo.
+
+**Barrido nuevo en el código fuente.** `CamouflageResourcesTest` gana un tercer
+caso que aplica la lista completa a los **identificadores que sobreviven a R8**:
+nombres de `data class` y `data object` —cuya plantilla de `toString()` llega
+legible al DEX— y constantes de enum, que R8 conserva porque `name` y `valueOf`
+son reflexión. Barre 169 identificadores y señala 3, los mismos de P-78 que están
+en la línea base del DEX. Los demás nombres de clase no se barren porque R8 sí los
+protege, lo que P-05 verificó: `ValidateSecretCodeUseCase` es legítimo.
+
+**Qué congela la línea base, dicho sin rodeos.** De las ~109 plantillas de
+`toString()` que H-1 midió, esta rama retiró **una**. El resto sigue legible en el
+DEX y la corrección de fondo —el rename de P-78— sigue pendiente. El guardián
+impide que el problema crezca; no lo resuelve.
+
+**Lo que el guardián no cubre.** Dos cosas, y la segunda es la mayor exposición
+de vocabulario que queda en el artefacto.
+
+La primera: caza vocabulario vedado, no **nombres propios internos**. La segunda
+cadena de H-1, `LocalSessionManager sin proveer…`, no la habría detenido, porque
+«LocalSessionManager» no es un término de la lista. Ese caso se arregló a mano y la
+categoría queda sin guardián automático. Tampoco puede ver un campo de texto sin
+envolver, porque R8 borra el envoltorio del artefacto (§10.1).
+
+La segunda: **la prosa de la interfaz del espacio interno, que no contiene ningún
+término vedado pero sí es vocabulario del dominio.** Lo encontró la cuarta auditoría
+barriendo el APK con un léxico más amplio que los 49 términos: `strings` sobre el
+artefacto devuelve «Rutas de atención», «Salud · Protección · Justicia», «Qué pasó»
+y las cadenas de «tu clave personal». Ninguna rompe una regla escrita —todas las
+afirmaciones de este informe están acotadas a los 49 términos— y no es una
+regresión de esta rama, pero en Colombia esa prosa **es** del dominio y nadie la
+había registrado. Queda como **P-100**, con la pregunta de producto que abre: si las
+etiquetas más específicas deberían venir del catálogo remoto, como ya viene el resto
+del contenido de RF-24/25, en vez de vivir en `strings.xml` y viajar en el APK.
+
+### 10.4 H-5 · Configuración de seguridad de red
+
+`res/xml/network_security_config.xml` con `cleartextTrafficPermitted="false"` y
+confianza solo en el almacén del sistema, declarado en el manifiesto y fijado por
+tres casos de `ManifestMinimizationTest`: la declaración, el contenido, y —añadido
+tras la revisión— que **ningún** elemento del archivo permita tráfico en claro,
+porque los dos primeros solo miraban `base-config` y un `domain-config` puede
+reabrir HTTP para un dominio sin tocarlo.
+
+**Corrección de la justificación.** La primera redacción decía que sin la línea de
+`trust-anchors` la app habría permitido leer el tráfico con una autoridad
+instalada a mano. **Eso no es cierto para esta app**, y lo señaló la auditora:
+desde Android 7 (API 24), una app con `targetSdk >= 24` ya confía solo en el
+almacén del sistema, y Aurora es min 26 / target 35. Las dos declaraciones de este
+archivo valen lo mismo y por el mismo motivo —hacen explícito un valor por defecto
+para que no se pueda perder en silencio al bajar el `targetSdk`—, pero **ninguna
+cerró un hueco abierto**. La afirmación incorrecta estaba repetida en cuatro
+sitios, incluido el mensaje de aserción de la prueba; se corrigieron los cuatro.
+
+No hace falta declararla para `debug`: **ya aplica**, porque el atributo está en el
+manifiesto principal. Verificado en el manifiesto fusionado de debug. Y queda la
+nota operativa de que, sin `<debug-overrides>`, una prueba legítima de
+interceptación TLS (MASVS-NETWORK-2) exigirá añadir ese bloque de forma temporal;
+dejarlo fuera ahora es lo correcto para este modelo de amenaza.
+
+Verificado sobre el APK release decodificado: el manifiesto fusionado lleva el
+atributo y el archivo viaja empaquetado. Y comprobado que la red sigue
+funcionando: la búsqueda de «Bucaramanga» devuelve resultados reales de
+Open-Meteo, con 0 errores de TLS en el registro.
+
+*Nota, porque ilustra que los guardianes del proyecto funcionan:* la primera
+versión de ese archivo fue rechazada por `CamouflageResourcesTest`, que detectó
+un término vedado en un comentario que había escrito la propia corrección.
+
+### 10.5 H-8 · Hallazgo nuevo · Media · «quick exit» legible en el DEX del release
+
+No es un hallazgo de la evaluación sobre v0.3.0: **apareció al arreglar H-1**, en
+cuanto el guardián empezó a comprobar los 49 términos en vez de 42. El DEX del
+release contenía `QUICK_EXIT`, `quickExit` y `quickExit()V` —la constante del enum
+de pasos del tutorial y el método de `SessionManager`—, legibles pese a R8: R8
+conserva los nombres de las constantes de enum porque `name` y `valueOf` son
+reflexión.
+
+**Por qué importa más que otras cadenas.** «quick exit» lo vedó por escrito una
+auditoría anterior (D3 H-1) por ser *el nombre canónico en inglés de los botones de
+escape en las apps de este dominio*. De todo el vocabulario que podía quedar en un
+artefacto, es el distinguidor más directo. **Gravedad media**: verlo exige extraer
+el APK y pasarle `strings`, pero el modelo de amenaza del proyecto sí contempla a
+alguien con acceso al teléfono, y lo que delata es el vocabulario (RNF-05).
+
+**Corrección.** `SessionManager.quickExit()` → `closeNow()` y el paso
+`TutorialStep.QUICK_EXIT` → `CLOSE_NOW`; 25 referencias en 12 archivos, 7 de
+código y 5 de pruebas. `closeNow` encaja además con `closeSession()`, que ya era
+el nombre de la rutina de cierre. Los dos sitios de definición llevan ahora un
+KDoc que explica por qué el nombre es deliberadamente soso, para que un refactor
+«de limpieza» no lo deshaga; `CodeChecks` recibió el mismo tratamiento.
+
+**Verificación**, sobre el DEX del release reconstruido: `quickExit` **0**
+ocurrencias (antes 2), `QUICK_EXIT` **0** (antes 1), y en su lugar `closeNow` (2)
+y `CLOSE_NOW` (1), que son vocabulario neutro. El guardián del DEX pasa con 0
+hallazgos. El nuevo caso de `CamouflageResourcesTest` sobre identificadores lo
+detiene en las formas habituales de declararlo —incluidas la constante con
+argumentos de constructor y el enum anidado en una clase, las dos comprobadas—,
+pero no en todas: un cuerpo de enum escrito **en una sola línea**
+(`enum class Paso { ENTRAR, CLOSE_NOW }`) se le escapa, porque el barrido exige
+que la constante empiece una línea, y lo mismo una constante que no vaya en
+mayúsculas. Por eso no se puede decir que «impide que vuelva». La red que no
+depende de la forma de escribir el código es el guardián del DEX, que mira el
+artefacto.
+
+### 10.6 H-9 · Hallazgo nuevo · Alta · Los campos enmascarados sí se podían copiar con el ojo abierto
+
+No es un hallazgo de la evaluación sobre v0.3.0 **y tampoco es una regresión de esta
+rama: estaba ahí desde v0.3.0 y la evaluación no lo vio.** Conviene decirlo así,
+porque es un resultado sobre el método tanto como sobre la app.
+
+**Qué.** `V2SecretField` —el campo enmascarado del kit, con 13 usos: clave personal,
+contraseñas de cuenta y contraseña de exportación— ofrecía «copiar» y «cortar» en su
+menú de selección **mientras el ojo de visibilidad estuviera abierto**. Es la vía (a)
+de H-7, el portapapeles, sobre los datos que gobiernan el acceso al espacio interno.
+
+**Por qué, medido y no inferido.** Se desensambló
+`TextFieldSelectionManager.showSelectionToolbar` de foundation 1.7.8: en el
+desplazamiento 36 lee `visualTransformation`, en el 39 hace
+`instanceof PasswordVisualTransformation`, y solo si eso es cierto salta a
+`aconst_null` para «copiar» (74) y para «cortar» (114). Es decir: Compose no anula
+nada por el `KeyboardType`, lo anula **mientras la transformación visual ES de
+contraseña**. Y `V2SecretField` la cambia a `VisualTransformation.None` al pulsar el
+ojo. Dos comprobaciones colaterales de la misma medición:
+
+- **«pegar» nunca consulta ese booleano** —su rama arranca en `getEditable` y
+  `hasText`—, así que conservarlo no depende de nada frágil;
+- el método **no consulta el tipo de teclado en ninguna rama**, lo que confirma que
+  la mitad del IME sí se sostenía: `keyboardOptions` fija `KeyboardType.Password`
+  sin condición.
+
+**Lo que agrava el dato.** El portapapeles de Compose escribe con
+`ClipData.newPlainText` **sin `EXTRA_IS_SENSITIVE`**, así que lo copiado entraba sin
+marca: queda a la vista en la previsualización de SystemUI de Android 13+ —ventana
+que `FLAG_SECURE` no cubre, el mismo argumento de H-7— y en el historial del
+teclado.
+
+**Gravedad: Alta**, en la misma escala que H-7 y por los mismos motivos. Alcanzable
+con el dedo, sin herramientas ni periféricos; sobre la clave personal, que es la
+credencial que protege todo lo demás; y en la contraseña de exportación, copiar era
+incluso la acción **esperada**. Atenúa que exige una acción deliberada de la usuaria
+y haber pasado la clave, pero eso valía igual para H-7.
+
+**Cómo se encontró, que es la parte que interesa al método.** Verificando una
+premisa en vez de creerla. La premisa estaba escrita en el código —«los campos de
+contraseña ya estaban cubiertos por `KeyboardType.Password`, que hace las dos cosas
+de un golpe»— y de ella colgaba, además, la **exención** con que
+`SensitiveFieldsGuardTest` perdonaba del envoltorio al único campo del kit que no lo
+tenía. Es la **segunda** vez en esta rama que una medición desmiente un comentario
+del código: la primera fue `autoCorrect = false` en §10.1. Y hay una diferencia que
+vale anotar: **H-8 apareció porque un guardián se volvió más estricto; H-9 llevaba
+ahí desde v0.3.0 y ninguna herramienta lo vio.** Lo vio una persona leyendo
+bytecode.
+
+**Corrección.** `V2SecretField` pasa también por `SecureTextEntry`, que anula copiar
+y cortar **sin leer ningún estado**, con el ojo abierto o cerrado. El kit queda con
+una regla y ninguna excepción. Dos apoyos de que es el mecanismo canónico: el propio
+`BasicSecureTextField` de Compose compila a la misma forma
+—`showMenu(rect, null, paste, null, selectAll)`— y el menú de Compose no tiene otros
+platos que esos cuatro, porque no inyecta «Compartir» ni actividades `PROCESS_TEXT`
+como el `EditText` del framework de vistas.
+
+Y el guardián pierde su único perdón calculado. La lección, que trasciende el caso:
+**lo calculado puede ser el juicio, nunca la exención** — una exención se escribe
+como dato con su causa, para que alguien pueda preguntarle «¿siempre?».
+
+**Coste aceptado, por decisión expresa:** tampoco se podrá copiar la contraseña de
+exportación que la usuaria elige. El argumento, suyo: copiarla para enviarla es justo
+lo que la pondría en el portapapeles. «Pegar» se conserva en los 13 campos, así que
+un gestor de contraseñas sigue pudiendo rellenar. Queda un corolario de usabilidad
+registrado en **P-105**: sin «copiar», transcribir una contraseña larga empuja a
+elegirla más corta.
+
+**Residual nuevo que el envoltorio NO cubre, y que no estaba declarado:** el **menú
+contextual por clic derecho**. `CoreTextField` envuelve el campo en `ContextMenuArea`
+y en 1.7.8 eso **ya está cableado en Android** —no es un no-op: se verificó que
+`classes.dex` conserva sus cadenas, que R8 habría borrado si fuera inalcanzable—.
+Dibuja su propio menú **sin consultar `LocalTextToolbar`**, con el «Copiar» colgando
+del mismo `!isPassword`. Solo lo dispara el botón secundario
+(`awaitFirstRightClickDown`), así que hace falta un ratón y con el dedo es
+inalcanzable; en el teléfono del piloto no aplica. Pero alcanza también al relato,
+donde `isPassword` es falso siempre, así que el titular de §10.1 hay que leerlo
+acotado al menú táctil. Y conviene saber que **en Compose 1.8 esa vía deja de
+necesitar un ratón**, porque el menú contextual pasa a ser el camino principal.
+
+**Medición del `EditorInfo` sobre el campo enmascarado real**, que faltaba —en §10.1
+solo estaban medidos el relato y la barra— y que cierra la pregunta de si envolver un
+campo de contraseña pisa algo. Hecha sobre el emulador, en «Cambiar tu código de
+acceso», con `adb shell dumpsys input_method`:
+
+| Estado del ojo | `inputType` | `imeOptions` | Árbol de accesibilidad |
+|---|---|---|---|
+| Cerrado | `0x8081` | `0x3000005` | `text="••••••"`, `password=true` |
+| **Abierto** | `0x8081` | `0x3000005` | **`text="abc123"`**, `password=false` |
+
+Dos lecturas, las dos importantes:
+
+1. **El envoltorio no pisa nada.** `0x8081` conserva la variación de contraseña
+   (`0x80`), e `imeOptions` lleva el `0x01000000` del envoltorio junto a la acción
+   `NEXT`. Y es **idéntico con el ojo abierto y cerrado**: la mitad del teclado es
+   incondicional, como decía la medición del bytecode.
+2. **Y confirma el residual de accesibilidad de forma empírica**, no inferida: al
+   abrir el ojo, el árbol pasa de `••••••` a **el texto en claro** y `password` de
+   `true` a `false`. Lo que hasta ahora era un argumento sobre dónde se instalan las
+   acciones semánticas es ahora una observación: con el ojo abierto, un servicio de
+   accesibilidad lee la clave personal. Está en P-95.
+
+**Lo que falta, y solo puede hacerlo una persona:** el paso **§8-S1b**, que comprueba
+el **menú** de un campo enmascarado con el ojo abierto. Ninguna prueba automática
+puede verlo: la instrumentada compone el envoltorio con una barra falsa, no un campo
+real con la máscara apagada, y la medición de arriba mide el `EditorInfo`, no el
+menú.
+
+### 10.7 H-10 · Hallazgo nuevo · Alta · El teclado ofrecía la clave personal dentro del propio buscador del clima
+
+Lo encontró **la usuaria**, en la corrida manual §8-S4, y lo trajo con captura: al
+escribir «aud» en la barra de búsqueda de la fachada, Gboard ofrecía
+`auditoria77` —la clave personal de la cuenta de prueba— en su tira de
+sugerencias. Dentro de Aurora. Es el hallazgo más directo de toda la evaluación:
+no hace falta descompilar nada ni tener herramientas; basta tomar el teléfono,
+abrir la app del clima y empezar a teclear.
+
+**Conviene separar dos cosas que es fácil confundir, porque la corrección de cada
+una es distinta:**
+
+| | Aprender | Sugerir |
+|---|---|---|
+| Qué es | que el teclado incorpore a su diccionario lo que se teclea | que el teclado ofrezca lo que ya tiene en el diccionario |
+| Qué lo controla | `IME_FLAG_NO_PERSONALIZED_LEARNING` (H-7) | `TYPE_TEXT_FLAG_NO_SUGGESTIONS` |
+| Estado antes de H-10 | **cerrado** desde H-7 | **abierto** |
+
+La propia S-4 lo confirma: las palabras inventadas que la usuaria escribió **ese
+día** en el relato y en la barra **no** se aprendieron. Lo que aparecía era una
+palabra aprendida **antes**.
+
+**Dónde se aprendió, con fecha.** La clave `auditoria77` se creó la mañana del
+2026-10-10, durante la recuperación de la cuenta de prueba tras el incidente de
+`connectedDebugAndroidTest`. La corrección de H-7 —la que añade el flag a las dos
+barras— entró ese mismo día a las **14:37** (commit `a329245`). En la ventana
+intermedia, la barra enviaba al teclado `inputType=0x1` e `imeOptions=0x2000003`:
+sin el flag, es decir aprendiendo. Y la barra es, por diseño, el sitio donde la
+clave se teclea cada vez que se entra (RF-12). Y el tecleo que la enseñó fue **manual**, no de la
+automatización: la §6 de este informe ya había medido que `adb shell input text` no
+pasa por el teclado, así que las entradas por `adb` de la evaluación no pudieron
+enseñarle nada a Gboard. Lo que sí pasó por el teclado fueron las veces que la
+usuaria tecleó la clave a mano, entre ellas la comprobación manual de H-6 —que era,
+irónicamente, «comprobar que el teclado no aprende la clave»—. Aquella
+comprobación salió bien porque se miró **en otra aplicación**; la palabra ya
+estaba aprendida y se ofrecía dentro de Aurora.
+
+**El instrumento que cierra el caso, y que no teníamos.** Gboard escribe en el
+registro del sistema su propio veredicto por campo. No hay que deducirlo de las
+banderas: lo dice él.
+
+```
+EditorInfo{packageName=com.auroraclima.app, inputType=80001, enableLearning=false,
+           autoCorrection=false, imeOptions=3000003, actionName=SEARCH}
+IncognitoMode = true
+```
+
+Con eso se midió **todo campo de texto de la app** sobre el build de hoy, con un
+control negativo para demostrar que el veredicto es por campo y no un ajuste
+global del emulador:
+
+| Campo | `inputType` | `imeOptions` | Gboard: `enableLearning` / `autoCorrection` | `IncognitoMode` |
+|---|---|---|---|---|
+| Barra de la fachada | `0x80001` | `0x3000003` | false / false | **true** |
+| Barra de práctica del tutorial | `0x80001` | `0x3000003` | false / false | **true** |
+| Relato | `0x28001` | `0x43000000` | true / true | **true** |
+| Correo (`V2PlainField`) | `0x8021` | — | true / true | **true** |
+| Clave y contraseñas (`V2SecretField`) | `0x8081` | `0x3000005` | false / false | **true** |
+| *Control: buscador de los Ajustes de Android* | `0x100001` | — | true / true | **false** |
+
+**Ningún campo de Aurora puede enseñarle nada a Gboard**, y lo dice Gboard. El
+control de la última fila es el que lo hace una medición y no una creencia.
+
+**Límite declarado de esta medición: vale para Gboard y solo para Gboard.**
+`IncognitoMode` es un campo del registro **de Gboard**, no de Android. Lo que
+Aurora declara es estándar —`IME_FLAG_NO_PERSONALIZED_LEARNING` y
+`TYPE_TEXT_FLAG_NO_SUGGESTIONS` son de la plataforma, no de Google— pero **honrarlo
+es decisión de cada teclado**, y la medición solo demuestra que Gboard lo honra. No
+se verificaron el teclado de Samsung, SwiftKey ni ningún otro, y en un teléfono del
+piloto es perfectamente posible que el teclado de fábrica sea otro. Dos
+consecuencias prácticas: un teclado que ignore esos flags podría aprender y sugerir
+igual, y eso Aurora no lo puede impedir —ni detectar—; y si el piloto se hace sobre
+teléfonos de una marca concreta, conviene repetir §8-S4 y §8-S4b con **su** teclado
+antes de entregar. Queda en **P-107**.
+
+**Corrección.** `TYPE_TEXT_FLAG_NO_SUGGESTIONS` en **las dos barras y solo en
+ellas**, por la vía que ya existía: el `EditorInfo` se intercepta en
+`SecureTextEntry`, que gana un parámetro `hideSuggestions`. Efecto medido: el
+`inputType` de la barra pasa de `0x1` a `0x80001` y Gboard pasa de declarar
+`enableLearning=true, autoCorrection=true` a `enableLearning=false,
+autoCorrection=false`.
+
+Por qué solo en las barras, y no «por coherencia» en todo el envoltorio: en el
+relato y en los correos el coste sería perder la autocorrección en textos largos
+—el mismo coste que ya se rechazó al descartar `autoCorrect = false` en §10.1— y
+el beneficio sería nulo, porque lo que se escribe ahí no es una credencial que
+vaya a reaparecer sugerida en la fachada. Lo fija el séptimo caso de
+`SensitiveFieldsGuardTest`, que comprueba las dos reglas opuestas: que las barras
+lo pidan y que los campos del kit **no** lo pidan.
+
+**Lo que Aurora no puede arreglar, y es importante decirlo.** La palabra ya está
+en el diccionario de Gboard. Ninguna bandera la borra, y Gboard la seguirá
+ofreciendo en WhatsApp, en el navegador o en cualquier otra app. Lo que esta
+corrección consigue es que **deje de aparecer dentro de Aurora**, que es donde
+delata: una clave rara sugerida en un buscador de ciudades es un indicio; la misma
+palabra sugerida en un chat no significa nada para quien la vea. La mitigación del
+resto es operativa y va en P-106: **borrar la palabra aprendida del teclado y
+rotar la clave personal**.
+
+**Gravedad: Alta.** Expone la credencial que protege todo el espacio interno, en
+la pantalla más expuesta de la app, sin herramientas y sin conocimiento técnico.
+Atenúa que el vector de aprendizaje llevaba cerrado desde H-7 y que la corrección
+de hoy cierra también el de la sugerencia; pero el hecho ocurrió sobre una clave
+real y lo encontró una persona usando la app, no un análisis.
+
+**Y una lección sobre el método, que es la tercera de la misma familia, y la que
+más conviene que quede escrita porque afecta a cómo se diseñan las comprobaciones
+manuales.** H-6 —«el teclado no aprende la clave personal»— se dio por **cerrado**
+el 2026-10-10 con una comprobación manual que consistió en teclear la clave en la
+barra y después mirar, **en otra aplicación**, si el teclado la sugería. No la
+sugería, y se anotó como pasa.
+
+Era la comprobación correcta para la pregunta equivocada. Medía **si la palabra
+había salido de Aurora**; la pregunta que importaba era **si Aurora la mostraba**.
+Y la mostraba: cuatro meses de uso después, al escribir «aud» en el buscador del
+clima, ahí estaba. El error no fue de ejecución —la comprobación se hizo bien— sino
+de **diseño del criterio**: se eligió el sitio de observación más lejano al riesgo.
+La regla que deja: **una comprobación de fuga se mira donde el dato haría daño, no
+donde sería inocuo.** Para una credencial de Aurora, ese sitio es la fachada de
+Aurora, no WhatsApp. Las tres veces que esta
+evaluación falló de fondo fue por creer una premisa en vez de medirla —el
+`autoCorrect = false` de §10.1, el enmascaramiento de §10.6 y esta—, y las tres
+las desmintió una medición: dos de bytecode y una de una persona mirando la
+pantalla.
+
+### 10.8 Recuento tras las correcciones
+
+| Resultado | v0.3.0 (medido) | v0.3.1 (tras corregir) |
+|---|---|---|
+| **Pasa** | 7 | **7** |
+| **Pasa con observación** | 9 | **10** — entra STORAGE-2 |
+| **Falla** | **1** (STORAGE-2) | **0** |
+| **No aplica** | 3 | 3 |
+
+**Ningún control sube a «Pasa» limpio, y esta cifra ya se corrigió dos veces.** La
+primera redacción daba 9/8/0/3, poniendo en «Pasa» tanto STORAGE-2 como
+PLATFORM-3. La segunda daba 8/9/0/3, corrigiendo STORAGE-2 pero dejando
+PLATFORM-3 limpio. Las dos estaban mal, y las dos veces lo demostró la auditora
+contra el texto de este mismo informe:
+
+- **MASVS-STORAGE-2** tiene **dos** observaciones vivas según §5.1, y la primera
+  es **P-22** —la caché persistente del SDK de Firestore es SQLite plano, sin
+  SQLCipher—, que esta rama no toca. Solo la segunda era H-7. Se le suma el
+  residual de accesibilidad de §10.1, **H-9** con su propio residual del clic
+  derecho (§10.6) y **H-10** con el suyo: una clave aprendida antes sigue en el
+  diccionario del teclado y Aurora no puede borrarla (§10.7). Queda en «Pasa con
+  observación».
+- **MASVS-PLATFORM-3** tampoco queda limpio. Su única observación *registrada* era
+  H-7, sí, pero el residual de accesibilidad de §10.1 es materia suya: la lectura
+  del árbol de accesibilidad es exposición de la INTERFAZ, que es justo lo que
+  este control cubre —capturas, recientes, enmascaramiento— y lo que `FLAG_SECURE`
+  no alcanza. Cobrarse el mismo residual en STORAGE-2 y no en PLATFORM-3 era una
+  asimetría sin justificación. **H-9 y H-10 caen igualmente en los dos**, por el mismo
+  motivo que H-7: son fuga de datos y nacen de una decisión de interfaz. Queda también
+  en «Pasa con observación».
+
+**Y una aclaración que el lector va a pedir: H-9 y H-10 son ALTOS y el recuento no se mueve.**
+No es contradicción. El recuento cuenta **controles**, no hallazgos; los dos controles
+que H-9 toca ya estaban en «Pasa con observación» por observaciones ajenas a él
+(P-22, el residual de accesibilidad); y los dos se **corrigen en esta misma rama**, igual
+que H-8 en §10.5. Lo que sí cambia es que el 0 en «Falla» cuelga ahora de dos
+comprobaciones manuales y no de una.
+
+Con la convención del propio informe —un control con observación viva es «Pasa con
+observación»— el recuento de v0.3.1 es **7 · 10 · 0 · 3**. La cifra es menos
+lucida que las dos anteriores y es la que se sostiene.
+
+Cuatro observaciones se reducen sin desaparecer: **MASVS-NETWORK-1** pierde la de
+la configuración implícita pero conserva la de P-12; **MASVS-CODE-3** pierde el
+defecto concreto de Compose pero mantiene que 1.7.8 sigue por detrás de la línea
+estable actual y que PdfBox-Android continúa sin mantenimiento; **MASVS-STORAGE-2**
+pierde H-7 pero conserva P-22 y el residual de accesibilidad; y **MASVS-PLATFORM-3**
+pierde H-7 y conserva ese mismo residual.
+
+**De las comprobaciones manuales, dos ya están hechas y una queda.** Hechas por la
+usuaria el 2026-10-13: el menú de selección del relato (§8-S1) y el del campo
+enmascarado con el ojo abierto (§8-S1b, los tres tramos) — las dos **pasan**: solo
+dejan pegar y seleccionar, nunca copiar ni cortar, ni con el ojo abierto ni con
+«Seleccionar todo» aplicado. Y **§8-S4b**, la que H-10 abrió, también
+está hecha y **pasa**: ni en la barra del clima ni en la de práctica apareció la
+palabra que el teclado había aprendido en otra aplicación. **Con eso el 0 en
+«Falla» deja de estar pendiente de ninguna comprobación manual.** Todo lo demás de esta sección se verificó con
+medición sobre el dispositivo o sobre el artefacto.
+
+### 10.9 Estado de la suite
+
+**802 pruebas de JVM** por variante en 106 clases, 0 fallos, 0 ignoradas — eran
+798 al empezar, y entran el tercer caso de `CamouflageResourcesTest`
+(identificadores que sobreviven a R8), el tercero de `ManifestMinimizationTest`
+(ningún bloque permite tráfico en claro), el sexto de `SensitiveFieldsGuardTest`
+(la aserción de atribución de §10.1) y el séptimo (las dos reglas opuestas de
+sugerencias de §10.7). **47 instrumentadas** en 12 clases sobre
+el emulador B, 0 fallos — eran 45, y entran los 2 casos de `SecureTextEntryTest`.
+ktlint sin violaciones y `lint` con 0 errores. `assembleDebug` y `assembleRelease`
+en verde, este último con el guardián del DEX pasando —390 627 cadenas juzgadas,
+148 364 distintas, en 197 entradas, 58 excepciones, 0 innecesarias, canarios 4/4, 0
+hallazgos— sobre el APK cuyo SHA-256 cita §10.3. Las cifras bajan ligeramente
+respecto a la ronda anterior (−260 cadenas) porque H-9 cambió el código, no por
+indeterminismo: con el alcance y el código fijos, cinco construcciones
+independientes dieron los nueve números idénticos.
+
+La corrida es la del comando completo, sobre árbol limpio y con el JDK prescrito:
+`test ktlintCheck lint assembleDebug assembleRelease`. **Procedimiento de
+aislamiento, que no es opcional:** detener los demonios de Gradle **y de Kotlin**,
+borrar `app/build`, y una **sola** invocación. No es ceremonia: dos construcciones
+concurrentes sobre el mismo directorio corrompen el estado incremental —se vio
+fallar en `kspReleaseKotlin` y en `processDebugResources`— y fueron la causa de las
+cifras irreproducibles que se corrigieron en §10.3. `lint`
+da 0 errores y 58 avisos, ninguno sobre los archivos nuevos. El APK release
+medido es el del SHA-256 de §10.3.

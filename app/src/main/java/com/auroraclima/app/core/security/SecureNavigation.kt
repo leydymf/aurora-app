@@ -36,7 +36,9 @@ import com.auroraclima.app.core.ui.v2.CloudReturnVisual
  * navegación raíz con la instancia inyectada por Hilt (no es un singleton manual).
  */
 val LocalSessionManager = staticCompositionLocalOf<SessionManager> {
-    error("LocalSessionManager sin proveer: envolver la NavHost raíz")
+    // Sin nombres propios a propósito: las cadenas de los mensajes de excepción
+    // sobreviven a R8 y quedan legibles en el DEX del release (H-1, P-89).
+    error("falta un proveedor requerido")
 }
 
 /**
@@ -70,7 +72,7 @@ fun NavGraphBuilder.secureGraph(route: String, startDestination: String, builder
  * [cloudBottomInset] desplaza SOLO el anclaje de la nube de salida rápida: la ruta
  * cuyo contenido termina en una barra de pestañas (v2-10) lo declara con la altura
  * de esa barra para que la nube flote por encima y ningún destino táctil quede
- * debajo. Es apariencia/posición — el botón, su gesto y `quickExit` no cambian
+ * debajo. Es apariencia/posición — el botón, su gesto y `closeNow` no cambian
  * (RF-16); el resto de rutas conserva el anclaje actual con el valor por defecto.
  */
 class SecureGraphScope internal constructor(private val graph: NavGraphBuilder) {
@@ -133,17 +135,17 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
         // Salida rápida (RF-16): la posición al alcance del pulgar y el gesto son
         // del mecanismo; la apariencia (nube violeta V2) se inyecta desde core/ui.
         CloudReturnVisual(
-            onClick = sessionManager::quickExit,
+            onClick = sessionManager::closeNow,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .systemBarsPadding()
                 .padding(bottom = cloudBottomInset)
-                .padding(QUICK_EXIT_MARGIN)
+                .padding(CLOSE_NOW_MARGIN)
         )
     }
 }
 
-private val QUICK_EXIT_MARGIN = 20.dp
+private val CLOSE_NOW_MARGIN = 20.dp
 
 /**
  * Aplica el conteo de [SecureFlagLedger] sobre el Window real. `object` manual por

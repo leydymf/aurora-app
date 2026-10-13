@@ -123,13 +123,13 @@ class SessionManagerTest {
     }
 
     @Test
-    fun `quickExit cierra de inmediato y descarta los temporizadores`() = runTest {
+    fun `closeNow cierra de inmediato y descarta los temporizadores`() = runTest {
         val cleaner = CountingCleaner()
         val manager = sessionManager(cleaner)
         val events = collectCloseEvents(manager)
         manager.startSession()
 
-        manager.quickExit()
+        manager.closeNow()
 
         assertFalse(manager.isSessionActive.value)
         assertEquals(1, cleaner.invocations)
@@ -149,7 +149,7 @@ class SessionManagerTest {
 
         manager.closeSession()
         manager.closeSession()
-        manager.quickExit()
+        manager.closeNow()
 
         assertEquals(1, cleaner.invocations)
         assertEquals(1, events.size)

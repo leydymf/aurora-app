@@ -99,3 +99,23 @@ escriba y toque la pantalla.
 
    Queda registrado como hallazgo H-7 (gravedad alta). Hace FALLAR
    MASVS-STORAGE-2 y rebaja MASVS-PLATFORM-3 a «Pasa con observación».
+
+────────────────────────────────────────────────────────────────────────────────
+NOTA AÑADIDA EL 2026-10-10 (hallazgo H-9) — NO se reescribe nada de arriba.
+
+Las filas de V2SecretField de la tabla de campos registran una INFERENCIA a partir
+del código, no una observación en pantalla con el ojo de visibilidad abierto. H-9
+la desmiente: Compose quita «copiar» y «cortar» del menú solo mientras la
+transformación visual ES de contraseña (instanceof PasswordVisualTransformation en
+TextFieldSelectionManager.showSelectionToolbar, medido en el bytecode de foundation
+1.7.8), y el ojo de ese campo la cambia a None. Con el ojo abierto, esos campos
+ofrecían «copiar» igual que el relato.
+
+Lo que esas filas SÍ registran correctamente es la mitad del teclado: la variación
+de contraseña del inputType es incondicional y el método que decide el menú no
+consulta el tipo de teclado en ninguna rama.
+
+Quien lea este archivo suelto no debe tomar la columna «copiar: no» al pie de la
+letra para V2SecretField. El hallazgo, su medición y su corrección están en la §10.6
+de docs/INFORME_SEGURIDAD_OWASP.md, y la comprobación en pantalla que falta es el
+paso §8-S1b de docs/RESULTADOS_PRUEBAS.md.

@@ -7,7 +7,23 @@ junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
-composeBom = "2024.04.01"
+# compose-bom 2025.02.00 -> foundation/ui 1.7.8. Se sube desde 2024.04.01 para
+# llevarse el arreglo del NPE de LegacyCursorAnchorInfoController, que entró en
+# foundation 1.7.4 (verificado contra los fuentes de Maven: 1.7.2 y 1.7.3 no lo
+# tienen, 1.7.4 en adelante sí). El salto real es de 1.7.2 a 1.7.8, porque
+# navigation-compose 2.8.9 ya elevaba el BOM viejo a 1.7.2. Se queda en la línea
+# 1.7.x a propósito: 1.8.x obligaría a revisar el emparejamiento con Kotlin 2.0,
+# el mismo motivo por el que el BOM de Firebase está fijado en 33.16.0.
+# Hallazgo H-2 de la evaluación OWASP (P-90).
+#
+# El BOM arrastra además **material3 de 1.2.1 a 1.3.1** (verificado en el árbol de
+# `releaseRuntimeClasspath`): no es solo foundation/ui. No abre superficie —el
+# manifiesto fusionado del release cambia en una sola línea, la de H-5, y el APK
+# crece 804 B— pero sí cambia métricas y colores por defecto de componentes que la
+# app usa: DatePicker, Checkbox, Switch, CircularProgressIndicator y los campos del
+# kit. De ahí el paso §8-S6 de verificación visual. Peso y gama baja (A2-1): sin
+# dependencias nuevas, +804 B sobre 23,95 MB.
+composeBom = "2025.02.00"
 googleServices = "4.5.0"
 # BOM 34.x requiere Kotlin >= 2.2 (metadata 2.3); 33.16.0 es la última compatible con Kotlin 2.0
 firebaseBom = "33.16.0"

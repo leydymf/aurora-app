@@ -10,8 +10,8 @@ import org.w3c.dom.Element
 /**
  * Auditoría del manifest declarado (RNF-04 minimización, RF-06 ausencia de indicios).
  *
- * - Permisos: exactamente los del inventario aprobado (solo INTERNET; esperable en
- *   una app de clima). Cualquier permiso nuevo debe justificarse contra un RF.
+ * - Permisos: exactamente los del inventario aprobado (INTERNET y ACCESS_NETWORK_STATE;
+ *   los dos esperables en una app de clima). Cualquier permiso nuevo debe justificarse contra un RF.
  * - Componentes: un único activity exportado (el launcher) y, desde RF-33, un único
  *   provider — el FileProvider NO exportado que recibe la captura de la cámara del
  *   sistema (EXTRA_OUTPUT); sus propiedades se auditan una a una abajo. Ningún
@@ -195,6 +195,72 @@ class ManifestMinimizationTest {
             "allowBackup debe ser false (P-00: el auto-backup copiaría la BD interna)",
             "false",
             application.androidAttr("allowBackup")
+        )
+    }
+
+    @Test
+    fun `la configuracion de seguridad de red esta declarada`() {
+        val application = elements("application").single()
+        assertEquals(
+            "La app debe declarar networkSecurityConfig (H-5, P-93): sin él, el bloqueo " +
+                "del tráfico en claro depende del valor por defecto de targetSdk y " +
+                "desaparecería en silencio si alguien lo bajara",
+            "@xml/network_security_config",
+            application.androidAttr("networkSecurityConfig")
+        )
+    }
+
+    @Test
+    fun `la configuracion de red prohibe el trafico en claro y las CA de usuario`() {
+        val config = requireNotNull(
+            sequenceOf(
+                File("src/main/res/xml/network_security_config.xml"),
+                File("app/src/main/res/xml/network_security_config.xml")
+            ).firstOrNull { it.exists() }
+        ) { "Falta res/xml/network_security_config.xml (H-5, P-93)" }
+        val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(config)
+
+        val base = xml.getElementsByTagName("base-config").item(0) as Element
+        assertEquals(
+            "cleartextTrafficPermitted debe ser false: ningún extremo de Aurora usa HTTP",
+            "false",
+            base.getAttribute("cleartextTrafficPermitted")
+        )
+
+        val anclas = (0 until xml.getElementsByTagName("certificates").length)
+            .map { (xml.getElementsByTagName("certificates").item(it) as Element).getAttribute("src") }
+        assertEquals(
+            "Solo debe confiarse en el almacén del sistema. Esta declaración hace " +
+                "explícito el valor por defecto desde API 24 para targetSdk >= 24, de modo " +
+                "que no se pierda en silencio si alguien baja el targetSdk: no cerró un " +
+                "hueco abierto, impide que se abra uno. Con ella, una CA que la usuaria " +
+                "instale a mano no sirve para leer el tráfico de Aurora",
+            listOf("system"),
+            anclas
+        )
+    }
+
+    @Test
+    fun `ningun bloque de la configuracion de red permite trafico en claro`() {
+        val config = requireNotNull(
+            sequenceOf(
+                File("src/main/res/xml/network_security_config.xml"),
+                File("app/src/main/res/xml/network_security_config.xml")
+            ).firstOrNull { it.exists() }
+        ) { "Falta res/xml/network_security_config.xml (H-5, P-93)" }
+        val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(config)
+
+        // El caso de arriba solo mira `base-config`. Un `domain-config` para un
+        // dominio concreto puede reabrir HTTP sin tocarlo, así que aquí se barre
+        // el archivo entero: ningún elemento, de ningún tipo, puede permitirlo.
+        val permisivos = (0 until xml.getElementsByTagName("*").length)
+            .map { xml.getElementsByTagName("*").item(it) as Element }
+            .filter { it.getAttribute("cleartextTrafficPermitted") == "true" }
+            .map { it.tagName }
+        assertTrue(
+            "Elementos que permiten tráfico en claro: $permisivos. Ningún extremo de " +
+                "Aurora usa HTTP (RNF-04)",
+            permisivos.isEmpty()
         )
     }
 }

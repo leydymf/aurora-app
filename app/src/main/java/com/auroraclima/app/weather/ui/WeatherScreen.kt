@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.SecureTextEntry
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.FacadeTypeVoice
 import com.auroraclima.app.core.ui.v2.SoftCard
@@ -189,81 +190,87 @@ private fun WeatherSearchBar(
     } else {
         Modifier
     }
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier.then(outline),
-        textStyle = FacadeTypeVoice.body,
-        placeholder = {
-            Text(
-                text = stringResource(R.string.weather_search_hint),
-                style = FacadeTypeVoice.body,
-                color = V2Palette.inkSecondary
-            )
-        },
-        leadingIcon = {
-            if (isActive) {
-                IconButton(onClick = onBack) {
+    SecureTextEntry(hideSuggestions = true) {
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = modifier.then(outline),
+            textStyle = FacadeTypeVoice.body,
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.weather_search_hint),
+                    style = FacadeTypeVoice.body,
+                    color = V2Palette.inkSecondary
+                )
+            },
+            leadingIcon = {
+                if (isActive) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_weather_back),
+                            contentDescription = stringResource(R.string.weather_search_cancel),
+                            tint = V2Palette.inkPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
                     Icon(
-                        painter = painterResource(R.drawable.ic_weather_back),
-                        contentDescription = stringResource(R.string.weather_search_cancel),
-                        tint = V2Palette.inkPrimary,
+                        painter = painterResource(R.drawable.ic_weather_search),
+                        contentDescription = null,
+                        tint = V2Palette.inkSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
-            } else {
-                Icon(
-                    painter = painterResource(R.drawable.ic_weather_search),
-                    contentDescription = null,
-                    tint = V2Palette.inkSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        trailingIcon = {
-            if (isActive) {
-                IconButton(onClick = onClear) {
-                    Box(
-                        modifier = Modifier
-                            .size(26.dp)
-                            .background(V2Palette.divider, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_weather_close),
-                            contentDescription = stringResource(R.string.weather_search_clear),
-                            tint = V2Palette.inkSecondary,
-                            modifier = Modifier.size(13.dp)
-                        )
+            },
+            trailingIcon = {
+                if (isActive) {
+                    IconButton(onClick = onClear) {
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .background(V2Palette.divider, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_weather_close),
+                                contentDescription = stringResource(R.string.weather_search_clear),
+                                tint = V2Palette.inkSecondary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
                     }
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_weather_pin),
+                        contentDescription = null,
+                        tint = V2Palette.inkSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-            } else {
-                Icon(
-                    painter = painterResource(R.drawable.ic_weather_pin),
-                    contentDescription = null,
-                    tint = V2Palette.inkSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        },
-        singleLine = true,
-        // Sin autocorrección: evita que el IME aprenda o sugiera lo tecleado aquí,
-        // y es plausible en una búsqueda de nombres propios de ciudades.
-        keyboardOptions = KeyboardOptions(
-            autoCorrect = false,
-            imeAction = ImeAction.Search
-        ),
-        shape = V2Corner.pill,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = V2Palette.cardSurface,
-            unfocusedContainerColor = V2Palette.cardSurface,
-            focusedTextColor = V2Palette.inkPrimary,
-            unfocusedTextColor = V2Palette.inkPrimary,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = V2Palette.inkPrimary
+            },
+            singleLine = true,
+            // Sin autocorrección porque es plausible en una búsqueda de nombres
+            // propios de ciudades, y punto. NO protege de que el teclado aprenda:
+            // se midió el EditorInfo con `dumpsys input_method` y esta bandera solo
+            // RETIRA `TYPE_TEXT_FLAG_AUTO_CORRECT`; esta barra enviaba `inputType=0x1`
+            // pelado, sin nada que hable de aprendizaje. De que no aprenda se encarga
+            // `SecureTextEntry`, que envuelve esta barra (H-7, P-94).
+            keyboardOptions = KeyboardOptions(
+                autoCorrectEnabled = false,
+                imeAction = ImeAction.Search
+            ),
+            shape = V2Corner.pill,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = V2Palette.cardSurface,
+                unfocusedContainerColor = V2Palette.cardSurface,
+                focusedTextColor = V2Palette.inkPrimary,
+                unfocusedTextColor = V2Palette.inkPrimary,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = V2Palette.inkPrimary
+            )
         )
-    )
+    }
 }
 
 /** Resultados de la búsqueda (v2-02): una sola tarjeta con divisores finos. */

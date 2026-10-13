@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+    Configuración de seguridad de red (H-5 de la evaluación OWASP, P-93).
+
+    Hasta ahora el bloqueo del tráfico en claro dependía del valor por defecto
+    de targetSdk 35. Funcionaba, pero era una garantía implícita: bajar el
+    targetSdk algún día lo habría desactivado en silencio. Aquí queda explícito.
+
+    cleartextTrafficPermitted="false": nada de HTTP. Los dos extremos de la app
+    son https (Open-Meteo y Firebase); no hay ninguno que lo necesite.
+
+    trust-anchors con solo "system": fija explícitamente el valor por defecto
+    para que no se pueda perder al bajar el targetSdk. Eso es TODO lo que hace,
+    y es el mismo motivo que la línea de arriba.
+
+    Importa decirlo en este orden porque la primera redacción afirmaba que sin
+    esta línea una CA instalada a mano habría permitido leer el tráfico, y eso
+    es falso para esta app: desde Android 7 (API 24), una app con targetSdk >= 24
+    ya confía solo en el almacén del sistema, y Aurora es min 26 / target 35. Las
+    autoridades que la usuaria instale nunca fueron de confianza aquí. La
+    declaración no cerró ningún hueco; impide que se abra uno.
+
+    Nota operativa: sin <debug-overrides>, una prueba legítima de interceptación
+    TLS (MASVS-NETWORK-2) exige añadir ese bloque de forma temporal. Se deja
+    fuera a propósito: en este modelo de amenaza es lo correcto.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

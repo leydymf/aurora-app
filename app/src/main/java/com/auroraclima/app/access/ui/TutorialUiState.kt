@@ -27,13 +27,19 @@ data class TutorialUiState(
     fun showsSkip(isReview: Boolean): Boolean = !isReview
 }
 
-/** Páginas del tutorial, en el orden del pager (criterio 1 de RF-10). */
+/**
+ * Páginas del tutorial, en el orden del pager (criterio 1 de RF-10).
+ *
+ * Los nombres de las constantes de un enum llegan LEGIBLES al DEX del release:
+ * R8 los conserva porque `name` y `valueOf` son reflexión. Así que aquí el
+ * vocabulario importa tanto como en `strings.xml` (RNF-05, H-8).
+ */
 enum class TutorialStep {
     /** Cómo entrar: la clave tecleada tal como en el clima. */
     ENTER,
 
     /** La nube de la esquina regresa al clima al instante (RF-16). */
-    QUICK_EXIT,
+    CLOSE_NOW,
 
     /** Cierre automático y qué ve un tercero (RNF-03). */
     AUTO_CLOSE,

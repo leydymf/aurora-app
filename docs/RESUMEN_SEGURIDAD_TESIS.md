@@ -44,13 +44,19 @@ para una cobertura ligera.
 
 ## Cuántos controles pasaron
 
-De los **veinte controles evaluados, diecinueve pasaron y uno falló**. Siete
-pasaron sin salvedades, nueve pasaron con una observación anotada, tres no
-aplican a una aplicación con las características de Aurora —no usa páginas web
-embebidas, no tiene servidores propios a los que fijar certificados y no se
-distribuye por una tienda donde forzar actualizaciones tenga sentido— y uno,
-el que pide evitar la fuga de datos sensibles, no se cumple. Más abajo se
-explica por qué y qué lo causa.
+El estándar tiene **veinticuatro controles**. Cuatro —los de la categoría de
+resiliencia— quedaron fuera de alcance de forma justificada, por el motivo que
+explica el apartado anterior. De los **veinte en alcance**, **tres no aplican** a
+una aplicación con las características de Aurora: no usa páginas web embebidas, no
+tiene servidores propios a los que fijar certificados y no se distribuye por una
+tienda donde forzar actualizaciones tenga sentido. Quedan **diecisiete
+evaluables**, y de esos **dieciséis pasaron y uno falló**: siete pasaron sin
+salvedades, nueve pasaron con una observación anotada, y el que pide evitar la
+fuga de datos sensibles no se cumple. Más abajo se explica por qué y qué lo causa.
+
+Conviene decirlo así, con el denominador a la vista, y no «diecinueve de veinte»:
+un control que no aplica no es un control aprobado, y sumarlo a los cumplidos
+infla la cifra.
 
 Lo más importante es que los pilares del diseño resistieron la comprobación
 directa, no solo la revisión del código. Las bases de datos donde viven los
@@ -106,6 +112,12 @@ protegido sin herramientas especiales: a quien tenga el teléfono le bastaría
 abrir otra aplicación y pegar. No es un fallo del cifrado ni del camuflaje —los
 registros siguen guardados y enviados cifrados—, sino una protección que no se
 aplicó a un campo. Se corrige en la versión siguiente.
+
+Una revisión posterior, ya durante la corrección, descubrió que esa declaración
+protege menos de lo que se creía: la opción «copiar» desaparece solo mientras el
+texto se muestra oculto, y la aplicación tiene un ojo para mostrarlo. Con el ojo
+abierto, también la clave de acceso y las contraseñas podían copiarse. Se cuenta
+más abajo.
 
 Esto se descubrió, además, de una manera que vale la pena contar: era una de las
 dos comprobaciones que ningún método automático podía hacer, porque escribir por
@@ -175,3 +187,133 @@ Esa coincidencia entre lo que el equipo ya sabía sobre sus propios riesgos de
 datos y lo que una verificación sistemática encuentra es, en sí misma, un
 resultado: indica que el seguimiento de riesgos que se llevó durante el
 desarrollo fue acertado, y señala con precisión dónde ese seguimiento no llegaba.
+
+## Re-verificación en la versión siguiente (v0.3.1)
+
+Lo que se cuenta arriba es lo que se midió sobre la versión v0.3.0, y así debe
+leerse: es el estado que la aplicación tenía cuando se evaluó. Después se
+corrigieron cuatro de los siete hallazgos, y conviene dejar constancia de ello
+porque cambia el resultado final.
+
+**Se corrigió el hallazgo de gravedad alta.** El campo donde se escribe el relato
+ya no ofrece «copiar» ni «cortar» en su menú de texto —«pegar» se conserva,
+porque hace falta— y además le pide al teclado que no memorice lo que se escribe
+en él. Lo segundo se extendió también a los campos de correo y a la barra donde
+se teclea la clave de acceso.
+
+Ese segundo punto merece una nota, porque salió de una objeción bien puesta. El
+plan inicial era desactivar la corrección automática en el campo del relato, dando
+por hecho que eso impedía que el teclado aprendiera. Se midió qué le declara
+realmente la aplicación al teclado y resultó que no: desactivar la corrección solo
+quita la corrección, no dice nada sobre memorizar. Habría costado escribir sin
+autocorrección un texto largo y difícil, a cambio de nada. La solución que se
+aplicó usa la marca que el sistema define exactamente para no memorizar, y deja
+la autocorrección intacta. De paso se descubrió que la barra donde se teclea la
+clave tampoco tenía esa protección, pese a que un comentario del código afirmaba
+que sí.
+
+**Se corrigieron también los otros tres previstos:** la caída de la aplicación
+—se actualizó la librería de Google que la causaba y la prueba que fallaba seis
+de cada nueve veces pasó veinte veces seguidas sin caer—, los nombres internos que
+sobrevivían a la ofuscación —renombrados, y con una comprobación automática nueva
+que revisa el archivo instalable en cada compilación—, y la configuración de red,
+que ahora es explícita en vez de depender de un valor por defecto.
+
+**Y apareció uno nuevo mientras se corregían**, que es lo que se espera de una
+comprobación automática que antes no existía. Al ampliar la lista de palabras que
+el guardián vigila, el archivo instalable resultó contener la expresión inglesa
+que nombra, en las aplicaciones de este campo, el botón de salida rápida. Era la
+palabra más delatora que podía quedar ahí. Se renombró, y el instalable
+reconstruido ya no la contiene: ahora dice «cerrar ahora», que no señala nada. Se
+dejó escrito en el código por qué ese nombre es deliberadamente soso, para que una
+limpieza futura no lo deshaga.
+
+**Y apareció un segundo hallazgo nuevo, este de gravedad alta, que llevaba ahí
+desde el principio.** Los campos donde se escribe la clave de acceso y las
+contraseñas ocultan el texto con puntos, y se daba por sentado que esa ocultación
+era lo que impedía copiarlos. Al verificar esa suposición en el código compilado de
+la librería de Google —en vez de creerla— resultó que la protección vale **solo
+mientras el texto está oculto**: la aplicación tiene un ojo para mostrarlo, y con el
+ojo abierto la clave y las contraseñas se podían copiar al portapapeles, igual que
+el relato. Es el mismo camino del hallazgo alto anterior, sobre el dato que protege
+todo lo demás. Se corrigió aplicando a esos campos la misma protección que al
+relato, con lo que la aplicación queda con una sola regla y ninguna excepción.
+
+Tiene un coste que se aceptó a conciencia: tampoco se podrá copiar la contraseña que
+la usuaria elige para cifrar el archivo exportado. El motivo es que copiarla para
+enviarla es justamente lo que la pondría en el portapapeles, que es lo que se está
+cerrando. Pegar sigue funcionando en todos los campos.
+
+**Y un tercero, que encontró la propia desarrolladora usando la aplicación.** Al
+hacer las comprobaciones finales en el teléfono escribió «aud» en el buscador del
+clima y el teclado le ofreció, en su tira de sugerencias, la clave de acceso que se
+había usado para las pruebas. Dentro de la aplicación. No hizo falta ninguna
+herramienta: basta tomar el teléfono y empezar a teclear.
+
+Conviene distinguir dos cosas que parecen una. Que el teclado **aprenda** lo que se
+escribe ya estaba cerrado desde la corrección anterior, y la propia comprobación lo
+confirmó: las palabras inventadas que escribió ese día no se aprendieron. Lo que
+quedaba abierto era que el teclado **ofreciera** lo que había aprendido **antes**,
+en las horas previas a esa corrección. Se cerró pidiéndole al teclado que no muestre
+sugerencias en las dos barras de búsqueda —y solo en ellas, para no perder la
+corrección automática al escribir el relato—.
+
+Hay dos límites que es honesto decir. El primero: la palabra ya está en el
+diccionario del teclado del teléfono, y seguirá apareciendo en otras
+aplicaciones. Lo que se consigue es que deje de aparecer dentro de Aurora, que es
+donde delata: una palabra extraña sugerida en un buscador de ciudades es un indicio;
+la misma palabra en un chat no significa nada. El resto se resuelve borrando esa
+palabra del teclado y cambiando la clave.
+
+El segundo límite: todo esto se comprobó con **el teclado de Google**, que es el
+que trae el emulador. Lo que la aplicación le pide al teclado es estándar de
+Android, pero obedecerlo es decisión de cada teclado, y no se probaron los de otras
+marcas. Si el piloto se hace sobre teléfonos de una marca concreta, hay que repetir
+esa comprobación con el teclado que traigan de fábrica.
+
+**Los tres hallazgos nuevos se encontraron de maneras distintas, y la diferencia dice
+algo del método.** El primero apareció porque una comprobación automática se volvió
+más estricta: la herramienta lo encontró sola. El segundo llevaba ahí desde la
+versión evaluada y **ninguna herramienta lo vio**, porque todas daban por buena la
+misma suposición escrita en el código; lo encontró una persona leyendo el código
+compilado de la librería. Y el tercero no lo habría visto ningún análisis, porque
+no estaba en el código de la aplicación sino en el diccionario del teclado del
+teléfono: lo encontró una persona **usando** la aplicación.
+
+Es la tercera vez en esta corrección que una suposición dada por buena resulta
+falsa al medirla —antes fueron la de la corrección automática del teclado y la del
+ocultamiento con puntos—, y es el aprendizaje que más vale llevarse: **una
+afirmación escrita no es una verificación**. Las tres se desmintieron midiendo: dos
+leyendo el código compilado de la librería y una mirando la pantalla del teléfono.
+
+**Quedan dos previstos**, los dos de preparación para el despliegue: firmar el
+instalable con una clave propia y revisar dos componentes que arrastra la librería
+de autenticación. Se abordan antes del piloto.
+
+Con eso, de los diecisiete controles evaluables **los diecisiete pasan y ninguno
+falla**: siete sin salvedades y diez con alguna observación anotada. Ninguno sube a
+«cumplido sin salvedades», y conviene explicar por qué, porque es la parte menos
+lucida y la más honesta del resultado.
+
+El control de fuga de datos deja de fallar, pero conserva dos observaciones. La
+primera es que la copia que la librería de Google mantiene en el teléfono para que
+la aplicación funcione sin conexión no está cifrada con la misma protección que el
+resto: es un riesgo ya registrado desde antes, que esta corrección no toca. La
+segunda es que un servicio de accesibilidad del sistema, como el lector de
+pantalla, sí puede copiar el texto del relato sin pasar por el menú que se cerró.
+Esa segunda observación afecta por igual al control que vigila el uso seguro de la
+interfaz, así que ese también queda con salvedad: el lector de pantalla puede leer
+el contenido de las pantallas protegidas, porque el bloqueo de capturas no alcanza
+a ese canal.
+
+Las dos se dejaron así a conciencia. Bloquear el lector de pantalla habría dejado
+el campo más largo de la aplicación —el relato de lo que pasó— inaccesible para
+quien lo necesite, y ese precio no se paga en una aplicación pensada para
+situaciones de vulnerabilidad.
+
+De seguridad queda una sola comprobación por hacer a mano, la del menú de texto
+del relato, porque es de las que ningún método automático puede verificar. Aparte
+de ella, y ya no por seguridad sino por prudencia, la actualización de la librería
+de Google obliga a repasar en pantalla los formularios y el selector de fecha: esa
+versión cambia medidas y colores por defecto de esos componentes.
+

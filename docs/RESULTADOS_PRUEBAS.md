@@ -29,6 +29,15 @@ compilación, lint y los dos APK ya estaban al día de este mismo `HEAD`); en `a
 → todo en verde. Los tests unitarios se re-ejecutaron forzando la limpieza
 previa (mismo criterio anti-caché de las corridas v0.2.0 y v0.3.0).
 
+> **Cifra vigente al 2026-10-10 (rama `fix/hallazgos-owasp`, v0.3.1):** la tabla de
+> abajo es la instantánea del cierre de `mejoras-v3`. La corrida vigente es
+> **801 pruebas de JVM por variante en 106 clases y 47 instrumentadas en 12
+> clases**, 0 fallos, con el comando completo sobre árbol limpio, demonios de Gradle
+> y de Kotlin detenidos y una sola invocación. Suben de 720 a 801 por los dos tramos
+> de la evaluación OWASP: +71 en la rama `seguridad-owasp` y +10 en esta. El detalle está en la §10.7 de
+> `docs/INFORME_SEGURIDAD_OWASP.md`, y el APK release medido va atado a su
+> SHA-256 en la §10.3 del mismo documento.
+
 | Métrica | v0.3.0 · V2 (2026-08-12) | Hoy (2026-10-05) |
 |---|---|---|
 | Pruebas unitarias JVM | 529 por variante (75 clases) | **720 por variante — debug y release, 1 440 ejecuciones, 0 fallos, 0 errores, 0 omitidas (100 clases)** |
@@ -299,7 +308,9 @@ Todo lo manual que resta está aquí y solo aquí. Reemplaza las §8 de v0.2.0 y
 v0.3.0 e integra **P-71** (reingreso silencioso), **P-73(c)** (tipos conectados a
 la Guía y al registro), **CP-38** (exportación), **CP-19** (RF-31), las dos
 pruebas que dejó el ADR 2026-10-05 (arranque en frío ×3 en C1 y regresión H-1
-en A14) y la verificación visual V2 que seguía pendiente. Los pasos numerados
+en A14), la verificación visual V2 que seguía pendiente y el **bloque S**, que es
+lo que dejaron las correcciones de la evaluación OWASP (v0.3.1): **S1 es
+bloqueante del tag v0.3.1**. Los pasos numerados
 completos de cada P-xx están en su entrada de `docs/PENDIENTES.md`; aquí va el
 resumen ejecutable, el resultado esperado y el orden. El orden está pensado
 para **una sola instalación en A** (bloques A y P encadenados sin reinstalar),
@@ -308,8 +319,10 @@ para **una sola instalación en A** (bloques A y P encadenados sin reinstalar),
 **Montaje:** emulador **A** = `Medium_Phone_API_35` **relanzado con 4 núcleos y
 4 GB** (`emulator -avd Medium_Phone_API_35 -cores 4 -memory 4096`, P-82; con la
 configuración por defecto de 1 núcleo / 2 GB la app no completa el arranque),
-instalación limpia del **debug** de esta rama (`429f283`, Room v5 / payload v3) —
-`./gradlew installDebug` y comprobar `lastUpdateTime` antes de empezar;
+instalación limpia del **debug** de la rama vigente —para los bloques A/B/P/C,
+`429f283` (Room v5 / payload v3); **para el bloque S, el debug de v0.3.1**, que es
+el único que lleva las correcciones de la evaluación OWASP— con
+`./gradlew installDebug` y comprobando `lastUpdateTime` antes de empezar;
 proyecto real `aurora-31c37`; consola de Firebase y panel `admin/` (`npm run
 dev`) abiertos. Emulador **B** (segundo dispositivo) solo en el bloque B.
 **Regla de orden:** el APK v5 debe estar instalado ANTES de publicar t05/t06
@@ -412,7 +425,7 @@ llave de depuración (decisión TRL 4 vigente, ver `docs/PENDIENTES.md`), 23 951
 
 | # | Qué correr | Resultado esperado |
 |---|---|---|
-| 0 | `./gradlew connectedDebugAndroidTest` | **42/42** en 10 clases. Cubre Keystore, SQLCipher (incluido el centinela `label` de la migración v5 — P-73c), cifrado de payload/media, foco de la barra, **`LocalCredentialStoreTest` (P-71 paso 8)** y **`JournalExportPipelineTest` (CP-38)**. Después: `./gradlew installDebug` limpio en A |
+| 0 | `./gradlew connectedDebugAndroidTest` | **47/47** en 12 clases (eran 42 en 10; entran `ImageImporterRejectionTest`, `QuickAccessRowHeightTest` y los 2 casos de `SecureTextEntryTest`). Cubre Keystore, SQLCipher (incluido el centinela `label` de la migración v5 — P-73c), cifrado de payload/media, foco de la barra, **`LocalCredentialStoreTest` (P-71 paso 8)** y **`JournalExportPipelineTest` (CP-38)**. Después: `./gradlew installDebug` limpio en A |
 
 ### Bloque A — Instalación A (una sola cuenta, encadenado sin reinstalar)
 
@@ -453,6 +466,47 @@ llave de depuración (decisión TRL 4 vigente, ver `docs/PENDIENTES.md`), 23 951
 | # | Qué correr | Pasos (resumen) | Resultado esperado |
 |---|---|---|---|
 | A14 | **RF-20 con todas las cascadas** — P-54 regresión · P-71 (5) · P-59 (8) · RF-31 · CP-12 · **regresión H-1 (ADR 2026-10-05)** · Device Explorer #5 | **Primero la regresión H-1:** con sesión abierta y datos apagados (no modo avión total, P-82), «Eliminar todo y salir» con la doble confirmación → la parte remota falla y la marca queda izada → cerrar la app → datos encendidos → reabrir y reingresar. **Luego la eliminación real:** Ajustes → «Eliminar tu cuenta y tus datos» → dos confirmaciones → contraseña (probar primero sin red y con contraseña incorrecta) → éxito. Device Explorer completo. Reabrir la app | **H-1:** al reingresar no queda ningún registro, resultado ni adjunto local y la marca baja en el siguiente arranque (sin «failed to complete startup»). Sin red / incorrecta: «Nada se ha eliminado todavía» y consola intacta; con éxito: consola sin `entries`/`media`/`mediaparts`/`outcomes`/`meta` y sin la cuenta en Auth; **`account_meta.xml` inexistente**, `media_store`/`media_view`/`media_pending`/`doc_out` inexistentes, `journal_store.db` y **`guidance_store.db`** ausentes; la app vuelve a ser solo clima (en debug el código de activación se resiembra; en release exigiría reinstalar — P-55) |
+
+### Bloque S — Seguridad y regresión visual de v0.3.1 (rama `fix/hallazgos-owasp`)
+
+Lo que dejaron las correcciones de la evaluación OWASP. **S1 es bloqueante del tag
+v0.3.1**: es la única verificación de H-7 que ninguna prueba automática puede
+hacer, porque comprueba el menú que dibuja el sistema operativo, no lo que Compose
+le pasa (eso ya lo fija `SecureTextEntryTest` en las instrumentadas). Instalar
+primero: `./gradlew installDebug` y comprobar `lastUpdateTime` antes de mirar el
+emulador — `assembleDebug` no instala.
+
+### Resultado del bloque S (corrida de la usuaria, 2026-10-13)
+
+| Paso | Estado | Nota |
+|---|---|---|
+| S1 · S1b (tres tramos) · S3 | ✅ | Solo dejan pegar y seleccionar; **nunca copiar ni cortar**, ni con el ojo abierto ni con «Seleccionar todo» aplicado. Cierra la comprobación manual de P-94 (H-7) y de P-103 (H-9) |
+| S2a · S2b · S6 · S7 · S8 · S9 | ✅ | Sin observaciones. S9 eliminó la cuenta de prueba y su marca de borrado pendiente se completó al siguiente arranque, como estaba previsto |
+| S5 | ✅ (cubierto) | Las 20 corridas de la caída ya estaban medidas (§10.2 del informe) |
+| **S4** | ❌ **→ H-10** | Las palabras inventadas escritas ese día en el relato y en la barra **no** se aprendieron. Pero el teclado **sí ofrecía una clave personal aprendida antes** —`auditoria77`, creada el 2026-10-10 antes de que existiera la protección— al escribir «aud» **en la propia barra del clima de Aurora**. Hallazgo nuevo, gravedad alta: §10.7 del informe y P-106 |
+| **S4b** | ✅ | Tras la corrección: ni en la barra del clima ni en la de práctica apareció la palabra que el teclado había aprendido en otra aplicación. Cierra la parte de H-10 que depende del código; lo que queda es operativo (borrar la palabra del diccionario y rotar la clave, P-106) |
+
+**Orden, que no es el numérico:** `S2a → S1 → S1b → S3 → S4 → S4b → S5 → S6 → S7 (con S2b en su «Cerrar sesión») → S8 → S9`.
+Lo fija el estado de la instalación: el correo de crear cuenta solo existe durante
+la activación y la pantalla de inicio de sesión solo aparece tras cerrar sesión, así
+que los dos tramos de «pegar» caen en los dos extremos de la corrida. S8 va al final
+a propósito: así el reingreso con credenciales de S7 ya ha ejercitado Firebase Auth,
+que es el tercer extremo HTTPS y el único que S8 no toca por sí mismo.
+
+| # | Qué correr | Pasos | Resultado esperado |
+|---|---|---|---|
+| S1 | **P-94 (H-7) — el menú del relato** · **bloqueante del tag** | Espacio interno → Mi registro → «Agregar» → escribir 3-4 palabras en «Qué pasó». Provocar el menú de selección de **tres** formas: mantener pulsado sobre el texto, doble toque sobre una palabra, y arrastrar los tiradores de selección; repetir con «Seleccionar todo» aplicado. Hacerlo con los gestos del emulador, **no** con Cmd/Ctrl+C del teclado del equipo, que no pasa por el menú (residual declarado en P-95) | En las cuatro formas el menú ofrece **«Pegar» y «Seleccionar todo»** y **NO** ofrece «Copiar», «Cortar» ni «Compartir». Si apareciera «Copiar» en alguna de las cuatro, la corrección de H-7 no está cerrada y el tag no sale |
+| S1b | **H-9 — el menú de un campo enmascarado CON EL OJO ABIERTO** · **el primer tramo es bloqueante del tag** | **Tramo 1 (bloqueante) — clave personal (RF-09):** Ajustes → «Cambiar tu código de acceso» → escribir 4-6 caracteres en «Tu código actual» → **abrir el ojo** → provocar el menú de las tres formas de S1 (pulsación larga, doble toque, arrastrar tiradores) y repetir con «Seleccionar todo» → repetir **con el ojo cerrado** → copiar un texto en otra app y **pegarlo** en «Nuevo código» → **salir sin guardar** (nube o atrás). **No pulsar «Guardar»**, o el resto de la corrida usaría otra clave. **Tramo 2 — contraseña de cuenta:** Ajustes → «Cambiar tu contraseña» → «Contraseña actual» → ojo abierto → pulsación larga → salir sin guardar. **Tramo 3 — contraseña de exportación (RF-45):** Mi registro → guardar el registro de S1 → «Exportar» → marcar uno → «Contraseña del archivo» → ojo abierto → pulsación larga → salir sin exportar | En los tres tramos y con el ojo **abierto y cerrado**: «Pegar» y «Seleccionar todo» sí; «Copiar», «Cortar» y «Compartir» **no**. **Por qué existe este paso:** Compose anula «copiar» solo mientras la transformación visual ES de contraseña, y el ojo la desactiva — con el ojo abierto los trece campos enmascarados ofrecían copiar (H-9). Ninguna prueba automática puede verlo: la instrumentada compone el envoltorio con una barra falsa, no un campo real con el ojo abierto. **Y el tramo de «pegar» no es decorativo:** es el único sitio donde alguien comprueba pegar en un campo **enmascarado** — S2a y S2b solo lo hacen en campos de correo |
+| S2a | **P-94 — «pegar» en la activación, y lo único que se ve una sola vez** · *se hace ANTES de S1* | Durante la activación de la instalación limpia, **en este orden**: (1) teclear el código de activación → pantalla de consentimiento → **mirar la casilla** (contraste B8, marcada/sin marcar) y pulsar **«No, gracias»**; (2) volver a teclear el código y aceptar; (3) copiar cualquier texto en otra app del emulador y pegarlo en el correo de **crear cuenta**; (4) **en «Crear cuenta», campo «Contraseña»** (H-9): escribir 5-6 caracteres, **abrir el ojo** y provocar el menú con pulsación larga y con doble toque; (5) **en «Tu clave personal.» (paso 2 de 3)**: lo mismo en el campo de la clave y en «Escríbela otra vez» | El rechazo devuelve al clima (RF-18, una de las rutas que tocó el renombre de H-8). El campo pega. **Por qué este orden exacto:** al crear la cuenta la navegación hace `popUpTo(INTRO_ROUTE) { inclusive = true }` y la puerta de búsqueda deja de devolver `OpenActivation` en cuanto existe la clave de la usuaria, así que **el consentimiento no vuelve a ser alcanzable** — ni su casilla, que por eso se mira aquí y no en S6. El correo de crear cuenta tampoco existe después. **(4) y (5), H-9:** con el ojo **abierto** y con el ojo **cerrado**, el menú ofrece «Pegar» (y «Seleccionar todo» si hay texto) y **NO** «Copiar», «Cortar» ni «Compartir». Van aquí por el mismo motivo que la casilla: la creación de la clave y el campo de contraseña de «Crear cuenta» no vuelven a ser alcanzables |
+| S2b | **P-94 y H-9 — «pegar» en el inicio de sesión** · *se intercala DENTRO de S7* | Tras el «Cerrar sesión» de S7: pegar en el correo de inicio de sesión y en el de «¿Olvidaste tu contraseña?» (RF-46). Y en el campo «Contraseña»: escribir, **abrir el ojo**, provocar el menú y **pegar** | Los dos campos pegan. El de RF-46 importa aparte: vive dentro de una hoja, que instala su propia barra de selección, así que si el envoltorio estuviera por fuera de la hoja no protegería nada. **Cuándo exactamente:** al llegar al «Cerrar sesión» de S7, **antes** del reingreso — porque S7 termina reingresando y entonces la pantalla de inicio de sesión ya no está. Hecho S2b, se continúa con el reingreso de S7 |
+| S3 | **P-94 — las dos barras** (RF-12/RF-14) | Teclear en la barra de la fachada y en la de práctica del tutorial; mantener pulsado el texto en cada una. Comprobar también que escribir y borrar sigue fluido | Sin «Copiar» ni «Cortar», con «Pegar». El foco no se pierde al teclear (lo cubre `WeatherSearchBarFocusTest`, esto solo confirma el APK instalado) |
+| S4 | **P-11 — el teclado no aprende** (comprobación de la usuaria, repetible) | Escribir una **palabra inventada** en el relato y otra en la barra de la fachada; salir, abrir otra app con un campo de texto y empezar a teclear las primeras letras de cada una | Gboard no las sugiere. Esta es la comprobación que desmiente o confirma la corrección de P-11: antes las barras no tenían protección mecánica ninguna, pese a lo que decía el comentario del código |
+| S4b | **H-10 — las dos barras ya no ofrecen sugerencias del teclado** | En la barra del clima, escribir «aud» (o las primeras letras de cualquier palabra que el teclado conozca) y mirar la tira de sugerencias de Gboard. Repetir en la barra de práctica del tutorial. Para que la prueba valga, el diccionario tiene que tener algo que ofrecer: escribir antes una palabra inventada en un campo de OTRA app, que sí aprende | **La tira de sugerencias no aparece** en ninguna de las dos barras, o aparece vacía. Es lo que impide que una clave aprendida antes —o aprendida en otra app— se muestre dentro de Aurora. **Lo que este paso NO puede comprobar, y hay que saberlo:** la palabra sigue en el diccionario de Gboard y seguirá ofreciéndose en WhatsApp o en el navegador; eso no lo puede arreglar Aurora. La mitigación es borrarla del teclado y rotar la clave (P-106). En la fachada se pierde la autocorrección al escribir nombres de ciudad: es el coste aceptado |
+| S5 | **P-90 — confirmación corta de la caída** | Teclear en la barra y pulsar Inicio 3-4 veces; lo mismo en el relato | 0 caídas. Las 10+10 ya están anotadas; esto solo confirma el APK instalado |
+| S6 | **Regresión visual por material3 1.2.1 → 1.3.1** (no es seguridad; la trae la subida de BOM de H-2) | Mirar en pantalla: selector de fecha del registro (A7), casilla y interruptor «Incluir adjuntos» de la exportación (A10), los indicadores circulares de carga, los campos del kit en login, clave y exportación, y **una hoja de confirmación** (guardar resultado del cuestionario o eliminar un registro): son `Dialog` con `usePlatformDefaultWidth = false` y el manejo de insets cambió en Compose 1.7, así que A9/A10 las marcaron ✅ antes del salto. La bandera segura viaja por API pública estable, así que el riesgo es de aspecto y no de seguridad. **La casilla del consentimiento no está aquí a propósito:** en este punto de la corrida ya es inalcanzable, así que se mira en S2a | Comparar con `docs/mockups-v2/` y con el contraste B8 (relleno blanco, contorno gris `#7E788E` que se engrosa con foco). Anotar diferencias de tamaño, color o separación: esa versión cambia métricas y colores por defecto de esos componentes |
+| S7 | **Re-smoke de la salida rápida y del tutorial tras el renombre de H-8** (RF-16, RNF-03, RF-10, RF-19; el rechazo del consentimiento va en S2a y la eliminación de cuenta de A14 queda declarada como ya ejercitada: es el mismo `closeNow` → `closeSession` que este paso dispara tres veces) | Entrar con la clave → pulsar la nube desde Inicio, desde el detalle de un registro y desde el cuestionario, cronometrando → comprobar que «atrás» no regresa al espacio interno → Ajustes → «Ver el tutorial de nuevo» → práctica de ingreso con la clave real → nube → Ajustes → «Cerrar sesión» → reingreso | La nube devuelve al clima en menos de 1 s en los tres sitios, con la barra vacía; «atrás» no regresa; el tutorial completa su práctica; el reingreso exige clave y credenciales. **Por qué está aquí:** A2 y la transversal de RF-16 quedaron en ✅ el 2026-10-07, y el renombre `quickExit`→`closeNow` del 2026-10-10 tocó esa ruta después. El renombre está probado archivo por archivo como puro, así que esto es confirmación, no sospecha — pero una lista única no debe dejar un ✅ cuyo código cambió luego |
+| S8 | **La red sigue funcionando con la configuración nueva** (H-5, P-93) | Buscar una ciudad en la fachada y ver el pronóstico; entrar y comprobar que la nube sincroniza un registro nuevo | Clima real y sincronización en verde. Son 30 s, y conviene porque el archivo no lleva `<debug-overrides>`: si algo quedara mal declarado, se vería como un fallo de red y no como un fallo de configuración |
+| S9 | **H-9 — el campo enmascarado DENTRO de un diálogo** · *al final, porque la instalación de S es desechable aquí* | Ajustes → «Eliminar tu cuenta y tus datos» → primera confirmación → en el diálogo de contraseña, **antes** de teclear la real: abrir el ojo → pulsación larga → mirar el menú. Luego, o cancelar, o completar la eliminación y dejar así borrada la cuenta de prueba del bloque S | Sin «Copiar» ni «Cortar», con «Pegar». **Por qué este campo importa más que los otros:** es el único enmascarado que vive dentro de un `SecureDialog`, y un `Dialog` **reinstala** su propia barra de selección (medido en `ProvideCommonCompositionLocals`). Es el caso donde la colocación del envoltorio es portante: si estuviera a nivel de pantalla en vez de dentro del campo, este quedaría desnudo en silencio |
 
 ### Bloque C — Plataforma (recomendadas antes del tag, no encadenadas)
 

@@ -21,7 +21,7 @@ import com.auroraclima.app.R
 /**
  * Apariencia V2 de la nube de regreso al clima (RF-16): círculo de 52 dp en el
  * violeta EXCLUSIVO del anexo v2-29 con la nube de contorno encima. Esto es SOLO
- * apariencia: el mecanismo (grafo seguro, `SessionManager.quickExit`, posición y
+ * apariencia: el mecanismo (grafo seguro, `SessionManager.closeNow`, posición y
  * alcance del pulgar) vive en `core/security/SecureNavigation`, que la inyecta.
  * Para un tercero sigue siendo un botón decorativo «del clima» (F2 de A2-6).
  */

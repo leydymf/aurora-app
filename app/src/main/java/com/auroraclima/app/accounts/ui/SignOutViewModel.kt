@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 /**
  * Cierre de sesión explícito (RF-19): destruye el blob del reingreso silencioso
  * y SOLO DESPUÉS emite [doneEvents], para que la navegación cierre la sesión
- * interna (quickExit) con el blob ya inexistente — si el orden se invirtiera,
+ * interna (closeNow) con el blob ya inexistente — si el orden se invirtiera,
  * el pop destruiría este ViewModel con el borrado a medio camino.
  */
 @HiltViewModel

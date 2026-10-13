@@ -47,7 +47,7 @@ class TutorialViewModelTest {
         assertEquals(TutorialStep.ENTER, viewModel.uiState.value.step)
 
         viewModel.onNext()
-        assertEquals(TutorialStep.QUICK_EXIT, viewModel.uiState.value.step)
+        assertEquals(TutorialStep.CLOSE_NOW, viewModel.uiState.value.step)
         viewModel.onNext()
         assertEquals(TutorialStep.AUTO_CLOSE, viewModel.uiState.value.step)
         viewModel.onNext()

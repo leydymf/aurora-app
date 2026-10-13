@@ -91,7 +91,7 @@ fun ConsentRoute(onAccepted: () -> Unit) {
             state = state,
             onAcceptanceChange = viewModel::onAcceptanceChange,
             onAccept = onAccepted,
-            onReject = sessionManager::quickExit
+            onReject = sessionManager::closeNow
         )
     }
 }
