@@ -196,7 +196,7 @@ respecto de v0.3.0 en **negrita**.
 | CP-04 | RF-07 | PASA + MANUAL (§8-A2) | Auto: `CreateAccountViewModelTest` (10), `CreateAccountUseCaseTest` (**11 — al crear la cuenta se guardan las credenciales cifradas para el reingreso silencioso**), `FirebaseAuthRepositoryTest` (15). |
 | CP-05 | RF-08, RF-09 | PASA + MANUAL ✅/parcial (§8-A3) | Auto: como v0.2.0. P-53 ✅; resta Device Explorer (P-28), **ahora junto a `account_meta.xml`** (§8-A3). |
 | CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ + **§8-A2** | Auto: `TutorialViewModelTest` (**10 — «Saltar por ahora»: el salto fija el logro sin práctica y la práctica sigue disponible desde Ajustes**), `TutorialUiStateTest` (5). P-34/P-53 ✅ (tutorial completo); **el salto se verifica en §8-A2**. |
-| CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (§8-A1) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4), **`NoTracesGuardTest` (8 — `RecentsThumbnailGuard` es el único archivo que toca la miniatura de recientes) y `RecentsThumbnailGuardTest` (6 — la decisión del latch, aislada como lógica pura porque la API de Android no expone getter del flag)**. **P-14 ✅ (2026-10-05): la miniatura SÍ mostraba el código a medias; la guard (API 33+, solo mientras se busca) se re-verificó en emulador con el APK `429f283`, y la auditoría final (A-1) la enganchó al ciclo de vida para cerrar la carrera sub-frame con la limpieza de ON_PAUSE.** P-11 bloqueante y **P-84 (residual: bajo API 33 no hay API y queda solo ON_PAUSE — se mira en §8-C2)**. P-11 en §8-A1. **El reingreso silencioso no toca la barra: el código sigue siendo la única puerta (RF-12).** |
+| CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (§8-A1) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4), **`NoTracesGuardTest` (8 — `RecentsThumbnailGuard` es el único archivo que toca la miniatura de recientes) y `RecentsThumbnailGuardTest` (6 — la decisión del latch, aislada como lógica pura porque la API de Android no expone getter del flag)**. **P-14 ✅ (2026-10-05): la miniatura SÍ mostraba el código a medias; la guard (API 33+, solo mientras se busca) se re-verificó en emulador con el APK `429f283`, y la auditoría final (A-1) la enganchó al ciclo de vida para cerrar la carrera sub-frame con la limpieza de ON_PAUSE.** P-11 bloqueante y **P-84 (residual: bajo API 33 no hay API y queda solo ON_PAUSE; mirado ya en §8-C2 (2026-10-13): confirmado en API 26 — en 3 de 4 corridas la miniatura conserva el texto tecleado y sus resultados; con una pantalla interna delante sale en blanco).** P-11 en §8-A1. **El reingreso silencioso no toca la barra: el código sigue siendo la única puerta (RF-12).** |
 | CP-08 | RF-15 | PASA + MANUAL (§8-A4/A5) | Auto: `SignInUseCaseTest` (16), `LoginViewModelTest` (11), **`SilentSignInUseCaseTest` (9 — éxito, rechazo definitivo destruye el blob, deshacer bajo `NonCancellable` tras la salida), `SilentSessionCoordinatorTest` (10 — local-first, confirmación en segundo plano, monitor de red, reintento acotado con espera creciente P-81), `SilentSessionViewModelTest` (2); instrumentada `LocalCredentialStoreTest` (11)**. Manual: P-29 (login manual) y **P-71 (reingreso silencioso)** en §8-A4/A5. |
 | CP-09 | RF-16 | PASA + MANUAL (§8-A4, A11) | Auto: `SessionManagerTest` (20), `SecureFlagLedgerTest` (5), **`SilentSignInUseCaseTest` (la salida rápida con el silencioso en vuelo deshace el login)**. Manual: P-27 (§8-A11) y **P-71(7)** (§8-A4). |
 | CP-10 | RF-17, RF-18 | PASA + MANUAL ✅ | Auto: `ConsentViewModelTest` (2). P-53 ✅; visual V2 en §8-A2. |
@@ -223,9 +223,9 @@ respecto de v0.3.0 en **negrita**.
 | CP-31 | RNF-04 | PASA + MANUAL parcial | Auto: `NoTracesGuardTest` (8), `ManifestMinimizationTest` (7) + §3 (permisos idénticos hoy). **RF-31 persiste solo fecha + nivel + tipos; el PDF exportado solo lleva lo que la usuaria marcó.** |
 | CP-32 | RNF-05 | PASA + MANUAL (§8-A1) | Auto: `CamouflageResourcesTest` + DEX §2 (**hoy: 0 símbolos nuevos legibles; `GuidanceDatabase` neutro como `JournalDatabase`**). **El permiso `ACCESS_NETWORK_STATE`, ahora declarado por la app, es de nivel normal y plausible en una app de clima** (§3). Residual P-78 (plantillas `toString` en el DEX). |
 | CP-33 | RNF-06 | PASA ✅ | `firestore.rules` **sin cambios en el diff**: `outcomes` y `account_meta` (local) no exigen regla nueva — `/users/{uid}/**` ya cubre `outcomes`. Playground 10/10 ✅ (2026-07-15/17). |
-| CP-34 | RNF-07 | MANUAL (§8-C1) | Gama media: arranque ≤ 3 s, interacción ≤ 2 s. **Añadir la generación de un PDF con adjuntos (RF-45) y la primera entrada sin red al cronómetro. Nuevo (ADR 2026-10-05, P-80): tres arranques en frío tras `am force-stop` sin «failed to complete startup» — el grafo de Hilt ya no construye Firestore/FirebaseAuth en el hilo principal.** |
+| CP-34 | RNF-07 | **MANUAL ✅ en emulador (§8-C1, 2026-10-13)** | Gama media: arranque ≤ 3 s, interacción ≤ 2 s. **Corrido sobre el release v0.3.1-trl4 (SHA-256 `d1124f7f…`, commit `1d9d69b`) en AVD Pixel 2 / API 30 (2 GB, 4 núcleos): tres arranques en frío de 265 / 228 / 231 ms —ninguno con «failed to complete startup»—, entrada al espacio interno por debajo de 0,5 s, cambio de pestaña en 55–71 ms, salida rápida en 41–74 ms, PDF con 4 adjuntos (cuatro imágenes) en 1 155 ms sin ANR y 0 frames por encima de 16,7 ms al desplazar la Guía. Los tiempos de entrada y salida son cotas inferiores (miden el encendido de la bandera, no el primer frame). Los 29,6 s de P-80 eran del AVD de 1 núcleo, no de la app. El estado local lo creó el debug, porque el release no se puede activar limpio (P-20) — detalle en §8-C. Queda la medición en el teléfono real del piloto, que P-80 ya pedía.** |
 | CP-35 | RNF-09 | NO APLICA | Evaluación heurística formal de usabilidad (posterior). |
-| CP-36 | RNF-10 | MANUAL (§8-C2) | API 26: componentes V2 **+ exportación (PdfBox en minSdk) + selector de documentos**. |
+| CP-36 | RNF-10 | **MANUAL ✅ en emulador (§8-C2, 2026-10-13)** | API 26: componentes V2 + exportación (PdfBox en minSdk) + selector de documentos. **Recorrido del release en Android 8.0.0 (minSdk exacto) sin una sola caída: fachada con clima real, tutorial con práctica, tres pestañas, guía completa, cuestionario con resultado guardado, registro restaurado de la nube con sus 4 adjuntos, selector de fecha, PDF cifrado de 4 páginas y compartir. La activación (consentimiento, sesión y clave) corrió sobre el DEBUG: en el release es inalcanzable (P-20). FLAG_SECURE operativo en todas las pantallas recorridas (`screencap` = 0 bytes) y sin degradación visual de la hoja de confirmación, el interruptor ni el selector de fecha. Sin corrida: el primer arranque del release en instalación limpia. La otra mitad de RNF-10 —«dispositivo reciente»— la cubren los bloques A/B/P/S en API 35 y C1 en API 30. La miniatura de recientes, en P-84 y en §8-C2.** |
 | CP-37 | RNF-11 | PASA | Pasada final de `revisora-arquitectura` sobre el diff completo `main..HEAD` (§9). |
 | CP-38 | RF-45 | PASA + MANUAL ✅ (§8-A10, 2026-10-07) | Auto (2026-10-03): `JournalListViewModelTest` (selección), `ExportPolicyTest` (5), `BuildExportDocumentUseCaseTest` (9), `LoadExportSummaryUseCaseTest` (3), `JournalExportViewModelTest` (13), `LocalJournalExportRepositoryTest` (8, incluida la cancelación a mitad de escritura), `PdfBoxExportWriterTest` (16, escritor real: abre solo con la contraseña, PDF anexado con recursos heredados y podado de anotaciones/metadatos, cabecera y pie en páginas rotadas/recortadas, banda de continuación, audios incrustados sin colisión, PDF dañado o con árbol roto), `ManifestMinimizationTest` (dos `cache-path`), `CamouflageResourcesTest`; instrumentada `JournalExportPipelineTest` (2). Selector de documentos y de apps = UI del sistema: **manual ✅ (§8-A10, 2026-10-07)**. |
 | **CP-39** | **RF-46** | **PASA + MANUAL ✅ (§8-B3)** | Auto (2026-10-06): `SendPasswordResetUseCaseTest` (10 — mismo desenlace con/sin cuenta y con correo mal formado, pausa tras cinco envíos con contador propio, sin conexión se distingue), `LoginViewModelTest` (ampliado, +13 del archivo), `FirebaseAuthRepositoryTest` (ampliado, +18 del archivo), `NoTracesGuardTest` (guarda ampliada: ninguna capa de la recuperación registra en logs ni telemetría). Manual: **B3 ✅ (2026-10-07)** — mensaje de confirmación idéntico con correo con cuenta / sin cuenta / mal formado, aviso previo, sin conexión distinto, pausa al sexto envío sin bloquear el inicio de sesión normal. **Pendiente (P-19/P-88): personalizar la plantilla de Firebase y verificarla con un correo real antes de cualquier entrega del APK al piloto** — la corrida de hoy validó el comportamiento de la app, no el contenido del correo que compone Firebase. |
@@ -249,13 +249,16 @@ silencioso) y **RNF-07**, que pasó de «solo plataforma» a tener una prueba
 propia — `PendingErasureRecoveryTest` fija que el arranque no construye la
 cascada de borrado sin la marca izada (el eslabón que rompía el arranque antes
 del ADR 2026-10-05) y `AppStartupTest` que ningún fallo de una tarea de arranque
-tumba el proceso. La medición de tiempos de RNF-07 sigue siendo manual (§8-C1),
-igual que RNF-09 (usabilidad, trabajo posterior) y RNF-10 (API 26, §8-C2).
+tumba el proceso. La medición de tiempos de RNF-07 sigue siendo manual, y **ya
+está hecha**: §8-C1, 2026-10-13, en emulador de gama media y sobre el release
+—con la salvedad, dicha allí, de que falta repetirla en el teléfono del piloto—.
+**RNF-10 también quedó corrido** (§8-C2, API 26). El único RNF que sigue sin
+ejercitarse es **RNF-09** (usabilidad, evaluación heurística posterior).
 
 | Alcance | Con cobertura automatizada | Solo manual / futuro |
 |---|---|---|
 | **RF (46)** | **45** | RF-38 (cola de Firestore, manual en P-49 y §8-A4) |
-| **RNF (11)** | 9 (incluye RNF-07 parcial y RNF-08 nuevo) | RNF-09 (heurística posterior), RNF-10 (§8-C2) |
+| **RNF (11)** | 9 (incluye RNF-07 parcial y RNF-08 nuevo) | RNF-09 (heurística posterior). **RNF-07 y RNF-10 ya corridos manualmente en §8-C1/C2 (2026-10-13)** |
 
 ## 5. Pasadas manuales ya ejecutadas por la usuaria (integradas)
 
@@ -409,6 +412,12 @@ correrlo en un teléfono real de gama media/baja en vez de otro emulador. Con
 A2/A8/A10 cerrados, **el §8 ya no bloquea el merge ni el tag** — A11/A12/C
 quedan anotados como condición previa al piloto, no al TRL 4.
 
+> **Actualización 2026-10-13:** el **bloque C ya está corrido** (§8-C, más abajo),
+> en emulador y sobre el release de v0.3.1. Lo que esa decisión pedía —correrlo en
+> un teléfono real de gama media/baja— **sigue vivo y sigue siendo lo que falta**:
+> la corrida en emulador descarta un arranque patológico, pero no sustituye la
+> medición en el aparato del piloto (P-80). **A11 y A12 siguen deferidos.**
+
 **Re-verificación automatizada previa al merge (2026-10-07):** `./gradlew
 cleanTestDebugUnitTest cleanTestReleaseUnitTest test ktlintCheck lint
 assembleDebug assembleRelease` → **BUILD SUCCESSFUL** (3 min 47 s, 137 tareas).
@@ -513,7 +522,270 @@ que es el tercer extremo HTTPS y el único que S8 no toca por sí mismo.
 | # | Qué correr | Pasos | Resultado esperado |
 |---|---|---|---|
 | C1 | **CP-34 (RNF-07) — gama media + arranque en frío (ADR 2026-10-05, P-80)** | Emulador perfil gama media (2 GB RAM, ej. Pixel 2 API 30) o dispositivo real; instalar el RELEASE; **`adb shell am force-stop com.auroraclima.app` y arrancar en frío 3 veces midiendo con `adb shell am start -W com.auroraclima.app/.MainActivity` (anotar `TotalTime` de cada una)**; cronometrar arranque en frío, fachada→código→pestañas, **primera entrada sin red** y **generación de un PDF con los 4 adjuntos** | Ninguno de los 3 arranques muestra «failed to complete startup» y la fachada aparece en ≤ 3 s (`TotalTime` ≤ 3 000 ms; el AVD saturado de P-82 no sirve de referencia); respuesta ≤ 2 s; la exportación muestra progreso y termina sin ANR; sin jank en las listas |
-| C2 | **CP-36 (RNF-10) — API 26** · **RF-14 bajo API 33** | Emulador API 26 (minSdk); instalar debug y release; recorrer fachada, activación, pestañas, guía, cuestionario (guardar resultado), registros, **exportar y compartir**. **Además:** teclear el código a medias → Home → mirar la miniatura de recientes | Sin crashes ni degradación visual de los componentes V2; FLAG_SECURE operativo; PdfBox escribe y el selector de documentos funciona en minSdk. **La miniatura PUEDE mostrar el texto a medias: `setRecentsScreenshotEnabled` existe solo desde API 33, así que bajo minSdk solo queda la limpieza en ON_PAUSE — limitación documentada (nota de RF-14 y ADR 2026-10-05), NO una regresión.** Anotar lo observado |
+| C2 | **CP-36 (RNF-10) — API 26** · **RF-14 bajo API 33** | Emulador API 26 (minSdk); instalar debug y release; recorrer fachada, activación, pestañas, guía, cuestionario (guardar resultado), registros, **exportar y compartir**. **Además:** teclear el código a medias → Home → mirar la miniatura de recientes | Sin crashes ni degradación visual de los componentes V2; FLAG_SECURE operativo; PdfBox escribe y el selector de documentos funciona en minSdk. **La miniatura PUEDE mostrar el texto a medias: `setRecentsScreenshotEnabled` existe solo desde API 33, así que bajo minSdk solo queda la limpieza en ON_PAUSE — limitación documentada (nota de RF-14 y ADR 2026-10-05), NO una regresión.** Anotar lo observado, **repitiendo al menos 4 veces: es una carrera entre el snapshot del sistema y la limpieza en ON_PAUSE, y una sola muestra no sostiene ninguna conclusión** |
+
+### Resultado del bloque C (corrida por adb desde Claude Code, 2026-10-13)
+
+**Las dos pruebas pasan, y hay que decir enseguida dónde se midió: en emulador,
+no en un teléfono real.** Es la limitación principal de estas cifras y afecta
+sobre todo a C1: un emulador sobre Apple Silicon ejecuta ARM de forma nativa, sin
+la capa de traducción que hacía lentos los emuladores x86, así que los tiempos
+salen **mejores** que los de un teléfono de gama media de verdad. Valen para
+demostrar que no hay un arranque patológico ni una interacción que se cuelgue
+—que es lo que RNF-07 quiere descartar y lo que P-80 dejó en duda— pero **no son
+la medición del piloto**: esa hay que repetirla en el teléfono real antes de
+entregarlo (P-80 ya lo pedía: «medir en el teléfono del piloto»).
+
+**Artefacto medido.** `app/build/outputs/apk/release/app-release.apk`,
+23 952 390 bytes, **SHA-256 `d1124f7f…b312e`** — el mismo que cita la §10.3 del
+informe OWASP—, construido desde `1d9d69b` (tag `v0.3.1-trl4`; los dos commits
+posteriores son solo documentación y no tocan código). Ese APK está firmado con
+la **clave de depuración** (H-3 / P-91), así que el artefacto que se entregue al
+piloto, firmado con keystore propio, tendrá otro hash y **no** será literalmente
+el medido aquí.
+
+**Montaje.** Dos AVD nuevos, los dos sobre perfil **Pixel 2** (`google_apis`,
+`arm64-v8a`), que de fábrica trae exactamente lo que pide C1: **2 GB de RAM y 4
+núcleos**. Se les activó la GPU (`-gpu host`), que el perfil trae apagada y que
+sin ella haría renderizar por software y falsearía el rendimiento a la baja. Se
+arrancaron con `-no-snapshot` para que cada corrida empiece limpia, y **el
+emulador de API 35 se apagó mientras se medía C1**, porque dos emuladores vivos
+compiten por CPU.
+
+- **C1:** `Aurora_GamaMedia_API30` — Android 11 / API 30, `MemTotal` 2 030 708 kB, 4 núcleos.
+- **C2:** `Aurora_API26` — Android 8.0.0 / API 26, el `minSdk` exacto.
+
+**Lo que obligó a cambiar el procedimiento escrito, y por qué no es un fallo.**
+C1 dice «instalar el RELEASE» y C2 «instalar debug y release». **El release no se
+puede activar en una instalación limpia:** el código de activación lo siembra
+`DebugSecretCodeSeeder`, que vive solo en `app/src/debug/`, y no existe
+`app/src/release/`; sin código sembrado, `ValidateSecretCodeUseCase` devuelve
+siempre `PassThrough` y la barra nunca abre la activación. No es una regresión, sino un hueco
+entre una decisión y el código: **P-20 está cerrado** —la directora aprobó en
+2026-07-21 el código único entregado en persona— pero **ninguna build de release
+siembra código alguno**, así que la decisión no tiene todavía implementación. Se resolvió por la vía que además es la realista: **instalar el
+debug, activar con `luna2026`, crear cuenta y clave personal, y actualizar
+in-place al release con `adb install -r`** — mismo `applicationId` y misma firma,
+así que los datos, la base SQLCipher y los alias del Keystore sobreviven.
+
+**Qué binario ejecutó cada cosa, dicho con precisión.** Todas las **mediciones** de
+C1 y **todo el recorrido posterior a la activación** —en las dos corridas— se
+hicieron con el **release ofuscado**. Lo que corrió sobre el **debug** es el tramo
+de primer uso, porque es justo el que el release no puede abrir: **consentimiento
+(RF-17/18), alta o inicio de sesión (RF-06/07) y creación de la clave personal
+(RF-08)**. El tutorial sí se ejercitó con el release, desde Ajustes → «Ver el
+tutorial otra vez». Tres consecuencias que conviene no dejar implícitas:
+
+- **Lo que esto sí demuestra, y no estaba probado:** R8 no rompe la **lectura** de
+  la base ni del Keystore creados por el debug — la clave personal abre el espacio
+  interno con el release encima, y en C2 el registro bajó de la nube y se descifró
+  bajo R8, es decir Auth + Firestore + SQLCipher funcionando ofuscados.
+- **Lo que no demuestra:** sigue **sin corrida manual el primer arranque del release
+  en instalación limpia** — creación de la base SQLCipher, creación de alias del
+  Keystore y migraciones de Room bajo R8 — las rutas donde la reflexión de Room y
+  las reglas `keep` tendrían que fallar si algo faltara. **Hoy no lo rastrea ningún
+  pendiente; queda abierto como P-111.**
+- **La instalación resultante no es un release limpio:** conserva la ranura
+  `CodeSlot.ACTIVATION` sembrada por el debug en `shared_prefs/search_index.xml`.
+  Es **inerte** —`ValidateSecretCodeUseCase` corta en cuanto existe la clave de la
+  usuaria, así que `luna2026` ya no abre nada— pero **ese AVD no sirve para probar
+  RF-20**: tras `clearAll()` ningún sembrador repone la ranura y el doble fondo
+  quedaría inalcanzable sin reinstalar (es **P-55**).
+
+| Paso | Estado | Nota |
+|---|---|---|
+| **C1** · CP-34 / RNF-07 | ✅ | Los tres arranques en frío **muy por debajo** del límite y ninguna interacción cerca de los 2 s. Detalle abajo |
+| **C2** · CP-36 / RNF-10 | ✅ | Recorrido completo en API 26 sin una sola caída; `logcat -b crash` vacío. Detalle abajo |
+| **C2** · miniatura de recientes bajo API 33 | ✅ con observación | **Confirma P-84 tal como estaba**: el código a medio teclear sí queda. Repetido 4 veces, abajo |
+
+#### C1 — tiempos medidos (API 30, release)
+
+Instrumentos, porque las cifras solo valen si se sabe con qué se tomaron:
+`am start -W` para el arranque (y el `Displayed` del propio sistema como segundo
+testigo independiente); **`dumpsys gfxinfo … framestats`** para las transiciones
+—mide dentro del dispositivo, así que no incluye la latencia de adb, y se
+comprobó que la app dibuja **0 frames en 4 s de reposo**, de modo que cada ráfaga
+de frames es la interacción y nada más—; y, para la entrada al espacio interno,
+**la propia bandera FLAG_SECURE como testigo**, con un bucle de `screencap` dentro
+del dispositivo (**período de muestreo ≈ 110 ms**, que es lo que cuesta cada
+captura en la fachada): en la fachada devuelve ~110 KB y dentro del doble fondo
+devuelve 0 bytes. `uiautomator` se descartó para cronometrar: tarda 1,8 s por
+volcado, más que el presupuesto que se quiere medir.
+
+**Qué mide exactamente ese testigo, para no afirmar de más.** La bandera se
+enciende en el `DisposableEffect` de `SecureScreen`, es decir **cuando se aplica la
+composición de la primera pantalla segura**, antes de que esa pantalla se mida, se
+disponga y pinte su primer frame. Las cifras de entrada y de salida rápida son por
+tanto **cotas inferiores** de la latencia percibida, no el instante en que cambia
+lo que se ve.
+
+Y hay un segundo sesgo, en sentido contrario, que conviene declarar junto al
+primero: **el muestreador atrasa**, porque la transición se detecta en la captura
+siguiente, de modo que sobrestima el instante de la bandera en hasta un período
+completo. O sea que la bandera adelanta al frame y el muestreo atrasa a la bandera.
+La consecuencia práctica es que **cualquier valor por debajo de ~110 ms debe leerse
+como «menos de un período de muestreo» y no como una cifra exacta**: los 42 ms de
+entrada sin red y los 41 ms de salida no son medidas finas, son «por debajo del
+umbral del instrumento». Nada de esto mueve la conclusión —todo queda uno o dos
+órdenes de magnitud por debajo de los 2 000 y los 1 000 ms—, pero el número hay que
+leerlo con su error. **La carrera simétrica que este mismo instrumento deja a la
+vista en la salida rápida está abierta como P-110.**
+
+| Qué se midió | Resultado | Límite |
+|---|---|---|
+| Arranque en frío ×3 (`TotalTime`), con red | **265 / 228 / 231 ms** (media 241) | ≤ 3 000 ms |
+| — calentamiento tras instalar (no cuenta) | 208 ms | — |
+| — segundo testigo: `Displayed` del sistema | +221 ms | — |
+| Arranque en frío ×3, **sin red** | **210 / 221 / 215 ms** | ≤ 3 000 ms |
+| Fachada → clave → espacio interno, con red | **283 / 410 / 293 ms** (cota inferior) | ≤ 2 000 ms |
+| Fachada → clave → espacio interno, **sin red** | **42 / 175 / 181 ms** (cota inferior) | ≤ 2 000 ms |
+| Cambio de pestaña (Inicio · Guía · Mi registro) | **55 / 71 / 57 / 55 / 56 / 70 ms** | ≤ 2 000 ms |
+| Pestaña Guía sin red | **7 ms** | ≤ 2 000 ms |
+| Salida rápida (nube → clima, RF-16) | **41 / 74 / 74 ms** (cota inferior) | ≤ 1 000 ms |
+| Guardado de un registro con 4 adjuntos | **≈ 1 200 ms** | ≤ 2 000 ms |
+| **Generación del PDF con los 4 adjuntos** | **1 155 ms**, sin ANR | ≤ 2 000 ms |
+| Jank al desplazar **la Guía** | 112 frames, peor 13,4 ms, **0 frames > 16,7 ms** | sin jank |
+
+**Ninguno de los tres arranques mostró «failed to complete startup»**, que era la
+pregunta concreta que dejó el ADR 2026-10-05. Conviene ponerlo al lado de P-80:
+allí el arranque dio **29,6 s** y la entrada quedó en entredicho; aquí da **241 ms
+de media**. La diferencia no es la app —el código es el mismo más las correcciones
+OWASP— sino el AVD: el de P-82 corría con **1 núcleo** y con Play Store
+actualizándose por detrás. Dicho de otro modo: **lo que P-80 midió fue el
+emulador, no Aurora**. El arrastre de Firebase al hilo principal que P-80 describe
+sigue ahí y sigue siendo deuda, pero no se manifiesta como un arranque lento en
+hardware que no esté saturado.
+
+**Tres acotaciones del resultado esperado de C1, para que nadie lo dé por más
+cubierto de lo que está.** (1) El **progreso** de la exportación no se cronometró
+en pantalla: el mecanismo existe y está verificado en código —el botón de guardar
+recibe `isLoading = state.isExporting` y se deshabilita mientras escribe— pero con
+1,2 s de generación apenas es perceptible, así que lo que se comprobó es que
+**termina sin ANR**, no que el indicador se vea. (2) El jank se midió **solo en la
+Guía**; el listado de registros y el pronóstico de 5 días no se desplazaron bajo
+medición. (3) Los 4 adjuntos del PDF eran **cuatro imágenes**: ni el PDF anexado ni
+el audio incrustado se ejercitaron aquí — eso lo cubrió §8-A10 / CP-38 el
+2026-10-07.
+
+Dos cosas más que salieron de paso: **RNF-08** quedó confirmado —la Guía carga
+completa sin conexión, con su rótulo «Puedes leerlo sin conexión» y el chip «Sin
+conexión» visible— y, **coherente con RF-13**, al teclear texto que no es el código
+la barra responde con una búsqueda de ciudad fallida de ~690 ms; la verificación
+*comparada* del requisito (ciudad inexistente contra código incorrecto, mismo
+texto y mismos tiempos) es la de §8-A1 y sigue en verde, esto solo la acompaña. El
+corte de red se hizo con `svc wifi/data disable`, como manda **P-82** (el modo
+avión cuelga `system_server` en estos AVD). El PDF generado se verificó
+abriéndolo: **4 páginas, 4 objetos `/Subtype /Image`, `/Encrypt` presente y
+ninguna cadena legible**.
+
+#### C2 — recorrido en API 26 (minSdk)
+
+Se instaló el debug (arranca en 752 ms), se activó, y se instaló el release
+encima: **251 / 230 / 247 ms** de arranque. Todo lo posterior a la activación se
+hizo con el release. **Sin una sola caída ni ANR** (`logcat -b crash` vacío; los
+«app died» del log son los `am force-stop` de las propias mediciones).
+
+*(La tabla va por flujo de pantallas, no por orden cronológico: la fachada se
+repasó con el release ya instalado, después de la activación.)*
+
+| Tramo | Binario | Resultado |
+|---|---|---|
+| Fachada y búsqueda de ciudad | release | ✅ Open-Meteo responde; Bucaramanga 22°, llovizna, humedad, viento, lluvia |
+| Pronóstico de 5 días (RF-04) | release | ✅ cinco filas con icono y máx./mín. |
+| Activación: consentimiento, sesión y clave | **debug** | ✅ `luna2026` → consentimiento (casilla y contraste correctos) → inicio de sesión con cuenta existente → clave personal. **En el release este tramo es inalcanzable (P-20)** |
+| Tutorial (RF-10/RF-19) | release | ✅ desde Ajustes, con práctica de ingreso y práctica de la nube |
+| Pestañas | release | ✅ Inicio · Guía · Mi registro |
+| Guía | release | ✅ portada y las tres secciones con su contenido: tipos con descripción, rutas Salud/Protección/Justicia, líneas 155 y 123 |
+| Cuestionario (RF-29/RF-31) | release | ✅ 12 preguntas, resultado «Para tener presente», **hoja de confirmación correcta** y resultado guardado |
+| Registros (RF-34/RF-39) | release | ✅ el registro de C1 **llegó por la nube con sus 4 adjuntos** y el detalle los muestra descifrados |
+| Formulario de registro y **selector de fecha** | release | ✅ chips de tipo dinámicos y el `DatePicker` de material3 se dibuja completo (encabezado, rejilla del mes y navegación) |
+| Exportar (RF-45) | release | ✅ PDF cifrado de 77 858 B, 4 páginas, 4 imágenes; **PdfBox escribe en minSdk** y el selector SAF funciona, con nombre neutro `documento_2026-10-13.pdf` |
+| Compartir | release | ✅ el intent abre la app receptora (no se envió nada) |
+| Ajustes | release | ✅ el listado con sus seis entradas bien dibujado (clave, contraseña, tutorial, privacidad, cerrar sesión y eliminar cuenta), repartidas en sus tres grupos |
+
+**Sin degradación visual de los componentes V2** en lo que se miró, que fueron tres
+de los que señalaba S6: la **hoja de confirmación** de guardar resultado (`Dialog`
+con `usePlatformDefaultWidth = false`) con su asa, su icono y su botón lleno; el
+**interruptor «Incluir adjuntos»** con los dos campos de contraseña, que cumplen el
+contraste B8 —relleno blanco, contorno que se engrosa y oscurece con el foco—; y el
+**selector de fecha**. Quedaron **sin mirar en API 26** los indicadores circulares
+de carga, y de las 25 rutas del grafo seguro no se visitaron las de detalle de tipo,
+detalle de entidad, visor de adjunto, edición de registro, relectura del acuerdo y
+los tres destinos de Ajustes.
+
+**FLAG_SECURE (RNF-02).** En **todas las pantallas internas recorridas** (las de la
+tabla), `adb shell screencap` devuelve **0 bytes**; la fachada y el pronóstico sí se
+capturan, como debe ser. Dos acotaciones para que la medida no se lea como más de lo
+que es: `screencap` captura el **compositado del display**, así que **no discrimina
+por ventana** —basta una capa segura para que falle la captura entera—; la garantía
+de que cada hoja y cada diálogo llevan la bandera la dan `SecureDialog`/`SecureSheet`
+y `NoTracesGuardTest`, no esta comprobación. Y el **selector SAF y la hoja de
+compartir** quedan fuera por diseño: corren en sus propias tareas y allí `screencap`
+sí funciona, que es la excepción de `isAwaitingSystemReturn`.
+
+**Sobre las capturas de este informe.** Las del espacio interno se tomaron con
+`adb emu screenrecord screenshot`, que lee el **framebuffer del emulador** por fuera
+de Android y por tanto no está sujeto a FLAG_SECURE. Es una capacidad del emulador,
+**no una vía disponible en un teléfono**, y no contradice RNF-02 en nada. Viven en un
+directorio temporal de la sesión, **fuera del repositorio y sin versionar**; si
+alguna se usara en el informe TRL 4 hay que revisarla antes, en particular la del
+formulario de contraseña de exportación.
+
+#### C2 — la miniatura de recientes, que es lo que había que anotar
+
+Son dos casos distintos y conviene no mezclarlos:
+
+- **Con una pantalla interna en primer plano, la miniatura sale en blanco.** Solo
+  se ven el nombre «Aurora» y el icono de clima. FLAG_SECURE impide que el sistema
+  capture la miniatura, también en API 26. **El doble fondo no queda en recientes
+  ni en minSdk**, que es lo que de verdad importa para el camuflaje.
+- **Con el código a medias en la barra del clima**, la miniatura conserva **el frame
+  con la búsqueda viva**: el texto tecleado **y** los resultados que derivan de él.
+  En la tarjeta de recientes de este launcher los resultados se leen enteros, y el
+  campo con el texto **está ahí pero tapado**: el encabezado de la tarjeta (icono,
+  nombre y ✕) cubre la franja superior, y de la barra solo asoma su borde inferior.
+
+**Esto confirma P-84 tal como estaba escrito, y no lo matiza: el código a medio
+teclear SÍ queda en la miniatura.** La primera lectura de esta corrida fue la
+contraria —«el campo aparece vacío, la limpieza borró el texto y solo quedan los
+resultados»— y era un **error de observación**: lo encontraron las dos auditorías al
+cotejarlo con el código, y lo confirmó la ampliación de las capturas a resolución
+completa. El frame anterior a pulsar Inicio muestra el texto en el campo, con su
+cursor, y la lista debajo; la miniatura es ese mismo frame, recortado por el
+encabezado. **Que el texto no se lea es geometría del launcher, no una protección:**
+otro launcher, otra altura de encabezado o una pantalla con otra proporción pueden
+dejarlo a la vista.
+
+**Y es una carrera, no una regla — por eso se repitió.** Siguiendo el protocolo que
+§8-A1 ya exige para esta misma carrera, se hicieron **cuatro corridas**: en **tres**
+la miniatura conservó la búsqueda (texto + resultados) y en **una** la limpieza de
+`ON_PAUSE` llegó a tiempo y la miniatura mostró la fachada normal, con su tarjeta de
+clima y sin rastro de la búsqueda. Es decir: **3 de 4 expuestas**. El mecanismo es el
+que ya documentaba el latch de `RecentsThumbnailGuard` —`clearSearch()` vacía texto,
+resultados y bandera en un **único `update` atómico**, y la lista solo se dibuja con
+la bandera puesta, así que **ningún frame puede tener campo vacío con resultados**—
+y lo que decide el resultado es si el sistema toma el snapshot antes o después de esa
+limpieza. Bajo API 33 no hay `setRecentsScreenshotEnabled` y solo queda ese mejor
+esfuerzo; en API 33+ no ocurre, porque el sistema no toma la captura.
+
+**Consecuencia para la decisión del piloto (P-84):** si se elige la opción (b)
+—aceptar el riesgo y advertirlo en el manual—, la advertencia tiene que cubrir **el
+texto tecleado y los resultados de la búsqueda**, sin confiar en que el recorte del
+launcher oculte lo primero.
+
+#### C2 — la otra mitad de RNF-10
+
+RNF-10 pide la versión mínima **y un dispositivo reciente**. La primera mitad es
+este bloque (API 26). La segunda está cubierta por el resto de la §8, que corrió
+sobre **API 35** (bloques A, B, P y S, con la corrida de la usuaria del 2026-10-07 y
+la del bloque S del 2026-10-13) y por **C1** sobre API 30. Entre las tres, el
+recorrido funcional queda ejercitado en Android 8, 11 y 15.
+
+**Una observación de método, para que nadie la confunda con un fallo.** Durante la
+corrida la nube de salida pareció no responder en la pantalla de práctica del
+tutorial. No era la app: el teclado del emulador la tapaba y los toques
+sintéticos de `adb` iban al teclado. Cerrando el teclado antes, la nube devuelve
+al clima con la barra vacía. Comprobado y descartado.
 
 ## 9. Pasadas de agentes sobre el diff completo `main..HEAD` (2026-10-05)
 
