@@ -1602,7 +1602,7 @@ más arriba: lo que no se mira, se declara.
 **Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
 el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
 `app-release.apk`, 23 952 390 B, SHA-256
-`36bff7a36aaa63d836e3b9d18245ef2f503f3fea4ce36e2e895133fdd31673d2`—: **390 627
+`d1124f7fe3b937e65d1cf99372e2d2d725b5ff24e9ede6002424b8c119cb312e`—: **390 627
 cadenas de 3 o más caracteres, 148 364 distintas, en 197 entradas, 0 hallazgos
 nuevos** y el autochequeo de canarios en 4/4.
 
