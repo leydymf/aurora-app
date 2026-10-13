@@ -483,7 +483,7 @@ emulador — `assembleDebug` no instala.
 | S1 · S1b (tres tramos) · S3 | ✅ | Solo dejan pegar y seleccionar; **nunca copiar ni cortar**, ni con el ojo abierto ni con «Seleccionar todo» aplicado. Cierra la comprobación manual de P-94 (H-7) y de P-103 (H-9) |
 | S2a · S2b · S6 · S7 · S8 · S9 | ✅ | Sin observaciones. S9 eliminó la cuenta de prueba y su marca de borrado pendiente se completó al siguiente arranque, como estaba previsto |
 | S5 | ✅ (cubierto) | Las 20 corridas de la caída ya estaban medidas (§10.2 del informe) |
-| **S4** | ❌ **→ H-10** | Las palabras inventadas escritas ese día en el relato y en la barra **no** se aprendieron. Pero el teclado **sí ofrecía una clave personal aprendida antes** —`auditoria77`, creada el 2026-10-10 antes de que existiera la protección— al escribir «aud» **en la propia barra del clima de Aurora**. Hallazgo nuevo, gravedad alta: §10.7 del informe y P-106 |
+| **S4** | ❌ **→ H-10** | Las palabras inventadas escritas ese día en el relato y en la barra **no** se aprendieron. Pero el teclado **sí ofrecía una clave personal aprendida antes** —creada el 2026-10-10, antes de que existiera la protección— al escribir «aud» **en la propia barra del clima de Aurora**. Hallazgo nuevo, gravedad alta: §10.7 del informe y P-106 |
 | **S4b** | ✅ | Tras la corrección: ni en la barra del clima ni en la de práctica apareció la palabra que el teclado había aprendido en otra aplicación. Cierra la parte de H-10 que depende del código; lo que queda es operativo (borrar la palabra del diccionario y rotar la clave, P-106) |
 
 **Orden, que no es el numérico:** `S2a → S1 → S1b → S3 → S4 → S4b → S5 → S6 → S7 (con S2b en su «Cerrar sesión») → S8 → S9`.

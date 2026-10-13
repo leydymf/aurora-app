@@ -891,6 +891,12 @@ sería un secreto: ya figura en siete archivos versionados de este repositorio
 `admin/src/firebase/config.ts`, `firestore/README.md`, `tools/admin/README.md`,
 `docs/PENDIENTES.md`, `docs/RESULTADOS_PRUEBAS.md`).
 
+> **Nota añadida el 2026-10-13.** «Que además es privado» era cierto cuando se
+> escribió y **dejó de serlo**: el repositorio es público por decisión expresa de la
+> desarrolladora (§10.10). La conclusión del párrafo no cambia —esos seis valores
+> no son credenciales y el control de acceso lo hacen las reglas de Firestore— pero
+> el argumento «total, está en un repositorio privado» ya no se puede usar.
+
 **Evidencia.** EV-03.
 
 ---
@@ -1887,8 +1893,8 @@ menú.
 
 Lo encontró **la usuaria**, en la corrida manual §8-S4, y lo trajo con captura: al
 escribir «aud» en la barra de búsqueda de la fachada, Gboard ofrecía
-`auditoria77` —la clave personal de la cuenta de prueba— en su tira de
-sugerencias. Dentro de Aurora. Es el hallazgo más directo de toda la evaluación:
+**la clave personal de la cuenta de prueba** —cuyo valor no se reproduce aquí— en
+su tira de sugerencias. Dentro de Aurora. Es el hallazgo más directo de toda la evaluación:
 no hace falta descompilar nada ni tener herramientas; basta tomar el teléfono,
 abrir la app del clima y empezar a teclear.
 
@@ -1905,7 +1911,7 @@ La propia S-4 lo confirma: las palabras inventadas que la usuaria escribió **es
 día** en el relato y en la barra **no** se aprendieron. Lo que aparecía era una
 palabra aprendida **antes**.
 
-**Dónde se aprendió, con fecha.** La clave `auditoria77` se creó la mañana del
+**Dónde se aprendió, con fecha.** Esa clave se creó la mañana del
 2026-10-10, durante la recuperación de la cuenta de prueba tras el incidente de
 `connectedDebugAndroidTest`. La corrección de H-7 —la que añade el flag a las dos
 barras— entró ese mismo día a las **14:37** (commit `a329245`). En la ventana
@@ -2093,3 +2099,49 @@ fallar en `kspReleaseKotlin` y en `processDebugResources`— y fueron la causa d
 cifras irreproducibles que se corrigieron en §10.3. `lint`
 da 0 errores y 58 avisos, ninguno sobre los archivos nuevos. El APK release
 medido es el del SHA-256 de §10.3.
+
+### 10.10 Nota sobre la visibilidad del repositorio
+
+Esto no es un hallazgo de la aplicación, pero condiciona cómo se lee todo lo
+anterior y por eso va escrito.
+
+Al ir a publicar v0.3.1 se comprobó con `gh repo view` que `leydymf/aurora-app`
+está **PÚBLICO**. El pendiente P-07 —«verificar que el repositorio remoto sea
+privado, porque los docs versionados describen el propósito real y un repo público
+rompería el camuflaje»— figuraba como resuelto desde el 2026-10-01, y en algún
+momento posterior la visibilidad cambió.
+
+**Es una decisión expresa de la desarrolladora, y queda así**, con tres motivos que
+se sostienen: el repositorio aporta a su hoja de vida mientras busca prácticas
+profesionales; el prototipo **no tiene usuarias reales**; y un despliegue real sería
+otro producto —en la UNAB, que querría darlo a conocer, y multiplataforma—, así que
+el camuflaje de *este* prototipo no tiene valor operativo que proteger.
+
+**Lo que esa decisión invalida, y hay que leer en consecuencia:**
+
+- La aceptación de tener los **49 términos vedados en claro** en el repositorio se
+  razonó «porque el repositorio es privado». Sigue siendo aceptable, pero por el
+  motivo nuevo, no por aquel.
+- **P-101(b)**, que aceptaba el hash del commit dentro del APK «bajo la premisa de
+  repositorio privado». Sigue siendo inocuo, y ahora por una razón distinta: el
+  historial que ese hash correlaciona es público de todos modos.
+- El argumento de §5.2 sobre los identificadores de Firebase, que se apoyaba en lo
+  mismo.
+
+**Y un hecho que no se deshace.** El repositorio estuvo público al menos desde el
+2026-10-07 con `CLAUDE.md` y `docs/ARQUITECTURA.md` dentro, y la primera línea de
+`CLAUDE.md` describe el doble fondo sin rodeos. Volver a privarlo no restauraría el
+secreto: GitHub pudo indexarlo y hay terceros que archivan repositorios públicos.
+Comprobado el 2026-10-13: 0 forks y 0 estrellas, que es el único consuelo medible.
+
+**Lo que sí se hizo antes de publicar**, porque una cosa es el diseño y otra las
+credenciales: se barrió el árbol buscando claves, contraseñas y correos reales. Se
+encontró y redactó la clave personal de la cuenta de prueba, que este mismo informe
+había escrito al narrar H-10 —la segunda vez que pasa, después de EV-13—, y se
+verificó que `google-services.json` no está versionado y que `.gitignore` cubre
+keystores, llaves de servicio, `local.properties` y los `.env`.
+
+**Consecuencia para el piloto, si alguna vez lo hay.** Un despliegue con usuarias
+reales exige un repositorio distinto y privado desde el primer commit, porque el
+historial de este ya es público y no se puede reescribir hacia atrás. Es, de hecho,
+coherente con la propia decisión: ese despliegue sería otro producto.
