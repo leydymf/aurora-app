@@ -244,15 +244,41 @@ la usuaria elige para cifrar el archivo exportado. El motivo es que copiarla par
 enviarla es justamente lo que la pondría en el portapapeles, que es lo que se está
 cerrando. Pegar sigue funcionando en todos los campos.
 
-**Los dos hallazgos nuevos se encontraron de maneras distintas, y la diferencia dice
+**Y un tercero, que encontró la propia desarrolladora usando la aplicación.** Al
+hacer las comprobaciones finales en el teléfono escribió «aud» en el buscador del
+clima y el teclado le ofreció, en su tira de sugerencias, la clave de acceso que se
+había usado para las pruebas. Dentro de la aplicación. No hizo falta ninguna
+herramienta: basta tomar el teléfono y empezar a teclear.
+
+Conviene distinguir dos cosas que parecen una. Que el teclado **aprenda** lo que se
+escribe ya estaba cerrado desde la corrección anterior, y la propia comprobación lo
+confirmó: las palabras inventadas que escribió ese día no se aprendieron. Lo que
+quedaba abierto era que el teclado **ofreciera** lo que había aprendido **antes**,
+en las horas previas a esa corrección. Se cerró pidiéndole al teclado que no muestre
+sugerencias en las dos barras de búsqueda —y solo en ellas, para no perder la
+corrección automática al escribir el relato—.
+
+Hay una parte que la aplicación no puede arreglar, y es honesto decirla: la palabra
+ya está en el diccionario del teclado del teléfono, y seguirá apareciendo en otras
+aplicaciones. Lo que se consigue es que deje de aparecer dentro de Aurora, que es
+donde delata: una palabra extraña sugerida en un buscador de ciudades es un indicio;
+la misma palabra en un chat no significa nada. El resto se resuelve borrando esa
+palabra del teclado y cambiando la clave.
+
+**Los tres hallazgos nuevos se encontraron de maneras distintas, y la diferencia dice
 algo del método.** El primero apareció porque una comprobación automática se volvió
 más estricta: la herramienta lo encontró sola. El segundo llevaba ahí desde la
 versión evaluada y **ninguna herramienta lo vio**, porque todas daban por buena la
 misma suposición escrita en el código; lo encontró una persona leyendo el código
-compilado de la librería. Es la segunda vez en esta corrección que una medición
-desmiente un comentario del propio código —la primera fue la de la corrección
-automática del teclado—, y es el aprendizaje que más vale llevarse: una afirmación
-escrita no es una verificación.
+compilado de la librería. Y el tercero no lo habría visto ningún análisis, porque
+no estaba en el código de la aplicación sino en el diccionario del teclado del
+teléfono: lo encontró una persona **usando** la aplicación.
+
+Es la tercera vez en esta corrección que una suposición dada por buena resulta
+falsa al medirla —antes fueron la de la corrección automática del teclado y la del
+ocultamiento con puntos—, y es el aprendizaje que más vale llevarse: **una
+afirmación escrita no es una verificación**. Las tres se desmintieron midiendo: dos
+leyendo el código compilado de la librería y una mirando la pantalla del teléfono.
 
 **Quedan dos previstos**, los dos de preparación para el despliegue: firmar el
 instalable con una clave propia y revisar dos componentes que arrastra la librería

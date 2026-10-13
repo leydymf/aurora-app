@@ -336,7 +336,7 @@ private fun PracticeContent(input: String, status: PracticeStatus, onInputChange
  */
 @Composable
 private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
-    SecureTextEntry {
+    SecureTextEntry(hideSuggestions = true) {
         TextField(
             value = value,
             onValueChange = onValueChange,

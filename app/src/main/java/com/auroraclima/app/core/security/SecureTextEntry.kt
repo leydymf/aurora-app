@@ -139,13 +139,17 @@ private class NoCopyTextToolbar(private val delegate: TextToolbar) : TextToolbar
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun NoImeLearning(content: @Composable () -> Unit) {
+private fun NoImeLearning(hideSuggestions: Boolean, content: @Composable () -> Unit) {
     InterceptPlatformTextInput(
         interceptor = { request, nextHandler ->
             val noLearning = PlatformTextInputMethodRequest { outAttributes ->
                 request.createInputConnection(outAttributes).also {
                     outAttributes.imeOptions =
                         outAttributes.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+                    if (hideSuggestions) {
+                        outAttributes.inputType =
+                            outAttributes.inputType or EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                    }
                 }
             }
             nextHandler.startInputMethod(noLearning)
@@ -155,19 +159,38 @@ private fun NoImeLearning(content: @Composable () -> Unit) {
 }
 
 /**
- * Envoltorio único para los campos de texto del espacio interno. Aplica las dos
+ * Envoltorio único para los campos de texto del espacio interno. Aplica las
  * protecciones a la vez, para que no se pueda poner una y olvidar la otra.
  *
  * Toda pantalla interna con un campo editable debe usar un campo del kit de
  * `core/ui/v2`, y **todo** campo del kit debe estar envuelto aquí, enmascare o no
  * (H-9: enmascarar no exime, porque el ojo apaga la máscara). Lo fija
  * `SensitiveFieldsGuardTest`.
+ *
+ * [hideSuggestions] añade `TYPE_TEXT_FLAG_NO_SUGGESTIONS` y **solo lo piden las dos
+ * barras de búsqueda** (H-10). El motivo es distinto del de las otras dos
+ * protecciones, y conviene no confundirlos:
+ *
+ *  - el flag del IME impide que el teclado APRENDA lo que se escribe;
+ *  - este impide que el teclado SUGIERA lo que ya aprendió **antes**.
+ *
+ * Hizo falta porque una clave personal tecleada en la barra cuando esta aún no
+ * tenía la primera protección quedó en el diccionario de Gboard, y el teclado la
+ * seguía ofreciendo dentro del propio buscador del clima: quien tomara el teléfono
+ * y escribiera «aud» en una app de clima veía la clave sugerida. Aurora no puede
+ * borrar lo que Gboard ya aprendió —ni evitar que lo sugiera en otra app—, pero sí
+ * puede dejar de pedirle sugerencias en el único campo donde eso delata.
+ *
+ * NO se aplica al relato ni a los correos a propósito: ahí el coste de perder
+ * autocorrección y predicciones en un texto largo no lo compensa nada, y el riesgo
+ * tampoco existe, porque lo que se teclea en ellos no es una credencial que vaya a
+ * reaparecer sugerida en la fachada.
  */
 @Composable
-fun SecureTextEntry(content: @Composable () -> Unit) {
+fun SecureTextEntry(hideSuggestions: Boolean = false, content: @Composable () -> Unit) {
     val toolbar = LocalTextToolbar.current
     val noCopy = remember(toolbar) { NoCopyTextToolbar(toolbar) }
     CompositionLocalProvider(LocalTextToolbar provides noCopy) {
-        NoImeLearning(content)
+        NoImeLearning(hideSuggestions = hideSuggestions, content = content)
     }
 }

@@ -190,7 +190,7 @@ private fun WeatherSearchBar(
     } else {
         Modifier
     }
-    SecureTextEntry {
+    SecureTextEntry(hideSuggestions = true) {
         TextField(
             value = query,
             onValueChange = onQueryChange,

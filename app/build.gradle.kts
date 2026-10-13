@@ -197,10 +197,34 @@ val verificarCamuflajeDex by tasks.registering {
         // espacio al principio (se recortan al leerlo) y en el DEX hay cadenas así.
         fun aceptada(cadena: String) = cadena in aceptadas || cadena.trim() in aceptadas
 
+        // Un término de 3 letras casa por accidente dentro de casi cualquier cosa
+        // —«sos» vive en «ISOSpeed» y en basura binaria como «\sOSUpPS9»— y esas
+        // cadenas no son estables entre construcciones, así que el release empezaba a
+        // fallar al azar. Para los términos cortos se exige que no estén pegados a
+        // una letra: así «SOS» suelto se caza y «ISOSpeed» no.
+        //
+        // El precio, dicho claro: un `sosBoton` propio se le escaparía AQUÍ. No queda
+        // sin vigilar, porque `CamouflageResourcesTest` aplica los dos ámbitos a los
+        // identificadores y a los literales de las fuentes, que es donde ese nombre
+        // nacería. Este guardián existe para el residuo que R8 deja, no para sustituir
+        // al de las fuentes.
+        fun casa(cadena: String, termino: String): Boolean {
+            if (termino.length > 3) return cadena.contains(termino, ignoreCase = true)
+            var desde = 0
+            while (true) {
+                val i = cadena.indexOf(termino, desde, ignoreCase = true)
+                if (i < 0) return false
+                val antes = cadena.getOrNull(i - 1)
+                val despues = cadena.getOrNull(i + termino.length)
+                if (antes?.isLetter() != true && despues?.isLetter() != true) return true
+                desde = i + 1
+            }
+        }
+
         fun juzgar(candidatas: Collection<String>): List<Pair<String, String>> = candidatas.mapNotNull { bruta ->
             val cadena = sinPrefijoDeLongitud(bruta)
             if (aceptada(cadena)) return@mapNotNull null
-            vedados.firstOrNull { cadena.contains(it, ignoreCase = true) }?.let { it to cadena }
+            vedados.firstOrNull { casa(cadena, it) }?.let { it to cadena }
         }
 
         // Autochequeo: la lógica de juicio se ejerce en CADA corrida contra cuatro
@@ -367,13 +391,20 @@ val verificarCamuflajeDex by tasks.registering {
 
         val hallazgos = juzgar(cadenas)
 
-        // Una excepción que nunca se dispara es, o una causa ya arreglada —y
-        // entonces sobra—, o el síntoma de que el guardián dejó de mirar donde
-        // mira esa excepción. Las dos cosas hay que verlas; no fallan el build.
+        // Una excepción que no hace falta es, o una causa ya arreglada —y entonces
+        // sobra—, o el síntoma de que el guardián dejó de mirar donde mira esa
+        // excepción. Las dos cosas hay que verlas; no fallan el build.
+        //
+        // «No hace falta» es más exigente que «no aparece»: se comprueba si, QUITÁNDOLA,
+        // el guardián reportaría algo. Con la medida anterior, las excepciones de
+        // `ISOSpeed` seguían contando como vivas porque la cadena sigue en el DEX,
+        // aunque la regla de términos cortos ya no la marque.
         val normalizadas = cadenas.map { sinPrefijoDeLongitud(it) }
             .flatMap { listOf(it, it.trim()) }
             .toSet()
-        val muertas = aceptadas.filterNot { it in normalizadas }
+        val muertas = aceptadas.filterNot { excepcion ->
+            excepcion in normalizadas && vedados.any { casa(excepcion, it) }
+        }
 
         informe.parentFile.mkdirs()
         informe.writeText(

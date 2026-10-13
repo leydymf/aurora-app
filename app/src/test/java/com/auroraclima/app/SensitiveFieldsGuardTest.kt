@@ -117,29 +117,43 @@ class SensitiveFieldsGuardTest {
      * a continuación, y un envoltorio correcto con un SEGUNDO campo después de que
      * la lambda cierre. Las dos dejaban el relato o un campo nuevo sin proteger.
      */
-    private fun rangoDeLambda(cuerpo: String, apertura: String): IntRange? {
-        val inicio = cuerpo.indexOf(apertura)
-        if (inicio < 0) return null
+    private fun rangoDeLambda(cuerpo: String): IntRange? {
+        val apertura = aperturaEnvoltorio.find(cuerpo) ?: return null
+        val llave = apertura.range.last
         var profundidad = 0
-        for (indice in (inicio + apertura.length - 1) until cuerpo.length) {
+        for (indice in llave until cuerpo.length) {
             when (cuerpo[indice]) {
                 '{' -> profundidad++
                 '}' -> {
                     profundidad--
-                    if (profundidad == 0) return (inicio + apertura.length)..indice
+                    if (profundidad == 0) return (llave + 1)..indice
                 }
             }
         }
         return null
     }
 
+    /**
+     * Apertura del envoltorio, con o sin argumentos.
+     *
+     * Por regex y no por literal porque el literal `"SecureTextEntry {"` dejó de
+     * valer en cuanto las dos barras pasaron a pedir `hideSuggestions = true`
+     * (H-10). Era la fragilidad que P-104(c) anotaba: una prueba que depende de un
+     * espacio exacto cae estando el código bien.
+     */
+    private val aperturaEnvoltorio = Regex("""SecureTextEntry\s*(?:\([^)]*\))?\s*\{""")
+
     /** Todos los campos de este cuerpo están dentro de la lambda de `SecureTextEntry`. */
     private fun estaEnvuelto(cuerpo: String): Boolean {
         val campos = camposDe(cuerpo)
         if (campos.isEmpty()) return true
-        val rango = rangoDeLambda(cuerpo, "SecureTextEntry {") ?: return false
+        val rango = rangoDeLambda(cuerpo) ?: return false
         return campos.all { it in rango }
     }
+
+    /** Este cuerpo pide además que el teclado no sugiera lo que ya aprendió (H-10). */
+    private fun pideNoSugerir(cuerpo: String): Boolean =
+        aperturaEnvoltorio.find(cuerpo)?.value?.contains("hideSuggestions = true") == true
 
     /**
      * Las dos barras de búsqueda viven fuera del kit porque su forma es de la fachada
@@ -334,6 +348,42 @@ class SensitiveFieldsGuardTest {
      * enumerar la forma. Se lleva por delante también el `val` de tipo función lambda,
      * que era el residual declarado, y cualquier forma futura.
      */
+    /**
+     * H-10: las barras piden que el teclado no sugiera; el resto NO.
+     *
+     * Son dos reglas opuestas y las dos importan. En las barras, `NO_SUGGESTIONS`
+     * impide que Gboard ofrezca una clave que aprendió **antes** de que existiera la
+     * protección contra el aprendizaje — pasó: una clave personal quedó en el
+     * diccionario y el teclado la seguía sugiriendo dentro del propio buscador del
+     * clima. En el relato y en los correos no se pone a propósito, porque ahí el
+     * coste de perder autocorrección en un texto largo no lo compensa nada.
+     *
+     * Si alguien lo extiende a todo el envoltorio «por coherencia», esta prueba cae.
+     */
+    @Test
+    fun `solo las barras piden al teclado que no sugiera`() {
+        camposFueraDelKit.forEach { ruta ->
+            funcionesConCampo(codigoDe(kotlin(ruta))).forEach { (barra, cuerpo) ->
+                assertTrue(
+                    "$ruta: $barra debe envolverse con hideSuggestions = true. Por esa barra se " +
+                        "teclea la clave personal, y sin esto el teclado puede ofrecer una clave " +
+                        "que aprendió antes de que existiera la protección (H-10).",
+                    pideNoSugerir(cuerpo)
+                )
+            }
+        }
+        val fields = codigoDe(kotlin(kit))
+        val conSugerenciasApagadas = funcionesConCampo(fields)
+            .filter { (_, cuerpo) -> pideNoSugerir(cuerpo) }
+            .map { (nombre, _) -> nombre }
+        assertTrue(
+            "Campos del kit que apagaron las sugerencias del teclado: $conSugerenciasApagadas. " +
+                "No deben: el relato y los correos pierden autocorrección y no ganan nada, " +
+                "porque lo que se escribe en ellos no reaparece sugerido en la fachada (H-10).",
+            conSugerenciasApagadas.isEmpty()
+        )
+    }
+
     @Test
     fun `todo campo de texto cae dentro de una funcion reconocida`() {
         (listOf(kit) + camposFueraDelKit).forEach { ruta ->

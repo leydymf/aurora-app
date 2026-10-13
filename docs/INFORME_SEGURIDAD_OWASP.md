@@ -1449,7 +1449,7 @@ en ninguna parte:
   relato, el campo más largo de la app, sin lector de pantalla, y ese precio no lo
   paga el modelo de amenaza. Queda como **residual declarado (P-95)**, y es uno de
   los dos motivos por los que MASVS-STORAGE-2 no queda en «Pasa» limpio, y el
-  único por el que MASVS-PLATFORM-3 tampoco (§10.7).
+  único por el que MASVS-PLATFORM-3 tampoco (§10.8).
 - **El menú contextual por clic derecho**, que no estaba declarado en ninguna
   parte y lo encontró la pasada final. `CoreTextField` envuelve el campo en
   `ContextMenuArea`, que en 1.7.8 **ya está cableado en Android**, dibuja su propio
@@ -1595,15 +1595,30 @@ más arriba: lo que no se mira, se declara.
 **Medición, atada al artefacto.** Sobre el APK release reconstruido en limpio con
 el JDK prescrito (JBR 21.0.4) y sin ningún otro demonio de Gradle activo —
 `app-release.apk`, 23 952 390 B, SHA-256
-`b21ea4e1daad2d545c189427ba654a6bf4b250027f195038b7da977c9182a6c1`—: **390 430
-cadenas de 3 o más caracteres, 148 569 distintas, en 197 entradas, 0 hallazgos
+`1c46315528e86cbb0badf2cb805f9a67dda80d81678e4f9a49c7a295745b3867`—: **390 627
+cadenas de 3 o más caracteres, 148 364 distintas, en 197 entradas, 0 hallazgos
 nuevos** y el autochequeo de canarios en 4/4.
 
 El piso es de **3** caracteres y no de 4 por un motivo concreto: de los 49
 términos vedados, «sos» mide 3, así que con el piso anterior una cadena que fuera
 exactamente «sos» era estructuralmente inalcanzable — la misma especie de hueco
-que el de los términos acentuados. Bajarlo duplica el recuento y cuesta **0
-hallazgos nuevos**, medido.
+que el de los términos acentuados.
+
+**Y ese cambio hubo que corregirlo, lo que vale la pena contar.** Se midió sobre
+una construcción y se concluyó «cuesta 0 hallazgos»; lo que costaba no era
+hallazgos, era **estabilidad**: un término de tres letras casa dentro de casi
+cualquier cosa —«sos» vive en «ISOSpeed» y en basura binaria como `\sOSUpPS9`— y
+esas cadenas cambian entre construcciones, así que el release empezó a fallar al
+azar. La regla de ahora: **un término de tres letras solo cuenta si no está pegado
+a otra letra**. Con eso «SOS» suelto se caza, «ISOSpeed» no, y las cuatro
+excepciones que hacían falta por esa causa se retiraron — de 62 a **58**. El
+precio, dicho claro: un `sosBoton` propio se le escaparía a ESTE guardián, pero no
+queda sin vigilar, porque `CamouflageResourcesTest` aplica los dos ámbitos a los
+identificadores y literales de las fuentes, que es donde ese nombre nacería.
+
+De paso se afinó el detector de excepciones innecesarias, que medía *presencia* en
+vez de *necesidad*: ahora comprueba si, quitándola, el guardián reportaría algo. Sin
+ese afinado, las cuatro de `ISOSpeed` habrían seguido contando como vivas.
 
 Las cifras van atadas al SHA-256 a propósito, igual que en §2, y conviene decir
 exactamente qué es reproducible y qué no, porque se midió:
@@ -1629,10 +1644,10 @@ Quien reejecute el comando **sobre el mismo commit** obtendrá otro SHA-256 y la
 mismas cifras. Si el código cambia, las cifras se mueven — y eso es lo correcto.
 
 El precio de juzgar todo es absorber el ruido de las librerías en la línea base, y
-eso es lo que hace creíble un «0 hallazgos»: **62 cadenas aceptadas, una por una y
+eso es lo que hace creíble un «0 hallazgos»: **58 cadenas aceptadas, una por una y
 con su causa escrita**. De ellas 9 son de Aurora y llevan pendiente (todas de
 P-78, y desaparecen con el rename `questionnaire`→`form` y `Consent*`→`Terms*`);
-las 53 restantes son de librería —`javax.crypto` para «secret», `ISOSpeed` de EXIF
+las 49 restantes son de librería —`javax.crypto` para «secret», `ISOSpeed` de EXIF
 para «sos», gRPC para «panic», y dos recursos del arsc: una cadena italiana del
 selector de fecha de material3 y un estilo de `androidx.credentials`— y no hay
 nada que arreglar en código ajeno. El guardián informa además de las excepciones
@@ -1861,7 +1876,106 @@ puede verlo: la instrumentada compone el envoltorio con una barra falsa, no un c
 real con la máscara apagada, y la medición de arriba mide el `EditorInfo`, no el
 menú.
 
-### 10.7 Recuento tras las correcciones
+### 10.7 H-10 · Hallazgo nuevo · Alta · El teclado ofrecía la clave personal dentro del propio buscador del clima
+
+Lo encontró **la usuaria**, en la corrida manual §8-S4, y lo trajo con captura: al
+escribir «aud» en la barra de búsqueda de la fachada, Gboard ofrecía
+`auditoria77` —la clave personal de la cuenta de prueba— en su tira de
+sugerencias. Dentro de Aurora. Es el hallazgo más directo de toda la evaluación:
+no hace falta descompilar nada ni tener herramientas; basta tomar el teléfono,
+abrir la app del clima y empezar a teclear.
+
+**Conviene separar dos cosas que es fácil confundir, porque la corrección de cada
+una es distinta:**
+
+| | Aprender | Sugerir |
+|---|---|---|
+| Qué es | que el teclado incorpore a su diccionario lo que se teclea | que el teclado ofrezca lo que ya tiene en el diccionario |
+| Qué lo controla | `IME_FLAG_NO_PERSONALIZED_LEARNING` (H-7) | `TYPE_TEXT_FLAG_NO_SUGGESTIONS` |
+| Estado antes de H-10 | **cerrado** desde H-7 | **abierto** |
+
+La propia S-4 lo confirma: las palabras inventadas que la usuaria escribió **ese
+día** en el relato y en la barra **no** se aprendieron. Lo que aparecía era una
+palabra aprendida **antes**.
+
+**Dónde se aprendió, con fecha.** La clave `auditoria77` se creó la mañana del
+2026-10-10, durante la recuperación de la cuenta de prueba tras el incidente de
+`connectedDebugAndroidTest`. La corrección de H-7 —la que añade el flag a las dos
+barras— entró ese mismo día a las **14:37** (commit `a329245`). En la ventana
+intermedia, la barra enviaba al teclado `inputType=0x1` e `imeOptions=0x2000003`:
+sin el flag, es decir aprendiendo. Y la barra es, por diseño, el sitio donde la
+clave se teclea cada vez que se entra (RF-12). Entre medias, además, la usuaria
+tecleó la clave a mano varias veces para la comprobación manual de H-6 —que era,
+irónicamente, «comprobar que el teclado no aprende la clave»—. Aquella
+comprobación salió bien porque se miró **en otra aplicación**; la palabra ya
+estaba aprendida y se ofrecía dentro de Aurora.
+
+**El instrumento que cierra el caso, y que no teníamos.** Gboard escribe en el
+registro del sistema su propio veredicto por campo. No hay que deducirlo de las
+banderas: lo dice él.
+
+```
+EditorInfo{packageName=com.auroraclima.app, inputType=80001, enableLearning=false,
+           autoCorrection=false, imeOptions=3000003, actionName=SEARCH}
+IncognitoMode = true
+```
+
+Con eso se midió **todo campo de texto de la app** sobre el build de hoy, con un
+control negativo para demostrar que el veredicto es por campo y no un ajuste
+global del emulador:
+
+| Campo | `inputType` | `imeOptions` | Gboard: `enableLearning` / `autoCorrection` | `IncognitoMode` |
+|---|---|---|---|---|
+| Barra de la fachada | `0x80001` | `0x3000003` | false / false | **true** |
+| Barra de práctica del tutorial | `0x80001` | `0x3000003` | false / false | **true** |
+| Relato | `0x28001` | `0x43000000` | true / true | **true** |
+| Correo (`V2PlainField`) | `0x8021` | — | true / true | **true** |
+| Clave y contraseñas (`V2SecretField`) | `0x8081` | `0x3000005` | false / false | **true** |
+| *Control: buscador de los Ajustes de Android* | `0x100001` | — | true / true | **false** |
+
+**Ningún campo de Aurora puede enseñarle nada a Gboard**, y lo dice Gboard. El
+control de la última fila es el que lo hace una medición y no una creencia.
+
+**Corrección.** `TYPE_TEXT_FLAG_NO_SUGGESTIONS` en **las dos barras y solo en
+ellas**, por la vía que ya existía: el `EditorInfo` se intercepta en
+`SecureTextEntry`, que gana un parámetro `hideSuggestions`. Efecto medido: el
+`inputType` de la barra pasa de `0x1` a `0x80001` y Gboard pasa de declarar
+`enableLearning=true, autoCorrection=true` a `enableLearning=false,
+autoCorrection=false`.
+
+Por qué solo en las barras, y no «por coherencia» en todo el envoltorio: en el
+relato y en los correos el coste sería perder la autocorrección en textos largos
+—el mismo coste que ya se rechazó al descartar `autoCorrect = false` en §10.1— y
+el beneficio sería nulo, porque lo que se escribe ahí no es una credencial que
+vaya a reaparecer sugerida en la fachada. Lo fija el séptimo caso de
+`SensitiveFieldsGuardTest`, que comprueba las dos reglas opuestas: que las barras
+lo pidan y que los campos del kit **no** lo pidan.
+
+**Lo que Aurora no puede arreglar, y es importante decirlo.** La palabra ya está
+en el diccionario de Gboard. Ninguna bandera la borra, y Gboard la seguirá
+ofreciendo en WhatsApp, en el navegador o en cualquier otra app. Lo que esta
+corrección consigue es que **deje de aparecer dentro de Aurora**, que es donde
+delata: una clave rara sugerida en un buscador de ciudades es un indicio; la misma
+palabra sugerida en un chat no significa nada para quien la vea. La mitigación del
+resto es operativa y va en P-106: **borrar la palabra aprendida del teclado y
+rotar la clave personal**.
+
+**Gravedad: Alta.** Expone la credencial que protege todo el espacio interno, en
+la pantalla más expuesta de la app, sin herramientas y sin conocimiento técnico.
+Atenúa que el vector de aprendizaje llevaba cerrado desde H-7 y que la corrección
+de hoy cierra también el de la sugerencia; pero el hecho ocurrió sobre una clave
+real y lo encontró una persona usando la app, no un análisis.
+
+**Y una lección sobre el método, que es la tercera de la misma familia.** H-6 se
+dio por bueno comprobando en **otra** aplicación que el teclado no sugería la
+clave. Era la comprobación correcta para la pregunta equivocada: medía si la
+palabra había salido de Aurora, no si Aurora la mostraba. Las tres veces que esta
+evaluación falló de fondo fue por creer una premisa en vez de medirla —el
+`autoCorrect = false` de §10.1, el enmascaramiento de §10.6 y esta—, y las tres
+las desmintió una medición: dos de bytecode y una de una persona mirando la
+pantalla.
+
+### 10.8 Recuento tras las correcciones
 
 | Resultado | v0.3.0 (medido) | v0.3.1 (tras corregir) |
 |---|---|---|
@@ -1879,21 +1993,23 @@ contra el texto de este mismo informe:
 - **MASVS-STORAGE-2** tiene **dos** observaciones vivas según §5.1, y la primera
   es **P-22** —la caché persistente del SDK de Firestore es SQLite plano, sin
   SQLCipher—, que esta rama no toca. Solo la segunda era H-7. Se le suma el
-  residual de accesibilidad de §10.1, y **H-9** con su propio residual del clic
-  derecho (§10.6). Queda en «Pasa con observación».
+  residual de accesibilidad de §10.1, **H-9** con su propio residual del clic
+  derecho (§10.6) y **H-10** con el suyo: una clave aprendida antes sigue en el
+  diccionario del teclado y Aurora no puede borrarla (§10.7). Queda en «Pasa con
+  observación».
 - **MASVS-PLATFORM-3** tampoco queda limpio. Su única observación *registrada* era
   H-7, sí, pero el residual de accesibilidad de §10.1 es materia suya: la lectura
   del árbol de accesibilidad es exposición de la INTERFAZ, que es justo lo que
   este control cubre —capturas, recientes, enmascaramiento— y lo que `FLAG_SECURE`
   no alcanza. Cobrarse el mismo residual en STORAGE-2 y no en PLATFORM-3 era una
-  asimetría sin justificación. **H-9 cae igualmente en los dos**, por el mismo
-  motivo que H-7: es fuga de datos y nace de una decisión de interfaz. Queda también
+  asimetría sin justificación. **H-9 y H-10 caen igualmente en los dos**, por el mismo
+  motivo que H-7: son fuga de datos y nacen de una decisión de interfaz. Queda también
   en «Pasa con observación».
 
-**Y una aclaración que el lector va a pedir: H-9 es ALTO y el recuento no se mueve.**
+**Y una aclaración que el lector va a pedir: H-9 y H-10 son ALTOS y el recuento no se mueve.**
 No es contradicción. El recuento cuenta **controles**, no hallazgos; los dos controles
 que H-9 toca ya estaban en «Pasa con observación» por observaciones ajenas a él
-(P-22, el residual de accesibilidad); y H-9 se **corrige en esta misma rama**, igual
+(P-22, el residual de accesibilidad); y los dos se **corrigen en esta misma rama**, igual
 que H-8 en §10.5. Lo que sí cambia es que el 0 en «Falla» cuelga ahora de dos
 comprobaciones manuales y no de una.
 
@@ -1908,23 +2024,27 @@ estable actual y que PdfBox-Android continúa sin mantenimiento; **MASVS-STORAGE
 pierde H-7 pero conserva P-22 y el residual de accesibilidad; y **MASVS-PLATFORM-3**
 pierde H-7 y conserva ese mismo residual.
 
-**El 0 en «Falla» está pendiente de DOS comprobaciones manuales**, y tras H-9 está
-más condicionado que antes, no menos: la del menú de selección del relato (§8-S1) y
-la del **campo enmascarado con el ojo abierto** (§8-S1b). Si la segunda fallara,
-MASVS-STORAGE-2 volvería a «Falla». Todo lo demás de esta sección se verificó con
+**De las comprobaciones manuales, dos ya están hechas y una queda.** Hechas por la
+usuaria el 2026-10-13: el menú de selección del relato (§8-S1) y el del campo
+enmascarado con el ojo abierto (§8-S1b, los tres tramos) — las dos **pasan**: solo
+dejan pegar y seleccionar, nunca copiar ni cortar, ni con el ojo abierto ni con
+«Seleccionar todo» aplicado. Queda **§8-S4b**, que es la que H-10 abre: confirmar en
+pantalla que las dos barras ya no ofrecen sugerencias del teclado. Si fallara, lo
+que no se cierra es la exposición de una clave aprendida antes, no el aprendizaje. Todo lo demás de esta sección se verificó con
 medición sobre el dispositivo o sobre el artefacto.
 
-### 10.8 Estado de la suite
+### 10.9 Estado de la suite
 
-**801 pruebas de JVM** por variante en 106 clases, 0 fallos, 0 ignoradas — eran
+**802 pruebas de JVM** por variante en 106 clases, 0 fallos, 0 ignoradas — eran
 798 al empezar, y entran el tercer caso de `CamouflageResourcesTest`
 (identificadores que sobreviven a R8), el tercero de `ManifestMinimizationTest`
-(ningún bloque permite tráfico en claro) y el sexto de `SensitiveFieldsGuardTest`
-(la aserción de atribución de §10.1). **47 instrumentadas** en 12 clases sobre
+(ningún bloque permite tráfico en claro), el sexto de `SensitiveFieldsGuardTest`
+(la aserción de atribución de §10.1) y el séptimo (las dos reglas opuestas de
+sugerencias de §10.7). **47 instrumentadas** en 12 clases sobre
 el emulador B, 0 fallos — eran 45, y entran los 2 casos de `SecureTextEntryTest`.
 ktlint sin violaciones y `lint` con 0 errores. `assembleDebug` y `assembleRelease`
-en verde, este último con el guardián del DEX pasando —390 430 cadenas juzgadas,
-148 569 distintas, en 197 entradas, 62 excepciones, 0 muertas, canarios 4/4, 0
+en verde, este último con el guardián del DEX pasando —390 627 cadenas juzgadas,
+148 364 distintas, en 197 entradas, 58 excepciones, 0 innecesarias, canarios 4/4, 0
 hallazgos— sobre el APK cuyo SHA-256 cita §10.3. Las cifras bajan ligeramente
 respecto a la ronda anterior (−260 cadenas) porque H-9 cambió el código, no por
 indeterminismo: con el alcance y el código fijos, cinco construcciones

@@ -100,11 +100,13 @@ PANIC! Entering TRANSIENT_FAILURE
 Refused to enqueue task after panic
 ] Uncaught exception in the SynchronizationContext. Panic!
 
-# --- «sos»: coincide dentro de «ISOSpeed», etiquetas EXIF de androidx ----------
-ISOSpeed
-ISOSpeedRatings
-ISOSpeedLatitudeyyy
-ISOSpeedLatitudezzz
+# --- «sos»: ya no hace falta excepción ----------------------------------------
+# Estas cuatro eran las etiquetas EXIF de androidx (ISOSpeed, ISOSpeedRatings…).
+# Se retiraron el 2026-10-13 al añadir la regla de términos cortos: un término de
+# 3 letras solo cuenta si no está pegado a otra letra, así que «sos» ya no casa
+# dentro de «ISOSpeed». La regla nació porque el piso de 3 caracteres hacía que
+# «sos» casara también dentro de basura binaria —«\sOSUpPS9»— que cambia entre
+# construcciones y hacía fallar el release al azar.
 
 # --- «hidden»: androidx.credentials, material3 y android.view ------------------
 hidden
