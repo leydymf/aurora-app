@@ -2113,9 +2113,11 @@ momento posterior la visibilidad cambió.
 
 **Es una decisión expresa de la desarrolladora, y queda así**, con tres motivos que
 se sostienen: el repositorio aporta a su hoja de vida mientras busca prácticas
-profesionales; el prototipo **no tiene usuarias reales**; y un despliegue real sería
-otro producto —en la UNAB, que querría darlo a conocer, y multiplataforma—, así que
-el camuflaje de *este* prototipo no tiene valor operativo que proteger.
+profesionales; el prototipo **no tiene usuarias reales**; y una implementación real
+—por ejemplo con la UNAB, que querría darla a conocer— sería **otra versión, con
+otra identidad y también para iOS**, así que el camuflaje de *este* prototipo no
+tiene valor operativo que proteger. No se vuelve privado: la decisión está tomada y
+razonada.
 
 **Lo que esa decisión invalida, y hay que leer en consecuencia:**
 
@@ -2134,14 +2136,117 @@ el camuflaje de *este* prototipo no tiene valor operativo que proteger.
 secreto: GitHub pudo indexarlo y hay terceros que archivan repositorios públicos.
 Comprobado el 2026-10-13: 0 forks y 0 estrellas, que es el único consuelo medible.
 
-**Lo que sí se hizo antes de publicar**, porque una cosa es el diseño y otra las
-credenciales: se barrió el árbol buscando claves, contraseñas y correos reales. Se
-encontró y redactó la clave personal de la cuenta de prueba, que este mismo informe
-había escrito al narrar H-10 —la segunda vez que pasa, después de EV-13—, y se
-verificó que `google-services.json` no está versionado y que `.gitignore` cubre
-keystores, llaves de servicio, `local.properties` y los `.env`.
+**Barrido de secretos sobre TODO el historial**, porque una cosa es el diseño y
+otra las credenciales. Hecho el 2026-10-13 con **gitleaks 8.30.1** sobre los 223
+commits (4,61 MB de contenido), más búsquedas dirigidas con `git log -S` por cada
+cadena conocida y una revisión archivo por archivo de los 20 documentos de
+`docs/evidencias-owasp/`. Resultado:
 
-**Consecuencia para el piloto, si alguna vez lo hay.** Un despliegue con usuarias
-reales exige un repositorio distinto y privado desde el primer commit, porque el
-historial de este ya es público y no se puede reescribir hacia atrás. Es, de hecho,
-coherente con la propia decisión: ese despliegue sería otro producto.
+| Qué se buscó | Resultado |
+|---|---|
+| Llaves privadas, JSON de cuenta de servicio, tokens de GitHub | **ninguno**, en ningún commit |
+| `google-services.json` | **nunca** entró al historial |
+| Claves de API reales | ninguna; el único `AIza` del árbol es el *nombre del patrón* en el informe de barrido de EV-03 |
+| Correos de usuarias reales o datos de las encuestas | ninguno; el único correo ajeno es `android@android.com`, que es el sujeto del certificado de depuración de Android |
+| Credenciales de cuentas de prueba | **dos**, ambas de cuentas **ya eliminadas** (ver abajo) |
+
+Los dos hallazgos reales, y por qué no hay nada que rotar:
+
+- `pruebas.debug@auroraclima.dev` con su contraseña, en el commit **publicado**
+  `393e5a9`. Es la cuenta de P-30, **eliminada** de Firebase Auth el 2026-10-01 con
+  `tools/admin/delete-test-account.mjs`. La credencial está muerta: no abre nada.
+- La clave personal de la cuenta de prueba de H-10, en los commits **publicados**
+  `18a5c7e` y `1d9d69b` —escrita por este mismo informe al narrar el hallazgo, la
+  segunda vez que pasa después de EV-13—. Se redactó del árbol, pero **queda en el
+  historial**. Esa cuenta también está eliminada.
+
+**Qué hay que rotar: nada.** No porque el descuido no importe, sino porque ninguna de
+las dos credenciales tiene cuenta viva detrás. `luna2026` aparece en nueve commits y
+**es intencional**: es el código de activación del build de depuración, vive en
+`app/src/debug/` y no existe en el release (lo verifica `verificarCamuflajeDex`). Lo
+que sí hay que hacer es cambiarlo en cualquier implementación real, y eso es la
+condición de abajo. `brisa2026` es un fixture de las pruebas de RF-09, nunca una
+credencial. Y se verificó que `.gitignore` cubre keystores, llaves de servicio,
+`local.properties` y los `.env`.
+
+**Riesgo real derivado, y condición dura para cualquier implementación con
+usuarias reales (P-108).** Esto merece el nombre de riesgo y no de nota: con el
+repositorio público son públicos el nombre, el ícono, el nombre de paquete, la
+apariencia de la fachada, el mecanismo de entrada —clave tecleada en la barra de
+búsqueda— y **el código de activación del build de depuración**, que vive en
+`app/src/debug/`. Es decir: cualquiera puede leer qué es Aurora y cómo se entra. Para
+este prototipo el impacto es nulo, porque no hay nada que proteger; pero la identidad
+de ESTA versión **no es reutilizable** en un despliegue con usuarias reales, y por
+tanto el requisito más importante del proyecto (RNF-05) exige rehacerla.
+
+Un despliegue con usuarias reales **no puede reutilizar nada de la identidad de este
+prototipo**. Hay que cambiar:
+
+| Qué | Por qué |
+|---|---|
+| **Nombre** de la app | «Aurora» está asociado públicamente a este propósito |
+| **Ícono** | el mismo, y además aparece en los mockups versionados |
+| **Nombre de paquete** (`com.auroraclima.app`) | identifica la app en los ajustes del sistema y en Play |
+| **Apariencia de la fachada** | las capturas y los mockups de alta fidelidad son públicos |
+| **Código de activación** | `luna2026` está en el historial y en los documentos |
+
+Y hacerlo en un **repositorio nuevo y privado desde el primer commit**, porque el
+historial de este ya es público y no se puede reescribir hacia atrás. Nada de esto
+contradice la decisión de la autora: es exactamente coherente con ella, porque esa
+implementación sería otra versión con otra identidad de todos modos. Lo que hace
+falta es que quede escrito como condición y no como aspiración.
+
+### 10.11 Exposición del proyecto de Firebase con el repositorio público
+
+Revisado el 2026-10-13, a petición expresa, sobre los tres frentes que importan.
+
+**`google-services.json`: no está expuesto.** No está versionado; `.gitignore` lo
+cubre junto con keystores, llaves de servicio, `local.properties` y los `.env`. Se
+verificó además contra **todo el historial** (223 commits), no solo contra el árbol:
+nunca entró. El panel web usa variables de entorno y no trae valores reales.
+
+**Las reglas de Firestore: públicas, y eso no es una debilidad.** `firestore.rules`
+sí está versionado, pero publicarlas no revela nada aprovechable, porque son
+correctas y no dependen del secreto:
+
+```
+users/{uid}/{document=**}   read, write  solo si request.auth.uid == uid
+topics|routes|agencies|lines|forms  read  autenticado · write  solo isAdmin()
+drafts/{document}           read, write  solo isAdmin()
+{document=**}               read, write  false        ← cierra todo lo demás
+```
+
+Los datos de las usuarias están aislados por `uid`, la escritura de contenido exige
+el claim `admin`, y el comodín final deniega cualquier ruta no contemplada. Son
+reglas que se sostienen publicadas, que es el único examen que importa: una regla que
+solo funciona si nadie la lee no es una regla.
+
+**El registro de cuentas: aquí está el riesgo, y no viene del repositorio.** El
+registro por correo y contraseña de Firebase Auth está **abierto por defecto**, y el
+código de activación de Aurora cierra la puerta de la *interfaz*, no la de la API.
+Quien obtenga la clave web del proyecto —que viaja dentro de cualquier APK, como en
+toda app de Firebase, de modo que el repositorio no cambia nada— puede crear cuentas
+directamente contra la API y leer el contenido de orientación. Ese contenido es
+**información de interés público** (rutas de atención, líneas de ayuda, agencias): no
+hay dato de usuaria alguno al alcance, por las reglas de arriba. El daño posible es
+consumo de cuota, cuentas basura en el proyecto y, si estuviera en plan de pago,
+costo.
+
+Lo que el repositorio público sí añade es el **identificador del proyecto**
+(`aurora-31c37`, presente en siete archivos), que ahorra el paso de extraerlo de un
+APK. Es un atajo de reconocimiento, no una credencial.
+
+**Qué ajustar, y cuándo** (gratis, en la consola, sin tocar código):
+
+1. **Desactivar el registro de cuentas al terminar las sesiones SUS.** Se mantiene
+   activo hasta entonces porque las participantes crean cuenta durante la prueba de
+   usabilidad, y desactivarlo antes impediría la medición. Firebase Console →
+   Authentication → Settings → *User actions* → desmarcar «Enable create». Es un
+   interruptor y se vuelve a activar cuando haga falta.
+2. **Confirmar que el proyecto sigue en plan Spark** (gratuito), para que ningún
+   abuso pueda convertirse en factura mientras el registro siga abierto.
+
+**Qué dejar para el piloto:** **App Check con Play Integrity**, que ata las
+peticiones a la app auténtica firmada y es la mitigación de fondo del registro
+abierto. Exige código, configuración y un build firmado de release, y sin usuarias
+reales no paga su costo hoy. Registrado en P-109.
