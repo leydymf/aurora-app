@@ -65,8 +65,9 @@ Esa actividad **no se ve**: no tiene `intent-filter`, ni icono, ni rótulo, ni
 entrada en el lanzador, y no abre ninguna pantalla de Aurora. **La validez de las
 sesiones no está en cuestión.** Pero es un componente exportado y sin permiso que
 cualquier app del teléfono puede lanzar, y que el release no tiene: una razón más
-para no activar la depuración USB (§1.2). Queda anotado como pendiente nuevo,
-gemelo de P-92: evaluar retirarla con `tools:node="remove"` en
+para no activar la depuración USB (§1.2). Queda registrado como **P-112** en
+`docs/PENDIENTES.md`, hermano de P-92 y con la misma prioridad (antes del
+piloto): evaluar retirarla con `tools:node="remove"` en
 `app/src/debug/AndroidManifest.xml` —como ya se hace con la `PreviewActivity`— o
 mover `ui-test-manifest` a `androidTestImplementation`, y fijar la retirada en
 `ManifestMinimizationTest`.

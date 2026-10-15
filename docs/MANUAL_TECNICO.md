@@ -448,8 +448,8 @@ Hay dos niveles de verificación automática del camuflaje:
      `PreviewActivity` en `src/debug`. **No cubre el manifiesto fusionado** del
      APK —lo que agregan Firebase Auth, GMS y AndroidX—: eso se revisó a mano en
      P-06, la tabla está en `docs/RESULTADOS_PRUEBAS.md` §3 y los pendientes son
-     P-92 y el de la actividad que `ui-test-manifest` fusiona en debug
-     (`docs/PREPARACION_SESIONES.md` §1.1).
+     P-92 (dos actividades de `firebase-auth`, en las dos variantes) y P-112 (una
+     actividad de `ui-test-manifest`, solo en debug).
    - `VisualSystemGuardTest`, `SensitiveFieldsGuardTest` y `PaletteContrastTest`.
 2. **Sobre el artefacto**, en la tarea Gradle **`verificarCamuflajeDex`**, que
    extrae todas las cadenas del APK de release (DEX, `resources.arsc`,
@@ -1068,6 +1068,7 @@ personas. El detalle de cada punto está en `docs/PENDIENTES.md` con su número.
 |---|---|
 | **P-109** | Desactivar el registro de cuentas al terminar las sesiones de evaluación; confirmar plan Spark; activar **App Check con Play Integrity** antes del piloto |
 | **P-92** | Evaluar retirar con `tools:node="remove"` las dos actividades exportadas que `firebase-auth` fusiona en el manifiesto (`genericidp://` y `recaptcha://`), que Aurora no usa, y **verificar después** que login, creación de cuenta y recuperación siguen funcionando: Firebase puede usar reCAPTCHA como defensa antiabuso |
+| **P-112** | Hermano del anterior, solo en debug: retirar la `androidx.activity.ComponentActivity` exportada que fusiona `ui-test-manifest`, o mover esa dependencia a `androidTestImplementation`, y fijar la retirada en `ManifestMinimizationTest`. No se ve en pantalla y no afecta a las sesiones de evaluación, pero es superficie innecesaria en el artefacto que se instala en los teléfonos |
 | **P-80** | Medir el arranque en frío **en el teléfono del piloto** (`adb shell am start -W`, TotalTime) contra el techo de 3 s de RNF-07. En emulador da 265 ms, pero un emulador ARM sobre Apple Silicon es mejor que un gama media real. Queda además la deuda conocida: `MainActivity` y la raíz de la app construyen Firebase en el hilo principal, y el refactor sugerido es diferirlos con `Provider` |
 | **P-107** | Repetir la verificación de que el teclado no aprende ni sugiere **con el teclado de fábrica de los teléfonos del piloto**. Lo medido solo demuestra que Gboard honra las banderas; honrarlas es decisión de cada teclado |
 | **P-65** | Decidir formalmente que el piloto se hace **solo con release**: en debug los identificadores semánticos de la interfaz quedan legibles en el DEX y la biblioteca de PDF escribe trazas en logcat. Nota: hoy esto choca con P-111, que impide probar un primer uso completo en release |
