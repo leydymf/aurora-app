@@ -62,3 +62,10 @@ admin/.env.*.local
 capturas-api*/
 captura-*.png
 export-*.pdf
+
+# Artefactos compilados — nunca versionar. `app/build/` ya está ignorado, así que
+# el APK que produce Gradle no corre peligro; esto cubre la copia manual, que es
+# el riesgo real: el APK de las sesiones de evaluación se saca del árbol a mano
+# (docs/PREPARACION_SESIONES.md §2) y el repositorio es público.
+*.apk
+*.aab
