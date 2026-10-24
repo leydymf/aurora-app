@@ -108,7 +108,7 @@
          2026-10-06; el mensaje de confirmación es el MISMO exista o no la
          cuenta, para que la pantalla no sirva de oráculo. -->
     <string name="account_reset_link">¿Olvidaste la contraseña de tu cuenta?</string>
-    <string name="account_reset_title">Recuperar el acceso</string>
+    <string name="account_reset_title">Restablecer la contraseña de tu cuenta</string>
     <string name="account_reset_body">Escribe tu correo y te enviamos un mensaje para elegir una nueva contraseña de tu cuenta.</string>
     <string name="account_reset_warning">Al restablecer la contraseña de tu cuenta, la información guardada en la nube podría no abrirse en otro teléfono. Lo que tienes en este dispositivo no se pierde.</string>
     <string name="account_reset_submit">Enviar el correo</string>

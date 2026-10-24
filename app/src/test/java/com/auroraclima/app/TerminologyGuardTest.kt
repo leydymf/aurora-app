@@ -1,6 +1,7 @@
 package com.auroraclima.app
 
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -46,6 +47,16 @@ class TerminologyGuardTest {
         }.map { (id, texto) -> "$id: $texto" }
 
         assertTrue("Contraseña sin «cuenta»:\n" + sinCuenta.joinToString("\n"), sinCuenta.isEmpty())
+    }
+
+    @Test
+    fun `el flujo de restablecer nombra la contrasena de la cuenta y no el acceso`() {
+        assertEquals("Restablecer la contraseña de tu cuenta", strings.getValue("account_reset_title"))
+        val conAcceso = strings.filter { (id, texto) ->
+            id.startsWith("account_reset_") && texto.contains("acceso", ignoreCase = true)
+        }.map { (id, texto) -> "$id: $texto" }
+
+        assertTrue("«acceso» en el flujo de restablecer:\n" + conAcceso.joinToString("\n"), conAcceso.isEmpty())
     }
 
     @Test
