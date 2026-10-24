@@ -113,7 +113,13 @@ internal fun ConsentScreen(
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         BrandHeader()
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.account_intro_what),
+            style = InteriorTypeVoice.bodyStrong,
+            color = V2Palette.inkPrimary
+        )
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = stringResource(R.string.account_intro_title),
             style = InteriorTypeVoice.screenTitle,

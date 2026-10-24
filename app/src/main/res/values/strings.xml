@@ -60,6 +60,7 @@
     <string name="access_guide_practice_done">Así entras a Aurora. En el clima se verá exactamente igual que ahora.</string>
     <string name="access_guide_practice_exit">Ahora toca la nube de la esquina para practicar tu salida.</string>
     <string name="access_back_to_weather">Volver al clima</string>
+    <string name="account_intro_what">Aurora es un espacio privado para informarte, orientarte y guardar registros de forma segura.</string>
     <string name="account_intro_title">Antes de empezar, decides tú.</string>
     <string name="account_intro_body">Un espacio para ti, con reglas claras. Te contamos qué guardamos y por qué, sin letra pequeña.</string>
     <string name="account_intro_keep_title">Qué guardamos.</string>
