@@ -76,7 +76,7 @@
     <string name="account_register_subtitle">Solo pedimos lo mínimo para que puedas volver.</string>
     <string name="account_register_email_label">Correo</string>
     <string name="account_register_password_label">Contraseña de la cuenta</string>
-    <string name="account_password_rule_length">Mínimo 8 caracteres</string>
+    <string name="account_password_rule_length">Mínimo %1$d caracteres</string>
     <string name="account_register_confirm_label">Confirmar contraseña de la cuenta</string>
     <string name="account_error_password_mismatch">Las contraseñas de la cuenta no coinciden.</string>
     <string name="account_register_submit">Crear cuenta y continuar</string>

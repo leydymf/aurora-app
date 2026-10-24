@@ -13,7 +13,7 @@ import com.auroraclima.app.core.ui.v2.RuleRow
 @Composable
 internal fun PasswordRulesList(checks: PasswordChecks, modifier: Modifier = Modifier) {
     RuleRow(
-        text = stringResource(R.string.account_password_rule_length),
+        text = stringResource(R.string.account_password_rule_length, PasswordChecks.MIN_LENGTH),
         satisfied = checks.hasMinLength,
         modifier = modifier.padding(top = 10.dp)
     )
