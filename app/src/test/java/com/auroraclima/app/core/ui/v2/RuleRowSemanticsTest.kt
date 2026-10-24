@@ -21,10 +21,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 
-/**
- * La descripción de contenido de las reglas en vivo (código de acceso, contraseña de la cuenta y
- * contraseña del archivo PDF comparten RuleRow): texto y estado, y aviso cuando el estado cambia.
- */
+// Sin ui-test en la JVM: se lee el árbol de semántica de una ComposeView dentro de una actividad de Robolectric.
 @RunWith(RobolectricTestRunner::class)
 class RuleRowSemanticsTest {
     private class Pantalla(private val view: ComposeView) {

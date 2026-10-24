@@ -131,6 +131,14 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 }
 
+// Candidata a juicio: `admiteCortos` y `admiteLargos` dicen qué términos de 3 letras o más pueden dispararse en ella.
+data class Candidata(
+    val texto: String,
+    val admiteCortos: Boolean,
+    val admiteLargos: Boolean,
+    val crudo: Boolean
+)
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Camuflaje del DEX del release (H-1 de la evaluación OWASP, P-89)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,15 +162,6 @@ dependencies {
 // mensaje de excepción que H-1 denunció. El precio de juzgar todo es tener que
 // absorber el ruido de las librerías en la línea base, una por una y con su
 // causa escrita, y eso es lo que hace creíble un «0 hallazgos».
-// Una candidata a juicio: `crudo` es una secuencia imprimible sacada a ciegas de los bytes.
-// `admiteCortos` y `admiteLargos` dicen qué términos pueden dispararse en ella, según tengan 3 letras o más.
-data class Candidata(
-    val texto: String,
-    val admiteCortos: Boolean,
-    val admiteLargos: Boolean,
-    val crudo: Boolean
-)
-
 val verificarCamuflajeDex by tasks.registering {
     group = "verification"
     description = "Falla si el DEX del APK release contiene términos vedados por el camuflaje (RNF-05)."
@@ -272,9 +271,7 @@ val verificarCamuflajeDex by tasks.registering {
             }
         }
 
-        // Candidatas de una entrada: secuencias imprimibles al estilo de `strings`, decodificando UTF-8.
-        // En un DEX esas secuencias no admiten términos cortos y se suman las cadenas reales de su tabla.
-        // El piso es 3 y no 4 porque «sos» mide 3 (hallazgo A-6 de la auditoría).
+        // Secuencias imprimibles de la entrada, más las cadenas reales de la tabla si es un DEX (esas no admiten largos).
         fun extraer(nombre: String, bytes: ByteArray): List<Candidata> {
             val esDex = nombre.endsWith(".dex")
             val candidatas = ArrayList<Candidata>()
@@ -344,7 +341,12 @@ val verificarCamuflajeDex by tasks.registering {
             cadenas.forEachIndexed { indice, cadena ->
                 val posicion = inicioDatos + datos.size()
                 (0 until 4).forEach { tabla[4 * indice + it] = (posicion shr (8 * it)).toByte() }
-                datos.write(cadena.length)
+                var restante = cadena.length
+                while (restante >= 0x80) {
+                    datos.write((restante and 0x7F) or 0x80)
+                    restante = restante ushr 7
+                }
+                datos.write(restante)
                 datos.write(cadena.toByteArray(Charsets.UTF_8))
                 datos.write(0)
             }
@@ -354,7 +356,8 @@ val verificarCamuflajeDex by tasks.registering {
         // Autochequeo del extractor: «sos» se caza como cadena real en cualquier combinación de mayúsculas.
         val combinaciones = listOf("SOS", "sos", "Sos", "sOS", "SoS", "sOs", "soS", "SOs")
         val sinCazar = combinaciones.filter { forma ->
-            juzgar(extraer("classes.dex", dexSintetico(listOf("Bucaramanga", forma)))).none { it.first == "sos" }
+            val dex = dexSintetico(listOf("x".repeat(200), "Bucaramanga", forma))
+            juzgar(extraer("classes.dex", dex)).none { it.first == "sos" }
         }
         if (sinCazar.isNotEmpty()) {
             throw GradleException(
@@ -363,6 +366,10 @@ val verificarCamuflajeDex by tasks.registering {
             )
         }
         // Las mismas tres letras entre bytes que no forman una cadena no deben cazarse.
+        val largaExacta = "x".repeat(200)
+        require(cadenasDelDex(dexSintetico(listOf(largaExacta))) == listOf(largaExacta)) {
+            "El lector de string_ids no leyó entera una cadena con longitud de dos bytes en ULEB128."
+        }
         val sosEnBytes = byteArrayOf(0x01, 's'.code.toByte(), 'O'.code.toByte(), 'S'.code.toByte(), 0x00)
         val dexConRuido = extraer("classes.dex", dexSintetico(listOf("Bucaramanga"), sosEnBytes))
         require(dexConRuido.any { it.crudo && it.texto == "sOS" }) {
@@ -444,7 +451,7 @@ val verificarCamuflajeDex by tasks.registering {
         // no corta la cadena. Con el extractor anterior, solo ASCII, los términos
         // acentuados de la lista no podían coincidir nunca.
         val cadenas = LinkedHashSet<String>()
-        val todas = ArrayList<Candidata>()
+        val todas = LinkedHashSet<Candidata>()
         ZipFile(apk).use { zip ->
             val juzgables = Collections.list(zip.entries())
                 .filter { entrada: ZipEntry -> enAlcance.matches(entrada.name) }

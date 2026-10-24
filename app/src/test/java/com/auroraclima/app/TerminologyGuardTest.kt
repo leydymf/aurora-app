@@ -5,12 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Guardia de la terminología de v0.3.2: la app nombra siempre igual a sus cuatro
- * credenciales — código de activación, contraseña de la cuenta, código de acceso y
- * contraseña del archivo PDF — para que nadie confunda la contraseña de Firebase, lo que
- * se teclea en el buscador y la clave con la que se abre un PDF exportado.
- */
+/** Guardia de la terminología de v0.3.2: cuatro credenciales, cada una con un solo nombre en los textos. */
 class TerminologyGuardTest {
     private val strings: Map<String, String> = run {
         val file = requireNotNull(

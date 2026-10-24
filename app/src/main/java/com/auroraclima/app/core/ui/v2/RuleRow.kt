@@ -23,8 +23,6 @@ import com.auroraclima.app.R
  * del código de acceso (RF-08, RF-09) y las reglas de la contraseña de la cuenta
  * (RF-07, RF-39). Al cumplirse, el icono cambia al visto en círculo y el verde de
  * «listo/cumplido» (regla 1); pendiente, círculo vacío en tinta secundaria.
- * El lector de pantalla recibe un solo elemento, «texto, cumplida» o «texto, pendiente»
- * (el icono y el estilo no se leen), y anuncia el cambio cuando la regla pasa de un estado al otro.
  */
 @Composable
 fun RuleRow(text: String, satisfied: Boolean, modifier: Modifier = Modifier) {
@@ -54,5 +52,5 @@ fun RuleRow(text: String, satisfied: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-/** Lo que lee el lector de pantalla de una regla: su texto y su estado, separados por coma. */
+/** Lo que lee el lector de pantalla: «texto, cumplida» o «texto, pendiente»; el cambio se anuncia como región viva. */
 internal fun ruleDescription(text: String, state: String): String = "$text, $state"
