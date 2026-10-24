@@ -296,7 +296,7 @@
         <item quantity="other">%d seleccionados</item>
     </plurals>
     <string name="journal_export_title">Exportar</string>
-    <string name="journal_export_subtitle">Se creará un archivo PDF con lo que elegiste, protegido con una contraseña.</string>
+    <string name="journal_export_subtitle">Se creará un archivo PDF con lo que elegiste, protegido con la contraseña del archivo PDF.</string>
     <plurals name="journal_export_summary_count">
         <item quantity="one">%d registro</item>
         <item quantity="other">%d registros</item>
@@ -308,13 +308,15 @@
     <string name="journal_export_include_attachments">Incluir adjuntos</string>
     <string name="journal_export_include_note">Las imágenes y los documentos PDF se agregan como páginas; los audios van como archivos dentro del mismo PDF (panel de adjuntos del lector). Si lo apagas, solo se mencionan.</string>
     <string name="journal_export_too_large">Los adjuntos de esta selección pesan demasiado para un solo archivo. Exporta menos registros a la vez para incluirlos.</string>
-    <string name="journal_export_notice">El archivo quedará fuera de tu espacio protegido. Quien tenga el archivo y la contraseña podrá leerlo: guárdalo o compártelo solo con quien confíes.</string>
-    <string name="journal_export_password_label">Contraseña del archivo</string>
-    <string name="journal_export_password_confirm">Repite la contraseña</string>
-    <string name="journal_export_password_help">Mínimo 10 caracteres; mezcla letras y números. No la pierdas: sin ella el archivo no se puede abrir.</string>
-    <string name="journal_export_password_short">La contraseña debe tener al menos 10 caracteres.</string>
-    <string name="journal_export_password_mismatch">Las contraseñas no coinciden.</string>
-    <string name="journal_export_password_toggle">Cambiar visibilidad de la contraseña</string>
+    <string name="journal_export_notice">El archivo quedará fuera de tu espacio protegido. Quien tenga el archivo y la contraseña del archivo PDF podrá leerlo: guárdalo o compártelo solo con quien confíes.</string>
+    <string name="journal_export_password_label">Contraseña del archivo PDF</string>
+    <string name="journal_export_password_confirm">Repite la contraseña del archivo PDF</string>
+    <string name="journal_export_password_help">Mezcla letras y números. No pierdas la contraseña del archivo PDF: sin ella el archivo no se puede abrir.</string>
+    <string name="journal_export_password_scope">Solo sirve para abrir este archivo. No es la contraseña de tu cuenta ni tu código de acceso.</string>
+    <string name="journal_export_password_rule_length">Mínimo %1$d caracteres</string>
+    <string name="journal_export_password_short">La contraseña del archivo PDF debe tener al menos 10 caracteres.</string>
+    <string name="journal_export_password_mismatch">La repetición no coincide con la contraseña del archivo PDF.</string>
+    <string name="journal_export_password_toggle">Cambiar visibilidad de la contraseña del archivo PDF</string>
     <string name="journal_export_save">Guardar en el teléfono</string>
     <string name="journal_export_share">Compartir</string>
     <string name="journal_export_preparing">Preparando el archivo…</string>

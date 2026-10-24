@@ -6,9 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Guardia de la terminología de v0.3.2: la app nombra siempre igual a sus tres
- * credenciales — código de activación, contraseña de la cuenta y código de acceso —
- * para que nadie confunda la contraseña de Firebase con lo que se teclea en el buscador.
+ * Guardia de la terminología de v0.3.2: la app nombra siempre igual a sus cuatro
+ * credenciales — código de activación, contraseña de la cuenta, código de acceso y
+ * contraseña del archivo PDF — para que nadie confunda la contraseña de Firebase, lo que
+ * se teclea en el buscador y la clave con la que se abre un PDF exportado.
  */
 class TerminologyGuardTest {
     private val strings: Map<String, String> = run {
@@ -21,8 +22,11 @@ class TerminologyGuardTest {
             .associate { it.groupValues[1] to it.groupValues[2] }
     }
 
-    // Exención declarada: la contraseña del PDF exportado es un cuarto concepto, ajeno a las tres credenciales.
+    // Exención declarada: la contraseña del archivo PDF es el cuarto término y se vigila en su propia prueba.
     private val prefijosExentosDeContrasena = listOf("journal_export_")
+
+    // Exención declarada: esta frase nombra la contraseña de la cuenta justamente para distinguirla de la del PDF.
+    private val idsExentosDeContrasenaDelArchivo = setOf("journal_export_password_scope")
 
     // Exención declarada: va justo bajo el título «Tu código de acceso.», así que «Este código» no es ambiguo.
     private val idsExentosDeCodigoCompleto = setOf("access_setup_difference")
@@ -50,6 +54,41 @@ class TerminologyGuardTest {
     }
 
     @Test
+    fun `toda contrasena de los textos de exportacion es la del archivo PDF`() {
+        val sueltas = strings.filter { (id, texto) ->
+            id.startsWith("journal_export_") && id !in idsExentosDeContrasenaDelArchivo &&
+                Regex("""contraseñas?(?! del archivo PDF)""", RegexOption.IGNORE_CASE).containsMatchIn(texto)
+        }.map { (id, texto) -> "$id: $texto" }
+
+        assertTrue("Contraseña sola en la exportación:\n" + sueltas.joinToString("\n"), sueltas.isEmpty())
+    }
+
+    @Test
+    fun `la contrasena del archivo PDF solo se nombra en los textos de exportacion`() {
+        val fuera = strings.filter { (id, texto) ->
+            !id.startsWith("journal_export_") && texto.contains("contraseña del archivo PDF", ignoreCase = true)
+        }.map { (id, texto) -> "$id: $texto" }
+
+        val detalle = fuera.joinToString("\n")
+        assertTrue("«contraseña del archivo PDF» fuera de la exportación:\n$detalle", fuera.isEmpty())
+    }
+
+    @Test
+    fun `los cuatro terminos se escriben igual`() {
+        assertEquals("Contraseña del archivo PDF", strings.getValue("journal_export_password_label"))
+        assertEquals("Contraseña de la cuenta", strings.getValue("account_register_password_label"))
+        assertEquals("Nuevo código de acceso", strings.getValue("access_change_new_label"))
+        assertTrue(strings.getValue("access_setup_title").contains("código de acceso"))
+        val alMenosUnaVez = listOf("contraseña del archivo PDF", "contraseña de la cuenta", "código de acceso")
+        alMenosUnaVez.forEach { termino ->
+            assertTrue(
+                "«$termino» no aparece en ningún texto",
+                strings.values.any { it.contains(termino, ignoreCase = true) }
+            )
+        }
+    }
+
+    @Test
     fun `el flujo de restablecer nombra la contrasena de la cuenta y no el acceso`() {
         assertEquals("Restablecer la contraseña de tu cuenta", strings.getValue("account_reset_title"))
         val conAcceso = strings.filter { (id, texto) ->
@@ -57,6 +96,16 @@ class TerminologyGuardTest {
         }.map { (id, texto) -> "$id: $texto" }
 
         assertTrue("«acceso» en el flujo de restablecer:\n" + conAcceso.joinToString("\n"), conAcceso.isEmpty())
+    }
+
+    @Test
+    fun `la frase bajo la contrasena del PDF la distingue de la cuenta y del codigo de acceso`() {
+        val frase = strings.getValue("journal_export_password_scope")
+
+        assertEquals(
+            "Solo sirve para abrir este archivo. No es la contraseña de tu cuenta ni tu código de acceso.",
+            frase
+        )
     }
 
     @Test

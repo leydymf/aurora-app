@@ -36,6 +36,7 @@ import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.rememberSystemLauncher
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.RuleRow
 import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2BackHeader
 import com.auroraclima.app.core.ui.v2.V2ErrorState
@@ -298,7 +299,7 @@ private fun IncludeAttachmentsRow(
     }
 }
 
-/** Contraseña del archivo con confirmación (criterio 4); errores solo tras intentar exportar. */
+/** Contraseña del archivo PDF con confirmación (criterio 4); errores solo tras intentar exportar. */
 @Composable
 private fun PasswordFields(
     state: JournalExportUiState,
@@ -319,6 +320,17 @@ private fun PasswordFields(
         imeAction = ImeAction.Next,
         keyboardActions = KeyboardActions(),
         toggleDescription = toggleDescription
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.journal_export_password_scope),
+        style = InteriorTypeVoice.caption,
+        color = V2Palette.inkSecondary
+    )
+    RuleRow(
+        text = stringResource(R.string.journal_export_password_rule_length, ExportPolicy.MIN_PASSWORD_LENGTH),
+        satisfied = state.hasMinPasswordLength,
+        modifier = Modifier.padding(top = 10.dp)
     )
     Spacer(modifier = Modifier.height(12.dp))
     V2FieldLabel(text = stringResource(R.string.journal_export_password_confirm))

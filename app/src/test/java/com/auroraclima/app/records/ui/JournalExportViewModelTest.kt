@@ -88,6 +88,33 @@ class JournalExportViewModelTest {
     }
 
     @Test
+    fun `la regla del largo parte sin cumplir y cambia con cada tecla`() = runTest {
+        val viewModel = readyViewModel()
+        assertFalse(viewModel.uiState.value.hasMinPasswordLength)
+
+        viewModel.onPasswordChanged("123456789")
+        assertFalse(viewModel.uiState.value.hasMinPasswordLength)
+
+        viewModel.onPasswordChanged("1234567890")
+        assertTrue(viewModel.uiState.value.hasMinPasswordLength)
+
+        viewModel.onPasswordChanged("123456789")
+        assertFalse(viewModel.uiState.value.hasMinPasswordLength)
+    }
+
+    @Test
+    fun `la regla del largo depende solo de la contrasena y no de su repeticion ni de intentar exportar`() = runTest {
+        val viewModel = readyViewModel()
+        viewModel.onConfirmationChanged("1234567890")
+        assertFalse(viewModel.uiState.value.hasMinPasswordLength)
+
+        viewModel.onPasswordChanged("1234567890")
+        viewModel.onConfirmationChanged("")
+        assertTrue(viewModel.uiState.value.hasMinPasswordLength)
+        assertFalse(viewModel.uiState.value.showsPasswordError)
+    }
+
+    @Test
     fun `una contrasena corta o que no coincide no lanza nada`() = runTest {
         val viewModel = readyViewModel()
 

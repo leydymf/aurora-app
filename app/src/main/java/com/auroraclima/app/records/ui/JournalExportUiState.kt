@@ -39,6 +39,10 @@ data class JournalExportUiState(
             else -> null
         }
 
+    /** Regla en vivo del largo mínimo: se pinta desde el principio y cambia con cada tecla. */
+    val hasMinPasswordLength: Boolean
+        get() = ExportPolicy.isPasswordLongEnough(password)
+
     val isPasswordValid: Boolean
         get() = ExportPolicy.isPasswordLongEnough(password) && password == confirmation
 
