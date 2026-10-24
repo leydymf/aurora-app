@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.accounts.domain.model.PasswordChecks
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.core.security.SyncKeyManager
@@ -30,7 +31,7 @@ class CreateAccountUseCase @Inject constructor(
     suspend operator fun invoke(email: String, password: String): CreateAccountResult {
         val normalizedEmail = email.trim()
         if (!EMAIL_PATTERN.matches(normalizedEmail)) return CreateAccountResult.InvalidEmail
-        if (password.length < MIN_PASSWORD_LENGTH) return CreateAccountResult.WeakPassword
+        if (!PasswordChecks.of(password).allSatisfied) return CreateAccountResult.WeakPassword
         val result = repository.createAccount(normalizedEmail, password)
         if (result == CreateAccountResult.Success) {
             saveCredentials(normalizedEmail, password)
@@ -58,8 +59,6 @@ class CreateAccountUseCase @Inject constructor(
     }
 
     companion object {
-        const val MIN_PASSWORD_LENGTH = 8
-
         // Validación mínima de forma (algo@dominio.tld); la verificación real la
         // hace el proveedor. Kotlin puro: sin android.util.Patterns (ARQUITECTURA §2).
         private val EMAIL_PATTERN = Regex("""^[^@\s]+@[^@\s]+\.[^@\s]+$""")

@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.ui
 
 import androidx.annotation.StringRes
+import com.auroraclima.app.accounts.domain.model.PasswordChecks
 
 /**
  * Estado de la creación de cuenta (RF-07), mockup alta-fidelidad-09 (P05).
@@ -19,6 +20,10 @@ data class CreateAccountUiState(
     @StringRes val confirmErrorRes: Int? = null,
     @StringRes val generalErrorRes: Int? = null
 ) {
+    // Reglas de la contraseña de la cuenta, recalculadas con cada tecla.
+    val passwordChecks: PasswordChecks
+        get() = PasswordChecks.of(password)
+
     val canSubmit: Boolean
         get() = email.isNotBlank() && password.isNotEmpty() && confirmPassword.isNotEmpty() && !isLoading
 }

@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -59,6 +60,26 @@ class ChangePasswordViewModelTest {
         assertEquals("", state.newPassword)
         assertEquals("", state.confirmPassword)
         assertEquals(listOf(Unit), events)
+    }
+
+    @Test
+    fun `las reglas de la contrasena nueva parten sin cumplir y cambian con cada tecla`() = runTest {
+        assertFalse(viewModel.uiState.value.newPasswordChecks.hasMinLength)
+
+        viewModel.onNewPasswordChange("1234567")
+        assertFalse(viewModel.uiState.value.newPasswordChecks.hasMinLength)
+
+        viewModel.onNewPasswordChange("12345678")
+        assertTrue(viewModel.uiState.value.newPasswordChecks.hasMinLength)
+
+        viewModel.onNewPasswordChange("1234567")
+        assertFalse(viewModel.uiState.value.newPasswordChecks.hasMinLength)
+    }
+
+    @Test
+    fun `las reglas de la contrasena nueva no cambian al escribir la actual`() = runTest {
+        viewModel.onCurrentPasswordChange("12345678")
+        assertFalse(viewModel.uiState.value.newPasswordChecks.hasMinLength)
     }
 
     @Test

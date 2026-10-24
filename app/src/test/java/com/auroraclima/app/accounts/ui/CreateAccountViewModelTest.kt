@@ -172,6 +172,30 @@ class CreateAccountViewModelTest {
     }
 
     @Test
+    fun `las reglas de la contrasena parten sin cumplir y cambian con cada tecla`() = runTest {
+        assertFalse(viewModel.uiState.value.passwordChecks.hasMinLength)
+
+        viewModel.onPasswordChange("1234567")
+        assertFalse(viewModel.uiState.value.passwordChecks.hasMinLength)
+
+        viewModel.onPasswordChange("12345678")
+        assertTrue(viewModel.uiState.value.passwordChecks.hasMinLength)
+
+        viewModel.onPasswordChange("1234567")
+        assertFalse(viewModel.uiState.value.passwordChecks.hasMinLength)
+    }
+
+    @Test
+    fun `las reglas dependen solo de la contrasena y no de su confirmacion`() = runTest {
+        viewModel.onConfirmPasswordChange("12345678")
+        assertFalse(viewModel.uiState.value.passwordChecks.hasMinLength)
+
+        viewModel.onPasswordChange("12345678")
+        viewModel.onConfirmPasswordChange("")
+        assertTrue(viewModel.uiState.value.passwordChecks.hasMinLength)
+    }
+
+    @Test
     fun `sin campos completos no se puede enviar`() = runTest {
         assertFalse(viewModel.uiState.value.canSubmit)
         viewModel.onSubmit()

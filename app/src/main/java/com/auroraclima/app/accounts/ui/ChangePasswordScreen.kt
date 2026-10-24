@@ -133,10 +133,8 @@ internal fun ChangePasswordScreen(
                 keyboardActions = KeyboardActions(),
                 toggleDescription = stringResource(R.string.account_password_toggle)
             )
-            V2FieldMessage(
-                messageRes = state.newErrorRes,
-                fallbackRes = R.string.account_register_password_hint
-            )
+            V2FieldMessage(messageRes = state.newErrorRes, fallbackRes = null)
+            PasswordRulesList(checks = state.newPasswordChecks)
             Spacer(modifier = Modifier.height(16.dp))
 
             V2FieldLabel(stringResource(R.string.account_password_change_confirm_label))

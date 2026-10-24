@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.ChangePasswordResult
+import com.auroraclima.app.accounts.domain.model.PasswordChecks
 import com.auroraclima.app.accounts.domain.model.ReauthenticateResult
 import com.auroraclima.app.accounts.domain.model.UpdatePasswordResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
@@ -37,9 +38,7 @@ class ChangePasswordUseCase @Inject constructor(
     private val credentials: CredentialStore
 ) {
     suspend operator fun invoke(currentPassword: String, newPassword: String): ChangePasswordResult {
-        if (newPassword.length < CreateAccountUseCase.MIN_PASSWORD_LENGTH) {
-            return ChangePasswordResult.WeakPassword
-        }
+        if (!PasswordChecks.of(newPassword).allSatisfied) return ChangePasswordResult.WeakPassword
         when (repository.reauthenticate(currentPassword)) {
             ReauthenticateResult.InvalidCredentials -> return ChangePasswordResult.InvalidCredentials
             ReauthenticateResult.NoConnection -> return ChangePasswordResult.NoConnection

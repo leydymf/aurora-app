@@ -146,10 +146,8 @@ internal fun CreateAccountScreen(
                 keyboardActions = KeyboardActions(),
                 toggleDescription = stringResource(R.string.account_password_toggle)
             )
-            V2FieldMessage(
-                messageRes = state.passwordErrorRes,
-                fallbackRes = R.string.account_register_password_hint
-            )
+            V2FieldMessage(messageRes = state.passwordErrorRes, fallbackRes = null)
+            PasswordRulesList(checks = state.passwordChecks)
             Spacer(modifier = Modifier.height(16.dp))
 
             V2FieldLabel(stringResource(R.string.account_register_confirm_label))
