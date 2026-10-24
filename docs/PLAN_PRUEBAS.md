@@ -7,7 +7,7 @@
 - **CP-05** (PU + PS, fase 3 y 4) — RQ: RF-08, RF-09 — Creación y cambio de código: reglas de longitud y ciudad, almacenamiento no legible, confirmación de contraseña.
 - **CP-06** (CN + US, fase 4) — RQ: RF-10, RF-11 — Tutorial con práctica de ingreso y salida rápida; reapertura desde configuración.
 - **CP-07** (PI + PS, fase 3 y 4) — RQ: RF-12, RF-13, RF-14 — Apertura por código exacto, respuesta indistinguible para otras entradas, barra limpia sin historial ni autocompletado.
-- **CP-08** (PU + CN, fase 3 y 4) — RQ: RF-15 — Inicio de sesión: acceso correcto, error genérico, bloqueo tras 5 intentos.
+- **CP-08** (PU + CN, fase 3 y 4) — RQ: RF-15 — Inicio de sesión: acceso correcto, error genérico, bloqueo tras 5 intentos. Desde v0.3.2: con un registro interrumpido antes de crear el código de acceso (sesión viva o credenciales guardadas), el inicio de sesión del flujo de activación pide la contraseña de la cuenta y no llega a crear el código sin ella.
 - **CP-09** (PI + US, fase 3 y 4) — RQ: RF-16 — Salida rápida: retorno al clima en menos de 1 s, sin regreso posible por navegación ni rastro de sesión.
 - **CP-10** (CN, fase 4) — RQ: RF-17, RF-18 — Consentimiento bloqueante sin preselección; rechazo sin recolección de datos; relectura posterior.
 - **CP-11** (CN, fase 4) — RQ: RF-19 — Cierre de sesión y exigencia de credenciales en el siguiente acceso.

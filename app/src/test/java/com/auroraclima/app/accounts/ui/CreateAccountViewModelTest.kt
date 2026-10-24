@@ -3,9 +3,11 @@ package com.auroraclima.app.accounts.ui
 import com.auroraclima.app.R
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.usecase.CreateAccountUseCase
+import com.auroraclima.app.accounts.domain.usecase.DiscardUnfinishedActivationUseCase
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,8 +31,14 @@ class CreateAccountViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val repository = FakeAuthRepository()
+    private val credentials = FakeCredentialStore()
     private val viewModel = CreateAccountViewModel(
-        CreateAccountUseCase(repository, FakeSyncKeyManager(), FakeCredentialStore())
+        CreateAccountUseCase(
+            repository,
+            FakeSyncKeyManager(),
+            credentials,
+            DiscardUnfinishedActivationUseCase(FakeAccessCodePresence(codeExists = false), repository, credentials)
+        )
     )
 
     private fun fillValidForm() {

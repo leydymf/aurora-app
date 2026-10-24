@@ -433,7 +433,7 @@ El sistema debe restaurar íntegramente los registros y evidencias de la usuaria
 **Criterios de aceptación:**
 1. Al iniciar sesión en un dispositivo nuevo y finalizar la sincronización, se ven todos los incidentes y evidencias íntegros.
 
-*Notas:* -
+*Notas:* **Refinamiento v0.3.2 (evaluación heurística, hallazgo A):** mientras no exista código de acceso en el dispositivo (flujo de activación), una sesión viva del proveedor o unas credenciales guardadas **no** abren el paso: vienen de un registro interrumpido y se descartan. El descarte corre al abrir el consentimiento, antes de crear una cuenta y al abrir el inicio de sesión de activación, y nunca corre si el código de acceso ya existe. Retomar el registro sigue siendo posible, pero escribiendo otra vez la contraseña de la cuenta (con el mismo bloqueo temporal de RF-15). El reingreso con código de acceso ya creado (P-31 opción C) no cambia.
 
 ## RF-40 — Autenticación de administradora
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RNF-06

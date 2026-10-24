@@ -39,6 +39,7 @@ internal class FakeAuthRepository : AuthRepository {
 
     override suspend fun createAccount(email: String, password: String): CreateAccountResult {
         requestedEmails += email
+        callLog?.add("createAccount")
         gate?.await()
         return nextCreateResult
     }
@@ -60,6 +61,7 @@ internal class FakeAuthRepository : AuthRepository {
 
     override fun signOut() {
         signOutCalls++
+        callLog?.add("signOut")
         activeSession = false
     }
 

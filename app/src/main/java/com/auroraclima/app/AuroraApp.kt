@@ -24,6 +24,8 @@ import com.auroraclima.app.accounts.ui.ChangePasswordRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
 import com.auroraclima.app.accounts.ui.DeleteAccountRoute
+import com.auroraclima.app.accounts.ui.LOGIN_FLOW_ARG
+import com.auroraclima.app.accounts.ui.LOGIN_FLOW_FIRST_USE
 import com.auroraclima.app.accounts.ui.LoginRoute
 import com.auroraclima.app.accounts.ui.PrivacyScreen
 import com.auroraclima.app.accounts.ui.SignOutViewModel
@@ -108,7 +110,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                         // RF-39: cuenta existente en un dispositivo nuevo —
                         // inicia sesión dentro del flujo de activación; «Atrás»
                         // regresa al formulario de creación.
-                        onOpenLogin = { navController.navigate(ENTRY_SETUP_ROUTE) }
+                        onOpenLogin = { navController.navigate("$ENTRY_SETUP_BASE/$LOGIN_FLOW_FIRST_USE") }
                     )
                 }
                 // Inicio de sesión del flujo de activación (RF-39): mismo login
@@ -116,6 +118,8 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // nuevo (RF-08) — en este dispositivo aún no existe. La llave
                 // del respaldo y la restauración ya corrieron dentro del caso
                 // de uso del login; nada de la pila anterior debe quedar.
+                // El argumento marca el flujo de activación: aquí una sesión viva
+                // o un blob no se saltan el formulario (hallazgo A de v0.3.2).
                 screen(ENTRY_SETUP_ROUTE) {
                     LoginRoute(
                         onAccessGranted = {
@@ -445,7 +449,8 @@ private const val INNER_ROUTE = "inner"
 private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
-private const val ENTRY_SETUP_ROUTE = "entry_setup"
+private const val ENTRY_SETUP_BASE = "entry_setup"
+private const val ENTRY_SETUP_ROUTE = "$ENTRY_SETUP_BASE/{$LOGIN_FLOW_ARG}"
 private const val GUIDE_ROUTE = "guide"
 private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ENTRY_ROUTE = "entry"

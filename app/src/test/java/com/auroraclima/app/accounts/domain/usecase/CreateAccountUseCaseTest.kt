@@ -1,6 +1,7 @@
 package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.accounts.domain.model.CreateAccountResult
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -11,7 +12,40 @@ class CreateAccountUseCaseTest {
     private val repository = FakeAuthRepository()
     private val syncKeys = FakeSyncKeyManager()
     private val credentials = FakeCredentialStore()
-    private val useCase = CreateAccountUseCase(repository, syncKeys, credentials)
+    private val accessCode = FakeAccessCodePresence(codeExists = false)
+    private val useCase = CreateAccountUseCase(
+        repository,
+        syncKeys,
+        credentials,
+        DiscardUnfinishedActivationUseCase(accessCode, repository, credentials)
+    )
+
+    @Test
+    fun `antes de crear la cuenta se descartan los restos de otro registro`() = runTest {
+        // Hallazgo A (v0.3.2): la cuenta nueva no hereda la sesión ni el blob
+        // que dejó un registro interrumpido.
+        val callLog = mutableListOf<String>()
+        repository.callLog = callLog
+        repository.activeSession = true
+        credentials.save("anterior@correo.co", "clave-anterior-1")
+
+        useCase("usuaria@correo.co", "clave-segura-1")
+
+        assertEquals(listOf("signOut", "createAccount"), callLog)
+        assertEquals(1, credentials.eraseCalls)
+        assertEquals("usuaria@correo.co", credentials.stored?.email)
+    }
+
+    @Test
+    fun `una entrada invalida no descarta nada`() = runTest {
+        // Sin tocar la red no hay cuenta nueva que proteger.
+        credentials.save("anterior@correo.co", "clave-anterior-1")
+
+        useCase("sin-arroba", "clave-segura-1")
+
+        assertEquals(0, credentials.eraseCalls)
+        assertEquals(0, repository.signOutCalls)
+    }
 
     @Test
     fun `con correo valido y contrasena de 8 o mas la cuenta se crea`() = runTest {

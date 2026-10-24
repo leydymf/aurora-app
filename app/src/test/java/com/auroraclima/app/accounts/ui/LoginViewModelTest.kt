@@ -1,10 +1,14 @@
 package com.auroraclima.app.accounts.ui
 
+import androidx.lifecycle.SavedStateHandle
 import com.auroraclima.app.R
+import com.auroraclima.app.accounts.domain.model.CreateAccountResult
 import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.model.SignInResult
 import com.auroraclima.app.accounts.domain.repository.SignInAttempts
 import com.auroraclima.app.accounts.domain.security.WallClock
+import com.auroraclima.app.accounts.domain.usecase.CreateAccountUseCase
+import com.auroraclima.app.accounts.domain.usecase.DiscardUnfinishedActivationUseCase
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
 import com.auroraclima.app.accounts.domain.usecase.FakeSignInAttemptStore
@@ -13,6 +17,7 @@ import com.auroraclima.app.accounts.domain.usecase.NoCloudReconciliation
 import com.auroraclima.app.accounts.domain.usecase.SendPasswordResetUseCase
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -44,9 +49,20 @@ class LoginViewModelTest {
      *  se re-ancla al deadline persistido en cada tick y ambos deben avanzar juntos. */
     private val resetAttempts = FakeSignInAttemptStore()
 
-    private fun TestScope.createViewModel(): LoginViewModel {
+    /** Por defecto el código de acceso existe: el reingreso normal (ENTRY_ROUTE). */
+    private val accessCode = FakeAccessCodePresence()
+    private val discardUnfinished = DiscardUnfinishedActivationUseCase(accessCode, repository, credentials)
+
+    /** Login del flujo de activación (ENTRY_SETUP_ROUTE): aún no hay código de acceso. */
+    private fun TestScope.createActivationViewModel(): LoginViewModel {
+        accessCode.codeExists = false
+        return createViewModel(SavedStateHandle(mapOf(LOGIN_FLOW_ARG to LOGIN_FLOW_FIRST_USE)))
+    }
+
+    private fun TestScope.createViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): LoginViewModel {
         val clock = WallClock { BASE_EPOCH_MS + testScheduler.currentTime }
         return LoginViewModel(
+            savedStateHandle,
             SignInUseCase(
                 repository,
                 store,
@@ -59,7 +75,9 @@ class LoginViewModelTest {
             repository,
             credentials,
             silentSession,
-            SendPasswordResetUseCase(repository, resetAttempts, clock)
+            SendPasswordResetUseCase(repository, resetAttempts, clock),
+            accessCode,
+            discardUnfinished
         )
     }
 
@@ -123,6 +141,141 @@ class LoginViewModelTest {
         // El silencioso corre en el coordinador, no aquí: cero login directo.
         assertEquals(0, repository.signInCalls)
     }
+
+    @Test
+    fun `registro interrumpido - el login de activacion pide la contrasena aunque la sesion siga viva`() = runTest {
+        // Hallazgo A (v0.3.2): la cuenta se creó (el proveedor deja la sesión
+        // iniciada y el caso de uso guarda el blob) y el proceso se cortó antes
+        // del código de acceso. Antes, este login abría sin contraseña.
+        createAccount()
+        repository.activeSession = true
+        val viewModel = createActivationViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isCheckingSession)
+        assertEquals(0, repository.signInCalls)
+        // El estado a medias no queda usable por ningún otro camino.
+        assertEquals(1, repository.signOutCalls)
+        assertFalse(repository.activeSession)
+        assertNull(credentials.stored)
+    }
+
+    @Test
+    fun `registro interrumpido - el login de activacion pide la contrasena aunque haya blob`() = runTest {
+        // Variante: la sesión del proveedor ya no está, pero el blob sí.
+        credentials.save("usuaria@correo.co", "clave-segura-1")
+        val viewModel = createActivationViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isCheckingSession)
+        assertEquals(0, silentSession.startCalls)
+        assertNull(credentials.stored)
+    }
+
+    @Test
+    fun `registro interrumpido - con la contrasena correcta continua a crear el codigo`() = runTest {
+        createAccount()
+        repository.activeSession = true
+        val viewModel = createActivationViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        viewModel.fillAndSubmit()
+        advanceUntilIdle()
+
+        // El evento lleva a SETUP_ROUTE (AuroraApp); el login volvió a crear el blob.
+        assertEquals(1, events.size)
+        assertEquals(1, repository.signInCalls)
+        assertEquals("clave-segura-1", credentials.stored?.password)
+    }
+
+    @Test
+    fun `registro interrumpido - con la contrasena incorrecta no avanza y aplica la pausa`() = runTest {
+        createAccount()
+        repository.activeSession = true
+        repository.nextSignInResult = SignInResult.InvalidCredentials
+        val viewModel = createActivationViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        repeat(5) {
+            viewModel.fillAndSubmit("clave-mala")
+            runCurrent()
+        }
+
+        assertEquals(0, events.size)
+        assertTrue(viewModel.uiState.value.isLocked)
+        assertEquals("5:00", viewModel.uiState.value.lockCountdownText)
+    }
+
+    @Test
+    fun `cuenta no creada en el proveedor - el registro empieza de cero`() = runTest {
+        // La creación falló (red, servicio): no queda sesión ni blob, y el login
+        // de activación muestra el formulario vacío sin abrir nada.
+        repository.nextCreateResult = CreateAccountResult.GenericFailure
+        assertEquals(CreateAccountResult.GenericFailure, createAccount())
+        val viewModel = createActivationViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertNull(credentials.stored)
+        assertFalse(repository.activeSession)
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isCheckingSession)
+        assertEquals("", viewModel.uiState.value.email)
+        assertEquals("", viewModel.uiState.value.password)
+    }
+
+    @Test
+    fun `sin codigo de acceso el login pide la contrasena aunque la ruta no lo marque`() = runTest {
+        // Defensa en profundidad: una navegación que olvide el argumento no abre.
+        accessCode.codeExists = false
+        repository.activeSession = true
+        credentials.save("usuaria@correo.co", "clave-segura-1")
+        val viewModel = createViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isCheckingSession)
+    }
+
+    @Test
+    fun `en la ruta de activacion una lectura fallida del codigo no abre el paso`() = runTest {
+        // La ruta cubre el fallo de la otra señal: el formulario se muestra
+        // igual, y la guarda del descarte no borra nada ante la duda.
+        accessCode.failOnRead = true
+        repository.activeSession = true
+        val viewModel = createViewModel(SavedStateHandle(mapOf(LOGIN_FLOW_ARG to LOGIN_FLOW_FIRST_USE)))
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isCheckingSession)
+        assertEquals(0, repository.signOutCalls)
+    }
+
+    @Test
+    fun `reingreso con codigo y lectura fallida conserva el acceso de P-31 C`() = runTest {
+        // Regresión: ante la duda, el reingreso normal no se degrada.
+        accessCode.failOnRead = true
+        credentials.save("usuaria@correo.co", "clave-segura-1")
+        val viewModel = createViewModel()
+        val events = collectOpenEvents(viewModel)
+        runCurrent()
+
+        assertEquals(1, events.size)
+        assertEquals(1, silentSession.startCalls)
+        assertEquals(0, credentials.eraseCalls)
+    }
+
+    private suspend fun createAccount(): CreateAccountResult =
+        CreateAccountUseCase(repository, FakeSyncKeyManager(), credentials, discardUnfinished)
+            .invoke("usuaria@correo.co", "clave-segura-1")
 
     @Test
     fun `sin sesion y sin blob se muestra el formulario`() = runTest {

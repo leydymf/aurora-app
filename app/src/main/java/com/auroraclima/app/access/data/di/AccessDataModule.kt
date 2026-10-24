@@ -7,7 +7,9 @@ import com.auroraclima.app.access.data.RawCityNameDirectory
 import com.auroraclima.app.access.domain.repository.CityNameDirectory
 import com.auroraclima.app.access.domain.repository.SecretCodeRepository
 import com.auroraclima.app.access.domain.security.SecretCodeHasher
+import com.auroraclima.app.access.domain.usecase.CheckAccessCodeUseCase
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
+import com.auroraclima.app.core.security.AccessCodePresence
 import com.auroraclima.app.core.security.LocalAccountDataEraser
 import com.auroraclima.app.core.security.SearchQueryGate
 import dagger.Binds
@@ -31,6 +33,10 @@ abstract class AccessDataModule {
     /** La puerta de la barra de búsqueda (core) se resuelve con el caso de uso de access. */
     @Binds
     abstract fun bindSearchQueryGate(impl: ValidateSecretCodeUseCase): SearchQueryGate
+
+    /** ¿Existe ya el código de acceso? (accounts y la sync lo consultan desde core). */
+    @Binds
+    abstract fun bindAccessCodePresence(impl: CheckAccessCodeUseCase): AccessCodePresence
 
     /** La puerta (hashes y su llave) muere con la cuenta (RF-20). */
     @Binds

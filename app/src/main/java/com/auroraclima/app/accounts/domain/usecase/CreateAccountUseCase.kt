@@ -22,16 +22,22 @@ import kotlinx.coroutines.CancellationException
  * P-31 opción C: el mismo momento hace nacer el blob de credenciales del
  * reingreso silencioso (mismo criterio que establish: los únicos momentos con
  * la contraseña confirmada en memoria). También de mejor esfuerzo.
+ *
+ * v0.3.2 (hallazgo A): antes de hablar con el proveedor se descarta lo que haya
+ * dejado otro registro sin terminar ([DiscardUnfinishedActivationUseCase]), para
+ * que la cuenta nueva no herede nada de la anterior.
  */
 class CreateAccountUseCase @Inject constructor(
     private val repository: AuthRepository,
     private val syncKeys: SyncKeyManager,
-    private val credentials: CredentialStore
+    private val credentials: CredentialStore,
+    private val discardUnfinished: DiscardUnfinishedActivationUseCase
 ) {
     suspend operator fun invoke(email: String, password: String): CreateAccountResult {
         val normalizedEmail = email.trim()
         if (!EMAIL_PATTERN.matches(normalizedEmail)) return CreateAccountResult.InvalidEmail
         if (!PasswordChecks.of(password).allSatisfied) return CreateAccountResult.WeakPassword
+        discardUnfinished()
         val result = repository.createAccount(normalizedEmail, password)
         if (result == CreateAccountResult.Success) {
             saveCredentials(normalizedEmail, password)

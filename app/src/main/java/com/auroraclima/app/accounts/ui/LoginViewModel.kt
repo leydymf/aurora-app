@@ -1,5 +1,6 @@
 package com.auroraclima.app.accounts.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
@@ -7,9 +8,11 @@ import com.auroraclima.app.accounts.domain.model.PasswordResetResult
 import com.auroraclima.app.accounts.domain.repository.AuthRepository
 import com.auroraclima.app.accounts.domain.repository.CredentialStore
 import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
+import com.auroraclima.app.accounts.domain.usecase.DiscardUnfinishedActivationUseCase
 import com.auroraclima.app.accounts.domain.usecase.SendPasswordResetUseCase
 import com.auroraclima.app.accounts.domain.usecase.SignInOutcome
 import com.auroraclima.app.accounts.domain.usecase.SignInUseCase
+import com.auroraclima.app.core.security.AccessCodePresence
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -23,6 +26,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** Argumento de ruta del login; nombre y valor neutros porque quedan legibles en el APK (RNF-05). */
+const val LOGIN_FLOW_ARG = "flow"
+
+/** Valor de [LOGIN_FLOW_ARG] del login dentro del flujo de activación (RF-39). */
+const val LOGIN_FLOW_FIRST_USE = "first"
+
 /**
  * Inicio de sesión (RF-15). El orden de decisión al entrar (RF-12 criterio 1 +
  * P-31 opción C):
@@ -35,16 +44,29 @@ import kotlinx.coroutines.launch
  * 3. Sin blob → formulario de login manual (comportamiento previo a la opción
  *    C; también el estado tras RF-19, RF-20 o un rechazo definitivo).
  *
+ * Ese orden vale SOLO para el reingreso con código de acceso ya creado. En el
+ * flujo de activación (RF-39, ruta con [LOGIN_FLOW_FIRST_USE], o cualquier
+ * apertura sin código de acceso) una sesión viva o un blob vienen de un
+ * registro sin terminar y no prueban nada: se descartan y siempre se pide la
+ * contraseña (hallazgo A de v0.3.2). Las dos señales se suman para que un fallo
+ * de una no abra el paso: la ruta cubre una lectura fallida del código, y el
+ * código cubre una navegación que olvide el argumento.
+ *
  * La contraseña vive solo en este estado y se limpia al usarse.
  */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val signIn: SignInUseCase,
     private val repository: AuthRepository,
     private val credentials: CredentialStore,
     private val silentSession: SilentSessionOrchestrator,
-    private val sendPasswordReset: SendPasswordResetUseCase
+    private val sendPasswordReset: SendPasswordResetUseCase,
+    private val accessCode: AccessCodePresence,
+    private val discardUnfinished: DiscardUnfinishedActivationUseCase
 ) : ViewModel() {
+    private val isFirstUseRoute = savedStateHandle.get<String>(LOGIN_FLOW_ARG) == LOGIN_FLOW_FIRST_USE
+
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
@@ -59,6 +81,22 @@ class LoginViewModel @Inject constructor(
     private var countdownJob: Job? = null
 
     init {
+        viewModelScope.launch {
+            if (isActivationFlow()) {
+                // Nada de lo que encuentre aquí sirve de prueba: fuera, y formulario.
+                discardUnfinished()
+                showForm()
+            } else {
+                decideReentry()
+            }
+        }
+    }
+
+    // Ante una lectura fallida el código se da por existente: preserva el
+    // reingreso de P-31 C, y la ruta de activación ya cubre su propio caso.
+    private suspend fun isActivationFlow(): Boolean = isFirstUseRoute || !accessCode.isSet().getOrDefault(true)
+
+    private suspend fun decideReentry() {
         when {
             repository.hasActiveSession() ->
                 // isCheckingSession queda true: la pantalla no llega a pintar el formulario.
@@ -69,12 +107,14 @@ class LoginViewModel @Inject constructor(
                 silentSession.start()
                 _openEvents.tryEmit(Unit)
             }
-            else -> {
-                _uiState.update { it.copy(isCheckingSession = false) }
-                // Un bloqueo vigente de una visita anterior se retoma donde iba.
-                viewModelScope.launch { startLockCountdown(signIn.currentLockMillis()) }
-            }
+            else -> showForm()
         }
+    }
+
+    private suspend fun showForm() {
+        _uiState.update { it.copy(isCheckingSession = false) }
+        // Un bloqueo vigente de una visita anterior se retoma donde iba.
+        startLockCountdown(signIn.currentLockMillis())
     }
 
     fun onEmailChange(value: String) {
