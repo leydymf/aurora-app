@@ -27,6 +27,7 @@
     <string name="weather_tab_today">Hoy</string>
     <string name="weather_tab_forecast">5 días</string>
     <string name="access_setup_title">Tu código de acceso.</string>
+    <string name="access_setup_difference">Este código es distinto de la contraseña de tu cuenta. Lo escribirás en el buscador de ciudades para entrar a Aurora.</string>
     <string name="access_setup_body">Elige algo fácil de recordar para ti, y sin significado para nadie más.</string>
     <string name="access_setup_rule_length">Mínimo 6 caracteres</string>
     <string name="access_setup_rule_city">No puede ser el nombre de una ciudad</string>

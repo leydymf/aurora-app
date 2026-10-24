@@ -111,6 +111,12 @@ internal fun CodeSetupScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
+            text = stringResource(R.string.access_setup_difference),
+            style = InteriorTypeVoice.bodyStrong,
+            color = V2Palette.inkPrimary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
             text = stringResource(R.string.access_setup_body),
             style = InteriorTypeVoice.body,
             color = V2Palette.inkSecondary
