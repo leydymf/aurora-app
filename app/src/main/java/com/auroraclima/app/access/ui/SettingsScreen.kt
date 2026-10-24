@@ -39,19 +39,19 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 
 /**
  * Ajustes del espacio interno (mockup P21 / v2-23): tres grupos de filas con
- * insignia — Tu llave de entrada, Tu privacidad y Tu cuenta — con la acción
+ * insignia — Tu acceso, Tu privacidad y Tu cuenta — con la acción
  * delicada (eliminar todo, RF-20) AL FINAL en el rosa de avisos. Menú estático
  * sin ViewModel — mismo criterio que PanelScreen (guía, 2026-07-10): el patrón
  * UiState aplica a pantallas con estado. Los destinos los decide la navegación
  * raíz (guardia RF-06).
  *
  * Matices por significado (regla 1, anexo v2-29 normativo por D7): llave lila
- * para la clave de reconocerte, llave neutra para la contraseña de la cuenta
+ * para el código de acceso, llave neutra para la contraseña de la cuenta
  * (fila conservada por D6 aunque el mockup la omita), libro azul del tutorial,
  * escudo AZUL de protección para «qué guardamos» (el anexo prima sobre el
  * verdoso del mockup), puerta arena para cerrar sesión y papelera rosa para
  * eliminar. «Cambiar código secreto» del mockup sigue vedado: «Cambiar tu
- * clave personal» (CamouflageResourcesTest, criterio P-17/P-25).
+ * código de acceso» (CamouflageResourcesTest, criterio P-17/P-25).
  */
 @Composable
 fun SettingsScreen(
@@ -102,8 +102,8 @@ fun SettingsScreen(
             )
             // RF-39: la contraseña de la cuenta también se cambia desde aquí;
             // la pantalla es de accounts y la conexión, por navegación (§2).
-            // Misma llave en neutro: también abre tu espacio, pero no es la
-            // clave de reconocerte (fila conservada por D6).
+            // Misma llave en neutro: también abre tu espacio, pero no es el
+            // código de acceso (fila conservada por D6).
             IconListRow(
                 iconRes = V2Icons.code,
                 accent = V2Palette.accentGroup,

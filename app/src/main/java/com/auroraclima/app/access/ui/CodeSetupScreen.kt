@@ -46,11 +46,12 @@ import com.auroraclima.app.core.ui.v2.V2StepHeader
 import com.auroraclima.app.core.ui.v2.V2Voice
 
 /**
- * Creación de la clave personal (RF-08), mockup v2-07 (P06). Paso 2 de 3 del
+ * Creación del código de acceso (RF-08), mockup v2-07 (P06). Paso 2 de 3 del
  * primer uso. Redacción de camuflaje sobre el mockup: «Tu código secreto.» →
- * «Tu clave personal.» (decisión D3/P-17 y D1: «secreto» está vedado por
- * CamouflageResourcesTest). Campo de confirmación agregado a pedido de la
- * usuaria, como en P05. Los campos reportan cada tecla como interacción (P-15).
+ * «Tu código de acceso.» (decisión D3/P-17 y D1: «secreto» está vedado por
+ * CamouflageResourcesTest; v0.3.2 unifica el nombre con la contraseña de la
+ * cuenta). Campo de confirmación agregado a pedido de la usuaria, como en P05.
+ * Los campos reportan cada tecla como interacción (P-15).
  */
 @Composable
 fun CodeSetupRoute(onCodeCreated: () -> Unit) {

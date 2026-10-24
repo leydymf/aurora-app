@@ -3,8 +3,8 @@ package com.auroraclima.app.access.ui
 import androidx.annotation.StringRes
 
 /**
- * Estado de la creación de la clave personal (RF-08), mockup alta-fidelidad-10
- * (P06) con la redacción de camuflaje aprobada en D3 («clave personal», P-17) y
+ * Estado de la creación del código de acceso (RF-08), mockup alta-fidelidad-10
+ * (P06) con la redacción de camuflaje aprobada en D3 (P-17; hoy «código de acceso») y
  * el campo de confirmación pedido por la usuaria. Las dos primeras reglas del
  * mockup se verifican en vivo; la tercera («nunca se guarda en texto legible»)
  * es una propiedad del sistema y se pinta informativa.

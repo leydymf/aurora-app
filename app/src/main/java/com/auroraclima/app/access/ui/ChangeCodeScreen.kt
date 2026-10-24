@@ -37,14 +37,14 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecretField
 
 /**
- * Cambio de la clave personal (RF-09), mockup alta-fidelidad-34 (P21·b) con las
- * adaptaciones registradas en la nota de RF-09: la credencial pedida es la clave
- * vigente (no la contraseña) y la redacción de camuflaje de P-17. Los campos
+ * Cambio del código de acceso (RF-09), mockup alta-fidelidad-34 (P21·b) con las
+ * adaptaciones registradas en la nota de RF-09: la credencial pedida es el código
+ * vigente (no la contraseña de la cuenta) y la redacción de camuflaje de P-17. Los campos
  * reportan cada tecla como interacción (P-15) — el teclado es ventana propia y
  * la inactividad expulsaría a mitad de cambio.
  *
  * V2 (cierre): re-estilo por extensión del sistema (decisión D6, sin mockup V2
- * propio) — mismo kit y misma composición que la creación de la clave (P06).
+ * propio) — mismo kit y misma composición que la creación del código de acceso (P06).
  */
 @Composable
 fun ChangeCodeRoute(onCodeChanged: () -> Unit, onBack: () -> Unit) {
