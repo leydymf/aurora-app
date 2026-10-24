@@ -33,6 +33,7 @@ import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.ui.components.BrandHeader
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.RuleRow
 import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2FieldLabel
@@ -204,30 +205,5 @@ internal fun CodeSetupScreen(
         }
         // Aire final para no chocar con el botón nube de salida rápida.
         Spacer(modifier = Modifier.height(48.dp))
-    }
-}
-
-/**
- * Renglón de regla en vivo del mockup P06; lo reutiliza el cambio de clave
- * (RF-09, P21·b). Al cumplirse, el icono cambia al visto en círculo y el verde
- * de «listo/cumplido» (regla 1); pendiente, círculo vacío en tinta secundaria.
- */
-@Composable
-internal fun RuleRow(text: String, satisfied: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(
-                if (satisfied) V2Icons.synced else R.drawable.ic_rule_pending
-            ),
-            contentDescription = null,
-            tint = if (satisfied) V2Palette.accentCare.stroke else V2Palette.inkSecondary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = text,
-            style = if (satisfied) InteriorTypeVoice.bodyStrong else InteriorTypeVoice.body,
-            color = if (satisfied) V2Palette.inkPrimary else V2Palette.inkSecondary
-        )
     }
 }
