@@ -1,3 +1,4 @@
+import java.io.ByteArrayOutputStream
 import java.util.Collections
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -153,6 +154,15 @@ dependencies {
 // mensaje de excepción que H-1 denunció. El precio de juzgar todo es tener que
 // absorber el ruido de las librerías en la línea base, una por una y con su
 // causa escrita, y eso es lo que hace creíble un «0 hallazgos».
+// Una candidata a juicio: `crudo` es una secuencia imprimible sacada a ciegas de los bytes.
+// `admiteCortos` y `admiteLargos` dicen qué términos pueden dispararse en ella, según tengan 3 letras o más.
+data class Candidata(
+    val texto: String,
+    val admiteCortos: Boolean,
+    val admiteLargos: Boolean,
+    val crudo: Boolean
+)
+
 val verificarCamuflajeDex by tasks.registering {
     group = "verification"
     description = "Falla si el DEX del APK release contiene términos vedados por el camuflaje (RNF-05)."
@@ -208,8 +218,10 @@ val verificarCamuflajeDex by tasks.registering {
         // identificadores y a los literales de las fuentes, que es donde ese nombre
         // nacería. Este guardián existe para el residuo que R8 deja, no para sustituir
         // al de las fuentes.
-        fun casa(cadena: String, termino: String): Boolean {
-            if (termino.length > 3) return cadena.contains(termino, ignoreCase = true)
+        fun casa(cadena: String, termino: String, candidata: Candidata): Boolean {
+            if (termino.length > 3) return candidata.admiteLargos && cadena.contains(termino, ignoreCase = true)
+            // Los cortos exigen además una cadena real: tres letras entre bytes de control de un DEX no lo son.
+            if (!candidata.admiteCortos) return false
             var desde = 0
             while (true) {
                 val i = cadena.indexOf(termino, desde, ignoreCase = true)
@@ -221,10 +233,74 @@ val verificarCamuflajeDex by tasks.registering {
             }
         }
 
-        fun juzgar(candidatas: Collection<String>): List<Pair<String, String>> = candidatas.mapNotNull { bruta ->
-            val cadena = sinPrefijoDeLongitud(bruta)
+        fun juzgar(candidatas: Collection<Candidata>): List<Pair<String, String>> = candidatas.mapNotNull { candidata ->
+            val cadena = if (candidata.crudo) sinPrefijoDeLongitud(candidata.texto) else candidata.texto
             if (aceptada(cadena)) return@mapNotNull null
-            vedados.firstOrNull { casa(cadena, it) }?.let { it to cadena }
+            vedados.firstOrNull { casa(cadena, it, candidata) }?.let { it to cadena }
+        }
+
+        fun reales(textos: List<String>) = textos.map {
+            Candidata(it, admiteCortos = true, admiteLargos = true, crudo = false)
+        }
+
+        // Devuelve las cadenas que la tabla `string_ids` del DEX declara; si el archivo no cuadra, falla.
+        fun cadenasDelDex(bytes: ByteArray): List<String> {
+            fun entero(en: Int): Int {
+                require(en >= 0 && en + 4 <= bytes.size) { "DEX truncado: no hay 4 bytes en $en." }
+                return (bytes[en].toInt() and 0xFF) or
+                    ((bytes[en + 1].toInt() and 0xFF) shl 8) or
+                    ((bytes[en + 2].toInt() and 0xFF) shl 16) or
+                    ((bytes[en + 3].toInt() and 0xFF) shl 24)
+            }
+            require(bytes.size >= 112 && String(bytes, 0, 4, Charsets.ISO_8859_1) == "dex\n") {
+                "El archivo no empieza con la firma de un DEX."
+            }
+            val cantidad = entero(56)
+            val tabla = entero(60)
+            require(cantidad >= 0 && tabla >= 0 && tabla.toLong() + 4L * cantidad <= bytes.size) {
+                "La tabla de cadenas del DEX no cabe en el archivo: $cantidad entradas en $tabla."
+            }
+            return (0 until cantidad).map { indice ->
+                var posicion = entero(tabla + 4 * indice)
+                require(posicion in 0 until bytes.size) { "La cadena $indice apunta fuera del DEX." }
+                while (posicion < bytes.size && (bytes[posicion].toInt() and 0x80) != 0) posicion++
+                posicion++
+                var fin = posicion
+                while (fin < bytes.size && bytes[fin].toInt() != 0) fin++
+                require(posicion <= fin && fin < bytes.size) { "La cadena $indice del DEX no termina." }
+                String(bytes, posicion, fin - posicion, Charsets.UTF_8)
+            }
+        }
+
+        // Candidatas de una entrada: secuencias imprimibles al estilo de `strings`, decodificando UTF-8.
+        // En un DEX esas secuencias no admiten términos cortos y se suman las cadenas reales de su tabla.
+        // El piso es 3 y no 4 porque «sos» mide 3 (hallazgo A-6 de la auditoría).
+        fun extraer(nombre: String, bytes: ByteArray): List<Candidata> {
+            val esDex = nombre.endsWith(".dex")
+            val candidatas = ArrayList<Candidata>()
+            var inicio = -1
+            fun cerrar(fin: Int) {
+                if (inicio >= 0 && fin - inicio >= 3) {
+                    val texto = String(bytes, inicio, fin - inicio, Charsets.UTF_8)
+                    candidatas += Candidata(texto, admiteCortos = !esDex, admiteLargos = true, crudo = true)
+                }
+                inicio = -1
+            }
+            for (indice in bytes.indices) {
+                val c = bytes[indice].toInt() and 0xFF
+                if (c in 0x20..0x7E || c >= 0x80) {
+                    if (inicio < 0) inicio = indice
+                } else {
+                    cerrar(indice)
+                }
+            }
+            cerrar(bytes.size)
+            if (esDex) {
+                for (texto in cadenasDelDex(bytes)) {
+                    candidatas += Candidata(texto, admiteCortos = true, admiteLargos = false, crudo = false)
+                }
+            }
+            return candidatas
         }
 
         // Autochequeo: la lógica de juicio se ejerce en CADA corrida contra cuatro
@@ -240,7 +316,7 @@ val verificarCamuflajeDex by tasks.registering {
             "no se pudo descifrar la evidencia",
             "agresión del día"
         )
-        val cazados = juzgar(canarios).map { it.second }.toSet()
+        val cazados = juzgar(reales(canarios)).map { it.second }.toSet()
         val perdidos = canarios.filterNot { it in cazados }
         if (perdidos.isNotEmpty()) {
             throw GradleException(
@@ -248,10 +324,69 @@ val verificarCamuflajeDex by tasks.registering {
                     "Revisar la lista de términos y la lógica de juicio antes de confiar en el resultado."
             )
         }
-        val falsosPositivos = juzgar(listOf("Bucaramanga", "temperatura mínima", "pronóstico de 5 días"))
+        val falsosPositivos = juzgar(reales(listOf("Bucaramanga", "temperatura mínima", "pronóstico de 5 días")))
         require(falsosPositivos.isEmpty()) {
             "El guardián marca cadenas inocentes de la fachada: $falsosPositivos."
         }
+
+        // DEX mínimo y válido: cabecera, tabla de string_ids, cadenas y un relleno de bytes que no son cadena.
+        fun dexSintetico(cadenas: List<String>, relleno: ByteArray = ByteArray(0)): ByteArray {
+            val cabecera = ByteArray(112)
+            "dex\n035".toByteArray(Charsets.ISO_8859_1).copyInto(cabecera)
+            fun escribir(en: Int, valor: Int) {
+                for (i in 0 until 4) cabecera[en + i] = (valor shr (8 * i)).toByte()
+            }
+            escribir(56, cadenas.size)
+            escribir(60, cabecera.size)
+            val datos = ByteArrayOutputStream()
+            val inicioDatos = cabecera.size + 4 * cadenas.size
+            val tabla = ByteArray(4 * cadenas.size)
+            cadenas.forEachIndexed { indice, cadena ->
+                val posicion = inicioDatos + datos.size()
+                (0 until 4).forEach { tabla[4 * indice + it] = (posicion shr (8 * it)).toByte() }
+                datos.write(cadena.length)
+                datos.write(cadena.toByteArray(Charsets.UTF_8))
+                datos.write(0)
+            }
+            return cabecera + tabla + datos.toByteArray() + relleno
+        }
+
+        // Autochequeo del extractor: «sos» se caza como cadena real en cualquier combinación de mayúsculas.
+        val combinaciones = listOf("SOS", "sos", "Sos", "sOS", "SoS", "sOs", "soS", "SOs")
+        val sinCazar = combinaciones.filter { forma ->
+            juzgar(extraer("classes.dex", dexSintetico(listOf("Bucaramanga", forma)))).none { it.first == "sos" }
+        }
+        if (sinCazar.isNotEmpty()) {
+            throw GradleException(
+                "El guardián dejó de cazar «sos» cuando es una cadena real del DEX: $sinCazar. " +
+                    "Revisar la lectura de string_ids y la regla de términos cortos."
+            )
+        }
+        // Las mismas tres letras entre bytes que no forman una cadena no deben cazarse.
+        val sosEnBytes = byteArrayOf(0x01, 's'.code.toByte(), 'O'.code.toByte(), 'S'.code.toByte(), 0x00)
+        val dexConRuido = extraer("classes.dex", dexSintetico(listOf("Bucaramanga"), sosEnBytes))
+        require(dexConRuido.any { it.crudo && it.texto == "sOS" }) {
+            "La prueba del falso positivo no sirve: el extractor ya no ve las tres letras sueltas en los bytes."
+        }
+        require(juzgar(dexConRuido).isEmpty()) {
+            "El guardián marca «sos» dentro de bytes del DEX que no forman una cadena: ${juzgar(dexConRuido)}."
+        }
+        val fueraDeDex = juzgar(extraer("resources.arsc", sosEnBytes))
+        require(fueraDeDex.any { it.first == "sos" }) {
+            "El guardián dejó de cazar «sos» en las entradas que no son un DEX."
+        }
+        val largoEnBytes = "quick exit".toByteArray(Charsets.UTF_8)
+        val rellenoLargo = byteArrayOf(0x01) + largoEnBytes + byteArrayOf(0x00)
+        val dexConLargo = extraer("classes.dex", dexSintetico(listOf("Bucaramanga"), rellenoLargo))
+        require(juzgar(dexConLargo).any { it.first == "quick exit" }) {
+            "El guardián dejó de cazar un término largo escrito en bytes sueltos del DEX."
+        }
+        val largoReal = juzgar(extraer("classes.dex", dexSintetico(listOf("quick exit"))))
+        require(largoReal.any { it.first == "quick exit" }) {
+            "El guardián dejó de cazar un término largo cuando es una cadena real del DEX."
+        }
+        val dexTruncado = runCatching { extraer("classes.dex", dexSintetico(listOf("Bucaramanga")).copyOf(120)) }
+        require(dexTruncado.isFailure) { "Un DEX truncado debe hacer fallar al extractor, no devolver menos cadenas." }
 
         // Alcance: TODO lo que puede llevar texto propio de Aurora. La primera
         // versión miraba solo `classes*.dex`, y `resources.arsc` es justo donde
@@ -309,6 +444,7 @@ val verificarCamuflajeDex by tasks.registering {
         // no corta la cadena. Con el extractor anterior, solo ASCII, los términos
         // acentuados de la lista no podían coincidir nunca.
         val cadenas = LinkedHashSet<String>()
+        val todas = ArrayList<Candidata>()
         ZipFile(apk).use { zip ->
             val juzgables = Collections.list(zip.entries())
                 .filter { entrada: ZipEntry -> enAlcance.matches(entrada.name) }
@@ -347,29 +483,14 @@ val verificarCamuflajeDex by tasks.registering {
             entradas = juzgables.size
             for (entrada in juzgables) {
                 val bytes: ByteArray = zip.getInputStream(entrada).readBytes()
-                var inicio = -1
-
-                // Piso de 3 y no de 4: de los 49 términos, «sos» mide 3, así que con
-                // el piso anterior una cadena que fuera exactamente «sos» era
-                // estructuralmente inalcanzable para el guardián — la misma especie de
-                // hueco que el de los acentuados. Bajarlo cuesta 0 hallazgos nuevos,
-                // medido (hallazgo A-6 de la auditoría).
-                fun cerrar(fin: Int) {
-                    if (inicio >= 0 && fin - inicio >= 3) {
+                val candidatas = extraer(entrada.name, bytes)
+                for (candidata in candidatas) {
+                    if (candidata.crudo) {
                         total++
-                        cadenas += String(bytes, inicio, fin - inicio, Charsets.UTF_8)
-                    }
-                    inicio = -1
-                }
-                for (indice in bytes.indices) {
-                    val c = bytes[indice].toInt() and 0xFF
-                    if (c in 0x20..0x7E || c >= 0x80) {
-                        if (inicio < 0) inicio = indice
-                    } else {
-                        cerrar(indice)
+                        cadenas += candidata.texto
                     }
                 }
-                cerrar(bytes.size)
+                todas += candidatas
             }
         }
         require(cadenas.isNotEmpty()) { "No se extrajo ninguna cadena: ¿cambió el formato del APK?" }
@@ -389,7 +510,7 @@ val verificarCamuflajeDex by tasks.registering {
                 "SensitiveFieldsGuardTest: revisar su comentario y el §10.1 del informe."
         }
 
-        val hallazgos = juzgar(cadenas)
+        val hallazgos = juzgar(todas)
 
         // Una excepción que no hace falta es, o una causa ya arreglada —y entonces
         // sobra—, o el síntoma de que el guardián dejó de mirar donde mira esa
@@ -403,7 +524,8 @@ val verificarCamuflajeDex by tasks.registering {
             .flatMap { listOf(it, it.trim()) }
             .toSet()
         val muertas = aceptadas.filterNot { excepcion ->
-            excepcion in normalizadas && vedados.any { casa(excepcion, it) }
+            val candidata = Candidata(excepcion, admiteCortos = true, admiteLargos = true, crudo = false)
+            excepcion in normalizadas && vedados.any { casa(excepcion, it, candidata) }
         }
 
         informe.parentFile.mkdirs()
