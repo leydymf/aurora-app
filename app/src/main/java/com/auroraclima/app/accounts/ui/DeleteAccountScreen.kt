@@ -36,6 +36,7 @@ import com.auroraclima.app.core.ui.v2.V2DestructiveButton
 import com.auroraclima.app.core.ui.v2.V2FieldLabel
 import com.auroraclima.app.core.ui.v2.V2FieldMessage
 import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2NoticeCard
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecretField
@@ -223,6 +224,8 @@ private fun PasswordConfirmDialog(
                 toggleDescription = stringResource(R.string.account_password_toggle)
             )
             V2FieldMessage(messageRes = state.errorRes, fallbackRes = null)
+            Spacer(modifier = Modifier.height(16.dp))
+            V2NoticeCard(stringResource(R.string.account_delete_final_notice))
             Spacer(modifier = Modifier.height(18.dp))
             V2PrimaryButton(
                 text = stringResource(R.string.account_delete_confirm_cancel),

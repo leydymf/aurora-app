@@ -147,6 +147,7 @@
     <string name="account_delete_confirm_cancel">Ahora no</string>
     <string name="account_delete_password_title">Un último paso.</string>
     <string name="account_delete_password_body">Escribe la contraseña de tu cuenta para confirmar. Al terminar volverás al clima.</string>
+    <string name="account_delete_final_notice">Se borrarán tu cuenta y todos tus datos de este teléfono y de la nube. Para volver a usar Aurora tendrás que instalarla de nuevo.</string>
     <string name="account_delete_submit">Eliminar definitivamente</string>
     <string name="account_delete_error_offline">Necesitas conexión para completar esto. Nada se ha eliminado todavía; inténtalo cuando tengas red.</string>
     <string name="account_delete_error_generic">No se pudo completar. Puedes intentarlo de nuevo con calma.</string>
