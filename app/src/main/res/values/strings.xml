@@ -102,7 +102,7 @@
     <string name="account_login_submit">Entrar</string>
     <string name="account_login_error">Los datos no coinciden. Revísalos e inténtalo con calma.</string>
     <string name="account_login_lock_title">Pausa temporal</string>
-    <string name="account_login_lock_body">Por tu seguridad, el acceso queda en pausa unos minutos. Respira; tu información sigue protegida.</string>
+    <string name="account_login_lock_body">Por tu seguridad, el inicio de sesión queda en pausa unos minutos. Respira; tu información sigue protegida.</string>
     <string name="account_login_lock_countdown">PODRÁS INTENTAR DE NUEVO EN %1$s</string>
     <!-- RF-46: recuperación por correo. Redacción aprobada por la usuaria el
          2026-10-06; el mensaje de confirmación es el MISMO exista o no la

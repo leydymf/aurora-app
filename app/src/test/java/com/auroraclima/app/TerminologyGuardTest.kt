@@ -94,6 +94,14 @@ class TerminologyGuardTest {
     }
 
     @Test
+    fun `el bloqueo del inicio de sesion lo nombra y no lo llama acceso`() {
+        val cuerpo = strings.getValue("account_login_lock_body")
+
+        assertTrue(cuerpo.contains("el inicio de sesión queda en pausa"))
+        assertTrue("«acceso» en el bloqueo: $cuerpo", !cuerpo.contains("acceso", ignoreCase = true))
+    }
+
+    @Test
     fun `la frase bajo la contrasena del PDF la distingue de la cuenta y del codigo de acceso`() {
         val frase = strings.getValue("journal_export_password_scope")
 
