@@ -229,6 +229,11 @@
     <string name="guidance_save_body">Se guardará la fecha, el nivel y los tipos reconocidos — nunca tus respuestas. Queda protegido, solo se ve dentro de la app y puedes eliminarlo cuando quieras.</string>
     <string name="guidance_save_confirm">Guardar</string>
     <string name="guidance_save_cancel">Cancelar</string>
+    <string name="guidance_leave_title">¿Salir ahora?</string>
+    <string name="guidance_leave_answers_body">Tus respuestas se descartan por completo.</string>
+    <string name="guidance_leave_result_body">Este resultado no se guardará. Solo queda si eliges «Guardar este resultado».</string>
+    <string name="guidance_leave_keep">Seguir aquí</string>
+    <string name="guidance_leave_confirm">Salir</string>
     <string name="guidance_history_tag">Tus resultados</string>
     <string name="guidance_history_title">Resultados guardados</string>
     <string name="guidance_history_subtitle">Solo tú puedes verlos. Puedes eliminarlos cuando quieras.</string>

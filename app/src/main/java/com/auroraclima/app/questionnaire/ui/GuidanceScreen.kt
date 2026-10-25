@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -91,26 +92,20 @@ import com.auroraclima.app.questionnaire.domain.model.Question
 fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
     val viewModel: GuidanceViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
-    val dismiss = {
-        viewModel.onAbandon()
-        onClose()
+    LaunchedEffect(viewModel) {
+        viewModel.leaveEvents.collect { onClose() }
     }
-    // El botón atrás del sistema también retrocede pregunta a pregunta
-    // (RF-27 criterio 1); en la portada sigue el pop normal hacia el panel y
-    // en el resultado equivale a «Terminar»: descarta lo NO guardado (RF-31
-    // criterio 1) y vuelve. Con la hoja de guardado abierta, el back lo
-    // intercepta la propia hoja (SecureSheet) y solo la cierra.
-    BackHandler(enabled = state.phase != GuidancePhase.INTRO) {
-        when (state.phase) {
-            GuidancePhase.QUESTION -> viewModel.onPrevious()
-            GuidancePhase.RESULT -> dismiss()
-            GuidancePhase.INTRO -> Unit
-        }
-    }
+    // La regla del gesto atrás vive en el ViewModel (v0.3.2). Con una hoja abierta,
+    // el back lo intercepta la propia hoja (SecureSheet) y solo la cierra.
+    BackHandler(enabled = state.interceptsBack, onBack = viewModel::onBackRequested)
     GuidanceScreen(
         state = state,
         onStart = viewModel::onStart,
-        onDismiss = dismiss,
+        // «Terminar» descarta lo NO guardado (RF-31 criterio 1) y vuelve, sin preguntar.
+        onFinish = viewModel::onAbandon,
+        onLeaveRequested = viewModel::onLeaveRequested,
+        onLeaveConfirmed = viewModel::onLeaveConfirmed,
+        onLeaveDismissed = viewModel::onLeaveDismissed,
         onOptionSelected = viewModel::onOptionSelected,
         onNext = viewModel::onNext,
         onPrevious = viewModel::onPrevious,
@@ -127,7 +122,10 @@ fun GuidanceRoute(onClose: () -> Unit, onOpenRoutes: () -> Unit) {
 internal fun GuidanceScreen(
     state: GuidanceUiState,
     onStart: () -> Unit,
-    onDismiss: () -> Unit,
+    onFinish: () -> Unit,
+    onLeaveRequested: () -> Unit,
+    onLeaveConfirmed: () -> Unit,
+    onLeaveDismissed: () -> Unit,
     onOptionSelected: (String) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -149,19 +147,24 @@ internal fun GuidanceScreen(
             state.isLoading -> V2LoadingState()
             state.errorRes != null -> V2ErrorState(messageRes = state.errorRes, onRetry = onRetry)
             else -> when (state.phase) {
-                GuidancePhase.INTRO -> IntroContent(state = state, onStart = onStart, onDismiss = onDismiss)
+                GuidancePhase.INTRO -> IntroContent(
+                    state = state,
+                    onStart = onStart,
+                    onLeaveRequested = onLeaveRequested
+                )
                 GuidancePhase.QUESTION -> QuestionContent(
                     state = state,
                     onOptionSelected = onOptionSelected,
                     onNext = onNext,
                     onPrevious = onPrevious,
-                    onAbandon = onDismiss
+                    onLeaveRequested = onLeaveRequested
                 )
                 GuidancePhase.RESULT -> ResultContent(
                     state = state,
                     onMunicipalitySelected = onMunicipalitySelected,
                     onOpenRoutes = onOpenRoutes,
-                    onFinish = onDismiss,
+                    onFinish = onFinish,
+                    onBack = onLeaveRequested,
                     onSaveRequested = onSaveRequested
                 )
             }
@@ -175,6 +178,13 @@ internal fun GuidanceScreen(
             onDismiss = onSaveDismissed
         )
     }
+    if (state.isLeavePromptVisible) {
+        LeaveSheet(
+            isResult = state.phase == GuidancePhase.RESULT,
+            onKeep = onLeaveDismissed,
+            onLeave = onLeaveConfirmed
+        )
+    }
 }
 
 /**
@@ -185,12 +195,12 @@ internal fun GuidanceScreen(
  * vez; el aviso va en el rosa de avisos (RF-30 también en la portada).
  */
 @Composable
-private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss: () -> Unit) {
+private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onLeaveRequested: () -> Unit) {
     val questionnaire = state.questionnaire ?: return
     Column(modifier = Modifier.fillMaxSize()) {
         V2BackHeader(
             tag = stringResource(R.string.guidance_tag),
-            onBack = onDismiss,
+            onBack = onLeaveRequested,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         Column(
@@ -243,7 +253,7 @@ private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onDismiss:
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
             V2PrimaryButton(text = stringResource(R.string.guidance_start), onClick = onStart)
             TextButton(
-                onClick = onDismiss,
+                onClick = onLeaveRequested,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
                 Text(
@@ -271,7 +281,7 @@ private fun QuestionContent(
     onOptionSelected: (String) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onAbandon: () -> Unit
+    onLeaveRequested: () -> Unit
 ) {
     val questionnaire = state.questionnaire ?: return
     val question = state.currentQuestion ?: return
@@ -292,7 +302,7 @@ private fun QuestionContent(
                 color = V2Palette.inkSecondary,
                 modifier = Modifier.weight(1f)
             )
-            ExitChip(onClick = onAbandon)
+            ExitChip(onClick = onLeaveRequested)
         }
         Spacer(modifier = Modifier.height(12.dp))
         SegmentedProgressBar(
@@ -393,6 +403,7 @@ private fun ResultContent(
     onMunicipalitySelected: (String) -> Unit,
     onOpenRoutes: () -> Unit,
     onFinish: () -> Unit,
+    onBack: () -> Unit,
     onSaveRequested: () -> Unit
 ) {
     val questionnaire = state.questionnaire ?: return
@@ -402,10 +413,10 @@ private fun ResultContent(
             .fillMaxSize()
             .padding(horizontal = 24.dp)
     ) {
-        // Flecha = gesto atrás (v0.3.2): en el resultado ambos equivalen a «Terminar».
+        // Flecha = gesto atrás (v0.3.2): sin guardar, preguntan antes de descartar.
         V2BackHeader(
             tag = stringResource(R.string.guidance_result_tag),
-            onBack = onFinish,
+            onBack = onBack,
             modifier = Modifier.padding(top = 8.dp)
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -479,6 +490,46 @@ private fun ResultContent(
         }
         V2PrimaryButton(text = stringResource(R.string.guidance_result_finish), onClick = onFinish)
         Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
+    }
+}
+
+/**
+ * Salir con algo que se perdería (v0.3.2), con el patrón de la confirmación de
+ * eliminar (P20·b): «Seguir aquí» es la ÚNICA acción llena y salir va como texto
+ * en el rosa de avisos. Tocar fuera o atrás equivale a quedarse. El texto dice qué
+ * se pierde: las respuestas, o el resultado sin guardar.
+ */
+@Composable
+private fun LeaveSheet(isResult: Boolean, onKeep: () -> Unit, onLeave: () -> Unit) {
+    SecureSheet(onDismissRequest = onKeep) {
+        V2SheetCard {
+            Text(
+                text = stringResource(R.string.guidance_leave_title),
+                style = InteriorTypeVoice.cardTitle,
+                color = V2Palette.inkPrimary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(
+                    if (isResult) R.string.guidance_leave_result_body else R.string.guidance_leave_answers_body
+                ),
+                style = InteriorTypeVoice.caption,
+                color = V2Palette.inkSecondary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            V2PrimaryButton(text = stringResource(R.string.guidance_leave_keep), onClick = onKeep)
+            Spacer(modifier = Modifier.height(6.dp))
+            TextButton(onClick = onLeave) {
+                Text(
+                    text = stringResource(R.string.guidance_leave_confirm),
+                    style = InteriorTypeVoice.bodyStrong,
+                    color = V2Palette.accentNotice.stroke
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
 

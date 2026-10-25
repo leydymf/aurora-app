@@ -11,9 +11,12 @@ import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUs
 import com.auroraclima.app.questionnaire.domain.usecase.SaveGuidanceOutcomeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -41,6 +44,12 @@ class GuidanceViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(GuidanceUiState())
     val uiState: StateFlow<GuidanceUiState> = _uiState.asStateFlow()
+
+    // Salir del cuestionario (v0.3.2). Consumo único: un replay tras rotar sacaría
+    // de la pantalla sin gesto. Y una sola vez: un segundo pop sacaría el panel.
+    private val _leaveEvents = Channel<Unit>(Channel.BUFFERED)
+    val leaveEvents: Flow<Unit> = _leaveEvents.receiveAsFlow()
+    private var hasLeft = false
 
     init {
         // RF-28: el descarte corre en la MISMA rutina de limpieza de RF-16/
@@ -99,12 +108,52 @@ class GuidanceViewModel @Inject constructor(
     }
 
     /**
-     * Abandono limpio (RF-27 criterio 2): las respuestas y el resultado se
-     * descartan por completo antes de salir. El pop de la ruta destruye además
-     * este ViewModel — la copia en memoria muere con él.
+     * «Terminar» (RF-31 criterio 1): abandono limpio sin preguntar (RF-27 criterio
+     * 2). Las respuestas y el resultado se descartan por completo antes de salir, y
+     * la salida pasa por el mismo `leave()` que las demás: una sola vez. El pop de la
+     * ruta destruye además este ViewModel — la copia en memoria muere con él.
      */
     fun onAbandon() {
+        leave()
+    }
+
+    /**
+     * Flecha, gesto atrás, «Salir» o «Ahora no» (v0.3.2). Si se perdería algo, pregunta
+     * antes; si no, sale. Salir siempre descarta todo antes (RF-27 criterio 2).
+     * Mientras se guarda no hace nada: el guardado termina en la misma pantalla.
+     */
+    fun onLeaveRequested() {
+        val state = _uiState.value
+        when {
+            state.isSaving -> Unit
+            state.wouldLoseProgress -> _uiState.update { it.copy(isLeavePromptVisible = true) }
+            else -> leave()
+        }
+    }
+
+    /**
+     * Gesto atrás del sistema: en una pregunta retrocede (RF-27 criterio 1), como la
+     * flecha de abajo; en la portada y en el resultado hace lo mismo que la flecha
+     * de arriba.
+     */
+    fun onBackRequested() {
+        if (_uiState.value.phase == GuidancePhase.QUESTION) onPrevious() else onLeaveRequested()
+    }
+
+    fun onLeaveConfirmed() {
+        _uiState.update { it.copy(isLeavePromptVisible = false) }
+        leave()
+    }
+
+    fun onLeaveDismissed() {
+        _uiState.update { it.copy(isLeavePromptVisible = false) }
+    }
+
+    private fun leave() {
+        if (hasLeft) return
+        hasLeft = true
         discardAnswers()
+        _leaveEvents.trySend(Unit)
     }
 
     /** Abre la hoja de confirmación (RF-31 criterio 2). Tocar el botón aún no guarda nada. */
@@ -170,7 +219,8 @@ class GuidanceViewModel @Inject constructor(
                 isSaveSheetVisible = false,
                 isSaving = false,
                 isSaved = false,
-                saveErrorRes = null
+                saveErrorRes = null,
+                isLeavePromptVisible = false
             )
         }
     }

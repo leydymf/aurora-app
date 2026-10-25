@@ -28,8 +28,10 @@ import com.auroraclima.app.questionnaire.domain.usecase.CalculateGuidanceLevelUs
 import com.auroraclima.app.questionnaire.domain.usecase.SaveGuidanceOutcomeUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -466,6 +468,163 @@ class GuidanceViewModelTest {
 
         assertFalse(viewModel.uiState.value.isSaveSheetVisible)
         assertEquals(1, savedOutcomes.saved.size)
+    }
+
+    // Salir con algo que se perdería (v0.3.2): flecha, gesto atrás, «Salir» y
+    // «Ahora no» preguntan; «Terminar» (onAbandon) sigue sin preguntar.
+
+    @Test
+    fun `sin respuestas salir no pregunta y sale`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+
+        viewModel.onLeaveRequested()
+
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `con respuestas salir pregunta y confirmar descarta todo antes de salir`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        viewModel.onOptionSelected("s2")
+
+        viewModel.onLeaveRequested()
+
+        assertTrue(viewModel.uiState.value.isLeavePromptVisible)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+
+        viewModel.onLeaveConfirmed()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLeavePromptVisible)
+        assertEquals(emptyMap<String, String>(), state.answers)
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `en la portada con respuestas de una vuelta atras tambien pregunta`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onStart()
+        viewModel.onOptionSelected("s2")
+        viewModel.onPrevious()
+        assertEquals(GuidancePhase.INTRO, viewModel.uiState.value.phase)
+
+        viewModel.onLeaveRequested()
+
+        assertTrue(viewModel.uiState.value.isLeavePromptVisible)
+    }
+
+    @Test
+    fun `en el resultado sin guardar pregunta y quedarse conserva el resultado`() = runTest {
+        val viewModel = viewModelAtResult()
+        advanceUntilIdle()
+
+        viewModel.onLeaveRequested()
+        assertTrue(viewModel.uiState.value.isLeavePromptVisible)
+
+        viewModel.onLeaveDismissed()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLeavePromptVisible)
+        assertEquals(GuidancePhase.RESULT, state.phase)
+        assertTrue(state.result != null)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `con el resultado ya guardado salir no pregunta`() = runTest {
+        val viewModel = viewModelAtResult()
+        advanceUntilIdle()
+        viewModel.onSaveRequested()
+        viewModel.onSaveConfirmed()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isSaved)
+
+        viewModel.onLeaveRequested()
+
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `mientras se guarda salir no hace nada`() = runTest {
+        val viewModel = viewModelAtResult()
+        advanceUntilIdle()
+        viewModel.onSaveRequested()
+        viewModel.onSaveConfirmed()
+        // Sin avanzar el planificador: el guardado sigue en curso.
+        assertTrue(viewModel.uiState.value.isSaving)
+
+        viewModel.onLeaveRequested()
+
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `el gesto atras retrocede en una pregunta y queda libre solo en la portada sin respuestas`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.interceptsBack)
+
+        viewModel.onStart()
+        viewModel.onOptionSelected("s2")
+        viewModel.onNext()
+        assertTrue(viewModel.uiState.value.interceptsBack)
+
+        viewModel.onBackRequested()
+
+        assertEquals(GuidancePhase.QUESTION, viewModel.uiState.value.phase)
+        assertEquals(0, viewModel.uiState.value.questionIndex)
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+    }
+
+    @Test
+    fun `terminar sale sin preguntar y una sola vez`() = runTest {
+        val viewModel = viewModelAtResult()
+        advanceUntilIdle()
+
+        viewModel.onAbandon()
+        viewModel.onAbandon()
+
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `dos pedidos seguidos de salir salen una sola vez`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onLeaveRequested()
+        viewModel.onLeaveRequested()
+
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `la salida rapida con la pregunta abierta descarta y la cierra`() = runTest {
+        // RF-28: la nube no pregunta; si la pregunta estaba abierta, también se va.
+        val sessionManager = sessionManager()
+        val viewModel = viewModel(sessionManager)
+        advanceUntilIdle()
+        sessionManager.startSession()
+        viewModel.onStart()
+        viewModel.onOptionSelected("s2")
+        viewModel.onLeaveRequested()
+
+        sessionManager.closeNow()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLeavePromptVisible)
+        assertEquals(emptyMap<String, String>(), state.answers)
     }
 
     /** Lleva el flujo hasta el resultado (todo «Con frecuencia» → nivel n03). */

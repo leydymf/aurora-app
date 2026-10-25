@@ -39,8 +39,28 @@ data class GuidanceUiState(
     val isSaving: Boolean = false,
     /** El resultado visible ya se guardó: el botón cede su lugar a la constancia. */
     val isSaved: Boolean = false,
-    @StringRes val saveErrorRes: Int? = null
+    @StringRes val saveErrorRes: Int? = null,
+    /** Pregunta antes de salir visible (v0.3.2). */
+    val isLeavePromptVisible: Boolean = false
 ) {
+    /**
+     * Salir ahora perdería algo (v0.3.2): respuestas dadas sin resultado aún, o un
+     * resultado que no se guardó. «Terminar» descarta sin preguntar (RF-31 criterio
+     * 1); la flecha, el gesto atrás, «Salir» y «Ahora no» preguntan.
+     */
+    val wouldLoseProgress: Boolean
+        get() = when (phase) {
+            GuidancePhase.RESULT -> result != null && !isSaved
+            else -> answers.isNotEmpty()
+        }
+
+    /**
+     * El gesto atrás pasa por el ViewModel. Solo queda libre (pop normal hacia el
+     * panel) en la portada sin nada que perder.
+     */
+    val interceptsBack: Boolean
+        get() = phase != GuidancePhase.INTRO || wouldLoseProgress
+
     val currentQuestion: Question?
         get() = questionnaire?.questions?.getOrNull(questionIndex)
 
