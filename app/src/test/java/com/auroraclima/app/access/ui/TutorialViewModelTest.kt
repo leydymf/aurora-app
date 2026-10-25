@@ -61,6 +61,45 @@ class TutorialViewModelTest {
     }
 
     @Test
+    fun `volver desde la practica regresa al resumen y borra lo tecleado`() = runTest {
+        viewModel.onStartPractice()
+        viewModel.onPracticeInputChange("ab")
+
+        viewModel.onBackRequested()
+
+        assertEquals(TutorialStep.ENTER, viewModel.uiState.value.step)
+        assertEquals("", viewModel.uiState.value.practiceInput)
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `volver desde la practica conserva el ingreso ya logrado`() = runTest {
+        seedUserCode()
+        viewModel.onStartPractice()
+        viewModel.onPracticeInputChange("amanecer26")
+        advanceUntilIdle()
+        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
+
+        viewModel.onBackRequested()
+
+        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
+        assertEquals("", viewModel.uiState.value.practiceInput)
+    }
+
+    @Test
+    fun `volver desde la primera pagina emite el cierre sin tocar el estado`() = runTest {
+        val closes = mutableListOf<Unit>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.closeEvents.collect { closes += it }
+        }
+
+        viewModel.onBackRequested()
+
+        assertEquals(1, closes.size)
+        assertEquals(TutorialStep.ENTER, viewModel.uiState.value.step)
+    }
+
+    @Test
     fun `practicar salta directo a la practica desde el resumen`() = runTest {
         // Vista V2 (v2-08): los tres momentos se muestran juntos y «Practicar»
         // salta a la práctica sin recorrer las páginas intermedias.

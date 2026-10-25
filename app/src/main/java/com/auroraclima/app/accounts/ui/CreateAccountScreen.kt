@@ -50,7 +50,7 @@ import com.auroraclima.app.core.ui.v2.keyboardAware
  * (dispositivo nuevo: activación → login → código nuevo).
  */
 @Composable
-fun CreateAccountRoute(onAccountCreated: () -> Unit, onOpenLogin: () -> Unit) {
+fun CreateAccountRoute(onAccountCreated: () -> Unit, onOpenLogin: () -> Unit, onBack: () -> Unit) {
     val viewModel: CreateAccountViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     val sessionManager = LocalSessionManager.current
@@ -60,6 +60,7 @@ fun CreateAccountRoute(onAccountCreated: () -> Unit, onOpenLogin: () -> Unit) {
     AuroraV2Theme(V2Voice.Interior) {
         CreateAccountScreen(
             state = state,
+            onBack = onBack,
             onOpenLogin = onOpenLogin,
             onEmailChange = {
                 sessionManager.registerInteraction()
@@ -87,6 +88,7 @@ fun CreateAccountRoute(onAccountCreated: () -> Unit, onOpenLogin: () -> Unit) {
 @Composable
 internal fun CreateAccountScreen(
     state: CreateAccountUiState,
+    onBack: () -> Unit,
     onOpenLogin: () -> Unit,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
@@ -104,7 +106,8 @@ internal fun CreateAccountScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        BrandHeader()
+        // Volver lleva al consentimiento: aún no se creó nada (v0.3.2).
+        BrandHeader(onBack = onBack)
         Spacer(modifier = Modifier.height(16.dp))
         V2StepHeader(step = 1, totalSteps = 3)
         Spacer(modifier = Modifier.height(16.dp))

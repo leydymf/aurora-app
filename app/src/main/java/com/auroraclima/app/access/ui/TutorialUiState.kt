@@ -14,7 +14,7 @@ data class TutorialUiState(
     val isFirstStep: Boolean get() = step == TutorialStep.ENTER
 
     /**
-     * En primer uso la primera página no ofrece «Atrás» (detrás no hay nada: el
+     * En primer uso la primera página no ofrece flecha (detrás no hay nada: el
      * setup salió de la pila); en modo repaso (RF-11) sí, y regresa a donde
      * estaba la usuaria.
      */
@@ -22,7 +22,7 @@ data class TutorialUiState(
 
     /**
      * «Saltar por ahora» existe solo en el primer uso (refinamiento RF-10,
-     * 2026-08): en repaso (RF-11) no hay nada que saltar — «Atrás» ya regresa.
+     * 2026-08): en repaso (RF-11) no hay nada que saltar — la flecha ya regresa.
      */
     fun showsSkip(isReview: Boolean): Boolean = !isReview
 }

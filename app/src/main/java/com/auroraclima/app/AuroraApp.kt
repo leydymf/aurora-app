@@ -110,7 +110,10 @@ fun AuroraApp(sessionManager: SessionManager) {
                         // RF-39: cuenta existente en un dispositivo nuevo —
                         // inicia sesión dentro del flujo de activación; «Atrás»
                         // regresa al formulario de creación.
-                        onOpenLogin = { navController.navigate("$ENTRY_SETUP_BASE/$LOGIN_FLOW_FIRST_USE") }
+                        onOpenLogin = { navController.navigate("$ENTRY_SETUP_BASE/$LOGIN_FLOW_FIRST_USE") },
+                        // Flecha = gesto atrás: el consentimiento sigue en la pila y
+                        // todavía no se creó nada (v0.3.2).
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 // Inicio de sesión del flujo de activación (RF-39): mismo login
@@ -126,7 +129,9 @@ fun AuroraApp(sessionManager: SessionManager) {
                             navController.navigate(SETUP_ROUTE) {
                                 popUpTo(INTRO_ROUTE) { inclusive = true }
                             }
-                        }
+                        },
+                        // Flecha = gesto atrás: regresa al formulario de creación.
+                        onBack = { navController.popBackStack() }
                     )
                 }
                 screen(SETUP_ROUTE) {
@@ -144,9 +149,9 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // práctica de salida usa la salida real del grafo seguro) y el
                 // reingreso con la clave ejercita RF-12 de verdad.
                 screen(GUIDE_ROUTE) {
-                    // onClose inalcanzable en primer uso: la primera página no
-                    // muestra «Atrás» (showBack en TutorialScreen) y detrás ya
-                    // no hay nada — el setup se sacó de la pila al navegar aquí.
+                    // onClose inalcanzable en primer uso: la flecha se oculta en la
+                    // primera página (TutorialUiState.showsBack) y detrás ya no
+                    // hay nada — el setup se sacó de la pila al navegar aquí.
                     TutorialRoute(
                         isReview = false,
                         onClose = {},
@@ -164,7 +169,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                     )
                 }
                 // Reapertura del tutorial (RF-11): mismo contenido en modo
-                // repaso; «Atrás» en la primera página regresa a donde estaba.
+                // repaso; la flecha en la primera página regresa a donde estaba.
                 // En repaso no se ofrece «Saltar» (showsSkip); si llegara a
                 // emitirse, converge con el mismo regreso que onClose.
                 screen(GUIDE_REVIEW_ROUTE) {

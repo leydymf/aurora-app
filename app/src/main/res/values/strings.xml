@@ -52,7 +52,6 @@
     <string name="access_guide_practice_cta">Practicar</string>
     <string name="access_guide_skip">Saltar por ahora</string>
     <string name="access_guide_skip_hint">Puedes volver a verlo cuando quieras desde Ajustes.</string>
-    <string name="access_guide_back">Atrás</string>
     <string name="access_guide_practice_tag">TUTORIAL · PRÁCTICA</string>
     <string name="access_guide_practice_title">Practica tu entrada.</string>
     <string name="access_guide_practice_body">Escribe tu código de acceso en esta barra, igual que lo harás en el clima.</string>

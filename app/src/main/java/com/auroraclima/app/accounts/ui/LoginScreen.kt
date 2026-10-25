@@ -59,7 +59,7 @@ import com.auroraclima.app.core.ui.v2.keyboardAware
  * sin rojos de alarma). Los campos reportan cada tecla como interacción (P-15).
  */
 @Composable
-fun LoginRoute(onAccessGranted: () -> Unit) {
+fun LoginRoute(onAccessGranted: () -> Unit, onBack: (() -> Unit)? = null) {
     val viewModel: LoginViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     val sessionManager = LocalSessionManager.current
@@ -69,6 +69,7 @@ fun LoginRoute(onAccessGranted: () -> Unit) {
     AuroraV2Theme(V2Voice.Interior) {
         LoginScreen(
             state = state,
+            onBack = onBack,
             onEmailChange = {
                 sessionManager.registerInteraction()
                 viewModel.onEmailChange(it)
@@ -100,6 +101,7 @@ fun LoginRoute(onAccessGranted: () -> Unit) {
 @Composable
 internal fun LoginScreen(
     state: LoginUiState,
+    onBack: (() -> Unit)?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onTogglePasswordVisibility: () -> Unit,
@@ -118,7 +120,9 @@ internal fun LoginScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        BrandHeader()
+        // Flecha solo en el flujo de activación, donde vuelve a crear la cuenta. En
+        // el reingreso detrás está el clima, y para eso ya está la nube (v0.3.2).
+        BrandHeader(onBack = onBack)
         // Mientras se decide si ya hay sesión no se pinta el formulario:
         // con sesión vigente esta pantalla ni se ve (RF-12 criterio 1).
         if (state.isCheckingSession) return

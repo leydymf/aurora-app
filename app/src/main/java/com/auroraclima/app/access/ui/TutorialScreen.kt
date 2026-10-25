@@ -1,9 +1,9 @@
 package com.auroraclima.app.access.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +19,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -66,7 +65,7 @@ import com.auroraclima.app.core.ui.v2.keyboardAware
  * F3·F4 de A2-6): la nube de la esquina — pintada por el grafo seguro — sale de
  * verdad a la fachada, y el reingreso con la clave ejercita RF-12 tal como será
  * siempre. En modo repaso (RF-11) la única diferencia es el rótulo y que
- * «Atrás» regresa a donde estaba la usuaria.
+ * la flecha regresa a donde estaba la usuaria.
  */
 @Composable
 fun TutorialRoute(isReview: Boolean, onClose: () -> Unit, onSkip: () -> Unit) {
@@ -78,13 +77,20 @@ fun TutorialRoute(isReview: Boolean, onClose: () -> Unit, onSkip: () -> Unit) {
     LaunchedEffect(viewModel) {
         viewModel.skipEvents.collect { onSkip() }
     }
+    LaunchedEffect(viewModel) {
+        viewModel.closeEvents.collect { onClose() }
+    }
+    // La flecha y el gesto atrás hacen lo mismo (v0.3.2; la regla vive en el
+    // ViewModel). En la primera página el gesto hace el pop normal: repaso →
+    // Ajustes; primer uso → la fachada, porque el setup ya salió de la pila.
+    BackHandler(enabled = !state.isFirstStep, onBack = viewModel::onBackRequested)
     AuroraV2Theme(V2Voice.Interior) {
         TutorialScreen(
             state = state,
             isReview = isReview,
             onStartPractice = viewModel::onStartPractice,
             onSkip = viewModel::onSkip,
-            onBack = { if (state.isFirstStep) onClose() else viewModel.onBack() },
+            onBack = viewModel::onBackRequested,
             onPracticeInputChange = {
                 // El teclado es una ventana propia: cada tecla debe contar como
                 // interacción o la inactividad expulsaría a mitad de práctica (P-15).
@@ -113,7 +119,9 @@ internal fun TutorialScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        BrandHeader()
+        // En la primera página del primer uso no hay a dónde volver: detrás solo
+        // está el clima.
+        BrandHeader(onBack = onBack.takeIf { state.showsBack(isReview) })
         Spacer(modifier = Modifier.height(16.dp))
         if (state.step == TutorialStep.PRACTICE) {
             PracticeContent(
@@ -124,11 +132,9 @@ internal fun TutorialScreen(
         } else {
             OverviewContent(
                 isReview = isReview,
-                showBack = state.showsBack(isReview),
                 showSkip = state.showsSkip(isReview),
                 onStartPractice = onStartPractice,
-                onSkip = onSkip,
-                onBack = onBack
+                onSkip = onSkip
             )
         }
         // Aire final para no chocar con el botón nube de la esquina.
@@ -168,14 +174,7 @@ private val MOMENTS = listOf(
 )
 
 @Composable
-private fun OverviewContent(
-    isReview: Boolean,
-    showBack: Boolean,
-    showSkip: Boolean,
-    onStartPractice: () -> Unit,
-    onSkip: () -> Unit,
-    onBack: () -> Unit
-) {
+private fun OverviewContent(isReview: Boolean, showSkip: Boolean, onStartPractice: () -> Unit, onSkip: () -> Unit) {
     if (isReview) {
         Text(
             text = stringResource(R.string.access_guide_tag_review),
@@ -231,18 +230,6 @@ private fun OverviewContent(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-    }
-    if (showBack) {
-        Spacer(modifier = Modifier.height(8.dp))
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            TextButton(onClick = onBack) {
-                Text(
-                    text = stringResource(R.string.access_guide_back),
-                    style = InteriorTypeVoice.bodyStrong,
-                    color = V2Palette.inkSecondary
-                )
-            }
-        }
     }
 }
 

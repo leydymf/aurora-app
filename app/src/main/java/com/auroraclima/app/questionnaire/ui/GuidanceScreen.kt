@@ -402,11 +402,11 @@ private fun ResultContent(
             .fillMaxSize()
             .padding(horizontal = 24.dp)
     ) {
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = stringResource(R.string.guidance_result_tag),
-            style = InteriorTypeVoice.label,
-            color = V2Palette.inkSecondary
+        // Flecha = gesto atrás (v0.3.2): en el resultado ambos equivalen a «Terminar».
+        V2BackHeader(
+            tag = stringResource(R.string.guidance_result_tag),
+            onBack = onFinish,
+            modifier = Modifier.padding(top = 8.dp)
         )
         Spacer(modifier = Modifier.height(12.dp))
         LevelCard(level = result.level)

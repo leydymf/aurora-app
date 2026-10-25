@@ -35,6 +35,11 @@ class TutorialViewModel @Inject constructor(
     /** Saltar por ahora (refinamiento RF-10, 2026-08): continúa el flujo sin practicar. */
     val skipEvents: SharedFlow<Unit> = _skipEvents.asSharedFlow()
 
+    private val _closeEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Volver desde la primera página: el destino lo decide el NavHost (repaso → Ajustes). */
+    val closeEvents: SharedFlow<Unit> = _closeEvents.asSharedFlow()
+
     private var practiceCheckJob: Job? = null
 
     /**
@@ -59,6 +64,35 @@ class TutorialViewModel @Inject constructor(
             val steps = TutorialStep.entries
             val previous = steps.getOrNull(steps.indexOf(state.step) - 1) ?: state.step
             state.copy(step = previous)
+        }
+    }
+
+    /**
+     * Flecha y gesto atrás (v0.3.2), la misma regla:
+     *  - desde la práctica, al resumen que la ofrece: «Practicar» salta directo desde
+     *    ahí, así que la página anterior del pager mostraría el mismo resumen otra
+     *    vez. Lo tecleado se borra —es la clave real, sin máscara— salvo el logro,
+     *    que queda fijo (criterio 2 de RF-10);
+     *  - desde la primera página, cerrar (evento para el NavHost);
+     *  - en otra página, la anterior. Hoy la UI no llega a ellas (el pager quedó
+     *    del diseño original); la rama se conserva por si vuelve a usarse.
+     */
+    fun onBackRequested() {
+        val state = _uiState.value
+        when {
+            state.step == TutorialStep.PRACTICE -> {
+                practiceCheckJob?.cancel()
+                _uiState.update {
+                    val matched = it.practiceStatus == PracticeStatus.MATCHED
+                    it.copy(
+                        step = TutorialStep.ENTER,
+                        practiceInput = "",
+                        practiceStatus = if (matched) PracticeStatus.MATCHED else PracticeStatus.TYPING
+                    )
+                }
+            }
+            state.isFirstStep -> _closeEvents.tryEmit(Unit)
+            else -> onBack()
         }
     }
 

@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import com.auroraclima.app.R
 import com.auroraclima.app.core.ui.theme.Marcellus
 import com.auroraclima.app.core.ui.theme.Night
+import com.auroraclima.app.core.ui.v2.V2BackButton
 
 /**
  * Encabezado de marca del espacio interno: símbolo squircle + wordmark en
@@ -24,8 +25,14 @@ import com.auroraclima.app.core.ui.theme.Night
  * sin símbolo ni serif).
  */
 @Composable
-fun BrandHeader(modifier: Modifier = Modifier) {
+fun BrandHeader(modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        // Flecha opcional junto a la marca (v0.3.2), en el patrón de Ajustes
+        // (v2-23): la muestra quien tenga a dónde volver.
+        if (onBack != null) {
+            V2BackButton(onBack = onBack)
+            Spacer(modifier = Modifier.width(12.dp))
+        }
         Image(
             painter = painterResource(R.drawable.ic_sparkle_badge),
             // Decorativa: sin descripción que delate nada por accesibilidad (RNF-05).
