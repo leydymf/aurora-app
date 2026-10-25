@@ -1,5 +1,8 @@
 package com.auroraclima.app.core.ui.v2
 
+import android.os.Build
+import android.view.ViewGroup
+import android.view.Window
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
@@ -101,5 +104,28 @@ private class ClearFocusOnTapNode :
                 detectTapGestures(onTap = { currentValueOf(LocalFocusManager).clearFocus() })
             }
         )
+    }
+}
+
+/**
+ * Que soltar el foco cierre el teclado también en API 26–27 (corrida en el emulador
+ * de API 26, v0.3.2). Antes de Android 9, cuando una vista suelta el foco en modo
+ * táctil, el sistema se lo devuelve al primer elemento enfocable de la ventana: la
+ * vista de Compose lo recupera, Compose se lo da al primer campo y el teclado vuelve
+ * a abrirse. Así «tocar fuera», «Listo» y «Buscar» no cerraban nada. Con el
+ * contenedor raíz enfocable y por delante de sus hijos, ese foco devuelto se queda
+ * en él y el campo lo suelta de verdad. Tocar un campo sigue pidiendo el foco para
+ * Compose como siempre. Desde API 28 el sistema ya no reasigna el foco: no se toca.
+ *
+ * Se aplica a cada ventana con campos: la de MainActivity (y la Activity de las
+ * pruebas del teclado, para que midan la misma) y las propias de `SecureDialog` y
+ * `SecureSheet`, porque un diálogo es otra ventana y el sistema le devuelve el foco
+ * igual (RF-20, RF-46).
+ */
+fun Window.keepReleasedFocusOutOfFields() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) return
+    findViewById<ViewGroup>(android.R.id.content)?.apply {
+        isFocusableInTouchMode = true
+        descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
     }
 }

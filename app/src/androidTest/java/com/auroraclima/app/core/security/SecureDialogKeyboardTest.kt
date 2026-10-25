@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,9 +28,9 @@ import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.awaitIme
 import com.auroraclima.app.core.ui.v2.configureLikeMainActivity
 import com.auroraclima.app.core.ui.v2.imeBottomPx
+import com.auroraclima.app.core.ui.v2.scrollIntoViewAbove
 import com.auroraclima.app.core.ui.v2.windowHeightPx
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -40,7 +40,8 @@ import org.junit.runner.RunWith
  * Las ventanas propias del espacio interno con un campo dentro (v0.3.2): la hoja de
  * restablecer contraseña (RF-46) y el diálogo con contraseña de eliminar la cuenta
  * (RF-20). En la corrida del emulador el teclado tapaba el campo y el botón de la
- * hoja, y dejaba cortado el último botón del diálogo.
+ * hoja, y dejaba cortado el último botón del diálogo; y en API 26–27 «Listo» dentro
+ * de esas ventanas reabría el teclado.
  *
  * Se mide en coordenadas de PANTALLA: el diálogo y la hoja son ventanas propias con
  * su origen, y la Activity (edge-to-edge) empieza en el borde superior de la pantalla.
@@ -66,7 +67,7 @@ class SecureDialogKeyboardTest {
                 }
             }
         }
-        assertButtonReachableOverKeyboard()
+        assertUsableWithKeyboard()
     }
 
     @Test
@@ -80,35 +81,26 @@ class SecureDialogKeyboardTest {
                 }
             }
         }
-        assertButtonReachableOverKeyboard()
+        assertUsableWithKeyboard()
     }
 
-    private fun assertButtonReachableOverKeyboard() {
+    private fun assertUsableWithKeyboard() {
         composeRule.onNodeWithTag(FIELD).performClick()
         composeRule.awaitIme(visible = true)
         composeRule.waitForIdle()
 
-        val visibleBottom = composeRule.windowHeightPx() - composeRule.imeBottomPx()
-        val fieldBottom = screenBottomOf(FIELD)
-        assertTrue(
-            "El campo termina en $fieldBottom px y el teclado empieza en $visibleBottom px",
-            fieldBottom <= visibleBottom
-        )
-
-        composeRule.onNodeWithTag(BUTTON).performScrollTo()
-        composeRule.waitForIdle()
-        val buttonBottom = screenBottomOf(BUTTON)
-        assertTrue(
-            "El botón termina en $buttonBottom px y el teclado empieza en $visibleBottom px",
-            buttonBottom <= visibleBottom
-        )
+        val visibleBottom = { composeRule.windowHeightPx() - composeRule.imeBottomPx() }
+        composeRule.scrollIntoViewAbove(FIELD, visibleBottom)
+        composeRule.scrollIntoViewAbove(BUTTON, visibleBottom)
         composeRule.onNodeWithTag(BUTTON).performClick()
         assertEquals(1, clicks)
-    }
 
-    private fun screenBottomOf(tag: String): Float {
-        val node = composeRule.onNodeWithTag(tag).fetchSemanticsNode()
-        return node.positionOnScreen.y + node.size.height
+        // «Listo» dentro de la ventana propia cierra el teclado. En API 26–27 el
+        // sistema le devolvía el foco al campo de esa ventana y lo reabría.
+        composeRule.onNodeWithTag(FIELD).performClick()
+        composeRule.awaitIme(visible = true)
+        composeRule.onNodeWithTag(FIELD).performImeAction()
+        composeRule.awaitIme(visible = false)
     }
 
     @Composable

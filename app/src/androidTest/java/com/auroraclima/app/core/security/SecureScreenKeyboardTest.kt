@@ -28,9 +28,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.auroraclima.app.R
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
+import com.auroraclima.app.core.ui.v2.PIXEL_ROUNDING
 import com.auroraclima.app.core.ui.v2.V2PlainField
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.awaitIme
+import com.auroraclima.app.core.ui.v2.awaitLayout
 import com.auroraclima.app.core.ui.v2.configureLikeMainActivity
 import com.auroraclima.app.core.ui.v2.imeBottomPx
 import com.auroraclima.app.core.ui.v2.keyboardAware
@@ -41,7 +43,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -119,20 +120,23 @@ class SecureScreenKeyboardTest {
         val cloud = composeRule.onNodeWithContentDescription(
             composeRule.activity.getString(R.string.access_back_to_weather)
         )
-        val visibleBottom = composeRule.windowHeightPx() - composeRule.imeBottomPx()
-        val cloudBottom = cloud.fetchSemanticsNode().boundsInWindow.bottom
-        assertTrue(
-            "La nube termina en $cloudBottom px y el teclado empieza en $visibleBottom px",
-            cloudBottom <= visibleBottom
-        )
-        // Y el campo enfocado no queda debajo de la nube (keyboardAware le reserva
-        // su franja): antes le tapaba el extremo derecho, donde va el ojo.
-        val cloudTop = cloud.fetchSemanticsNode().boundsInWindow.top
-        val fieldBottom = composeRule.onNodeWithTag(FIELD).fetchSemanticsNode().boundsInWindow.bottom
-        assertTrue(
-            "El campo termina en $fieldBottom px y la nube empieza en $cloudTop px",
-            fieldBottom <= cloudTop
-        )
+
+        // La nube queda sobre el teclado y el campo enfocado sobre la nube
+        // (keyboardAware le reserva su franja): antes le tapaba el extremo derecho,
+        // donde va el ojo. Se espera a que el diseño termine de ajustarse al teclado.
+        fun cloudBottom() = cloud.fetchSemanticsNode().boundsInWindow.bottom
+        fun cloudTop() = cloud.fetchSemanticsNode().boundsInWindow.top
+        fun fieldBottom() = composeRule.onNodeWithTag(FIELD).fetchSemanticsNode().boundsInWindow.bottom
+        fun visibleBottom() = composeRule.windowHeightPx() - composeRule.imeBottomPx()
+        // La misma tolerancia de redondeo en las dos comparaciones (ImeTestSupport).
+        composeRule.awaitLayout(
+            message = {
+                "La nube va de ${cloudTop()} a ${cloudBottom()} px, el campo termina en ${fieldBottom()} px " +
+                    "y el teclado empieza en ${visibleBottom()} px"
+            }
+        ) {
+            cloudBottom() <= visibleBottom() + PIXEL_ROUNDING && fieldBottom() <= cloudTop() + PIXEL_ROUNDING
+        }
 
         cloud.performClick()
         composeRule.waitForIdle()

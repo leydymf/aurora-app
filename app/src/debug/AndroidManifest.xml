@@ -18,5 +18,15 @@
         <activity
             android:name="androidx.compose.ui.tooling.PreviewActivity"
             tools:node="remove" />
+
+        <!-- La Activity vacía de las pruebas instrumentadas (ui-test-manifest) con el
+             mismo adjustResize que MainActivity, para que las pruebas del teclado
+             midan la misma ventana: en API 26 fijarlo en tiempo de ejecución no
+             llegaba a la ventana (quedaba en adjustPan) y las pruebas medían otra
+             cosa. Solo debug; su exportación no cambia. -->
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:windowSoftInputMode="adjustResize"
+            tools:node="merge" />
     </application>
 </manifest>

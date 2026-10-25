@@ -1,10 +1,11 @@
 package com.auroraclima.app.core.ui.v2
 
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.rules.ActivityScenarioRule
@@ -12,8 +13,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 
 /**
  * Apoyo común de las pruebas del teclado. La Activity de prueba se configura como
- * MainActivity (edge-to-edge + `adjustResize`): sin eso las pruebas medirían otra
- * ventana, una que sí se achica sola, y pasarían sin probar nada.
+ * MainActivity: edge-to-edge aquí, `adjustResize` en `src/debug/AndroidManifest.xml`
+ * (fijarlo en tiempo de ejecución no llegaba a la ventana en API 26) y el foco
+ * soltado fuera de los campos. Sin eso las pruebas medirían otra ventana y pasarían
+ * sin probar nada.
  */
 typealias ImeComposeRule = AndroidComposeTestRule<ActivityScenarioRule<ComponentActivity>, ComponentActivity>
 
@@ -31,8 +34,7 @@ fun ImeComposeRule.configureLikeMainActivity() {
     InstrumentationRegistry.getInstrumentation().setInTouchMode(true)
     runOnUiThread {
         activity.enableEdgeToEdge()
-        @Suppress("DEPRECATION")
-        activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        activity.window.keepReleasedFocusOutOfFields()
     }
 }
 
@@ -53,6 +55,43 @@ fun ImeComposeRule.windowHeightPx(): Int {
     runOnUiThread { height = activity.window.decorView.height }
     return height
 }
+
+/**
+ * Baja de [tag] en píxeles de PANTALLA (sirve también para ventanas de diálogo).
+ * Tras abrirse el teclado, el diseño tarda unos cuadros en ajustarse —en API 26 más
+ * que en 30—: por eso [scrollIntoViewAbove] reintenta hasta que el nodo queda
+ * por encima del límite, como haría una usuaria que vuelve a deslizar.
+ */
+private fun ImeComposeRule.screenBottomOf(tag: String): Float {
+    val node = onNodeWithTag(tag).fetchSemanticsNode()
+    return node.positionOnScreen.y + node.size.height
+}
+
+/**
+ * Desplaza hasta [tag] y espera a que termine por encima de [limitPx]. Un píxel de
+ * tolerancia: el paso de dp a píxeles redondea mitades (52 dp a 420 dpi = 136,5 px).
+ */
+fun ImeComposeRule.scrollIntoViewAbove(tag: String, limitPx: () -> Int) = awaitLayout(
+    message = { "«$tag» termina en ${screenBottomOf(tag)} px y el límite es ${limitPx()} px" }
+) {
+    onNodeWithTag(tag).performScrollTo()
+    waitForIdle()
+    screenBottomOf(tag) <= limitPx() + PIXEL_ROUNDING
+}
+
+/**
+ * Espera a que el diseño cumpla [condition] tras abrirse el teclado. Solo atrapa el
+ * vencimiento del plazo: cualquier otro fallo (un nodo que no existe) sale tal cual.
+ */
+fun ImeComposeRule.awaitLayout(message: () -> String, condition: () -> Boolean) {
+    try {
+        waitUntil(IME_TIMEOUT_MS, condition)
+    } catch (e: ComposeTimeoutException) {
+        throw AssertionError(message(), e)
+    }
+}
+
+const val PIXEL_ROUNDING = 1
 
 /**
  * Espera a que el teclado se abra o se cierre. Si nunca aparece, la prueba FALLA

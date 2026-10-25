@@ -112,6 +112,19 @@ class KeyboardAwareGuardTest {
         assertTrue("Archivos con diálogo u hoja segura y lista perezosa: $conLista", conLista.isEmpty())
     }
 
+    /**
+     * Las instrumentadas aplican el arreglo de foco de API 26–27 por su cuenta, en la
+     * Activity de prueba: si MainActivity dejara de llamarlo, seguirían en verde.
+     */
+    @Test
+    fun `MainActivity suelta el foco fuera de los campos en API 26 y 27`() {
+        val codigo = codigoDe(File(appDir, "MainActivity.kt"))
+        assertTrue(
+            "MainActivity debe llamar window.keepReleasedFocusOutOfFields() (ver KeyboardAware.kt)",
+            "window.keepReleasedFocusOutOfFields()" in codigo
+        )
+    }
+
     @Test
     fun `el guardián encuentra pantallas con campos`() {
         // Piso de no vacuidad: si el regex dejara de casar, la prueba de arriba

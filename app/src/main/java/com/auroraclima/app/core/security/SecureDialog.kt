@@ -1,6 +1,7 @@
 package com.auroraclima.app.core.security
 
 import android.content.Context
+import android.view.Window
 import android.view.WindowManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,6 +22,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.SecureFlagPolicy
+import com.auroraclima.app.core.ui.v2.keepReleasedFocusOutOfFields
 
 /**
  * Único diálogo permitido en el espacio interno (RNF-02, auditoría A1): los diálogos,
@@ -34,7 +36,8 @@ import androidx.compose.ui.window.SecureFlagPolicy
  * ventana del diálogo, y en la confirmación con contraseña de RF-20 el botón
  * «Eliminar definitivamente» quedaba cortado debajo (corrida en el emulador). Por eso
  * el contenido no puede llevar su propia lista perezosa ni otro desplazamiento
- * vertical (lo primero lo vigila `KeyboardAwareGuardTest`).
+ * vertical (lo primero lo vigila `KeyboardAwareGuardTest`). En API 26 la plataforma
+ * no achicaba esa ventana por su cuenta: se le pide `ADJUST_RESIZE` explícito.
  */
 @Composable
 fun SecureDialog(
@@ -51,6 +54,12 @@ fun SecureDialog(
             securePolicy = SecureFlagPolicy.SecureOn
         )
     ) {
+        // El foco soltado no debe volver al campo (API 26–27, KeyboardAware.kt).
+        SetUpDialogWindow { window ->
+            @Suppress("DEPRECATION")
+            window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            window.keepReleasedFocusOutOfFields()
+        }
         Box(modifier = Modifier.verticalScroll(rememberScrollState())) { content() }
     }
 }
@@ -81,7 +90,14 @@ fun SecureSheet(onDismissRequest: () -> Unit, content: @Composable () -> Unit) {
             decorFitsSystemWindows = false
         )
     ) {
-        DimBehindDialogWindow()
+        // Repone el fondo atenuado que esta ventana a pantalla completa perdía. Solo
+        // suma FLAG_DIM_BEHIND; no toca FLAG_SECURE, que pone Compose por securePolicy.
+        val context = LocalContext.current
+        SetUpDialogWindow { window ->
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window.setDimAmount(themeDimAmount(context))
+            window.keepReleasedFocusOutOfFields()
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -114,19 +130,15 @@ fun SecureSheet(onDismissRequest: () -> Unit, content: @Composable () -> Unit) {
 }
 
 /**
- * Repone el fondo atenuado de la ventana del diálogo, una sola vez por ventana: cada
- * cambio de atributos obliga al WindowManager a volver a medirla, y en una hoja con
- * campo eso ocurriría en cada tecla (gama baja, RNF-07). Solo suma `FLAG_DIM_BEHIND`;
- * no toca `FLAG_SECURE`, que pone Compose por `securePolicy`.
+ * Ajusta la ventana propia del diálogo, una sola vez por ventana: cada cambio de
+ * atributos obliga al WindowManager a volver a medirla, y en una hoja con campo eso
+ * ocurriría en cada tecla (gama baja, RNF-07). Si el padre no es una ventana de
+ * diálogo no hace nada.
  */
 @Composable
-private fun DimBehindDialogWindow() {
+private fun SetUpDialogWindow(setUp: (Window) -> Unit) {
     val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
-    val context = LocalContext.current
-    LaunchedEffect(dialogWindow) {
-        dialogWindow?.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-        dialogWindow?.setDimAmount(themeDimAmount(context))
-    }
+    LaunchedEffect(dialogWindow) { dialogWindow?.let(setUp) }
 }
 
 /**

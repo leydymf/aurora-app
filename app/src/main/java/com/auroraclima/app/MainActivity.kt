@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.ui.theme.AuroraTheme
+import com.auroraclima.app.core.ui.v2.keepReleasedFocusOutOfFields
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -21,5 +22,6 @@ class MainActivity : ComponentActivity() {
                 AuroraApp(sessionManager)
             }
         }
+        window.keepReleasedFocusOutOfFields()
     }
 }

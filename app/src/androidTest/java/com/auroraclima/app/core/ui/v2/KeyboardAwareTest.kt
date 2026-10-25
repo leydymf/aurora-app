@@ -26,14 +26,12 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -93,15 +91,7 @@ class KeyboardAwareTest {
         composeRule.setContent { FormLikeScreen() }
         openKeyboardOn(EMAIL)
 
-        composeRule.onNodeWithTag(FINAL_BUTTON).performScrollTo()
-        composeRule.waitForIdle()
-
-        val visibleBottom = composeRule.windowHeightPx() - composeRule.imeBottomPx()
-        val buttonBottom = composeRule.onNodeWithTag(FINAL_BUTTON).fetchSemanticsNode().boundsInWindow.bottom
-        assertTrue(
-            "El botón final termina en $buttonBottom px y el teclado empieza en $visibleBottom px",
-            buttonBottom <= visibleBottom
-        )
+        composeRule.scrollIntoViewAbove(FINAL_BUTTON) { composeRule.windowHeightPx() - composeRule.imeBottomPx() }
         composeRule.onNodeWithTag(FINAL_BUTTON).performClick()
         assertEquals(1, finalClicks)
     }
