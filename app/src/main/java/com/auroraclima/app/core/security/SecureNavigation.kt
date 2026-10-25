@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -88,8 +89,8 @@ class SecureGraphScope internal constructor(private val graph: NavGraphBuilder) 
 /**
  * Mientras al menos una instancia esté en composición, la ventana bloquea capturas
  * de pantalla y oculta su contenido en la vista de recientes. Superpone además la
- * nube de salida rápida y observa los toques (en la pasada Initial, sin consumirlos)
- * para reiniciar la inactividad. Privado a propósito: las pantallas nunca lo invocan
+ * nube de salida rápida ([QuickExitCloud]) y registra la interacción
+ * ([trackSessionInteraction]). Privado a propósito: las pantallas nunca lo invocan
  * directamente, solo [secureGraph].
  */
 @Composable
@@ -100,16 +101,54 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
         window?.let(SecureFlagCounter::acquire)
         onDispose { window?.let(SecureFlagCounter::release) }
     }
+    Box(modifier = Modifier.fillMaxSize().trackSessionInteraction()) {
+        content()
+        QuickExitCloud(modifier = Modifier.align(Alignment.BottomEnd), bottomInset = cloudBottomInset)
+    }
+}
+
+/**
+ * La nube de salida rápida (RF-16) con su anclaje y su gesto, los mismos en la ruta
+ * segura y en cada ventana propia (`SecureWindow`): una sola rutina de cierre,
+ * `closeNow`. La apariencia y sus medidas (CloudReturnSize, CloudReturnMargin,
+ * compartidas con keyboardAware) vienen de core/ui. El inset del teclado la mantiene
+ * visible y pulsable con el teclado abierto: con edge-to-edge, sin él quedaba debajo
+ * (v0.3.2). [bottomInset] la eleva sobre una barra de pestañas (ver [SecureGraphScope]).
+ */
+@Composable
+internal fun QuickExitCloud(modifier: Modifier, bottomInset: Dp = 0.dp) {
     val sessionManager = LocalSessionManager.current
-    // El desplazamiento también cuenta como interacción (RNF-03, P-21): una lectura
-    // larga con scroll no debe cerrar la sesión a los 5 minutos. El toque que inicia
-    // cada gesto ya lo captura pointerInput, pero el scroll por accesibilidad
-    // (TalkBack) no genera eventos de puntero; esta conexión de nested scroll cubre
-    // ambos casos, acotada por InteractionThrottle para no reiniciar el temporizador
-    // en cada frame de un desplazamiento continuo.
-    val scrollInteractionConnection = remember(sessionManager) {
+    CloudReturnVisual(
+        onClick = sessionManager::closeNow,
+        modifier = modifier
+            .systemBarsPadding()
+            .imePadding()
+            .padding(bottom = bottomInset)
+            .padding(CloudReturnMargin)
+    )
+}
+
+/**
+ * Observa los toques (en la pasada Initial, sin consumirlos) y el desplazamiento para
+ * reiniciar la inactividad (RNF-03). Lo usan la ruta segura y cada ventana propia: un
+ * toque dentro de una hoja o un diálogo también es uso, aunque la ventana de la
+ * Activity no lo reciba.
+ *
+ * El desplazamiento también cuenta como interacción (P-21): una lectura larga con
+ * scroll no debe cerrar la sesión a los 5 minutos. El toque que inicia cada gesto ya
+ * lo captura pointerInput, pero el scroll por accesibilidad (TalkBack) no genera
+ * eventos de puntero; la conexión de nested scroll cubre ambos casos, acotada por
+ * InteractionThrottle para no reiniciar el temporizador en cada frame de un
+ * desplazamiento continuo.
+ *
+ * `composed`, como `keyboardAware`: la sesión se lee de [LocalSessionManager], que solo
+ * existe en composición.
+ */
+internal fun Modifier.trackSessionInteraction(): Modifier = composed {
+    val sessionManager = LocalSessionManager.current
+    remember(sessionManager) {
         val throttle = InteractionThrottle(MonotonicClock(SystemClock::elapsedRealtime))
-        object : NestedScrollConnection {
+        val scrollConnection = object : NestedScrollConnection {
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
                 if (consumed != Offset.Zero && throttle.shouldRegister()) {
                     sessionManager.registerInteraction()
@@ -117,11 +156,8 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
                 return Offset.Zero
             }
         }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollInteractionConnection)
+        Modifier
+            .nestedScroll(scrollConnection)
             .pointerInput(sessionManager) {
                 awaitPointerEventScope {
                     while (true) {
@@ -132,22 +168,6 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
                     }
                 }
             }
-    ) {
-        content()
-        // Salida rápida (RF-16): el anclaje y el gesto son del mecanismo; la
-        // apariencia y sus medidas (CloudReturnSize, CloudReturnMargin, compartidas
-        // con keyboardAware) vienen de core/ui.
-        // El inset del teclado la mantiene visible y pulsable con el teclado
-        // abierto: con edge-to-edge, sin él quedaba debajo (v0.3.2).
-        CloudReturnVisual(
-            onClick = sessionManager::closeNow,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .systemBarsPadding()
-                .imePadding()
-                .padding(bottom = cloudBottomInset)
-                .padding(CloudReturnMargin)
-        )
     }
 }
 

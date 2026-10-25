@@ -83,6 +83,10 @@ fun AccentBadge(
  * superiores 28 con el asa de arrastre decorativa del mockup. Solo apariencia:
  * la ventana segura la pone `core/security/SecureSheet`, que recibe esto como
  * contenido — mismo reparto que CloudReturnVisual con la salida rápida.
+ *
+ * Termina con la franja de la nube ([CloudReturnClearance]): la ventana de la hoja
+ * dibuja su propia nube en la esquina (RF-16, v0.3.2) y esa franja blanca es su
+ * sitio, como el aire final de cada pantalla.
  */
 @Composable
 fun V2SheetCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
@@ -92,7 +96,8 @@ fun V2SheetCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.
             .clip(V2Corner.sheet)
             .background(V2Palette.cardSurface)
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 20.dp),
+            .padding(horizontal = 24.dp)
+            .padding(top = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -103,6 +108,7 @@ fun V2SheetCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.
         )
         Spacer(modifier = Modifier.height(16.dp))
         content()
+        Spacer(modifier = Modifier.height(CloudReturnClearance))
     }
 }
 

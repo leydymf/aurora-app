@@ -54,6 +54,14 @@ val CloudReturnSize = 52.dp
  */
 val CloudReturnMargin = 20.dp
 
+/**
+ * Lo que ocupa la nube desde su borde de anclaje: diámetro más margen. Lo reservan
+ * [keyboardAware] (sobre el teclado), [V2SheetCard] (al pie de cada hoja) y el
+ * diálogo y el selector de fecha de `core/security` (debajo de su tarjeta), para que
+ * la nube nunca tape un campo ni un botón.
+ */
+val CloudReturnClearance = CloudReturnSize + CloudReturnMargin
+
 @Preview(showBackground = true, backgroundColor = 0xFFF3F1F7)
 @Composable
 private fun CloudReturnVisualPreview() {

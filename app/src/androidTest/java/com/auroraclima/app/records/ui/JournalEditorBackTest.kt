@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.TestSession
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.V2Voice
 import java.time.LocalDate
@@ -33,6 +34,9 @@ import org.junit.runner.RunWith
 class JournalEditorBackTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @get:Rule
+    val session = TestSession()
 
     private var backRequests = 0
     private var leaves = 0
@@ -72,7 +76,7 @@ class JournalEditorBackTest {
 
     /** Réplica mínima del ViewModel: pedir salir con cambios abre la pregunta. */
     private fun setEditor(initial: JournalEditorUiState) {
-        composeRule.setContent {
+        session.setContent(composeRule) {
             var state by remember { mutableStateOf(initial) }
             AuroraV2Theme(V2Voice.Interior) {
                 JournalEditorScreen(

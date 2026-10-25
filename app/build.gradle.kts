@@ -122,6 +122,8 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
+    // Reloj virtual para el plazo de inactividad en las instrumentadas (RNF-03); no entra al APK
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.espresso.core)
     // La BD de prueba del test de cifrado (core/database) declara sus propios DAOs
     kspAndroidTest(libs.room.compiler)

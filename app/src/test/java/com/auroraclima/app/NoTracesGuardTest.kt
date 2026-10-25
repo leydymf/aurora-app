@@ -136,7 +136,10 @@ class NoTracesGuardTest {
         // Crean un Popup internamente sin nombrarlo (auditoría N2).
         "DropdownMenu",
         "TooltipBox",
-        "PopupWindow"
+        "PopupWindow",
+        // La ventana propia de core/security (FLAG_SECURE y nube): `internal`, pero
+        // fuera de ese paquete se usan sus envoltorios, nunca ella (v0.3.2).
+        "SecureWindow("
     )
 
     @Test
@@ -155,6 +158,32 @@ class NoTracesGuardTest {
         assertTrue(
             "Ventanas propias fuera de los envoltorios de core/security (RNF-02, A1):\n" +
                 violations.joinToString("\n"),
+            violations.isEmpty()
+        )
+    }
+
+    /**
+     * Toda ventana propia nace en core/security, y ahí cada `Dialog(` o `Popup(` debe
+     * forzar FLAG_SECURE: hoy la bandera depende de una sola línea de `SecureWindow`
+     * (v0.3.2). Sin comentarios: un KDoc que citara la línea no debe contar como ventana
+     * protegida.
+     */
+    @Test
+    fun `toda ventana propia de core security fuerza FLAG_SECURE`() {
+        val securityDir = File(mainDir, "java/com/auroraclima/app/core/security")
+        val windowCall = Regex("""(?<![\w.])(Dialog|Popup)\(""")
+        val violations = securityDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .mapNotNull { file ->
+                val text = file.readText().withoutComments().replace(Regex("//.*"), "")
+                val windows = windowCall.findAll(text).count()
+                val secured = Regex("""securePolicy\s*=\s*SecureFlagPolicy\.SecureOn""").findAll(text).count()
+                if (windows > secured) "${file.relativeTo(mainDir)}: $windows ventanas, $secured con SecureOn" else null
+            }
+            .toList()
+
+        assertTrue(
+            "Ventana propia sin FLAG_SECURE forzada (RNF-02):\n" + violations.joinToString("\n"),
             violations.isEmpty()
         )
     }
@@ -211,7 +240,17 @@ class NoTracesGuardTest {
             "SecureBackStackGuard",
             // La fachada tampoco debe leer ni gobernar la sesión interna (auditoría D3 H-5).
             "SessionManager",
-            "SessionGuard"
+            "SessionGuard",
+            // Ni las ventanas propias del espacio interno ni su nube (v0.3.2).
+            "SecureSheet",
+            "SecureDialog",
+            "SecureDayPicker",
+            "SecureWindow",
+            "LocalSessionManager",
+            "CloudReturnVisual",
+            // Leen la sesión por dentro: llamarlos no nombra ningún token anterior.
+            "QuickExitCloud",
+            "trackSessionInteraction"
         )
         // Excepción deliberada y acotada, registrada en el ADR 2026-10-10 (c):
         // `weather/ui/WeatherScreen` SÍ importa `core/security/SecureTextEntry`.

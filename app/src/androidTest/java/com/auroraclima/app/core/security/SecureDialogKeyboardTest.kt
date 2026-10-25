@@ -51,6 +51,9 @@ class SecureDialogKeyboardTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
+    @get:Rule
+    val session = TestSession()
+
     private var clicks = 0
 
     @Before
@@ -60,7 +63,7 @@ class SecureDialogKeyboardTest {
 
     @Test
     fun laHojaQuedaSobreElTecladoConSuCampoYSuBoton() {
-        composeRule.setContent {
+        session.setContent(composeRule) {
             AuroraV2Theme(V2Voice.Interior) {
                 SecureSheet(onDismissRequest = {}) {
                     V2SheetCard { FieldAndButton(gapDp = 120) }
@@ -72,7 +75,7 @@ class SecureDialogKeyboardTest {
 
     @Test
     fun elUltimoBotonDelDialogoSeAlcanzaConElTeclado() {
-        composeRule.setContent {
+        session.setContent(composeRule) {
             AuroraV2Theme(V2Voice.Interior) {
                 SecureDialog(onDismissRequest = {}) {
                     // Alto suficiente para que, sin desplazamiento, el teclado deje el

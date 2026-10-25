@@ -45,7 +45,9 @@ import androidx.compose.ui.unit.dp
  *     quedaba debajo de la nube, con el ojo de la contraseña tapado (corrida en el
  *     emulador, v0.3.2). Es lo que dibuja el mockup v2-06: la nube en su propia
  *     franja, al lado del botón. Sin teclado no hace falta: cada pantalla ya deja
- *     su aire final para la nube;
+ *     su aire final para la nube. La franja ([CloudReturnClearance]) supone la nube
+ *     en su anclaje base: una ruta con `cloudBottomInset` (hoy solo el panel, que
+ *     no tiene campos) la eleva por encima;
  *  3. un toque en una zona vacía quita el foco, y con él se cierra el teclado.
  *     Solo reacciona a los toques que ningún hijo consumió: botones y campos
  *     reciben el suyo como siempre, y un arrastre sigue desplazando (no cierra el
@@ -64,15 +66,8 @@ fun Modifier.keyboardAware(): Modifier = this
         val ime = WindowInsets.ime
         val density = LocalDensity.current
         val keyboardOpen by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
-        Modifier.padding(bottom = if (keyboardOpen) CLOUD_BAND_OVER_KEYBOARD else 0.dp)
+        Modifier.padding(bottom = if (keyboardOpen) CloudReturnClearance else 0.dp)
     }
-
-/**
- * La nube y su margen, las mismas constantes con que la ancla `SecureNavigation`.
- * Supone la nube en su anclaje base: una ruta con `cloudBottomInset` (hoy solo el
- * panel, que no tiene campos) la eleva por encima de esta franja.
- */
-private val CLOUD_BAND_OVER_KEYBOARD = CloudReturnSize + CloudReturnMargin
 
 /**
  * Solo la parte «tocar fuera quita el foco» de [keyboardAware], para la fachada:

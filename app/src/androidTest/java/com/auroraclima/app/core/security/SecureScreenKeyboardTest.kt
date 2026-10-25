@@ -1,6 +1,5 @@
 package com.auroraclima.app.core.security
 
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,11 +35,6 @@ import com.auroraclima.app.core.ui.v2.configureLikeMainActivity
 import com.auroraclima.app.core.ui.v2.imeBottomPx
 import com.auroraclima.app.core.ui.v2.keyboardAware
 import com.auroraclima.app.core.ui.v2.windowHeightPx
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
@@ -53,66 +46,55 @@ import org.junit.runner.RunWith
  * teclado abierto, sin tapar el campo enfocado. Antes de v0.3.2 se anclaba solo
  * sobre la barra de navegación y, con edge-to-edge, el teclado la tapaba entera.
  *
- * Se arma el grafo seguro real (`secureGraph`/`screen`) con un `SessionManager`
- * real y sin limpiezas: lo que se prueba es la posición y el toque, no la limpieza.
+ * Se arma el grafo seguro real (`secureGraph`/`screen`) con la sesión de prueba
+ * ([TestSession]): lo que se prueba es la posición y el toque, no la limpieza.
  */
 @RunWith(AndroidJUnit4::class)
 class SecureScreenKeyboardTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val sessionManager = SessionManager(
-        scope = scope,
-        monotonicClock = MonotonicClock(SystemClock::elapsedRealtime),
-        boundCleaners = emptySet()
-    )
+    @get:Rule
+    val session = TestSession()
 
     @Before
     fun setUp() {
         composeRule.configureLikeMainActivity()
     }
 
-    @After
-    fun tearDown() {
-        scope.cancel()
-    }
-
     @Test
     fun laNubeQuedaSobreElTecladoYCierraLaSesion() {
-        composeRule.setContent {
-            CompositionLocalProvider(LocalSessionManager provides sessionManager) {
-                val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = GRAPH) {
-                    secureGraph(route = GRAPH, startDestination = SCREEN) {
-                        screen(SCREEN) {
-                            var text by remember { mutableStateOf("") }
-                            AuroraV2Theme(V2Voice.Interior) {
-                                // El campo va abajo, donde lo deja el desplazamiento al
-                                // abrirse el teclado: ahí es donde la nube lo tapaba.
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .keyboardAware()
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(24.dp)
-                                ) {
-                                    Spacer(modifier = Modifier.height(560.dp))
-                                    V2PlainField(
-                                        value = text,
-                                        onValueChange = { text = it },
-                                        modifier = Modifier.testTag(FIELD),
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-                                    )
-                                    Spacer(modifier = Modifier.height(200.dp))
-                                }
+        session.setContent(composeRule) {
+            val navController = rememberNavController()
+            NavHost(navController = navController, startDestination = GRAPH) {
+                secureGraph(route = GRAPH, startDestination = SCREEN) {
+                    screen(SCREEN) {
+                        var text by remember { mutableStateOf("") }
+                        AuroraV2Theme(V2Voice.Interior) {
+                            // El campo va abajo, donde lo deja el desplazamiento al
+                            // abrirse el teclado: ahí es donde la nube lo tapaba.
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .keyboardAware()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(24.dp)
+                            ) {
+                                Spacer(modifier = Modifier.height(560.dp))
+                                V2PlainField(
+                                    value = text,
+                                    onValueChange = { text = it },
+                                    modifier = Modifier.testTag(FIELD),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                                )
+                                Spacer(modifier = Modifier.height(200.dp))
                             }
                         }
                     }
                 }
             }
         }
-        composeRule.runOnUiThread { sessionManager.startSession() }
+        composeRule.runOnUiThread { session.sessionManager.startSession() }
         composeRule.onNodeWithTag(FIELD).performClick()
         composeRule.awaitIme(visible = true)
         composeRule.waitForIdle()
@@ -140,7 +122,10 @@ class SecureScreenKeyboardTest {
 
         cloud.performClick()
         composeRule.waitForIdle()
-        assertFalse("Tocar la nube con el teclado abierto debe cerrar la sesión", sessionManager.isSessionActive.value)
+        assertFalse(
+            "Tocar la nube con el teclado abierto debe cerrar la sesión",
+            session.sessionManager.isSessionActive.value
+        )
     }
 
     private companion object {
