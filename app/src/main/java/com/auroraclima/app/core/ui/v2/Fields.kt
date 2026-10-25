@@ -16,8 +16,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -81,7 +83,7 @@ fun V2PlainField(
         shape = V2Corner.control,
         colors = v2FieldColors(),
         keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions
+        keyboardActions = keyboardActions.closingOnDone()
     )
 }
 
@@ -174,7 +176,7 @@ fun V2SecretField(
             keyboardType = KeyboardType.Password,
             imeAction = imeAction
         ),
-        keyboardActions = keyboardActions
+        keyboardActions = keyboardActions.closingOnDone()
     )
 }
 
@@ -215,6 +217,36 @@ fun V2StepHeader(step: Int, totalSteps: Int, modifier: Modifier = Modifier) {
             text = stringResource(R.string.common_step_label, step, totalSteps),
             style = InteriorTypeVoice.label,
             color = V2Palette.inkSecondary
+        )
+    }
+}
+
+/**
+ * «Listo» cierra el teclado SIEMPRE. La acción por defecto de Compose ya lo hacía,
+ * pero cada pantalla que pasa su `onDone` (enviar el formulario) la reemplaza y el
+ * teclado quedaba abierto encima del botón. Aquí se quita el foco —lo que cierra
+ * el teclado— y después corre lo que pidió la pantalla. «Siguiente» se deja con la
+ * acción por defecto, que ya pasa al campo siguiente. Si la pantalla no pasa
+ * `onDone`, antes solo se ocultaba el teclado; ahora también se suelta el foco.
+ *
+ * `KeyboardActions` no tiene `copy()`: si una subida de Compose le agrega otro
+ * manejador, hay que copiarlo aquí o se perdería en silencio.
+ */
+@Composable
+private fun KeyboardActions.closingOnDone(): KeyboardActions {
+    val focusManager = LocalFocusManager.current
+    val screenActions = this
+    return remember(screenActions, focusManager) {
+        KeyboardActions(
+            onDone = {
+                focusManager.clearFocus()
+                screenActions.onDone?.invoke(this)
+            },
+            onGo = screenActions.onGo,
+            onNext = screenActions.onNext,
+            onPrevious = screenActions.onPrevious,
+            onSearch = screenActions.onSearch,
+            onSend = screenActions.onSend
         )
     }
 }

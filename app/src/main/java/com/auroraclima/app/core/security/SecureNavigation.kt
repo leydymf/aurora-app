@@ -7,6 +7,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
@@ -134,11 +135,14 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
         content()
         // Salida rápida (RF-16): la posición al alcance del pulgar y el gesto son
         // del mecanismo; la apariencia (nube violeta V2) se inyecta desde core/ui.
+        // El inset del teclado la mantiene visible y pulsable con el teclado
+        // abierto: con edge-to-edge, sin él quedaba debajo (v0.3.2).
         CloudReturnVisual(
             onClick = sessionManager::closeNow,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .systemBarsPadding()
+                .imePadding()
                 .padding(bottom = cloudBottomInset)
                 .padding(CLOSE_NOW_MARGIN)
         )
