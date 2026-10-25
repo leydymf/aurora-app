@@ -56,8 +56,30 @@ data class JournalEditorUiState(
     @StringRes val kindErrorRes: Int? = null,
     @StringRes val detailErrorRes: Int? = null,
     @StringRes val saveErrorRes: Int? = null,
-    @StringRes val mediaErrorRes: Int? = null
+    @StringRes val mediaErrorRes: Int? = null,
+    // Lo que había al abrir (v0.3.2): al crear, el formulario vacío del día; en
+    // edición, lo guardado. Null mientras carga el registro a editar.
+    val baseline: EditorBaseline? = null,
+    val isLeavePromptVisible: Boolean = false
 ) {
+    /**
+     * Volver perdería algo: la flecha y el gesto atrás preguntan antes de salir. Al
+     * crear cuentan también los adjuntos ya importados; en edición no, porque se
+     * guardan con el registro en cuanto se agregan o se quitan.
+     */
+    val hasUnsavedChanges: Boolean
+        get() {
+            val base = baseline ?: return false
+            return occurredOn != base.occurredOn ||
+                kindId != base.kindId ||
+                detail != base.detail ||
+                (!isEditing && attachments.isNotEmpty())
+        }
+
+    /** El atrás pasa por el ViewModel: hay algo que preguntar o un guardado en curso. */
+    val interceptsBack: Boolean
+        get() = isSaving || hasUnsavedChanges
+
     /** Botones de adjuntar habilitados: hay cupo y no hay importación en curso. */
     val canAttach: Boolean
         get() = !isImporting && AttachmentPolicy.hasCapacity(attachments.size)
@@ -86,3 +108,6 @@ data class JournalEditorUiState(
     val selectedKindLabel: String
         get() = kinds.firstOrNull { it.id == kindId }?.label ?: kindLabel
 }
+
+/** Fecha, tipo y texto tal como estaban al abrir el editor (ver [JournalEditorUiState.baseline]). */
+data class EditorBaseline(val occurredOn: LocalDate, val kindId: String?, val detail: String)

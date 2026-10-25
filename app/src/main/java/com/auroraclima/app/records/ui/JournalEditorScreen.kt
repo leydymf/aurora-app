@@ -1,6 +1,7 @@
 package com.auroraclima.app.records.ui
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,11 +42,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureDayPicker
+import com.auroraclima.app.core.security.SecureSheet
 import com.auroraclima.app.core.security.rememberSystemLauncher
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
@@ -61,6 +64,7 @@ import com.auroraclima.app.core.ui.v2.V2LoadingState
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2ParagraphField
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.V2SheetCard
 import com.auroraclima.app.core.ui.v2.keyboardAware
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.JournalAttachment
@@ -104,6 +108,9 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
     LaunchedEffect(viewModel) {
         viewModel.savedEvents.collect { onSaved() }
     }
+    LaunchedEffect(viewModel) {
+        viewModel.leaveEvents.collect { onBack() }
+    }
     // Ida-y-vuelta hacia una pantalla del sistema (core/security): armada
     // antes de cada lanzamiento y desarmada si falla.
     val launchExternal = rememberSystemLauncher(onLaunchFailed = viewModel::onLaunchFailed)
@@ -114,7 +121,9 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
     }
     JournalEditorScreen(
         state = state,
-        onBack = onBack,
+        onBack = viewModel::onBackRequested,
+        onLeaveConfirmed = viewModel::onLeaveConfirmed,
+        onLeaveDismissed = viewModel::onLeaveDismissed,
         onRetryLoad = viewModel::onRetryLoad,
         onOpenDatePicker = viewModel::onOpenDatePicker,
         onDismissDatePicker = {
@@ -151,6 +160,8 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
 internal fun JournalEditorScreen(
     state: JournalEditorUiState,
     onBack: () -> Unit,
+    onLeaveConfirmed: () -> Unit,
+    onLeaveDismissed: () -> Unit,
     onRetryLoad: () -> Unit,
     onOpenDatePicker: () -> Unit,
     onDismissDatePicker: () -> Unit,
@@ -165,6 +176,10 @@ internal fun JournalEditorScreen(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // La flecha y el gesto atrás piden lo mismo (onBack). Sin cambios ni guardado en
+    // curso, el gesto hace el pop normal; con la hoja abierta, la hoja intercepta
+    // el atrás y solo se cierra.
+    BackHandler(enabled = state.interceptsBack, onBack = onBack)
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -192,6 +207,9 @@ internal fun JournalEditorScreen(
                 onSubmit = onSubmit
             )
         }
+    }
+    if (state.isLeavePromptVisible) {
+        LeaveConfirmSheet(onKeep = onLeaveDismissed, onLeave = onLeaveConfirmed)
     }
     if (state.isPickingDate) {
         SecureDayPicker(
@@ -267,6 +285,44 @@ private fun JournalEditorForm(
         )
         // Aire final para no chocar con el botón nube de salida rápida.
         Spacer(modifier = Modifier.height(EDITOR_BOTTOM_CLEARANCE))
+    }
+}
+
+/**
+ * Salir con cambios sin guardar (v0.3.2), con el patrón de la confirmación de
+ * eliminar (P20·b): «Seguir aquí» es la ÚNICA acción llena —quedarse es el camino
+ * principal— y salir va como texto en el rosa de avisos. Tocar fuera o atrás
+ * equivale a quedarse.
+ */
+@Composable
+private fun LeaveConfirmSheet(onKeep: () -> Unit, onLeave: () -> Unit) {
+    SecureSheet(onDismissRequest = onKeep) {
+        V2SheetCard {
+            Text(
+                text = stringResource(R.string.journal_leave_title),
+                style = InteriorTypeVoice.cardTitle,
+                color = V2Palette.inkPrimary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.journal_leave_body),
+                style = InteriorTypeVoice.caption,
+                color = V2Palette.inkSecondary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            V2PrimaryButton(text = stringResource(R.string.journal_leave_keep), onClick = onKeep)
+            Spacer(modifier = Modifier.height(6.dp))
+            TextButton(onClick = onLeave) {
+                Text(
+                    text = stringResource(R.string.journal_leave_confirm),
+                    style = InteriorTypeVoice.bodyStrong,
+                    color = V2Palette.accentNotice.stroke
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
 

@@ -83,8 +83,21 @@ class JournalEditorViewModel @Inject constructor(
     private val _captureEvents = Channel<String>(Channel.BUFFERED)
     val captureEvents: Flow<String> = _captureEvents.receiveAsFlow()
 
+    // Salir del editor (flecha o gesto atrás, v0.3.2). Consumo único por el mismo
+    // motivo que la captura: un replay tras rotar sacaría de la pantalla sin gesto.
+    private val _leaveEvents = Channel<Unit>(Channel.BUFFERED)
+    val leaveEvents: Flow<Unit> = _leaveEvents.receiveAsFlow()
+
+    // Se sale una sola vez: dos toques seguidos a la flecha (o a «Salir sin
+    // guardar») dejarían dos eventos, y el segundo pop sacaría la pantalla de abajo.
+    private var hasLeft = false
+
     init {
-        if (isEditing) loadForEdit()
+        if (isEditing) {
+            loadForEdit()
+        } else {
+            _uiState.update { it.copy(baseline = EditorBaseline(it.occurredOn, it.kindId, it.detail)) }
+        }
         loadKinds()
         viewModelScope.launch {
             // Limpia adjuntos en preparación de una creación abandonada antes
@@ -164,6 +177,35 @@ class JournalEditorViewModel @Inject constructor(
     fun onLaunchFailed() {
         viewModelScope.launch { attachmentRepository.discardCapture() }
         _uiState.update { it.copy(isImporting = false, mediaErrorRes = R.string.journal_media_error) }
+    }
+
+    /**
+     * Flecha o gesto atrás. Con cambios sin guardar pregunta antes; mientras se
+     * guarda no hace nada, porque el guardado ya va a salir solo y salir dos veces
+     * sacaría también la pantalla de abajo.
+     */
+    fun onBackRequested() {
+        val state = _uiState.value
+        when {
+            state.isSaving -> Unit
+            state.hasUnsavedChanges -> _uiState.update { it.copy(isLeavePromptVisible = true) }
+            else -> leave()
+        }
+    }
+
+    fun onLeaveConfirmed() {
+        _uiState.update { it.copy(isLeavePromptVisible = false) }
+        leave()
+    }
+
+    private fun leave() {
+        if (hasLeft) return
+        hasLeft = true
+        _leaveEvents.trySend(Unit)
+    }
+
+    fun onLeaveDismissed() {
+        _uiState.update { it.copy(isLeavePromptVisible = false) }
     }
 
     fun onRemoveAttachment(id: Long) {
@@ -296,7 +338,8 @@ class JournalEditorViewModel @Inject constructor(
                                 kindLabel = entry.kindLabel,
                                 storedKindId = entry.kindId,
                                 storedKindLabel = entry.kindLabel,
-                                detail = entry.detail
+                                detail = entry.detail,
+                                baseline = EditorBaseline(entry.occurredOn, entry.kindId, entry.detail)
                             )
                         }
                     }

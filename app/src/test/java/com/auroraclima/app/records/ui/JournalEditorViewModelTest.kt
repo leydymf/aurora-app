@@ -575,4 +575,98 @@ class JournalEditorViewModelTest {
 
         assertEquals(listOf("t01", "t02", "t03", "t04"), viewModel.uiState.value.kindOptions.map { it.id })
     }
+
+    // Salir con cambios sin guardar (v0.3.2): la flecha y el gesto atrás preguntan.
+
+    @Test
+    fun `al crear sin tocar nada volver sale sin preguntar`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onBackRequested()
+
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `con texto escrito volver pregunta y no sale`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onDetailChange("algo")
+
+        viewModel.onBackRequested()
+
+        assertTrue(viewModel.uiState.value.isLeavePromptVisible)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `confirmar la salida sale y quedarse cierra la pregunta`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onKindSelected(fourth)
+        viewModel.onBackRequested()
+
+        viewModel.onLeaveDismissed()
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+
+        viewModel.onBackRequested()
+        viewModel.onLeaveConfirmed()
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `al crear un adjunto importado cuenta como cambio`() = runTest {
+        attachments.attachmentsResult = Result.success(listOf(JournalAttachment(4, AttachmentKind.IMAGE)))
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `en edicion sin tocar nada no hay cambios aunque tenga adjuntos`() = runTest {
+        repository.entryResult = Result.success(stored)
+        attachments.attachmentsResult = Result.success(listOf(JournalAttachment(4, AttachmentKind.IMAGE)))
+        val viewModel = viewModel(entryId = 7)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+        viewModel.onDaySelected(LocalDate.of(2026, 6, 29))
+        assertTrue(viewModel.uiState.value.hasUnsavedChanges)
+        // Volver a lo guardado ya no es un cambio.
+        viewModel.onDaySelected(stored.occurredOn)
+        assertFalse(viewModel.uiState.value.hasUnsavedChanges)
+    }
+
+    @Test
+    fun `dos toques seguidos a volver salen una sola vez`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onBackRequested()
+        viewModel.onBackRequested()
+
+        assertEquals(Unit, withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
+
+    @Test
+    fun `mientras se guarda volver no hace nada`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onKindSelected(fourth)
+        viewModel.onDetailChange("lo que pasó")
+        viewModel.onSubmit()
+        // Sin avanzar el planificador: el guardado sigue en curso.
+        assertTrue(viewModel.uiState.value.isSaving)
+
+        viewModel.onBackRequested()
+
+        assertFalse(viewModel.uiState.value.isLeavePromptVisible)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.leaveEvents.first() })
+    }
 }
