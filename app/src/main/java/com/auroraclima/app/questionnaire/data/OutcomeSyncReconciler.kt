@@ -4,6 +4,7 @@ import com.auroraclima.app.core.security.AccessCodePresence
 import com.auroraclima.app.core.security.AccountDataReconciler
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.SyncKeyManager
+import com.auroraclima.app.core.security.isConfirmed
 import com.auroraclima.app.questionnaire.domain.repository.OutcomeSyncRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -50,7 +51,7 @@ class OutcomeSyncReconciler @Inject constructor(
      * con código.
      */
     private suspend fun pushPending(generation: Long) {
-        if (!accessCode.isSet().getOrDefault(false)) return
+        if (!accessCode.isConfirmed()) return
         val pending = storeAccess.withDatabase { db -> db.outcomeDao().pendingSync(generation) }
             .getOrNull() ?: return
         pending.forEach { row -> syncRepository.push(row.id) }

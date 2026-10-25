@@ -3,6 +3,7 @@ package com.auroraclima.app.records.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.core.security.SealedPayload
 import com.auroraclima.app.records.data.local.JournalDatabase
@@ -35,7 +36,8 @@ class FirestoreJournalSyncRepositoryTest {
     private val remote = FakeJournalSyncRemoteSource()
     private val cipher = ReversiblePayloadCipher()
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 4)
-    private val repository = FirestoreJournalSyncRepository(remote, cipher, storeAccess, keyManager)
+    private val accessCode = FakeAccessCodePresence()
+    private val repository = FirestoreJournalSyncRepository(remote, cipher, storeAccess, keyManager, accessCode)
 
     @After
     fun tearDown() {
@@ -96,6 +98,27 @@ class FirestoreJournalSyncRepositoryTest {
         repository.push(id)
 
         assertEquals(4L, database.journalDao().entryById(id)?.syncedGeneration)
+    }
+
+    @Test
+    fun `sin codigo de acceso el push no sube nada y la fila queda pendiente`() = runTest {
+        // Hallazgo A′ (v0.3.2): la guarda vive también en el punto único de
+        // subida, no solo en los reconciliadores; ante la duda tampoco sube.
+        accessCode.codeExists = false
+        val id = seedRow()
+
+        assertTrue(repository.push(id).isFailure)
+        accessCode.codeExists = true
+        accessCode.failOnRead = true
+        assertTrue(repository.push(id).isFailure)
+
+        assertTrue(remote.uploaded.isEmpty())
+        assertEquals(0L, database.journalDao().entryById(id)?.syncedGeneration)
+
+        // Con el código creado, la misma fila sube.
+        accessCode.failOnRead = false
+        assertTrue(repository.push(id).isSuccess)
+        assertEquals(1, remote.uploaded.size)
     }
 
     @Test

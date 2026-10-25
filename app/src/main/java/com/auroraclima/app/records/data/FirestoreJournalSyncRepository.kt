@@ -1,9 +1,11 @@
 package com.auroraclima.app.records.data
 
 import com.auroraclima.app.core.network.networkResult
+import com.auroraclima.app.core.security.AccessCodePresence
 import com.auroraclima.app.core.security.PayloadCipher
 import com.auroraclima.app.core.security.SealedPayload
 import com.auroraclima.app.core.security.SyncKeyManager
+import com.auroraclima.app.core.security.isConfirmed
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.local.JournalEntryRow
 import com.auroraclima.app.records.data.local.RemovedRow
@@ -43,9 +45,13 @@ class FirestoreJournalSyncRepository @Inject constructor(
     private val remote: JournalSyncRemoteSource,
     private val cipher: PayloadCipher,
     private val storeAccess: JournalStoreAccess,
-    private val keyManager: SyncKeyManager
+    private val keyManager: SyncKeyManager,
+    private val accessCode: AccessCodePresence
 ) : JournalSyncRepository {
     override suspend fun push(entryId: Long): Result<Unit> = networkResult {
+        // Sin código de acceso no sube nada (v0.3.2, hallazgo A′): ante la
+        // duda tampoco. Se lanza como sin DEK y la fila queda pendiente.
+        if (!accessCode.isConfirmed()) throw IllegalStateException()
         // Generación ANTES de sellar: la constancia debe corresponder a la DEK
         // usada. Sin DEK establecida se lanza y el registro queda pendiente.
         val generation = keyManager.currentGeneration() ?: throw IllegalStateException()

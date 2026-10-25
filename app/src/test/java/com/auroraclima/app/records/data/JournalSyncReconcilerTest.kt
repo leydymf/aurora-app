@@ -29,8 +29,9 @@ class JournalSyncReconcilerTest {
     private val storeAccess = JournalStoreAccess { database }
     private val remote = FakeJournalSyncRemoteSource()
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 1)
+    private val accessCode = FakeAccessCodePresence()
     private val syncRepository =
-        FirestoreJournalSyncRepository(remote, ReversiblePayloadCipher(), storeAccess, keyManager)
+        FirestoreJournalSyncRepository(remote, ReversiblePayloadCipher(), storeAccess, keyManager, accessCode)
     private val store = AttachmentStore(context, ReversibleMediaCipher())
     private val mediaRemote = FakeJournalMediaRemoteSource()
     private val mediaSyncRepository = FirestoreJournalMediaSyncRepository(
@@ -40,10 +41,10 @@ class JournalSyncReconcilerTest {
         store = store,
         travelCipher = ReversibleRecoverableMediaCipher(),
         metaCipher = ReversiblePayloadCipher(),
-        keyManager = keyManager
+        keyManager = keyManager,
+        accessCode = accessCode
     )
     private val attachmentRepository = FakeJournalAttachmentRepository()
-    private val accessCode = FakeAccessCodePresence()
     private val reconciler = JournalSyncReconciler(
         storeAccess,
         syncRepository,

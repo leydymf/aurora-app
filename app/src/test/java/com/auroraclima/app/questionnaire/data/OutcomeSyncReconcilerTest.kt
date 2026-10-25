@@ -27,9 +27,9 @@ class OutcomeSyncReconcilerTest {
     private val storeAccess = GuidanceStoreAccess { database }
     private val remote = FakeOutcomeSyncRemoteSource()
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 4)
-    private val syncRepository =
-        FirestoreOutcomeSyncRepository(remote, ReversiblePayloadCipher(), storeAccess, keyManager)
     private val accessCode = FakeAccessCodePresence()
+    private val syncRepository =
+        FirestoreOutcomeSyncRepository(remote, ReversiblePayloadCipher(), storeAccess, keyManager, accessCode)
     private val reconciler = OutcomeSyncReconciler(storeAccess, syncRepository, keyManager, accessCode)
 
     @Test

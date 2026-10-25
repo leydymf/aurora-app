@@ -19,8 +19,10 @@ import org.junit.Test
  * ninguna feature que cree registros. Si alguien agrega un camino nuevo antes
  * del código, esta prueba lo detecta antes de que el descarte borre algo real.
  *
- * Fija además la otra mitad del hallazgo: todo reconciliador que suba espera al
- * código de acceso, y las exenciones del descarte son exactamente las declaradas.
+ * Fija además la otra mitad del hallazgo: ninguna subida ocurre sin código de
+ * acceso —el punto único de subida (capa 1) y la cola de los reconciliadores
+ * (capa 2) esperan al código, y solo las fuentes remotas escriben en el SDK—,
+ * y las exenciones del descarte son exactamente las declaradas.
  */
 class ActivationReachabilityGuardTest {
     private val mainDir = requireNotNull(
@@ -124,16 +126,70 @@ class ActivationReachabilityGuardTest {
         assertTrue("Uso del navController que el recorrido no modela:\n" + leaks.joinToString("\n"), leaks.isEmpty())
     }
 
+    /** El único criterio de subida (`core/security/AccessCodePresence.kt`). */
+    private val uploadGuard = "accessCode.isConfirmed()"
+
+    private fun mainSources(): List<File> = appDir.walkTopDown().filter { it.extension == "kt" }.toList()
+
+    @Test
+    fun `toda subida a la nube espera al codigo de acceso dentro de su propia funcion`() {
+        // Capa 1, el punto único de subida (v0.3.2, hallazgo A′): cada
+        // `.upload(` —con cualquier receptor— debe ir precedido de la guarda
+        // dentro de la MISMA función. Crear, editar o guardar desde cualquier
+        // pantalla pasa por aquí, así que no depende de que esas pantallas
+        // sean inalcanzables sin código.
+        val uploadCall = Regex("""\.upload\(""")
+        val calls = mainSources().flatMap { file ->
+            val text = file.readText()
+            uploadCall.findAll(text).map { match ->
+                val functionStart = text.lastIndexOf("fun ", match.range.first)
+                val guarded = functionStart >= 0 && uploadGuard in text.substring(functionStart, match.range.first)
+                file.name to guarded
+            }
+        }
+
+        assertEquals(
+            "Se esperaban las subidas del historial, las evidencias y los resultados guardados",
+            setOf(
+                "FirestoreJournalSyncRepository.kt",
+                "FirestoreJournalMediaSyncRepository.kt",
+                "FirestoreOutcomeSyncRepository.kt"
+            ),
+            calls.map { it.first }.toSet()
+        )
+        val unguarded = calls.filterNot { it.second }.map { it.first }
+        assertTrue("Subidas sin la guarda del código antes, en su función: $unguarded", unguarded.isEmpty())
+    }
+
+    @Test
+    fun `solo las fuentes remotas escriben directamente en la nube`() {
+        // Una escritura directa al SDK fuera de una fuente remota se saltaría
+        // el punto único de subida de la prueba anterior.
+        val firestoreWrite = Regex("""\.(set|update|batch|runTransaction)\(|\.delete\(\)""")
+        val writers = mainSources()
+            .filter { file ->
+                val text = file.readText()
+                "com.google.firebase.firestore" in text && firestoreWrite.containsMatchIn(text)
+            }
+            .map { it.name }
+        val outsideRemoteSources = writers.filterNot { it.endsWith("RemoteSource.kt") }
+
+        assertTrue("Se esperaban las fuentes remotas de sync, purga y sobre de llaves", writers.size >= 5)
+        assertTrue(
+            "Escrituras directas al SDK fuera de una fuente remota: $outsideRemoteSources",
+            outsideRemoteSources.isEmpty()
+        )
+    }
+
     @Test
     fun `todo reconciliador o restaurador que sube datos espera al codigo de acceso`() {
-        // Hallazgo A′ (v0.3.2): la guarda de subida vive en cada reconciliador;
-        // uno nuevo que suba sin ella dejaría subir datos antes del código.
+        // Capa 2: la cola de los reconciliadores ni siquiera se recorre sin
+        // código (evita N fallos seguidos en la capa 1).
         val syncContract = Regex("""\)\s*:[^{]*\b(AccountDataRestorer|AccountDataReconciler)\b""")
-        val pushers = appDir.walkTopDown()
-            .filter { it.extension == "kt" }
-            .filter { file -> file.readText().let { syncContract.containsMatchIn(it) && ".push(" in it } }
-            .toList()
-        val unguarded = pushers.filterNot { "accessCode.isSet()" in it.readText() }.map { it.name }
+        val pushers = mainSources().filter { file ->
+            file.readText().let { syncContract.containsMatchIn(it) && ".push(" in it }
+        }
+        val unguarded = pushers.filterNot { uploadGuard in it.readText() }.map { it.name }
 
         assertTrue("Se esperaban los reconciliadores del historial y de los resultados", pushers.size >= 2)
         assertTrue("Reconciliadores que suben sin esperar al código de acceso: $unguarded", unguarded.isEmpty())

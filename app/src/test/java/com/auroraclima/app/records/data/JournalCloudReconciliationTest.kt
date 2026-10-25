@@ -3,6 +3,7 @@ package com.auroraclima.app.records.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.local.JournalEntryRow
@@ -38,7 +39,8 @@ class JournalCloudReconciliationTest {
     private val remote = FakeJournalSyncRemoteSource()
     private val cipher = ReversiblePayloadCipher()
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 4)
-    private val repository = FirestoreJournalSyncRepository(remote, cipher, storeAccess, keyManager)
+    private val repository =
+        FirestoreJournalSyncRepository(remote, cipher, storeAccess, keyManager, FakeAccessCodePresence())
 
     @After
     fun tearDown() {

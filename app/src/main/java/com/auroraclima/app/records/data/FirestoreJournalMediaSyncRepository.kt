@@ -2,10 +2,12 @@ package com.auroraclima.app.records.data
 
 import android.content.Context
 import com.auroraclima.app.core.network.networkResult
+import com.auroraclima.app.core.security.AccessCodePresence
 import com.auroraclima.app.core.security.PayloadCipher
 import com.auroraclima.app.core.security.RecoverableMediaCipher
 import com.auroraclima.app.core.security.SealedPayload
 import com.auroraclima.app.core.security.SyncKeyManager
+import com.auroraclima.app.core.security.isConfirmed
 import com.auroraclima.app.records.data.local.AttachmentRow
 import com.auroraclima.app.records.data.local.RemovedRow
 import com.auroraclima.app.records.data.remote.EncryptedMediaHeaderDto
@@ -41,9 +43,13 @@ class FirestoreJournalMediaSyncRepository @Inject constructor(
     private val store: AttachmentStore,
     private val travelCipher: RecoverableMediaCipher,
     private val metaCipher: PayloadCipher,
-    private val keyManager: SyncKeyManager
+    private val keyManager: SyncKeyManager,
+    private val accessCode: AccessCodePresence
 ) : JournalMediaSyncRepository {
     override suspend fun push(attachmentId: Long): Result<Unit> = networkResult {
+        // Sin código de acceso no sube nada (v0.3.2, hallazgo A′): ante la
+        // duda tampoco. Se lanza como sin DEK y la fila queda pendiente.
+        if (!accessCode.isConfirmed()) throw IllegalStateException()
         val generation = keyManager.currentGeneration() ?: throw IllegalStateException()
         val row = storeAccess.withDatabase { db -> db.attachmentDao().byId(attachmentId) }
             .getOrThrow() ?: throw IllegalStateException()

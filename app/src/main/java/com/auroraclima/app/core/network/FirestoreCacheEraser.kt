@@ -21,9 +21,9 @@ import javax.inject.Singleton
 class FirestoreCacheEraser @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : LocalAccountDataEraser {
-    // Se conserva en la activación sin terminar (decisión de la usuaria,
-    // v0.3.2): detener la instancia rompería el login y la restauración que
-    // siguen en el mismo proceso. Residual: quedan los blobs y el sobre de
+    // Se conserva en la activación sin terminar (decisión técnica, v0.3.2):
+    // detener la instancia rompería el login y la restauración que siguen en
+    // el mismo proceso. Residual: quedan los blobs y el sobre de
     // llaves de la otra cuenta bajo su uid, legibles solo con su contraseña
     // (el mismo de P-22 en todo dispositivo donde esa cuenta entró); P-115.
     override val keptOnUnfinishedActivation = true

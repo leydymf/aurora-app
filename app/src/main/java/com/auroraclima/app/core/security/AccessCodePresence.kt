@@ -17,3 +17,11 @@ package com.auroraclima.app.core.security
 fun interface AccessCodePresence {
     suspend fun isSet(): Result<Boolean>
 }
+
+/**
+ * El lado de SUBIR: true solo si el código de acceso consta. Ante la duda
+ * (lectura fallida) no se sube, porque subir es lo irreversible. Es el único
+ * criterio de subida: lo usan todos los puntos que suben a la nube y lo exige
+ * `ActivationReachabilityGuardTest`.
+ */
+suspend fun AccessCodePresence.isConfirmed(): Boolean = isSet().getOrDefault(false)

@@ -4,6 +4,7 @@ import com.auroraclima.app.core.security.AccessCodePresence
 import com.auroraclima.app.core.security.AccountDataReconciler
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.SyncKeyManager
+import com.auroraclima.app.core.security.isConfirmed
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
 import com.auroraclima.app.records.domain.repository.JournalMediaSyncRepository
 import com.auroraclima.app.records.domain.repository.JournalSyncRepository
@@ -91,7 +92,7 @@ class JournalSyncReconciler @Inject constructor(
      * ante la duda se espera.
      */
     private suspend fun pushPending(generation: Long) {
-        if (!accessCode.isSet().getOrDefault(false)) return
+        if (!accessCode.isConfirmed()) return
         val pending = storeAccess.withDatabase { db -> db.journalDao().pendingSync(generation) }
             .getOrNull() ?: return
         pending.forEach { row -> syncRepository.push(row.id) }

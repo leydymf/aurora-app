@@ -3,6 +3,7 @@ package com.auroraclima.app.questionnaire.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.core.security.SealedPayload
 import com.auroraclima.app.questionnaire.data.local.GuidanceDatabase
@@ -35,7 +36,8 @@ class FirestoreOutcomeSyncRepositoryTest {
     private val remote = FakeOutcomeSyncRemoteSource()
     private val cipher = ReversiblePayloadCipher()
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 4)
-    private val repository = FirestoreOutcomeSyncRepository(remote, cipher, storeAccess, keyManager)
+    private val accessCode = FakeAccessCodePresence()
+    private val repository = FirestoreOutcomeSyncRepository(remote, cipher, storeAccess, keyManager, accessCode)
 
     @After
     fun tearDown() {
@@ -87,6 +89,25 @@ class FirestoreOutcomeSyncRepositoryTest {
         assertEquals(3, json.getInt("rank"))
         assertEquals(cleartext, json.getString("label"))
         assertEquals(2, json.getJSONArray("tags").length())
+    }
+
+    @Test
+    fun `sin codigo de acceso el push no sube el guardado y queda pendiente`() = runTest {
+        // Hallazgo A′ (v0.3.2): mismo punto único de subida que el historial.
+        accessCode.codeExists = false
+        val id = seedRow()
+
+        assertTrue(repository.push(id).isFailure)
+        // Ante la duda (lectura fallida) tampoco sube.
+        accessCode.codeExists = true
+        accessCode.failOnRead = true
+        assertTrue(repository.push(id).isFailure)
+        assertTrue(remote.uploaded.isEmpty())
+        assertEquals(1, database.outcomeDao().pendingSync(4).size)
+
+        accessCode.failOnRead = false
+        assertTrue(repository.push(id).isSuccess)
+        assertEquals(1, remote.uploaded.size)
     }
 
     @Test

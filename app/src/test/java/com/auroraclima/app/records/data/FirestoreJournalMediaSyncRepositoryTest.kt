@@ -3,6 +3,7 @@ package com.auroraclima.app.records.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.records.data.local.AttachmentRow
 import com.auroraclima.app.records.data.local.JournalDatabase
@@ -35,6 +36,7 @@ class FirestoreJournalMediaSyncRepositoryTest {
     private val store = AttachmentStore(context, ReversibleMediaCipher())
     private val remote = FakeJournalMediaRemoteSource()
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 2)
+    private val accessCode = FakeAccessCodePresence()
     private val repository = FirestoreJournalMediaSyncRepository(
         context = context,
         remote = remote,
@@ -42,7 +44,8 @@ class FirestoreJournalMediaSyncRepositoryTest {
         store = store,
         travelCipher = ReversibleRecoverableMediaCipher(),
         metaCipher = ReversiblePayloadCipher(),
-        keyManager = keyManager
+        keyManager = keyManager,
+        accessCode = accessCode
     )
 
     private val mediaDir = File(context.filesDir, "media_store")
@@ -136,6 +139,26 @@ class FirestoreJournalMediaSyncRepositoryTest {
 
         assertTrue(remote.headers.isEmpty())
         assertEquals(0L, database.attachmentDao().byId(id)?.syncedGeneration)
+    }
+
+    @Test
+    fun `sin codigo de acceso el push no sube el adjunto y queda pendiente`() = runTest {
+        // Hallazgo A′ (v0.3.2): mismo punto único de subida que el historial.
+        accessCode.codeExists = false
+        val id = seedAttachment()
+
+        assertTrue(repository.push(id).isFailure)
+        // Ante la duda (lectura fallida) tampoco sube.
+        accessCode.codeExists = true
+        accessCode.failOnRead = true
+        assertTrue(repository.push(id).isFailure)
+        assertTrue(remote.headers.isEmpty())
+        assertTrue(remote.parts.isEmpty())
+        assertEquals(0L, database.attachmentDao().byId(id)?.syncedGeneration)
+
+        accessCode.failOnRead = false
+        assertTrue(repository.push(id).isSuccess)
+        assertEquals(1, remote.headers.size)
     }
 
     @Test
