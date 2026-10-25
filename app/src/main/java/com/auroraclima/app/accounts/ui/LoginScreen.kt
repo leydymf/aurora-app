@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -51,6 +50,7 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecretField
 import com.auroraclima.app.core.ui.v2.V2SheetCard
 import com.auroraclima.app.core.ui.v2.V2Voice
+import com.auroraclima.app.core.ui.v2.keyboardAware
 
 /**
  * Inicio de sesión (RF-15), mockup v2-09 (P08, con P08·b heredado). Error
@@ -114,7 +114,7 @@ internal fun LoginScreen(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
-            .systemBarsPadding()
+            .keyboardAware()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {

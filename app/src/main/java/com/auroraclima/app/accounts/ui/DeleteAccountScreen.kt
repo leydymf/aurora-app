@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +39,7 @@ import com.auroraclima.app.core.ui.v2.V2NoticeCard
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecretField
+import com.auroraclima.app.core.ui.v2.keyboardAware
 
 /**
  * Eliminación total de la cuenta (RF-20), fila «CUENTA» de Configuración (P21).
@@ -97,7 +97,7 @@ internal fun DeleteAccountScreen(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
-            .systemBarsPadding()
+            .keyboardAware()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {

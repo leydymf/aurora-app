@@ -29,7 +29,7 @@ import com.auroraclima.app.R
 fun CloudReturnVisual(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .size(52.dp)
+            .size(CloudReturnSize)
             .shadow(elevation = 6.dp, shape = CircleShape)
             .background(V2Palette.accentCloud.tint)
             .clickable(onClick = onClick, role = Role.Button),
@@ -43,6 +43,16 @@ fun CloudReturnVisual(onClick: () -> Unit, modifier: Modifier = Modifier) {
         )
     }
 }
+
+/** Diámetro de la nube; [keyboardAware] lo usa para reservarle su franja sobre el teclado. */
+val CloudReturnSize = 52.dp
+
+/**
+ * Margen de la nube respecto del borde (o del teclado). Lo aplica `SecureNavigation`
+ * al anclarla y [keyboardAware] lo suma a la franja: una sola fuente, para que no se
+ * desacoplen.
+ */
+val CloudReturnMargin = 20.dp
 
 @Preview(showBackground = true, backgroundColor = 0xFFF3F1F7)
 @Composable

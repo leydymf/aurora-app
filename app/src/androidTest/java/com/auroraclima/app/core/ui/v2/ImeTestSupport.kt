@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.rules.ActivityScenarioRule
+import androidx.test.platform.app.InstrumentationRegistry
 
 /**
  * Apoyo común de las pruebas del teclado. La Activity de prueba se configura como
@@ -18,7 +19,16 @@ typealias ImeComposeRule = AndroidComposeTestRule<ActivityScenarioRule<Component
 
 const val IME_TIMEOUT_MS = 10_000L
 
+/**
+ * Además fuerza el modo táctil. Los toques que simula Compose no pasan por el sistema
+ * de entrada y no lo restauran, así que una tecla física previa —un `adb shell input
+ * keyevent`, por ejemplo— deja el emulador sin modo táctil. Ahí Android devuelve el
+ * foco al primer campo en cuanto la vista lo suelta, el teclado se reabre y las
+ * pruebas fallan sin que la app tenga la culpa (observado en la corrida de v0.3.2).
+ * Una usuaria que toca la pantalla está siempre en modo táctil.
+ */
 fun ImeComposeRule.configureLikeMainActivity() {
+    InstrumentationRegistry.getInstrumentation().setInTouchMode(true)
     runOnUiThread {
         activity.enableEdgeToEdge()
         @Suppress("DEPRECATION")

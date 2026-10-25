@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -44,6 +43,7 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecretField
 import com.auroraclima.app.core.ui.v2.V2StepHeader
 import com.auroraclima.app.core.ui.v2.V2Voice
+import com.auroraclima.app.core.ui.v2.keyboardAware
 
 /**
  * Creación del código de acceso (RF-08), mockup v2-07 (P06). Paso 2 de 3 del
@@ -97,7 +97,7 @@ internal fun CodeSetupScreen(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
-            .systemBarsPadding()
+            .keyboardAware()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {

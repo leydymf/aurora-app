@@ -30,6 +30,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import com.auroraclima.app.core.ui.v2.CloudReturnMargin
 import com.auroraclima.app.core.ui.v2.CloudReturnVisual
 
 /**
@@ -133,8 +134,9 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
             }
     ) {
         content()
-        // Salida rápida (RF-16): la posición al alcance del pulgar y el gesto son
-        // del mecanismo; la apariencia (nube violeta V2) se inyecta desde core/ui.
+        // Salida rápida (RF-16): el anclaje y el gesto son del mecanismo; la
+        // apariencia y sus medidas (CloudReturnSize, CloudReturnMargin, compartidas
+        // con keyboardAware) vienen de core/ui.
         // El inset del teclado la mantiene visible y pulsable con el teclado
         // abierto: con edge-to-edge, sin él quedaba debajo (v0.3.2).
         CloudReturnVisual(
@@ -144,12 +146,10 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
                 .systemBarsPadding()
                 .imePadding()
                 .padding(bottom = cloudBottomInset)
-                .padding(CLOSE_NOW_MARGIN)
+                .padding(CloudReturnMargin)
         )
     }
 }
-
-private val CLOSE_NOW_MARGIN = 20.dp
 
 /**
  * Aplica el conteo de [SecureFlagLedger] sobre el Window real. `object` manual por

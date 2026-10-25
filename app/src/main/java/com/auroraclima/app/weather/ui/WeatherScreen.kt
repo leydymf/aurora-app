@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -49,6 +52,7 @@ import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2Voice
+import com.auroraclima.app.core.ui.v2.clearFocusOnTap
 import com.auroraclima.app.weather.domain.model.City
 import com.auroraclima.app.weather.domain.model.WeatherCondition
 
@@ -69,6 +73,8 @@ fun WeatherScreen(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
+            // Tocar fuera de la barra cierra el teclado, como en el resto de la app.
+            .clearFocusOnTap()
     ) {
         // El cielo degradado se ve solo con el clima; la búsqueda va sobre fondo
         // plano (v2-02). Cambia el MODIFICADOR y no el árbol, para que la barra
@@ -102,15 +108,24 @@ fun WeatherScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
+        // El inset del teclado va SOLO sobre los resultados (edge-to-edge: la
+        // ventana no se achica sola), para que el último se pueda alcanzar; en
+        // toda la columna haría saltar la barra de pestañas al enfocar la búsqueda.
         when {
             state.isSearchActive && state.searchResults.isNotEmpty() ->
                 CitySearchResults(
                     results = state.searchResults,
                     onCitySelected = onCitySelected,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .imePadding()
                 )
             state.isSearchActive && state.showNoResults ->
-                NoResultsContent(modifier = Modifier.weight(1f))
+                NoResultsContent(
+                    modifier = Modifier
+                        .weight(1f)
+                        .imePadding()
+                )
             state.isSearchActive ->
                 Spacer(modifier = Modifier.weight(1f))
             state.weather != null ->
@@ -190,6 +205,7 @@ private fun WeatherSearchBar(
     } else {
         Modifier
     }
+    val focusManager = LocalFocusManager.current
     SecureTextEntry(hideSuggestions = true) {
         TextField(
             value = query,
@@ -259,6 +275,9 @@ private fun WeatherSearchBar(
                 autoCorrectEnabled = false,
                 imeAction = ImeAction.Search
             ),
+            // Los resultados ya se ven mientras se escribe: «Buscar» solo cierra el
+            // teclado. La puerta del código sigue evaluando cada tecla (RF-12).
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             shape = V2Corner.pill,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = V2Palette.cardSurface,

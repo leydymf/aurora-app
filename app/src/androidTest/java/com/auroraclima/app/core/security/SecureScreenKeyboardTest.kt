@@ -3,9 +3,13 @@ package com.auroraclima.app.core.security
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,8 +49,8 @@ import org.junit.runner.RunWith
 
 /**
  * La nube de salida rápida (RF-16 criterio 1) sigue visible y pulsable con el
- * teclado abierto. Antes de v0.3.2 se anclaba solo sobre la barra de navegación
- * y, con edge-to-edge, el teclado la tapaba entera.
+ * teclado abierto, sin tapar el campo enfocado. Antes de v0.3.2 se anclaba solo
+ * sobre la barra de navegación y, con edge-to-edge, el teclado la tapaba entera.
  *
  * Se arma el grafo seguro real (`secureGraph`/`screen`) con un `SessionManager`
  * real y sin limpiezas: lo que se prueba es la posición y el toque, no la limpieza.
@@ -83,13 +87,23 @@ class SecureScreenKeyboardTest {
                         screen(SCREEN) {
                             var text by remember { mutableStateOf("") }
                             AuroraV2Theme(V2Voice.Interior) {
-                                Column(modifier = Modifier.fillMaxSize().keyboardAware().padding(24.dp)) {
+                                // El campo va abajo, donde lo deja el desplazamiento al
+                                // abrirse el teclado: ahí es donde la nube lo tapaba.
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .keyboardAware()
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(24.dp)
+                                ) {
+                                    Spacer(modifier = Modifier.height(560.dp))
                                     V2PlainField(
                                         value = text,
                                         onValueChange = { text = it },
                                         modifier = Modifier.testTag(FIELD),
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
                                     )
+                                    Spacer(modifier = Modifier.height(200.dp))
                                 }
                             }
                         }
@@ -110,6 +124,14 @@ class SecureScreenKeyboardTest {
         assertTrue(
             "La nube termina en $cloudBottom px y el teclado empieza en $visibleBottom px",
             cloudBottom <= visibleBottom
+        )
+        // Y el campo enfocado no queda debajo de la nube (keyboardAware le reserva
+        // su franja): antes le tapaba el extremo derecho, donde va el ojo.
+        val cloudTop = cloud.fetchSemanticsNode().boundsInWindow.top
+        val fieldBottom = composeRule.onNodeWithTag(FIELD).fetchSemanticsNode().boundsInWindow.bottom
+        assertTrue(
+            "El campo termina en $fieldBottom px y la nube empieza en $cloudTop px",
+            fieldBottom <= cloudTop
         )
 
         cloud.performClick()

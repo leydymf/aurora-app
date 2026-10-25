@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -52,6 +53,7 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecondaryButton
 import com.auroraclima.app.core.ui.v2.V2StepHeader
 import com.auroraclima.app.core.ui.v2.V2Voice
+import com.auroraclima.app.core.ui.v2.keyboardAware
 
 /**
  * Tutorial del espacio interno (RF-10; mockup v2-08, P07). Paso 3 de 3.
@@ -107,7 +109,7 @@ internal fun TutorialScreen(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
-            .systemBarsPadding()
+            .keyboardAware()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
@@ -336,6 +338,7 @@ private fun PracticeContent(input: String, status: PracticeStatus, onInputChange
  */
 @Composable
 private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
+    val focusManager = LocalFocusManager.current
     SecureTextEntry(hideSuggestions = true) {
         TextField(
             value = value,
@@ -360,6 +363,8 @@ private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
                 autoCorrectEnabled = false,
                 imeAction = ImeAction.Search
             ),
+            // Igual que la barra real: «Buscar» solo cierra el teclado.
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             shape = V2Corner.pill,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = V2Palette.cardSurface,

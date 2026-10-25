@@ -78,10 +78,13 @@ class KeyboardAwareTest {
 
         composeRule.onNodeWithTag(EMAIL).performImeAction()
         composeRule.onNodeWithTag(PASSWORD).assertIsFocused()
-
+        // De contraseña a contraseña: el ojo de visibilidad no debe robar el foco.
         composeRule.onNodeWithTag(PASSWORD).performImeAction()
+        composeRule.onNodeWithTag(CONFIRM).assertIsFocused()
+
+        composeRule.onNodeWithTag(CONFIRM).performImeAction()
         composeRule.awaitIme(visible = false)
-        composeRule.onNodeWithTag(PASSWORD).assertIsNotFocused()
+        composeRule.onNodeWithTag(CONFIRM).assertIsNotFocused()
         assertEquals("«Listo» debe enviar el formulario una vez", 1, submits)
     }
 
@@ -132,13 +135,14 @@ class KeyboardAwareTest {
 
     /**
      * Réplica de la forma de CreateAccountScreen: raíz con [keyboardAware], todo
-     * desplazable, dos campos del kit y el botón al final, alto suficiente para
+     * desplazable, tres campos del kit y el botón al final, alto suficiente para
      * que el teclado lo tape si la pantalla no se ajusta.
      */
     @Composable
     private fun FormLikeScreen() {
         var email by remember { mutableStateOf("") }
         var password by remember { mutableStateOf("") }
+        var confirm by remember { mutableStateOf("") }
         AuroraV2Theme(V2Voice.Interior) {
             Column(
                 modifier = Modifier
@@ -165,10 +169,21 @@ class KeyboardAwareTest {
                     isVisible = false,
                     onToggleVisibility = {},
                     isError = false,
+                    imeAction = ImeAction.Next,
+                    keyboardActions = KeyboardActions(),
+                    toggleDescription = "",
+                    modifier = Modifier.testTag(PASSWORD)
+                )
+                V2SecretField(
+                    value = confirm,
+                    onValueChange = { confirm = it },
+                    isVisible = false,
+                    onToggleVisibility = {},
+                    isError = false,
                     imeAction = ImeAction.Done,
                     keyboardActions = KeyboardActions(onDone = { submits++ }),
                     toggleDescription = "",
-                    modifier = Modifier.testTag(PASSWORD)
+                    modifier = Modifier.testTag(CONFIRM)
                 )
                 Spacer(modifier = Modifier.height(320.dp))
                 V2PrimaryButton(
@@ -185,6 +200,7 @@ class KeyboardAwareTest {
         const val EMPTY_AREA = "empty"
         const val EMAIL = "email"
         const val PASSWORD = "password"
+        const val CONFIRM = "confirm"
         const val FINAL_BUTTON = "final"
     }
 }

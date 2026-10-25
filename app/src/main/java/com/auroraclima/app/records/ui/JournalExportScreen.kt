@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -48,6 +47,7 @@ import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2SecondaryButton
 import com.auroraclima.app.core.ui.v2.V2SecretField
+import com.auroraclima.app.core.ui.v2.keyboardAware
 import com.auroraclima.app.records.domain.model.ExportPolicy
 import com.auroraclima.app.records.domain.model.ExportSummary
 import com.auroraclima.app.records.domain.model.ExportSummaryRow
@@ -134,7 +134,7 @@ internal fun JournalExportScreen(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
-            .systemBarsPadding()
+            .keyboardAware()
     ) {
         V2BackHeader(
             tag = stringResource(R.string.journal_tag),

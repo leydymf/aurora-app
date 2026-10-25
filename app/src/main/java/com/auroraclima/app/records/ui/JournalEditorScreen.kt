@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -62,6 +61,7 @@ import com.auroraclima.app.core.ui.v2.V2LoadingState
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2ParagraphField
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.keyboardAware
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.ResolvedKind
@@ -169,7 +169,7 @@ internal fun JournalEditorScreen(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
-            .systemBarsPadding()
+            .keyboardAware()
     ) {
         V2BackHeader(
             tag = stringResource(if (state.isEditing) R.string.journal_edit_tag else R.string.journal_new_tag),
