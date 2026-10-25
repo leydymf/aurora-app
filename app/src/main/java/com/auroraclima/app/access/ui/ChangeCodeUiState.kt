@@ -9,16 +9,22 @@ import androidx.annotation.StringRes
  * nota en RF-09) — y la redacción de camuflaje de P-17 (nunca «código secreto»).
  * Los códigos en claro viven solo aquí mientras se teclean y se limpian al
  * guardar; jamás tocan disco, Firebase ni logs (RF-08 criterio 3).
+ *
+ * v0.3.2 (evaluación heurística): el código nuevo se escribe dos veces, como en
+ * la creación — un error al teclearlo dejaba a la persona sin acceso.
  */
 data class ChangeCodeUiState(
     val currentCode: String = "",
     val newCode: String = "",
+    val confirmCode: String = "",
     val isCurrentVisible: Boolean = false,
     val isNewVisible: Boolean = false,
+    val isConfirmVisible: Boolean = false,
     val isLoading: Boolean = false,
     val hasMinLength: Boolean = false,
     val isNotRealCity: Boolean = false,
     @StringRes val currentErrorRes: Int? = null,
+    @StringRes val confirmErrorRes: Int? = null,
     @StringRes val generalErrorRes: Int? = null
 ) {
     /** Regla de ciudad para pintar: cubre el desfase entre la tecla y su verificación. */
@@ -26,5 +32,5 @@ data class ChangeCodeUiState(
         get() = isNotRealCity && newCode.isNotBlank()
 
     val canSubmit: Boolean
-        get() = currentCode.isNotBlank() && hasMinLength && isNotRealCity && !isLoading
+        get() = currentCode.isNotBlank() && hasMinLength && isNotRealCity && confirmCode.isNotEmpty() && !isLoading
 }

@@ -56,6 +56,7 @@ class ChangeCodeViewModelTest {
 
         viewModel.onCurrentCodeChange("brisa2026")
         viewModel.onNewCodeChange("lluvia2027")
+        viewModel.onConfirmCodeChange("lluvia2027")
         advanceUntilIdle()
         viewModel.onSubmit()
         advanceUntilIdle()
@@ -73,6 +74,7 @@ class ChangeCodeViewModelTest {
 
         viewModel.onCurrentCodeChange("cielo2026")
         viewModel.onNewCodeChange("bucaramanga")
+        viewModel.onConfirmCodeChange("bucaramanga")
         advanceUntilIdle()
         // El botón queda deshabilitado por las reglas en vivo; el envío se ignora.
         assertFalse(viewModel.uiState.value.canSubmit)
@@ -90,6 +92,7 @@ class ChangeCodeViewModelTest {
 
         viewModel.onCurrentCodeChange("cielo2026")
         viewModel.onNewCodeChange("lluvia2027")
+        viewModel.onConfirmCodeChange("lluvia2027")
         advanceUntilIdle()
         viewModel.onSubmit()
         advanceUntilIdle()
@@ -98,6 +101,7 @@ class ChangeCodeViewModelTest {
         // Higiene de estado sensible: ninguna clave queda en memoria del estado.
         assertEquals("", viewModel.uiState.value.currentCode)
         assertEquals("", viewModel.uiState.value.newCode)
+        assertEquals("", viewModel.uiState.value.confirmCode)
         assertNull(viewModel.uiState.value.currentErrorRes)
         // Regresión sobre la puerta (RF-12): la vieja no abre, la nueva sí.
         assertEquals(SearchGateResult.PassThrough, gate.inspect("cielo2026"))
@@ -110,6 +114,7 @@ class ChangeCodeViewModelTest {
 
         viewModel.onCurrentCodeChange("cielo2026")
         viewModel.onNewCodeChange("lluvia2027")
+        viewModel.onConfirmCodeChange("lluvia2027")
         advanceUntilIdle()
         repository.failOnWrite = true
         viewModel.onSubmit()
@@ -117,5 +122,70 @@ class ChangeCodeViewModelTest {
 
         assertEquals(R.string.common_error_generic, viewModel.uiState.value.generalErrorRes)
         assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `una confirmacion distinta no guarda y el error no repite los codigos`() = runTest {
+        // v0.3.2 (evaluación heurística): un error al teclear el código nuevo
+        // dejaba a la persona sin acceso. Ahora no se guarda nada.
+        seedUserCode("cielo2026")
+        val events = collectDoneEvents()
+
+        viewModel.onCurrentCodeChange("cielo2026")
+        viewModel.onNewCodeChange("lluvia2027")
+        viewModel.onConfirmCodeChange("lluvia2072")
+        advanceUntilIdle()
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(R.string.access_setup_error_mismatch, viewModel.uiState.value.confirmErrorRes)
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isLoading)
+        // El código vigente sigue abriendo y el nuevo no (nada cambió).
+        assertEquals(SearchGateResult.OpenAccess, gate.inspect("cielo2026"))
+        assertEquals(SearchGateResult.PassThrough, gate.inspect("lluvia2027"))
+    }
+
+    @Test
+    fun `sin confirmacion no se puede enviar`() = runTest {
+        seedUserCode("cielo2026")
+
+        viewModel.onCurrentCodeChange("cielo2026")
+        viewModel.onNewCodeChange("lluvia2027")
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.canSubmit)
+    }
+
+    @Test
+    fun `la confirmacion compara las formas recortadas como la creacion`() = runTest {
+        // Un espacio accidental no fabrica un desacuerdo: se hashea recortado.
+        seedUserCode("cielo2026")
+        val events = collectDoneEvents()
+
+        viewModel.onCurrentCodeChange("cielo2026")
+        viewModel.onNewCodeChange("lluvia2027")
+        viewModel.onConfirmCodeChange("lluvia2027 ")
+        advanceUntilIdle()
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertEquals(SearchGateResult.OpenAccess, gate.inspect("lluvia2027"))
+    }
+
+    @Test
+    fun `corregir la confirmacion limpia su error`() = runTest {
+        seedUserCode("cielo2026")
+        viewModel.onCurrentCodeChange("cielo2026")
+        viewModel.onNewCodeChange("lluvia2027")
+        viewModel.onConfirmCodeChange("otra-cosa")
+        advanceUntilIdle()
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        viewModel.onConfirmCodeChange("lluvia2027")
+
+        assertNull(viewModel.uiState.value.confirmErrorRes)
     }
 }

@@ -4,7 +4,7 @@
 - **CP-02** (PI + CN, fase 3 y 4) — RQ: RF-02, RF-03, RF-04 — Búsqueda y selección de ciudad, clima actual real, últimos datos sin conexión y pronóstico de 5 días.
 - **CP-03** (PS, fase 4) — RQ: RF-05, RF-06 — Activación inicial solo con el código; exploración completa sin hallar indicios del doble fondo.
 - **CP-04** (PU + CN, fase 3 y 4) — RQ: RF-07 — Creación de cuenta: caso válido, correo duplicado y contraseña débil.
-- **CP-05** (PU + PS, fase 3 y 4) — RQ: RF-08, RF-09 — Creación y cambio de código: reglas de longitud y ciudad, almacenamiento no legible, confirmación de contraseña.
+- **CP-05** (PU + PS, fase 3 y 4) — RQ: RF-08, RF-09 — Creación y cambio de código: reglas de longitud y ciudad, almacenamiento no legible, confirmación de contraseña. Desde v0.3.2, el cambio de código también pide escribir el nuevo dos veces: con una confirmación distinta no se guarda y el código vigente sigue abriendo.
 - **CP-06** (CN + US, fase 4) — RQ: RF-10, RF-11 — Tutorial con práctica de ingreso y salida rápida; reapertura desde configuración.
 - **CP-07** (PI + PS, fase 3 y 4) — RQ: RF-12, RF-13, RF-14 — Apertura por código exacto, respuesta indistinguible para otras entradas, barra limpia sin historial ni autocompletado.
 - **CP-08** (PU + CN, fase 3 y 4) — RQ: RF-15 — Inicio de sesión: acceso correcto, error genérico, bloqueo tras 5 intentos. Desde v0.3.2: con un registro interrumpido antes de crear el código de acceso (sesión viva o credenciales guardadas), el inicio de sesión del flujo de activación pide la contraseña de la cuenta y no llega a crear el código sin ella.

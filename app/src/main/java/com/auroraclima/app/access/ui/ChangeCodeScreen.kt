@@ -45,6 +45,9 @@ import com.auroraclima.app.core.ui.v2.V2SecretField
  *
  * V2 (cierre): re-estilo por extensión del sistema (decisión D6, sin mockup V2
  * propio) — mismo kit y misma composición que la creación del código de acceso (P06).
+ *
+ * v0.3.2 (evaluación heurística): el código nuevo se confirma con un segundo
+ * campo, como en P06 — otra adaptación sobre el arte de P21·b (nota en RF-09).
  */
 @Composable
 fun ChangeCodeRoute(onCodeChanged: () -> Unit, onBack: () -> Unit) {
@@ -65,8 +68,13 @@ fun ChangeCodeRoute(onCodeChanged: () -> Unit, onBack: () -> Unit) {
             sessionManager.registerInteraction()
             viewModel.onNewCodeChange(it)
         },
+        onConfirmCodeChange = {
+            sessionManager.registerInteraction()
+            viewModel.onConfirmCodeChange(it)
+        },
         onToggleCurrentVisibility = viewModel::onToggleCurrentVisibility,
         onToggleNewVisibility = viewModel::onToggleNewVisibility,
+        onToggleConfirmVisibility = viewModel::onToggleConfirmVisibility,
         onSubmit = {
             // También el envío con la tecla «Done» del IME cuenta como interacción.
             sessionManager.registerInteraction()
@@ -81,8 +89,10 @@ internal fun ChangeCodeScreen(
     onBack: () -> Unit,
     onCurrentCodeChange: (String) -> Unit,
     onNewCodeChange: (String) -> Unit,
+    onConfirmCodeChange: (String) -> Unit,
     onToggleCurrentVisibility: () -> Unit,
     onToggleNewVisibility: () -> Unit,
+    onToggleConfirmVisibility: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -127,8 +137,8 @@ internal fun ChangeCodeScreen(
                 isVisible = state.isNewVisible,
                 onToggleVisibility = onToggleNewVisibility,
                 isError = false,
-                imeAction = ImeAction.Done,
-                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                imeAction = ImeAction.Next,
+                keyboardActions = KeyboardActions(),
                 toggleDescription = stringResource(R.string.access_setup_toggle)
             )
             Spacer(modifier = Modifier.height(14.dp))
@@ -143,6 +153,22 @@ internal fun ChangeCodeScreen(
                 text = stringResource(R.string.access_setup_rule_city),
                 satisfied = state.cityRuleSatisfied
             )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Confirmación del código nuevo (v0.3.2), con el mismo rótulo y el
+            // mismo error que la creación (P06); el error no repite los códigos.
+            V2FieldLabel(stringResource(R.string.access_setup_confirm_label))
+            V2SecretField(
+                value = state.confirmCode,
+                onValueChange = onConfirmCodeChange,
+                isVisible = state.isConfirmVisible,
+                onToggleVisibility = onToggleConfirmVisibility,
+                isError = state.confirmErrorRes != null,
+                imeAction = ImeAction.Done,
+                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                toggleDescription = stringResource(R.string.access_setup_toggle)
+            )
+            V2FieldMessage(messageRes = state.confirmErrorRes, fallbackRes = null)
         }
         Spacer(modifier = Modifier.height(16.dp))
 

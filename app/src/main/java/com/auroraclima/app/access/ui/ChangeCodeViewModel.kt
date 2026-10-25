@@ -17,7 +17,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Cambio de la clave personal (RF-09). Mismo patrón que CodeSetupViewModel. */
+/**
+ * Cambio de la clave personal (RF-09). Mismo patrón que CodeSetupViewModel,
+ * incluida la confirmación del código nuevo (v0.3.2).
+ */
 @HiltViewModel
 class ChangeCodeViewModel @Inject constructor(
     private val changeSecretCode: ChangeSecretCodeUseCase
@@ -39,7 +42,7 @@ class ChangeCodeViewModel @Inject constructor(
     }
 
     fun onNewCodeChange(value: String) {
-        _uiState.update { it.copy(newCode = value, generalErrorRes = null) }
+        _uiState.update { it.copy(newCode = value, confirmErrorRes = null, generalErrorRes = null) }
         // Reglas en vivo (RF-08 criterio 2): solo la última tecla cuenta.
         checkJob?.cancel()
         checkJob = viewModelScope.launch {
@@ -50,6 +53,10 @@ class ChangeCodeViewModel @Inject constructor(
         }
     }
 
+    fun onConfirmCodeChange(value: String) {
+        _uiState.update { it.copy(confirmCode = value, confirmErrorRes = null, generalErrorRes = null) }
+    }
+
     fun onToggleCurrentVisibility() {
         _uiState.update { it.copy(isCurrentVisible = !it.isCurrentVisible) }
     }
@@ -58,34 +65,49 @@ class ChangeCodeViewModel @Inject constructor(
         _uiState.update { it.copy(isNewVisible = !it.isNewVisible) }
     }
 
+    fun onToggleConfirmVisibility() {
+        _uiState.update { it.copy(isConfirmVisible = !it.isConfirmVisible) }
+    }
+
     fun onSubmit() {
         val current = _uiState.value
         if (!current.canSubmit) return
-        _uiState.update { it.copy(isLoading = true, currentErrorRes = null, generalErrorRes = null) }
-        viewModelScope.launch {
-            when (val result = changeSecretCode(current.currentCode, current.newCode)) {
-                ChangeSecretCodeResult.Changed -> {
-                    // Higiene de estado sensible: ninguna clave permanece en
-                    // memoria del estado una vez guardado el hash.
-                    _uiState.update {
-                        it.copy(isLoading = false, currentCode = "", newCode = "")
-                    }
-                    _doneEvents.tryEmit(Unit)
+        // Mismo criterio que la creación (CodeSetupViewModel): se comparan las
+        // formas recortadas, que es lo que se hashea, y un desacuerdo no toca
+        // el código vigente. El mensaje no repite ninguno de los dos códigos.
+        if (current.newCode.trim() != current.confirmCode.trim()) {
+            _uiState.update { it.copy(confirmErrorRes = R.string.access_setup_error_mismatch) }
+            return
+        }
+        _uiState.update {
+            it.copy(isLoading = true, currentErrorRes = null, confirmErrorRes = null, generalErrorRes = null)
+        }
+        viewModelScope.launch { applyResult(changeSecretCode(current.currentCode, current.newCode)) }
+    }
+
+    private fun applyResult(result: ChangeSecretCodeResult) {
+        when (result) {
+            ChangeSecretCodeResult.Changed -> {
+                // Higiene de estado sensible: ninguna clave permanece en
+                // memoria del estado una vez guardado el hash.
+                _uiState.update {
+                    it.copy(isLoading = false, currentCode = "", newCode = "", confirmCode = "")
                 }
-                ChangeSecretCodeResult.CurrentCodeMismatch -> _uiState.update {
-                    it.copy(isLoading = false, currentErrorRes = R.string.access_change_error_current)
-                }
-                is ChangeSecretCodeResult.Rejected -> _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        hasMinLength = result.checks.hasMinLength,
-                        isNotRealCity = result.checks.isNotRealCity,
-                        generalErrorRes = R.string.access_setup_error_rules
-                    )
-                }
-                ChangeSecretCodeResult.StorageFailure -> _uiState.update {
-                    it.copy(isLoading = false, generalErrorRes = R.string.common_error_generic)
-                }
+                _doneEvents.tryEmit(Unit)
+            }
+            ChangeSecretCodeResult.CurrentCodeMismatch -> _uiState.update {
+                it.copy(isLoading = false, currentErrorRes = R.string.access_change_error_current)
+            }
+            is ChangeSecretCodeResult.Rejected -> _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    hasMinLength = result.checks.hasMinLength,
+                    isNotRealCity = result.checks.isNotRealCity,
+                    generalErrorRes = R.string.access_setup_error_rules
+                )
+            }
+            ChangeSecretCodeResult.StorageFailure -> _uiState.update {
+                it.copy(isLoading = false, generalErrorRes = R.string.common_error_generic)
             }
         }
     }
