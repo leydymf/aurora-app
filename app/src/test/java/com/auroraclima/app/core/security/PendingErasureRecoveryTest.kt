@@ -67,6 +67,26 @@ class PendingErasureRecoveryTest {
     }
 
     @Test
+    fun `completa tambien los erasers que la activacion sin terminar conserva`() = runTest {
+        // La marca de v0.3.2 (hallazgo A′) solo la lee ese descarte: RF-20
+        // promete que nada sobreviva y corre todos.
+        val flag = FakeFlag(raised = true)
+        var keptRan = false
+        val kept = object : LocalAccountDataEraser {
+            override val keptOnUnfinishedActivation = true
+
+            override suspend fun erase() {
+                keptRan = true
+            }
+        }
+
+        PendingErasureRecovery(flag, Provider { setOf(kept) }).initialize()
+
+        assertTrue(keptRan)
+        assertFalse(flag.raised)
+    }
+
+    @Test
     fun `si el conjunto de erasers no se puede construir la marca sigue izada`() = runTest {
         val flag = FakeFlag(raised = true)
 

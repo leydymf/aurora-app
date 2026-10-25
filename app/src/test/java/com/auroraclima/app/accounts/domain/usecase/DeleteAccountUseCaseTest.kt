@@ -99,6 +99,18 @@ class DeleteAccountUseCaseTest {
     }
 
     @Test
+    fun `la eliminacion corre tambien los erasers que la activacion sin terminar conserva`() = runTest {
+        // RF-20 no mira la marca de v0.3.2 (hallazgo A′): borra la puerta, el
+        // contador de intentos y la caché de la nube igual que todo lo demás.
+        val kept = RecordingLocalEraser(callLog, "conservado", keptOnUnfinishedActivation = true)
+
+        val result = useCase(local = setOf(localA, kept))("contrasena-1")
+
+        assertEquals(DeleteAccountResult.Success, result)
+        assertTrue("conservado" in callLog)
+    }
+
+    @Test
     fun `si la marca durable no puede garantizarse se aborta antes de borrar la cuenta`() = runTest {
         // Auditoría H-1: sin red de seguridad en disco no se cruza el punto de
         // no retorno — nada se ha perdido y se puede reintentar.

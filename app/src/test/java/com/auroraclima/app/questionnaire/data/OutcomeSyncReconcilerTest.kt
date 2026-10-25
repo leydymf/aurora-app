@@ -3,6 +3,7 @@ package com.auroraclima.app.questionnaire.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.questionnaire.data.local.GuidanceDatabase
 import com.auroraclima.app.questionnaire.data.local.OutcomeRow
@@ -28,7 +29,40 @@ class OutcomeSyncReconcilerTest {
     private val keyManager = FakeSyncKeyManager(dek = ByteArray(32), generation = 4)
     private val syncRepository =
         FirestoreOutcomeSyncRepository(remote, ReversiblePayloadCipher(), storeAccess, keyManager)
-    private val reconciler = OutcomeSyncReconciler(storeAccess, syncRepository, keyManager)
+    private val accessCode = FakeAccessCodePresence()
+    private val reconciler = OutcomeSyncReconciler(storeAccess, syncRepository, keyManager, accessCode)
+
+    @Test
+    fun `sin codigo de acceso no sube nada y lo pendiente sube despues`() = runTest {
+        // Hallazgo A′ (v0.3.2): ni la restauración ni la reconciliación suben
+        // antes de que exista el código de acceso.
+        accessCode.codeExists = false
+        database.outcomeDao().insert(OutcomeRow(savedAt = 100, rank = 1, label = "pendiente", tags = "[]"))
+
+        reconciler.restore()
+        reconciler.reconcile()
+
+        assertEquals(0, remote.uploaded.size)
+        assertEquals(1, database.outcomeDao().pendingSync(4).size)
+
+        accessCode.codeExists = true
+        reconciler.reconcile()
+
+        assertEquals(1, remote.uploaded.size)
+        assertEquals(0, database.outcomeDao().pendingSync(4).size)
+    }
+
+    @Test
+    fun `si no se puede leer el codigo de acceso no se sube`() = runTest {
+        // Ante la duda se espera: subir es lo irreversible.
+        accessCode.failOnRead = true
+        database.outcomeDao().insert(OutcomeRow(savedAt = 100, rank = 1, label = "pendiente", tags = "[]"))
+
+        reconciler.restore()
+        reconciler.reconcile()
+
+        assertEquals(0, remote.uploaded.size)
+    }
 
     @After
     fun tearDown() {

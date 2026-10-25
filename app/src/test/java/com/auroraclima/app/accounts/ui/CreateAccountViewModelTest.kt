@@ -6,6 +6,7 @@ import com.auroraclima.app.accounts.domain.usecase.CreateAccountUseCase
 import com.auroraclima.app.accounts.domain.usecase.DiscardUnfinishedActivationUseCase
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
+import com.auroraclima.app.accounts.domain.usecase.NoCloudReconciliation
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
@@ -37,7 +38,13 @@ class CreateAccountViewModelTest {
             repository,
             FakeSyncKeyManager(),
             credentials,
-            DiscardUnfinishedActivationUseCase(FakeAccessCodePresence(codeExists = false), repository, credentials)
+            DiscardUnfinishedActivationUseCase(
+                FakeAccessCodePresence(codeExists = false),
+                repository,
+                credentials,
+                NoCloudReconciliation,
+                emptySet()
+            )
         )
     )
 

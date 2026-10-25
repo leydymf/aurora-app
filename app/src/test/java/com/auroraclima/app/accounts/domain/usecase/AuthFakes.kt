@@ -15,6 +15,7 @@ import com.auroraclima.app.accounts.domain.repository.SilentSessionOrchestrator
 import com.auroraclima.app.accounts.domain.repository.StoredCredentials
 import com.auroraclima.app.accounts.domain.security.WallClock
 import com.auroraclima.app.core.security.CloudReconciliation
+import com.auroraclima.app.core.security.LocalAccountDataEraser
 import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -172,6 +173,17 @@ internal class FakeCredentialStore : CredentialStore {
     }
 }
 
+/** Borrador local que anota su nombre en una bitácora compartida (orden y exclusiones). */
+internal class RecordingLocalEraser(
+    private val log: MutableList<String>,
+    private val name: String,
+    override val keptOnUnfinishedActivation: Boolean = false
+) : LocalAccountDataEraser {
+    override suspend fun erase() {
+        log += name
+    }
+}
+
 /** Reconciliación con la nube simulada (ADR 2026-10-06): solo cuenta llamadas. */
 internal class FakeCloudReconciliation : CloudReconciliation {
     var calls = 0
@@ -188,6 +200,13 @@ internal class FakeCloudReconciliation : CloudReconciliation {
     override fun request() {
         requests++
     }
+
+    /** Bitácora compartida opcional: el descarte de A′ verifica el ORDEN con ella. */
+    var callLog: MutableList<String>? = null
+
+    override suspend fun stopAndWait() {
+        callLog?.add("stopReconciliation")
+    }
 }
 
 /** Reconciliación inerte para pruebas que no la observan. */
@@ -195,4 +214,6 @@ internal object NoCloudReconciliation : CloudReconciliation {
     override suspend fun reconcile() = Unit
 
     override fun request() = Unit
+
+    override suspend fun stopAndWait() = Unit
 }

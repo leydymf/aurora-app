@@ -17,6 +17,10 @@ class AccessCredentialsEraser @Inject constructor(
     private val hasher: KeystoreSecretCodeHasher,
     private val repository: LocalSecretCodeRepository
 ) : LocalAccountDataEraser {
+    // Se conserva en la activación sin terminar: borraría el código de
+    // activación y el dispositivo no podría volver a activarse.
+    override val keptOnUnfinishedActivation = true
+
     override suspend fun erase() {
         withContext(Dispatchers.IO) {
             // Mejor esfuerzo por paso: un Keystore que falle no debe impedir

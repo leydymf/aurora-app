@@ -3,6 +3,7 @@ package com.auroraclima.app.records.data
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.local.JournalEntryRow
@@ -42,13 +43,64 @@ class JournalSyncReconcilerTest {
         keyManager = keyManager
     )
     private val attachmentRepository = FakeJournalAttachmentRepository()
+    private val accessCode = FakeAccessCodePresence()
     private val reconciler = JournalSyncReconciler(
         storeAccess,
         syncRepository,
         mediaSyncRepository,
         attachmentRepository,
-        keyManager
+        keyManager,
+        accessCode
     )
+
+    @Test
+    fun `sin codigo de acceso la restauracion no sube nada y lo pendiente sube despues`() = runTest {
+        // Hallazgo A′ (v0.3.2): el login de activación restaura antes de que
+        // exista el código; nada del almacén local sube hasta entonces.
+        accessCode.codeExists = false
+        seedRows(3)
+
+        reconciler.restore()
+
+        assertTrue(remote.uploaded.isEmpty())
+        assertEquals(0, mediaRemote.uploadCalls)
+        assertEquals(3, database.journalDao().pendingSync(1).size)
+
+        // Primer reingreso con código: lo que esperaba sube completo.
+        accessCode.codeExists = true
+        reconciler.restore()
+
+        assertEquals(3, remote.uploaded.size)
+        assertTrue(database.journalDao().pendingSync(1).isEmpty())
+    }
+
+    @Test
+    fun `sin codigo de acceso la reconciliacion tampoco sube y despues si`() = runTest {
+        accessCode.codeExists = false
+        seedRows(2)
+
+        reconciler.reconcile()
+
+        assertTrue(remote.uploaded.isEmpty())
+        assertEquals(2, database.journalDao().pendingSync(1).size)
+
+        accessCode.codeExists = true
+        reconciler.reconcile()
+
+        assertEquals(2, remote.uploaded.size)
+    }
+
+    @Test
+    fun `si no se puede leer el codigo de acceso no se sube`() = runTest {
+        // Ante la duda se espera: subir es lo irreversible.
+        accessCode.failOnRead = true
+        seedRows(1)
+
+        reconciler.restore()
+        reconciler.reconcile()
+
+        assertTrue(remote.uploaded.isEmpty())
+    }
 
     @After
     fun tearDown() {

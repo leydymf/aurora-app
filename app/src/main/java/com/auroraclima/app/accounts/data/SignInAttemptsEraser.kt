@@ -14,6 +14,10 @@ import javax.inject.Singleton
 class SignInAttemptsEraser @Inject constructor(
     private val attemptStore: SignInAttemptStore
 ) : LocalAccountDataEraser {
+    // Se conserva en la activación sin terminar: borrarlo saltaría la pausa
+    // temporal de RF-15 con solo volver a abrir el consentimiento.
+    override val keptOnUnfinishedActivation = true
+
     override suspend fun erase() {
         attemptStore.clear()
     }

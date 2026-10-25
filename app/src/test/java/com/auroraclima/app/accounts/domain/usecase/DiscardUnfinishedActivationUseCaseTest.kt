@@ -2,6 +2,7 @@ package com.auroraclima.app.accounts.domain.usecase
 
 import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
+import com.auroraclima.app.core.security.LocalAccountDataEraser
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -18,7 +19,22 @@ class DiscardUnfinishedActivationUseCaseTest {
     private val repository = FakeAuthRepository()
     private val credentials = FakeCredentialStore()
     private val accessCode = FakeAccessCodePresence(codeExists = false)
-    private val useCase = DiscardUnfinishedActivationUseCase(accessCode, repository, credentials)
+
+    /** Bitácora de los borradores locales: cuáles corrieron y en qué orden. */
+    private val erased = mutableListOf<String>()
+
+    // Los tres que se conservan llevan los nombres de los borradores reales
+    // que declaran la excepción (acceso, intentos y caché de la nube).
+    private val localErasers = setOf(
+        RecordingLocalEraser(erased, "registros"),
+        RecordingLocalEraser(erased, "llave-del-respaldo"),
+        RecordingLocalEraser(erased, "codigos", keptOnUnfinishedActivation = true),
+        RecordingLocalEraser(erased, "intentos", keptOnUnfinishedActivation = true),
+        RecordingLocalEraser(erased, "cache-de-la-nube", keptOnUnfinishedActivation = true)
+    )
+    private val reconciliation = FakeCloudReconciliation().apply { callLog = erased }
+    private val useCase =
+        DiscardUnfinishedActivationUseCase(accessCode, repository, credentials, reconciliation, localErasers)
 
     private fun leaveUnfinishedRegistration() {
         repository.activeSession = true
@@ -35,6 +51,70 @@ class DiscardUnfinishedActivationUseCaseTest {
         assertNull(credentials.stored)
         assertFalse(repository.activeSession)
         assertEquals(1, repository.signOutCalls)
+    }
+
+    @Test
+    fun `sin codigo de acceso borra los datos de cuenta y conserva los exentos`() = runTest {
+        // Hallazgo A′ (v0.3.2): lo restaurado antes del código cae; la puerta,
+        // el bloqueo y la caché de la nube (por su causa declarada) no.
+        leaveUnfinishedRegistration()
+
+        useCase()
+
+        // La reconciliación de la otra cuenta se detiene ANTES de borrar.
+        assertEquals("stopReconciliation", erased.first())
+        assertEquals(setOf("stopReconciliation", "registros", "llave-del-respaldo"), erased.toSet())
+    }
+
+    @Test
+    fun `cancelar a quien lo pidio no deja el borrado a medias`() = runTest {
+        // El pop del consentimiento cancela su scope; los almacenes no pueden
+        // quedar la mitad borrados y la otra mitad vivos.
+        val gate = CompletableDeferred<Unit>()
+        val slow = LocalAccountDataEraser {
+            gate.await()
+            erased += "lento"
+        }
+        val useCase = DiscardUnfinishedActivationUseCase(
+            accessCode,
+            repository,
+            credentials,
+            NoCloudReconciliation,
+            linkedSetOf(slow, RecordingLocalEraser(erased, "registros"))
+        )
+
+        val caller = launch { useCase() }
+        runCurrent()
+        caller.cancel()
+        gate.complete(Unit)
+        caller.join()
+
+        assertEquals(listOf("lento", "registros"), erased)
+    }
+
+    @Test
+    fun `un borrador que falla no frena a los demas`() = runTest {
+        val failing = LocalAccountDataEraser { throw IllegalStateException() }
+        val useCase = DiscardUnfinishedActivationUseCase(
+            accessCode,
+            repository,
+            credentials,
+            NoCloudReconciliation,
+            setOf(failing, RecordingLocalEraser(erased, "registros"))
+        )
+
+        useCase()
+
+        assertEquals(listOf("registros"), erased)
+    }
+
+    @Test
+    fun `con codigo de acceso no corre ningun borrador`() = runTest {
+        accessCode.codeExists = true
+
+        useCase()
+
+        assertTrue(erased.isEmpty())
     }
 
     @Test

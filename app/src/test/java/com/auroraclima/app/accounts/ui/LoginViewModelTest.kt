@@ -51,7 +51,8 @@ class LoginViewModelTest {
 
     /** Por defecto el código de acceso existe: el reingreso normal (ENTRY_ROUTE). */
     private val accessCode = FakeAccessCodePresence()
-    private val discardUnfinished = DiscardUnfinishedActivationUseCase(accessCode, repository, credentials)
+    private val discardUnfinished =
+        DiscardUnfinishedActivationUseCase(accessCode, repository, credentials, NoCloudReconciliation, emptySet())
 
     /** Login del flujo de activación (ENTRY_SETUP_ROUTE): aún no hay código de acceso. */
     private fun TestScope.createActivationViewModel(): LoginViewModel {

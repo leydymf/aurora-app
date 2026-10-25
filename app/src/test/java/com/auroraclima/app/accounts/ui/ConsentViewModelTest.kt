@@ -4,6 +4,8 @@ import com.auroraclima.app.accounts.domain.usecase.CreateAccountUseCase
 import com.auroraclima.app.accounts.domain.usecase.DiscardUnfinishedActivationUseCase
 import com.auroraclima.app.accounts.domain.usecase.FakeAuthRepository
 import com.auroraclima.app.accounts.domain.usecase.FakeCredentialStore
+import com.auroraclima.app.accounts.domain.usecase.NoCloudReconciliation
+import com.auroraclima.app.accounts.domain.usecase.RecordingLocalEraser
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
@@ -26,7 +28,18 @@ class ConsentViewModelTest {
     private val repository = FakeAuthRepository()
     private val credentials = FakeCredentialStore()
     private val accessCode = FakeAccessCodePresence(codeExists = false)
-    private val discardUnfinished = DiscardUnfinishedActivationUseCase(accessCode, repository, credentials)
+    private val callLog = mutableListOf<String>()
+
+    /** Los registros que la cuenta A restauró antes de crear el código (hallazgo A′). */
+    private val accountAData = RecordingLocalEraser(callLog, "datos-de-A")
+    private val discardUnfinished =
+        DiscardUnfinishedActivationUseCase(
+            accessCode,
+            repository,
+            credentials,
+            NoCloudReconciliation,
+            setOf(accountAData)
+        )
 
     @Test
     fun `la casilla nace sin preseleccionar`() {
@@ -60,8 +73,8 @@ class ConsentViewModelTest {
     @Test
     fun `consentimiento y cuenta B nueva sobre los restos de la cuenta A`() = runTest {
         // Camino completo del atacante: código de activación → consentimiento →
-        // «crear cuenta» con otra cuenta. B no hereda la sesión ni el blob de A.
-        val callLog = mutableListOf<String>()
+        // «crear cuenta» con otra cuenta. B no hereda la sesión, el blob ni los
+        // datos locales de A.
         repository.callLog = callLog
         repository.activeSession = true
         credentials.save("cuenta-a@correo.co", "clave-cuenta-a")
@@ -77,9 +90,10 @@ class ConsentViewModelTest {
         createAccount.onSubmit()
         advanceUntilIdle()
 
-        // La sesión de A se cierra antes de que el proveedor cree a B.
+        // La sesión y los datos de A caen antes de que el proveedor cree a B.
         assertEquals("createAccount", callLog.last())
         assertTrue(callLog.indexOf("signOut") in 0 until callLog.indexOf("createAccount"))
+        assertTrue(callLog.indexOf("datos-de-A") in 0 until callLog.indexOf("createAccount"))
         assertEquals("cuenta-b@correo.co", credentials.stored?.email)
     }
 }

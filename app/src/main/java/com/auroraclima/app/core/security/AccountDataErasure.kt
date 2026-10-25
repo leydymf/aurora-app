@@ -27,7 +27,20 @@ fun interface RemoteAccountDataEraser {
  * demás, y ninguno debe registrar nada (regla 4 de CLAUDE.md). Los dueños de
  * material criptográfico destruyen su alias ANTES que sus datos: si el proceso
  * muriera a mitad, lo que quede es texto cifrado sin llave.
+ *
+ * También corre, con exclusiones, al descartar una activación sin terminar
+ * (hallazgo A′ de v0.3.2): ver [keptOnUnfinishedActivation].
  */
 fun interface LocalAccountDataEraser {
     suspend fun erase()
+
+    /**
+     * True si lo que borra NO debe caer al descartar una activación sin
+     * terminar. Ese descarte borra lo que una cuenta dejó antes de que
+     * existiera el código de acceso (registros restaurados, llaves, blob),
+     * pero no la puerta ni el bloqueo, y nada cuyo borrado inutilice el
+     * proceso en curso. Cada excepción declara su causa junto al override (§5:
+     * la exención es dato, no cálculo). RF-20 corre TODOS sin mirar esta marca.
+     */
+    val keptOnUnfinishedActivation: Boolean get() = false
 }

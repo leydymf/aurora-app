@@ -17,7 +17,7 @@ class CreateAccountUseCaseTest {
         repository,
         syncKeys,
         credentials,
-        DiscardUnfinishedActivationUseCase(accessCode, repository, credentials)
+        DiscardUnfinishedActivationUseCase(accessCode, repository, credentials, NoCloudReconciliation, emptySet())
     )
 
     @Test

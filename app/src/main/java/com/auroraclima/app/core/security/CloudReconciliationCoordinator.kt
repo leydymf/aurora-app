@@ -6,9 +6,11 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Disparo de la reconciliación con la nube. Es interfaz para que las pantallas
@@ -25,6 +27,15 @@ interface CloudReconciliation {
      * es lo que pasaba al esperarla dentro del login (auditoría 2026-10-06).
      */
     fun request()
+
+    /**
+     * Cancela la reconciliación pedida con [request] y ESPERA a que termine
+     * cualquiera que siga corriendo. La usa el descarte de una activación sin
+     * terminar (v0.3.2, hallazgo A′) antes de borrar los almacenes: una
+     * reconciliación viva de la otra cuenta podría reabrir las bases a mitad
+     * del borrado.
+     */
+    suspend fun stopAndWait()
 }
 
 /**
@@ -77,6 +88,17 @@ class CloudReconciliationCoordinator @Inject constructor(
     override fun onSessionCleanup() {
         requested?.cancel()
         requested = null
+    }
+
+    override suspend fun stopAndWait() {
+        // Se suelta la referencia ANTES de esperar: un request() que entrara
+        // mientras tanto no debe quedar pisado ni fuera del alcance del cierre.
+        val inFlight = requested
+        requested = null
+        inFlight?.cancelAndJoin()
+        // Las que lanzan las pantallas mueren con su ViewModel; el candado
+        // espera a la que todavía no haya soltado.
+        running.withLock { }
     }
 
     override suspend fun reconcile() {

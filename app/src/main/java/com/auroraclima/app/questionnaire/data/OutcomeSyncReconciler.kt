@@ -1,5 +1,6 @@
 package com.auroraclima.app.questionnaire.data
 
+import com.auroraclima.app.core.security.AccessCodePresence
 import com.auroraclima.app.core.security.AccountDataReconciler
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.SyncKeyManager
@@ -19,7 +20,8 @@ import javax.inject.Singleton
 class OutcomeSyncReconciler @Inject constructor(
     private val storeAccess: GuidanceStoreAccess,
     private val syncRepository: OutcomeSyncRepository,
-    private val keyManager: SyncKeyManager
+    private val keyManager: SyncKeyManager,
+    private val accessCode: AccessCodePresence
 ) : AccountDataRestorer, AccountDataReconciler {
     override suspend fun restore() {
         val generation = currentGenerationOrNull() ?: return
@@ -41,8 +43,14 @@ class OutcomeSyncReconciler @Inject constructor(
         pushPending(generation)
     }
 
-    /** Cola de subida compartida por la restauración y la reconciliación. */
+    /**
+     * Cola de subida compartida por la restauración y la reconciliación. Sin
+     * código de acceso no sube nada, por el mismo motivo que el historial
+     * (v0.3.2, hallazgo A′); lo pendiente sube en la primera reconciliación
+     * con código.
+     */
     private suspend fun pushPending(generation: Long) {
+        if (!accessCode.isSet().getOrDefault(false)) return
         val pending = storeAccess.withDatabase { db -> db.outcomeDao().pendingSync(generation) }
             .getOrNull() ?: return
         pending.forEach { row -> syncRepository.push(row.id) }

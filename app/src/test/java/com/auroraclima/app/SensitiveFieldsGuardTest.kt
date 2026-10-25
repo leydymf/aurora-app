@@ -60,8 +60,10 @@ class SensitiveFieldsGuardTest {
      * `BASE_URL` de `weather/data/remote` sí, y ahí el recorte no alcanza a nada que
      * este guardia busque.
      */
+    // DOT_MATCHES_ALL y no `(?:.|\n)*?`: la alternancia recurre una vez por
+    // carácter y un KDoc largo desbordaba la pila (v0.3.2).
     private fun codigoDe(file: File): String = file.readText()
-        .replace(Regex("""/\*(?:.|\n)*?\*/"""), "")
+        .replace(Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL), "")
         .replace(Regex("""//[^\n]*"""), "")
 
     /** El único archivo del kit que declara campos editables. */

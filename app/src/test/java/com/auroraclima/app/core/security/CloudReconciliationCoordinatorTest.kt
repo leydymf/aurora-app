@@ -128,4 +128,57 @@ class CloudReconciliationCoordinatorTest {
 
         assertEquals(false, finished)
     }
+
+    @Test
+    fun `detener y esperar cancela la pedida y no vuelve hasta que termino`() = runTest {
+        // Hallazgo A′ (v0.3.2): el descarte de una activación sin terminar
+        // borra los almacenes justo después; nada de la otra cuenta puede
+        // seguir escribiendo en ellos.
+        val gate = CompletableDeferred<Unit>()
+        var cleanedUp = false
+        val coordinator = coordinator(
+            setOf(
+                AccountDataReconciler {
+                    try {
+                        gate.await()
+                    } finally {
+                        cleanedUp = true
+                    }
+                }
+            )
+        )
+
+        coordinator.request()
+        advanceUntilIdle()
+        coordinator.stopAndWait()
+
+        // Volvió con el trabajo ya terminado (cancelado), no solo marcado.
+        assertEquals(true, cleanedUp)
+        assertEquals(false, gate.isCompleted)
+    }
+
+    @Test
+    fun `detener y esperar espera tambien a la reconciliacion de una pantalla`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        var finished = false
+        val coordinator = coordinator(
+            setOf(
+                AccountDataReconciler {
+                    gate.await()
+                    finished = true
+                }
+            )
+        )
+        val screen = launch { coordinator.reconcile() }
+        advanceUntilIdle()
+
+        val stop = launch { coordinator.stopAndWait() }
+        advanceUntilIdle()
+        assertEquals(false, stop.isCompleted)
+
+        gate.complete(Unit)
+        screen.join()
+        stop.join()
+        assertEquals(true, finished)
+    }
 }

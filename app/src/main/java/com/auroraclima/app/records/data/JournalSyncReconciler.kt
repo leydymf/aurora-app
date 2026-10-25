@@ -1,5 +1,6 @@
 package com.auroraclima.app.records.data
 
+import com.auroraclima.app.core.security.AccessCodePresence
 import com.auroraclima.app.core.security.AccountDataReconciler
 import com.auroraclima.app.core.security.AccountDataRestorer
 import com.auroraclima.app.core.security.SyncKeyManager
@@ -34,7 +35,8 @@ class JournalSyncReconciler @Inject constructor(
     private val syncRepository: JournalSyncRepository,
     private val mediaSyncRepository: JournalMediaSyncRepository,
     private val attachmentRepository: JournalAttachmentRepository,
-    private val keyManager: SyncKeyManager
+    private val keyManager: SyncKeyManager,
+    private val accessCode: AccessCodePresence
 ) : AccountDataRestorer, AccountDataReconciler {
     override suspend fun restore() {
         val generation = currentGenerationOrNull() ?: return
@@ -80,8 +82,16 @@ class JournalSyncReconciler @Inject constructor(
         pushPending(generation)
     }
 
-    /** Cola de subida compartida por la restauración y la reconciliación. */
+    /**
+     * Cola de subida compartida por la restauración y la reconciliación. Sin
+     * código de acceso no sube nada (v0.3.2, hallazgo A′): el login de
+     * activación restaura antes de que exista el código, y hasta entonces
+     * nadie ha probado ser la dueña de lo que haya en el almacén local. Lo
+     * pendiente espera intacto y sube en la primera reconciliación con código;
+     * ante la duda se espera.
+     */
     private suspend fun pushPending(generation: Long) {
+        if (!accessCode.isSet().getOrDefault(false)) return
         val pending = storeAccess.withDatabase { db -> db.journalDao().pendingSync(generation) }
             .getOrNull() ?: return
         pending.forEach { row -> syncRepository.push(row.id) }
