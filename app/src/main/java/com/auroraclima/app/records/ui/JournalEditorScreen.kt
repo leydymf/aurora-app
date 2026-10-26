@@ -380,6 +380,14 @@ private fun MediaSection(
         style = InteriorTypeVoice.caption,
         color = V2Palette.inkSecondary
     )
+    // El selector de archivos del sistema no trae una «X» (solo su menú): sin este
+    // aviso, quien no tiene archivos que elegir cree que no hay forma de volver (H-5).
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        text = stringResource(R.string.journal_media_cancel_hint),
+        style = InteriorTypeVoice.caption,
+        color = V2Palette.inkSecondary
+    )
 }
 
 /** Botón de origen del mockup P19 (Galería/Cámara) más la vía «Archivo». */

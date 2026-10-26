@@ -292,6 +292,27 @@ class JournalEditorViewModelTest {
     }
 
     @Test
+    fun `cancelar cualquier selector deja el editor exactamente como estaba`() = runTest {
+        // H-5: volver del selector sin elegir (también en un teléfono sin archivos)
+        // no borra lo escrito, no marca error y no deja una importación a medias.
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onKindSelected(first)
+        viewModel.onDetailChange("lo que pasó")
+        val before = viewModel.uiState.value
+
+        viewModel.onImagePicked(null)
+        viewModel.onDocumentPicked(null)
+        viewModel.onCaptureResult(saved = false)
+        advanceUntilIdle()
+
+        assertEquals(before, viewModel.uiState.value)
+        assertFalse(viewModel.uiState.value.isImporting)
+        assertNull(viewModel.uiState.value.mediaErrorRes)
+        assertEquals("lo que pasó", viewModel.uiState.value.detail)
+    }
+
+    @Test
     fun `guardar al crear reclama los adjuntos importados`() = runTest {
         attachments.attachmentsResult = Result.success(
             listOf(JournalAttachment(4, AttachmentKind.IMAGE), JournalAttachment(9, AttachmentKind.DOCUMENT))

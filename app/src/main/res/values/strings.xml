@@ -291,6 +291,7 @@
     <string name="journal_media_camera">Cámara</string>
     <string name="journal_media_document">Archivo</string>
     <string name="journal_media_note">Lo que adjuntes queda protegido y solo se ve aquí. El original sigue en tu galería o en tus archivos, y al usar la cámara algunos teléfonos guardan una copia propia.</string>
+    <string name="journal_media_cancel_hint">Si no tienes archivos o no quieres elegir ninguno, vuelve con el botón o el gesto de atrás de tu teléfono. Lo que escribiste sigue aquí.</string>
     <string name="journal_media_error">No se pudo adjuntar el archivo.</string>
     <string name="journal_media_full">Ya alcanzaste el máximo de adjuntos en este registro.</string>
     <string name="journal_media_remove">Quitar el adjunto</string>
