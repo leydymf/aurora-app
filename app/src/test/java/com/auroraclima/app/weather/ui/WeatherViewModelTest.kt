@@ -21,6 +21,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -127,14 +128,169 @@ class WeatherViewModelTest {
     }
 
     @Test
-    fun `un fallo de red en la busqueda se muestra como sin resultados`() = runTest {
+    fun `un fallo de red en la busqueda muestra el error con reintento`() = runTest {
         repository.searchResult = Result.failure(IOException("sin red"))
         val viewModel = createViewModel()
 
         viewModel.onSearchQueryChange("Bucara")
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.showNoResults)
+        val state = viewModel.uiState.value
+        assertTrue(state.searchFailed)
+        assertFalse(state.isSearching)
+        assertFalse(state.showNoResults)
+    }
+
+    @Test
+    fun `mientras se busca el indicador esta activo y se apaga al terminar`() = runTest {
+        repository.searchResult = Result.success(listOf(bucaramanga()))
+        repository.searchDelayMs = 500
+        val viewModel = createViewModel()
+
+        viewModel.onSearchQueryChange("Bucara")
+        assertTrue(viewModel.uiState.value.isSearching)
+        advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS + 100)
+        assertTrue(viewModel.uiState.value.isSearching)
+
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isSearching)
+        assertEquals(listOf(bucaramanga()), viewModel.uiState.value.searchResults)
+    }
+
+    @Test
+    fun `una busqueda que pasa de diez segundos muestra el error y reintentar la recupera`() = runTest {
+        repository.searchResult = Result.success(listOf(bucaramanga()))
+        repository.searchDelayMs = WeatherViewModel.NETWORK_TIMEOUT_MS + 5_000
+        val viewModel = createViewModel()
+
+        viewModel.onSearchQueryChange("Bucara")
+        advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS + WeatherViewModel.NETWORK_TIMEOUT_MS - 1)
+        assertTrue(viewModel.uiState.value.isSearching)
+        advanceTimeBy(2)
+        assertTrue(viewModel.uiState.value.searchFailed)
+        assertFalse(viewModel.uiState.value.isSearching)
+
+        repository.searchDelayMs = 0
+        viewModel.onRetrySearch()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.searchFailed)
+        assertEquals(listOf(bucaramanga()), state.searchResults)
+    }
+
+    @Test
+    fun `un codigo erroneo recorre los mismos estados que una ciudad en cada desenlace`() = runTest {
+        // RF-13: con puerta (código erróneo → PassThrough) y con ciudad normal el
+        // estado es el mismo en cada instante y en cada desenlace, incluidos error y plazo.
+        val outcomes = listOf(
+            Result.success(emptyList<City>()) to 0L,
+            Result.success(listOf(bucaramanga())) to 0L,
+            Result.failure<List<City>>(IOException("sin red")) to 0L,
+            Result.success(listOf(bucaramanga())) to WeatherViewModel.NETWORK_TIMEOUT_MS + 1_000
+        )
+        outcomes.forEach { (result, delayMs) ->
+            val traces = listOf("Bucaramanga", "codigofalso").map { query ->
+                repository.searchResult = result
+                repository.searchDelayMs = delayMs
+                val viewModel = createViewModel()
+                val trace = mutableListOf<Triple<Boolean, Boolean, Boolean>>()
+                fun snapshot() = with(viewModel.uiState.value) { Triple(isSearching, searchFailed, showNoResults) }
+                viewModel.onSearchQueryChange(query)
+                trace += snapshot()
+                advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS + 1)
+                trace += snapshot()
+                advanceUntilIdle()
+                trace += snapshot()
+                Triple(trace, viewModel.uiState.value.searchResults, viewModel.uiState.value.isSearchActive)
+            }
+            assertEquals(traces[0], traces[1])
+        }
+    }
+
+    @Test
+    fun `el codigo secreto abre aunque la busqueda falle por red`() = runTest {
+        repository.searchResult = Result.failure(IOException("sin red"))
+        gate.result = SearchGateResult.OpenAccess
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+
+        viewModel.onSearchQueryChange("cielo2026")
+        advanceUntilIdle()
+
+        assertEquals(listOf<SearchGateResult>(SearchGateResult.OpenAccess), events)
+        val state = viewModel.uiState.value
+        assertFalse(state.searchFailed)
+        assertFalse(state.isSearching)
+        assertEquals("", state.searchQuery)
+    }
+
+    @Test
+    fun `al elegir una ciudad se muestra la carga y no el clima de la anterior`() = runTest {
+        repository.defaultCity = bucaramanga()
+        repository.cachedSnapshot = sampleSnapshot()
+        repository.refreshResult = Result.success(sampleSnapshot())
+        repository.refreshDelayMs = 1_000
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.onCitySelected(bucaramanga())
+        runCurrent()
+
+        val loading = viewModel.uiState.value
+        assertTrue(loading.isLoadingWeather)
+        assertNull(loading.weather)
+
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isLoadingWeather)
+        assertNotNull(viewModel.uiState.value.weather)
+    }
+
+    @Test
+    fun `si el clima de la ciudad elegida falla se muestra el error y no el clima guardado de otra`() = runTest {
+        repository.cachedSnapshot = sampleSnapshot()
+        repository.refreshResult = Result.failure(IOException("sin red"))
+        val viewModel = createViewModel()
+
+        viewModel.onCitySelected(bucaramanga())
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.weatherFailed)
+        assertFalse(state.isLoadingWeather)
+        assertNull(state.weather)
+    }
+
+    @Test
+    fun `el clima que pasa de diez segundos muestra el error y reintentar lo recupera`() = runTest {
+        repository.refreshResult = Result.success(sampleSnapshot())
+        repository.refreshDelayMs = WeatherViewModel.NETWORK_TIMEOUT_MS + 5_000
+        val viewModel = createViewModel()
+
+        viewModel.onCitySelected(bucaramanga())
+        advanceTimeBy(WeatherViewModel.NETWORK_TIMEOUT_MS - 1)
+        assertTrue(viewModel.uiState.value.isLoadingWeather)
+        advanceTimeBy(2)
+        assertTrue(viewModel.uiState.value.weatherFailed)
+
+        repository.refreshDelayMs = 0
+        viewModel.onRetryWeather()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.weatherFailed)
+        assertEquals("Bucaramanga", state.weather?.cityName)
+    }
+
+    @Test
+    fun `al abrir sin datos guardados y sin red se muestra el error con reintento`() = runTest {
+        repository.defaultCity = bucaramanga()
+        repository.refreshResult = Result.failure(IOException("sin red"))
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.weatherFailed)
     }
 
     @Test
@@ -324,6 +480,7 @@ private class FakeWeatherRepository : WeatherRepository {
     var defaultCity: City? = null
     var cachedSnapshot: WeatherSnapshot? = null
     var refreshResult: Result<WeatherSnapshot> = Result.failure(IOException("sin red"))
+    var refreshDelayMs = 0L
 
     override suspend fun searchCities(query: String): Result<List<City>> {
         searchCallCount++
@@ -342,5 +499,8 @@ private class FakeWeatherRepository : WeatherRepository {
 
     override suspend fun getCachedForecast(): List<DailyForecast> = emptyList()
 
-    override suspend fun refreshSnapshot(city: City): Result<WeatherSnapshot> = refreshResult
+    override suspend fun refreshSnapshot(city: City): Result<WeatherSnapshot> {
+        if (refreshDelayMs > 0) delay(refreshDelayMs)
+        return refreshResult
+    }
 }

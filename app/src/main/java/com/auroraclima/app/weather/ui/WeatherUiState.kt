@@ -14,6 +14,14 @@ data class WeatherUiState(
     val searchResults: List<City> = emptyList(),
     val isSearchActive: Boolean = false,
     val showNoResults: Boolean = false,
+    /** Búsqueda de ciudades en curso (indicador de carga). */
+    val isSearching: Boolean = false,
+    /** La búsqueda falló o pasó del plazo: error con reintento. */
+    val searchFailed: Boolean = false,
+    /** Clima de la ciudad elegida en curso y sin datos que mostrar mientras tanto. */
+    val isLoadingWeather: Boolean = false,
+    /** El clima no pudo cargarse y no hay datos guardados que mostrar: error con reintento. */
+    val weatherFailed: Boolean = false,
     val weather: WeatherCardUiState? = null
 )
 

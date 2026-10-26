@@ -25,11 +25,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -40,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -67,6 +71,8 @@ fun WeatherScreen(
     onCitySelected: (City) -> Unit,
     onSearchCancel: () -> Unit,
     onOpenForecast: () -> Unit,
+    onRetrySearch: () -> Unit,
+    onRetryWeather: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -112,6 +118,10 @@ fun WeatherScreen(
         // ventana no se achica sola), para que el último se pueda alcanzar; en
         // toda la columna haría saltar la barra de pestañas al enfocar la búsqueda.
         when {
+            state.isSearchActive && state.isSearching ->
+                FacadeLoadingContent(modifier = Modifier.weight(1f).imePadding())
+            state.isSearchActive && state.searchFailed ->
+                FacadeErrorContent(onRetry = onRetrySearch, modifier = Modifier.weight(1f).imePadding())
             state.isSearchActive && state.searchResults.isNotEmpty() ->
                 CitySearchResults(
                     results = state.searchResults,
@@ -130,6 +140,10 @@ fun WeatherScreen(
                 Spacer(modifier = Modifier.weight(1f))
             state.weather != null ->
                 WeatherDetailsCards(weather = state.weather, modifier = Modifier.weight(1f))
+            state.isLoadingWeather ->
+                FacadeLoadingContent(modifier = Modifier.weight(1f))
+            state.weatherFailed ->
+                FacadeErrorContent(onRetry = onRetryWeather, modifier = Modifier.weight(1f))
             else ->
                 WeatherEmptyContent(modifier = Modifier.weight(1f))
         }
@@ -395,6 +409,54 @@ private fun NoResultsContent(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Carga de la fachada: el indicador corriente de una app de clima, sin texto. El
+ * mismo para una búsqueda que para el clima de la ciudad elegida (H-1).
+ */
+@Composable
+private fun FacadeLoadingContent(modifier: Modifier = Modifier) {
+    val label = stringResource(R.string.weather_loading)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = label },
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(color = V2Palette.inkSecondary)
+    }
+}
+
+/**
+ * Error de red de la fachada con reintento, en la voz del clima y sin detalles
+ * técnicos. La misma pieza sirve a la búsqueda de ciudades y al clima: un código
+ * del espacio interno que falla en red no se distingue de una ciudad (RF-13).
+ */
+@Composable
+private fun FacadeErrorContent(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = stringResource(R.string.weather_error_message),
+            style = FacadeTypeVoice.body,
+            color = V2Palette.inkPrimary,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(onClick = onRetry) {
+            Text(
+                text = stringResource(R.string.weather_retry),
+                style = FacadeTypeVoice.bodyStrong,
+                color = V2Palette.inkSecondary
+            )
+        }
+    }
+}
+
 /** Tarjetas de datos de P01: humedad y viento lado a lado, y el aviso de lluvia. */
 @Composable
 private fun WeatherDetailsCards(weather: WeatherCardUiState, modifier: Modifier = Modifier) {
@@ -525,7 +587,9 @@ private fun WeatherScreenPreview() {
             onSearchQueryChange = {},
             onCitySelected = {},
             onSearchCancel = {},
-            onOpenForecast = {}
+            onOpenForecast = {},
+            onRetrySearch = {},
+            onRetryWeather = {}
         )
     }
 }
@@ -543,7 +607,9 @@ private fun WeatherScreenNoResultsPreview() {
             onSearchQueryChange = {},
             onCitySelected = {},
             onSearchCancel = {},
-            onOpenForecast = {}
+            onOpenForecast = {},
+            onRetrySearch = {},
+            onRetryWeather = {}
         )
     }
 }

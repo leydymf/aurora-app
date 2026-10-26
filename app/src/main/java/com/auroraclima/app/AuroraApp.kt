@@ -466,7 +466,9 @@ private fun HomeRoute(navController: NavHostController) {
             onSearchQueryChange = viewModel::onSearchQueryChange,
             onCitySelected = viewModel::onCitySelected,
             onSearchCancel = viewModel::onSearchCancel,
-            onOpenForecast = { navController.navigate(FORECAST_ROUTE) }
+            onOpenForecast = { navController.navigate(FORECAST_ROUTE) },
+            onRetrySearch = viewModel::onRetrySearch,
+            onRetryWeather = viewModel::onRetryWeather
         )
     }
 }

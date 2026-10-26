@@ -14,6 +14,7 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * ViewModel único de la fachada de clima (RF-01, RF-02, RF-03).
@@ -52,6 +54,7 @@ class WeatherViewModel @Inject constructor(
     val gateEvents: SharedFlow<SearchGateResult> = _gateEvents.asSharedFlow()
 
     private var searchJob: Job? = null
+    private var refreshJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -59,49 +62,93 @@ class WeatherViewModel @Inject constructor(
             repository.getCachedSnapshot()?.let { cached ->
                 _uiState.update { it.copy(weather = cached.toCardUiState()) }
             }
-            refreshWeather(city)
+            refreshWeather(city, fallbackToCache = true)
         }
     }
 
     fun onSearchQueryChange(query: String) {
         searchJob?.cancel()
         val trimmed = query.trim()
+        val searchable = trimmed.length >= MIN_SEARCH_LENGTH
         _uiState.update {
             it.copy(
                 searchQuery = query,
                 isSearchActive = query.isNotEmpty(),
                 showNoResults = false,
-                searchResults = if (trimmed.length < MIN_SEARCH_LENGTH) emptyList() else it.searchResults
+                searchFailed = false,
+                // El indicador arranca con la tecla, sin esperar al debounce, y es el
+                // mismo para cualquier texto: un código no se distingue de una ciudad.
+                isSearching = searchable,
+                searchResults = if (searchable) it.searchResults else emptyList()
             )
         }
-        if (trimmed.length < MIN_SEARCH_LENGTH) return
+        if (!searchable) return
         searchJob = viewModelScope.launch {
             delay(SEARCH_DEBOUNCE_MS)
-            // La puerta corre en paralelo con la búsqueda real y la respuesta visible
-            // espera SIEMPRE a la búsqueda: un código erróneo es, en UI, mensajes,
-            // tiempos y tráfico de red, exactamente una búsqueda fallida, y un código
-            // válido no responde más rápido que una búsqueda (RF-13).
-            val gateResult = async { searchQueryGate.inspect(trimmed) }
-            val results = repository.searchCities(trimmed).getOrDefault(emptyList())
-            when (val destination = gateResult.await()) {
-                SearchGateResult.PassThrough -> _uiState.update {
-                    it.copy(searchResults = results, showNoResults = results.isEmpty())
-                }
-                else -> {
-                    // RF-14: la barra queda vacía antes de abrir; el código no queda
-                    // en el estado ni viaja en el evento.
-                    clearSearch()
-                    _gateEvents.tryEmit(destination)
-                }
+            runSearch(trimmed)
+        }
+    }
+
+    /** Reintento tras un fallo de la búsqueda: sin debounce, sobre el texto que sigue en la barra. */
+    fun onRetrySearch() {
+        val trimmed = _uiState.value.searchQuery.trim()
+        if (trimmed.length < MIN_SEARCH_LENGTH) return
+        searchJob?.cancel()
+        _uiState.update { it.copy(isSearching = true, searchFailed = false, showNoResults = false) }
+        searchJob = viewModelScope.launch { runSearch(trimmed) }
+    }
+
+    private suspend fun runSearch(query: String) {
+        // La puerta corre en paralelo con la búsqueda real y la respuesta visible
+        // espera SIEMPRE a la búsqueda (o a su plazo): un código erróneo es, en UI,
+        // mensajes, tiempos y tráfico de red, exactamente una búsqueda de ciudad, y un
+        // código válido no responde más rápido que una búsqueda (RF-13).
+        val (destination, results) = coroutineScope {
+            val gateResult = async { searchQueryGate.inspect(query) }
+            val found = withTimeoutOrNull(NETWORK_TIMEOUT_MS) { repository.searchCities(query).getOrNull() }
+            gateResult.await() to found
+        }
+        when (destination) {
+            SearchGateResult.PassThrough -> _uiState.update {
+                it.copy(
+                    isSearching = false,
+                    searchResults = results.orEmpty(),
+                    showNoResults = results != null && results.isEmpty(),
+                    searchFailed = results == null
+                )
+            }
+            else -> {
+                // RF-14: la barra queda vacía antes de abrir; el código no queda
+                // en el estado ni viaja en el evento. Abre aunque la búsqueda haya
+                // fallado: sin red el acceso sigue funcionando.
+                clearSearch()
+                _gateEvents.tryEmit(destination)
             }
         }
     }
 
     fun onCitySelected(city: City) {
         clearSearch()
-        viewModelScope.launch {
+        // La ciudad anterior no se queda a la vista mientras llega la nueva.
+        _uiState.update { it.copy(weather = null, isLoadingWeather = true, weatherFailed = false) }
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             repository.saveDefaultCity(city)
-            refreshWeather(city)
+            refreshWeather(city, fallbackToCache = false)
+        }
+    }
+
+    /** Reintento del clima tras un fallo: sobre la ciudad predeterminada ya guardada. */
+    fun onRetryWeather() {
+        refreshJob?.cancel()
+        _uiState.update { it.copy(isLoadingWeather = true, weatherFailed = false) }
+        refreshJob = viewModelScope.launch {
+            val city = repository.getDefaultCity()
+            if (city == null) {
+                _uiState.update { it.copy(isLoadingWeather = false) }
+            } else {
+                refreshWeather(city, fallbackToCache = true)
+            }
         }
     }
 
@@ -116,29 +163,44 @@ class WeatherViewModel @Inject constructor(
                 searchQuery = "",
                 isSearchActive = false,
                 searchResults = emptyList(),
-                showNoResults = false
+                showNoResults = false,
+                isSearching = false,
+                searchFailed = false
             )
         }
     }
 
-    private suspend fun refreshWeather(city: City) {
-        repository.refreshSnapshot(city)
-            .onSuccess { snapshot ->
-                _uiState.update { it.copy(weather = snapshot.toCardUiState()) }
+    /**
+     * [fallbackToCache]: con la ciudad predeterminada y sin red se muestran los
+     * últimos datos con su hora (RF-03.2); al elegir una ciudad nueva no, porque
+     * lo guardado es de otra ciudad y se vería como si fuera la elegida.
+     */
+    private suspend fun refreshWeather(city: City, fallbackToCache: Boolean) {
+        val shownBefore = _uiState.value.weather != null
+        if (!shownBefore) _uiState.update { it.copy(isLoadingWeather = true, weatherFailed = false) }
+        val refreshed = withTimeoutOrNull(NETWORK_TIMEOUT_MS) { repository.refreshSnapshot(city).getOrNull() }
+        if (refreshed != null) {
+            _uiState.update {
+                it.copy(weather = refreshed.toCardUiState(), isLoadingWeather = false, weatherFailed = false)
             }
-            .onFailure {
-                // Sin conexión: se muestran los últimos datos guardados con su hora (RF-03.2).
-                if (_uiState.value.weather == null) {
-                    repository.getCachedSnapshot()?.let { cached ->
-                        _uiState.update { it.copy(weather = cached.toCardUiState()) }
-                    }
-                }
-            }
+            return
+        }
+        val cached = if (fallbackToCache && _uiState.value.weather == null) repository.getCachedSnapshot() else null
+        _uiState.update {
+            it.copy(
+                weather = cached?.toCardUiState() ?: it.weather,
+                isLoadingWeather = false,
+                weatherFailed = cached == null && it.weather == null
+            )
+        }
     }
 
     companion object {
         const val MIN_SEARCH_LENGTH = 2
         const val SEARCH_DEBOUNCE_MS = 400L
+
+        /** Plazo de cada llamada de red de la fachada: pasado, se muestra el error con reintento. */
+        const val NETWORK_TIMEOUT_MS = 10_000L
     }
 }
 

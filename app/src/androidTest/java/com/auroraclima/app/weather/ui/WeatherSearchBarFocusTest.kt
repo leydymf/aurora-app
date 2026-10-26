@@ -44,7 +44,9 @@ class WeatherSearchBarFocusTest {
                     },
                     onCitySelected = {},
                     onSearchCancel = {},
-                    onOpenForecast = {}
+                    onOpenForecast = {},
+                    onRetrySearch = {},
+                    onRetryWeather = {}
                 )
             }
         }
