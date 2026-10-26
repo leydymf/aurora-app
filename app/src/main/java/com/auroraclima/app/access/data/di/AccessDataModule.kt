@@ -1,10 +1,13 @@
 package com.auroraclima.app.access.data.di
 
 import com.auroraclima.app.access.data.AccessCredentialsEraser
+import com.auroraclima.app.access.data.IntroNoteEraser
 import com.auroraclima.app.access.data.KeystoreSecretCodeHasher
 import com.auroraclima.app.access.data.LocalSecretCodeRepository
 import com.auroraclima.app.access.data.RawCityNameDirectory
+import com.auroraclima.app.access.data.SealedIntroNoteRepository
 import com.auroraclima.app.access.domain.repository.CityNameDirectory
+import com.auroraclima.app.access.domain.repository.IntroNoteRepository
 import com.auroraclima.app.access.domain.repository.SecretCodeRepository
 import com.auroraclima.app.access.domain.security.SecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.CheckAccessCodeUseCase
@@ -42,4 +45,13 @@ abstract class AccessDataModule {
     @Binds
     @IntoSet
     abstract fun bindAccessCredentialsEraser(impl: AccessCredentialsEraser): LocalAccountDataEraser
+
+    /** Aviso de bienvenida de quien saltó el tutorial. */
+    @Binds
+    abstract fun bindIntroNoteRepository(impl: SealedIntroNoteRepository): IntroNoteRepository
+
+    /** El aviso pendiente muere con la cuenta (RF-20). */
+    @Binds
+    @IntoSet
+    abstract fun bindIntroNoteEraser(impl: IntroNoteEraser): LocalAccountDataEraser
 }

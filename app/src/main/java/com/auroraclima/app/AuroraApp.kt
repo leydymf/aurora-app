@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.ChangeCodeRoute
 import com.auroraclima.app.access.ui.CodeSetupRoute
+import com.auroraclima.app.access.ui.EntryTransitionRoute
 import com.auroraclima.app.access.ui.SettingsScreen
 import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ChangePasswordRoute
@@ -179,6 +180,25 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onSkip = { navController.popBackStack() }
                     )
                 }
+                // Transición de entrada: la marca de Aurora ~700 ms para que la
+                // persona sepa dónde está, y luego el reingreso. Solo la alcanza la
+                // puerta con el código correcto; la salida no pasa por aquí (RF-16).
+                // Va dentro del grafo seguro: bloqueo de capturas y nube desde el primer
+                // cuadro (RNF-02). Sale de la pila al terminar: atrás no la reabre.
+                screen(ARRIVAL_ROUTE) {
+                    EntryTransitionRoute(
+                        onFinished = {
+                            // Solo si sigue en la transición: tras la nube, atrás o el
+                            // segundo plano la pila ya volvió a la fachada y desde ahí
+                            // jamás debe abrirse el interior (RF-16, RF-06).
+                            if (navController.currentBackStackEntry?.destination?.route == ARRIVAL_ROUTE) {
+                                navController.navigate(ENTRY_ROUTE) {
+                                    popUpTo(ARRIVAL_ROUTE) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
+                }
                 // Reingreso (RF-12, RF-15): con sesión vigente salta directo al
                 // panel; sin sesión, inicio de sesión con bloqueo temporal.
                 screen(ENTRY_ROUTE) {
@@ -213,7 +233,8 @@ fun AuroraApp(sessionManager: SessionManager) {
                         // por la ruta; la pantalla vuelve a leer todo lo demás.
                         onExportJournalEntries = { ids ->
                             navController.navigate("$JOURNAL_EXPORT_BASE/${ids.joinToString(",")}")
-                        }
+                        },
+                        onOpenTutorial = { navController.navigate(GUIDE_REVIEW_ROUTE) }
                     )
                 }
                 // Configuración del espacio interno (P21): reabrir el tutorial
@@ -430,7 +451,9 @@ private fun HomeRoute(navController: NavHostController) {
         viewModel.gateEvents.collect { destination ->
             when (destination) {
                 SearchGateResult.OpenActivation -> navController.navigate(INTRO_ROUTE)
-                SearchGateResult.OpenAccess -> navController.navigate(ENTRY_ROUTE)
+                // Código correcto: primero la marca (~700 ms), después el reingreso. Un código
+                // que no coincide cae en PassThrough y no navega a ninguna parte (RF-12, RF-13).
+                SearchGateResult.OpenAccess -> navController.navigate(ARRIVAL_ROUTE)
                 SearchGateResult.PassThrough -> Unit
             }
         }
@@ -458,6 +481,7 @@ private const val ENTRY_SETUP_BASE = "entry_setup"
 private const val ENTRY_SETUP_ROUTE = "$ENTRY_SETUP_BASE/{$LOGIN_FLOW_ARG}"
 private const val GUIDE_ROUTE = "guide"
 private const val GUIDE_REVIEW_ROUTE = "guide_review"
+private const val ARRIVAL_ROUTE = "arrival"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val SETTINGS_ROUTE = "settings"

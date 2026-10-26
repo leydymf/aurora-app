@@ -20,7 +20,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
 import com.auroraclima.app.core.ui.components.BrandHeader
 import com.auroraclima.app.core.ui.v2.AccentBadge
@@ -44,16 +49,53 @@ import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2Icons
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.V2SecondaryButton
 import com.auroraclima.app.core.ui.v2.V2Voice
+
+/**
+ * Enlace del Inicio con su único estado: el aviso de bienvenida de quien saltó el
+ * tutorial ([IntroNoteViewModel]). El resto del Inicio sigue siendo estático
+ * (ver [PanelScreen]); el destino de «Ver el tutorial» lo decide la navegación raíz.
+ */
+@Composable
+fun PanelRoute(
+    onStartGuidance: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onCall: () -> Unit,
+    onSaveNote: () -> Unit,
+    onLearn: () -> Unit,
+    onOpenTutorial: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val viewModel: IntroNoteViewModel = hiltViewModel()
+    val introNote by viewModel.uiState.collectAsState()
+    LaunchedEffect(viewModel) {
+        viewModel.openTutorialEvents.collect { onOpenTutorial() }
+    }
+    PanelScreen(
+        onStartGuidance = onStartGuidance,
+        onOpenHistory = onOpenHistory,
+        onOpenSettings = onOpenSettings,
+        onCall = onCall,
+        onSaveNote = onSaveNote,
+        onLearn = onLearn,
+        modifier = modifier,
+        showIntroNote = introNote.isVisible,
+        onOpenIntroNoteTutorial = viewModel::onOpenTutorial,
+        onDismissIntroNote = viewModel::onDismiss
+    )
+}
 
 /**
  * Inicio del espacio interno (mockup v2-10, P09): saludo, tarjeta del
  * cuestionario con «Empezar» y los tres accesos rápidos. Sin conteo de
- * preguntas ni duración (decisión D8), así que sigue sin ViewModel — menú
- * estático (guía §3, decisión 2026-07-10). Configuración se abre desde el
+ * preguntas ni duración (decisión D8). Configuración se abre desde el
  * engranaje arriba a la derecha (decisión D3). Los destinos los deciden la
  * navegación raíz y el host de pestañas (guardia RF-06, §2: sin imports entre
- * features — los accesos rápidos solo emiten callbacks).
+ * features — los accesos rápidos solo emiten callbacks). Es un menú estático
+ * (guía §3, decisión 2026-07-10): el único estado, el aviso de bienvenida, lo
+ * trae [PanelRoute] y llega aquí ya resuelto.
  */
 @Composable
 fun PanelScreen(
@@ -63,7 +105,10 @@ fun PanelScreen(
     onCall: () -> Unit,
     onSaveNote: () -> Unit,
     onLearn: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showIntroNote: Boolean = false,
+    onOpenIntroNoteTutorial: () -> Unit = {},
+    onDismissIntroNote: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -87,6 +132,11 @@ fun PanelScreen(
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+        // Quien saltó el tutorial ve aquí, una sola vez, dónde está y cómo volver.
+        if (showIntroNote) {
+            IntroNoteCard(onOpenTutorial = onOpenIntroNoteTutorial, onDismiss = onDismissIntroNote)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
         // Saludo en tarjeta (v2-10) con el léxico ya aprobado (D1).
         SoftCard {
             Text(
@@ -147,6 +197,40 @@ fun PanelScreen(
         QuickAccessRow(onCall = onCall, onSaveNote = onSaveNote, onLearn = onLearn)
         // Aire final: la nube queda por encima de la barra de pestañas.
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+/**
+ * Aviso de bienvenida para quien saltó el tutorial: neutro (acento de grupo, sin
+ * rosa de aviso, no es una advertencia) y sin botón lleno — el único lleno del
+ * Inicio es «Empezar» (regla 2). «Entendido» es la acción callada.
+ */
+@Composable
+private fun IntroNoteCard(onOpenTutorial: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(V2Corner.card)
+            .background(V2Palette.accentGroup.tint)
+            .padding(20.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.access_intro_note_text),
+            style = InteriorTypeVoice.body,
+            color = V2Palette.inkPrimary
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        V2SecondaryButton(
+            text = stringResource(R.string.access_intro_note_open),
+            onClick = onOpenTutorial
+        )
+        TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(R.string.access_intro_note_dismiss),
+                style = InteriorTypeVoice.bodyStrong,
+                color = V2Palette.inkPrimary
+            )
+        }
     }
 }
 
@@ -288,6 +372,28 @@ private fun PanelScreenLargeFontPreview() {
             onCall = {},
             onSaveNote = {},
             onLearn = {}
+        )
+    }
+}
+
+@Preview(
+    name = "Inicio · aviso de bienvenida",
+    widthDp = 360,
+    heightDp = 760,
+    showBackground = true,
+    backgroundColor = 0xFFF3F1F7
+)
+@Composable
+private fun PanelScreenIntroNotePreview() {
+    AuroraV2Theme(V2Voice.Interior) {
+        PanelScreen(
+            onStartGuidance = {},
+            onOpenHistory = {},
+            onOpenSettings = {},
+            onCall = {},
+            onSaveNote = {},
+            onLearn = {},
+            showIntroNote = true
         )
     }
 }

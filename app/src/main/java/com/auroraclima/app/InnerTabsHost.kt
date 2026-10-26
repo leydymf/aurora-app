@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.auroraclima.app.access.ui.PanelScreen
+import com.auroraclima.app.access.ui.PanelRoute
 import com.auroraclima.app.content.ui.GuideHomeScreen
 import com.auroraclima.app.core.ui.v2.AccentChip
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
@@ -58,6 +58,7 @@ fun InnerTabsHost(
     onAddJournalEntry: () -> Unit,
     onOpenJournalEntry: (Long) -> Unit,
     onExportJournalEntries: (List<Long>) -> Unit,
+    onOpenTutorial: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(HOME_TAB) }
@@ -104,13 +105,16 @@ fun InnerTabsHost(
                         // atención (RF-23), guardar → editor del registro
                         // (RF-32/33), Informarme → pestaña Guía (RF-21). Todo
                         // por rutas o estado local — sin imports entre features.
-                        PanelScreen(
+                        PanelRoute(
                             onStartGuidance = onOpenGuidance,
                             onOpenHistory = onOpenGuidanceHistory,
                             onOpenSettings = onOpenSettings,
                             onCall = onOpenLines,
                             onSaveNote = onAddJournalEntry,
-                            onLearn = { selectedTab = GUIDE_TAB }
+                            onLearn = { selectedTab = GUIDE_TAB },
+                            // Aviso de bienvenida de quien saltó el tutorial: abre el
+                            // repaso (RF-11), el mismo de Ajustes.
+                            onOpenTutorial = onOpenTutorial
                         )
                     }
                 }

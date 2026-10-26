@@ -89,7 +89,7 @@ fun TutorialRoute(isReview: Boolean, onClose: () -> Unit, onSkip: () -> Unit) {
             state = state,
             isReview = isReview,
             onStartPractice = viewModel::onStartPractice,
-            onSkip = viewModel::onSkip,
+            onSkip = { viewModel.onSkip(isReview) },
             onBack = viewModel::onBackRequested,
             onPracticeInputChange = {
                 // El teclado es una ventana propia: cada tecla debe contar como
