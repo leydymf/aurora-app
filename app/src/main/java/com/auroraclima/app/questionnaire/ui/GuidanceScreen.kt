@@ -51,6 +51,8 @@ import com.auroraclima.app.core.directory.DirectoryLine
 import com.auroraclima.app.core.security.SecureSheet
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.AccentChip
+import com.auroraclima.app.core.ui.v2.CloudLaneBar
+import com.auroraclima.app.core.ui.v2.CloudLanePair
 import com.auroraclima.app.core.ui.v2.IconListRow
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.RowChevron
@@ -336,7 +338,9 @@ private fun QuestionContent(
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // La nube de salida rápida flota abajo a la derecha: la fila le deja su carril
+        // y los tres quedan en una misma línea (v0.3.2).
+        CloudLaneBar {
             V2BackButton(onBack = onPrevious)
             Spacer(modifier = Modifier.width(12.dp))
             V2PrimaryButton(
@@ -347,7 +351,6 @@ private fun QuestionContent(
                 modifier = Modifier.weight(1f)
             )
         }
-        Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
     }
 }
 
@@ -472,25 +475,42 @@ private fun ResultContent(
             )
             Spacer(modifier = Modifier.height(18.dp))
             RoutesLinkRow(onClick = onOpenRoutes)
-            Spacer(modifier = Modifier.height(18.dp))
-            if (state.isSaved) {
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        ResultActionsBar(isSaved = state.isSaved, onSave = onSaveRequested, onFinish = onFinish)
+    }
+}
+
+/**
+ * Barra inferior FIJA del resultado (H-4): «Guardar» y «Terminar» siempre a la vista,
+ * sin desplazarse, y con el carril de la nube reservado para quedar en su misma línea.
+ * «Guardar» es la acción principal (RF-31: opt-in expreso); con el resultado ya guardado
+ * cede su sitio a la constancia y «Terminar» pasa a ser la acción llena.
+ */
+@Composable
+private fun ResultActionsBar(isSaved: Boolean, onSave: () -> Unit, onFinish: () -> Unit) {
+    Spacer(modifier = Modifier.height(8.dp))
+    CloudLanePair(
+        first = {
+            if (isSaved) {
                 AccentChip(
                     text = stringResource(R.string.guidance_result_saved),
                     accent = V2Palette.accentCare,
-                    iconRes = V2Icons.synced,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                    iconRes = V2Icons.synced
                 )
             } else {
-                V2SecondaryButton(
-                    text = stringResource(R.string.guidance_result_save),
-                    onClick = onSaveRequested
-                )
+                V2PrimaryButton(text = stringResource(R.string.guidance_result_save), onClick = onSave)
             }
-            Spacer(modifier = Modifier.height(16.dp))
+        },
+        second = {
+            val finish = stringResource(R.string.guidance_result_finish)
+            if (isSaved) {
+                V2PrimaryButton(text = finish, onClick = onFinish)
+            } else {
+                V2SecondaryButton(text = finish, onClick = onFinish)
+            }
         }
-        V2PrimaryButton(text = stringResource(R.string.guidance_result_finish), onClick = onFinish)
-        Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
-    }
+    )
 }
 
 /**
@@ -840,5 +860,8 @@ private fun dialNumber(context: Context, number: String) {
     }
 }
 
-/** Espacio final para que los botones no queden bajo la nube de la esquina (RF-16). */
+/**
+ * Aire final de la portada para que sus botones no queden bajo la nube de la esquina
+ * (RF-16). Preguntas y resultado usan [CloudLaneBar] y [CloudLanePair] en su lugar.
+ */
 private val GUIDANCE_BOTTOM_CLEARANCE = 88.dp
