@@ -20,3 +20,8 @@ private val SHORT_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM uu
 internal fun LocalDate.toLongDayText(): String = format(LONG_DAY)
 
 internal fun LocalDate.toShortDayText(): String = format(SHORT_DAY).replace(".", "")
+
+/** «12 oct» — fecha corta del nombre genérico de un adjunto (H-6). */
+private val DAY_MONTH: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM", SPANISH)
+
+internal fun LocalDate.toDayMonthText(): String = format(DAY_MONTH).replace(".", "")

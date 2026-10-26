@@ -234,7 +234,7 @@ private fun AttachmentSection(
         color = V2Palette.inkSecondary
     )
     Spacer(modifier = Modifier.height(8.dp))
-    AttachmentChipGrid(
+    AttachmentList(
         attachments = attachments,
         onOpen = { onOpenAttachment(it.id) },
         onRemove = null

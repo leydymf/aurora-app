@@ -367,7 +367,7 @@ private fun MediaSection(
     }
     if (attachments.isNotEmpty()) {
         Spacer(modifier = Modifier.height(12.dp))
-        AttachmentChipGrid(
+        AttachmentList(
             attachments = attachments,
             onOpen = null,
             onRemove = { onRemoveAttachment(it.id) }

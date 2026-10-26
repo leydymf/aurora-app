@@ -69,8 +69,9 @@ class LocalJournalAttachmentRepository @Inject constructor(
                 val input = resolver.openInputStream(parsed) ?: throw IOException()
                 input.use { copyCapped(it, output) }
             }
-            val id = db.attachmentDao().insert(newRow(owner = owner, ref = ref, kind = mime))
-            JournalAttachment(id = id, kind = kind)
+            val row = newRow(owner = owner, ref = ref, kind = mime)
+            val id = db.attachmentDao().insert(row)
+            JournalAttachment(id = id, kind = kind, createdAtEpochMillis = row.createdAt)
         }.alsoPushIfClaimed(owner)
 
     override suspend fun beginCapture(): Result<String> = withContext(Dispatchers.IO) {
@@ -206,10 +207,9 @@ class LocalJournalAttachmentRepository @Inject constructor(
     ): JournalAttachment {
         val ref = store.newRef()
         store.write(ref) { output -> imageImporter.sanitize(open, output) }
-        val id = db.attachmentDao().insert(
-            newRow(owner = owner, ref = ref, kind = AttachmentPolicy.IMPORTED_IMAGE_MIME)
-        )
-        return JournalAttachment(id = id, kind = AttachmentKind.IMAGE)
+        val row = newRow(owner = owner, ref = ref, kind = AttachmentPolicy.IMPORTED_IMAGE_MIME)
+        val id = db.attachmentDao().insert(row)
+        return JournalAttachment(id = id, kind = AttachmentKind.IMAGE, createdAtEpochMillis = row.createdAt)
     }
 
     private suspend fun requireCapacity(db: JournalDatabase, owner: Long) {
@@ -243,8 +243,9 @@ class LocalJournalAttachmentRepository @Inject constructor(
         }
     }.getOrNull()
 
-    private fun AttachmentRow.toDomain(): JournalAttachment? =
-        AttachmentKind.fromMime(kind)?.let { JournalAttachment(id = id, kind = it, sizeBytes = store.sizeOf(ref)) }
+    private fun AttachmentRow.toDomain(): JournalAttachment? = AttachmentKind.fromMime(kind)?.let {
+        JournalAttachment(id = id, kind = it, sizeBytes = store.sizeOf(ref), createdAtEpochMillis = createdAt)
+    }
 
     private companion object {
         const val COPY_BUFFER_BYTES = 8 * 1024

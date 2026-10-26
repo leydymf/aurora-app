@@ -4,13 +4,16 @@ package com.auroraclima.app.records.domain.model
  * Un adjunto protegido de un registro (RF-33): imagen, documento o audio,
  * cifrado en el almacén local. Solo lo mínimo que la UI necesita para pintar
  * el chip y decidir el visor (RNF-04): el contenido se pide aparte y los
- * metadatos del original (nombre, ruta, EXIF) NUNCA se conservan.
+ * metadatos del original (nombre, ruta, EXIF) NUNCA se conservan: lo que se muestra
+ * es un nombre genérico (tipo, número y fecha de adjuntado), nunca el del archivo.
  */
 data class JournalAttachment(
     val id: Long,
     val kind: AttachmentKind,
     /** Tamaño del archivo cifrado (≈ tamaño en claro); sirve para acotar la exportación (RF-45) sin descifrar. */
-    val sizeBytes: Long = 0
+    val sizeBytes: Long = 0,
+    /** Cuándo se adjuntó: da el número y la fecha del nombre genérico en pantalla (H-6). */
+    val createdAtEpochMillis: Long = 0
 )
 
 /** Familia del adjunto; decide ícono y visor. Se deriva del MIME al importar. */
