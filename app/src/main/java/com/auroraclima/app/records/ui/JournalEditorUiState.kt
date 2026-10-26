@@ -60,7 +60,11 @@ data class JournalEditorUiState(
     // Lo que había al abrir (v0.3.2): al crear, el formulario vacío del día; en
     // edición, lo guardado. Null mientras carga el registro a editar.
     val baseline: EditorBaseline? = null,
-    val isLeavePromptVisible: Boolean = false
+    val isLeavePromptVisible: Boolean = false,
+    // Selector del sistema que espera el aviso previo (v0.3.2): se muestra la primera
+    // vez, y con él en pantalla el atrás solo lo cierra.
+    val pendingPicker: PickerSource? = null,
+    val hasSeenPickerTip: Boolean = false
 ) {
     /**
      * Volver perdería algo: la flecha y el gesto atrás preguntan antes de salir. Al
@@ -111,3 +115,10 @@ data class JournalEditorUiState(
 
 /** Fecha, tipo y texto tal como estaban al abrir el editor (ver [JournalEditorUiState.baseline]). */
 data class EditorBaseline(val occurredOn: LocalDate, val kindId: String?, val detail: String)
+
+/**
+ * Pantalla del sistema que abre el editor y cuyo selector puede no ofrecer salida visible
+ * (sin «X», sin barra de atrás en los teléfonos con gestos). Solo las dos vías que usan
+ * selectores de archivos; la cámara trae su propio botón.
+ */
+enum class PickerSource { GALLERY, DOCUMENT }

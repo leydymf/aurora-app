@@ -313,6 +313,66 @@ class JournalEditorViewModelTest {
     }
 
     @Test
+    fun `la primera vez el selector pide un aviso y no se abre hasta aceptarlo`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onPickerRequested(PickerSource.DOCUMENT)
+
+        assertEquals(PickerSource.DOCUMENT, viewModel.uiState.value.pendingPicker)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.pickerEvents.first() })
+
+        viewModel.onPickerTipConfirmed()
+
+        assertEquals(PickerSource.DOCUMENT, viewModel.pickerEvents.first())
+        assertNull(viewModel.uiState.value.pendingPicker)
+        assertTrue(viewModel.uiState.value.hasSeenPickerTip)
+    }
+
+    @Test
+    fun `con el aviso ya aceptado el selector se abre directo`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onPickerRequested(PickerSource.GALLERY)
+        viewModel.onPickerTipConfirmed()
+        assertEquals(PickerSource.GALLERY, viewModel.pickerEvents.first())
+
+        viewModel.onPickerRequested(PickerSource.DOCUMENT)
+
+        assertNull(viewModel.uiState.value.pendingPicker)
+        assertEquals(PickerSource.DOCUMENT, viewModel.pickerEvents.first())
+    }
+
+    @Test
+    fun `ahora no cierra el aviso sin abrir nada y lo vuelve a mostrar la proxima vez`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onPickerRequested(PickerSource.DOCUMENT)
+
+        viewModel.onPickerTipDismissed()
+
+        assertNull(viewModel.uiState.value.pendingPicker)
+        assertFalse(viewModel.uiState.value.hasSeenPickerTip)
+        assertNull(withTimeoutOrNull(1_000) { viewModel.pickerEvents.first() })
+        viewModel.onPickerRequested(PickerSource.DOCUMENT)
+        assertEquals(PickerSource.DOCUMENT, viewModel.uiState.value.pendingPicker)
+    }
+
+    @Test
+    fun `sin cupo el selector no se abre ni pide aviso`() = runTest {
+        attachments.attachmentsResult = Result.success(
+            List(AttachmentPolicy.MAX_PER_ENTRY) { JournalAttachment(it + 1L, AttachmentKind.IMAGE) }
+        )
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onPickerRequested(PickerSource.GALLERY)
+
+        assertNull(viewModel.uiState.value.pendingPicker)
+        assertEquals(R.string.journal_media_full, viewModel.uiState.value.mediaErrorRes)
+    }
+
+    @Test
     fun `guardar al crear reclama los adjuntos importados`() = runTest {
         attachments.attachmentsResult = Result.success(
             listOf(JournalAttachment(4, AttachmentKind.IMAGE), JournalAttachment(9, AttachmentKind.DOCUMENT))

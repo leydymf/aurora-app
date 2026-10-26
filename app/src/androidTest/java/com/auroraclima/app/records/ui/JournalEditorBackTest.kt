@@ -74,8 +74,25 @@ class JournalEditorBackTest {
         assertEquals(1, backRequests)
     }
 
+    @Test
+    fun elAvisoDelSelectorOfreceAbrirOAhoraNoYElAtrasSoloLoCierra() {
+        var opened = 0
+        var dismissed = 0
+        showWith(unchanged.copy(pendingPicker = PickerSource.DOCUMENT), { opened++ }, { dismissed++ })
+
+        composeRule.onNodeWithText(string(R.string.journal_picker_tip_title)).assertExists()
+        composeRule.onNodeWithText(string(R.string.journal_picker_tip_body)).assertExists()
+        composeRule.onNodeWithText(string(R.string.journal_picker_tip_dismiss)).performClick()
+        composeRule.onNodeWithText(string(R.string.journal_picker_tip_open)).performClick()
+
+        assertEquals(1, opened)
+        assertEquals(1, dismissed)
+    }
+
     /** Réplica mínima del ViewModel: pedir salir con cambios abre la pregunta. */
-    private fun setEditor(initial: JournalEditorUiState) {
+    private fun setEditor(initial: JournalEditorUiState) = showWith(initial, {}, {})
+
+    private fun showWith(initial: JournalEditorUiState, onTipOpen: () -> Unit, onTipDismiss: () -> Unit) {
         session.setContent(composeRule) {
             var state by remember { mutableStateOf(initial) }
             AuroraV2Theme(V2Voice.Interior) {
@@ -100,6 +117,8 @@ class JournalEditorBackTest {
                     onPickGallery = {},
                     onPickCamera = {},
                     onPickDocument = {},
+                    onPickerTipConfirmed = onTipOpen,
+                    onPickerTipDismissed = onTipDismiss,
                     onRemoveAttachment = {},
                     onSubmit = {}
                 )

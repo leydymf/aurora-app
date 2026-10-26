@@ -119,6 +119,18 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
             launchExternal { takePicture.launch(Uri.parse(uri)) }
         }
     }
+    LaunchedEffect(viewModel) {
+        viewModel.pickerEvents.collect { source ->
+            launchExternal {
+                when (source) {
+                    PickerSource.GALLERY ->
+                        pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    PickerSource.DOCUMENT ->
+                        pickDocument.launch(AttachmentPolicy.allowedDocumentTypes.toTypedArray())
+                }
+            }
+        }
+    }
     JournalEditorScreen(
         state = state,
         onBack = viewModel::onBackRequested,
@@ -140,17 +152,11 @@ fun JournalEditorRoute(onSaved: () -> Unit, onBack: () -> Unit) {
             sessionManager.registerInteraction()
             viewModel.onDetailChange(it)
         },
-        onPickGallery = {
-            launchExternal {
-                pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            }
-        },
+        onPickGallery = { viewModel.onPickerRequested(PickerSource.GALLERY) },
         onPickCamera = viewModel::onRequestCapture,
-        onPickDocument = {
-            launchExternal {
-                pickDocument.launch(AttachmentPolicy.allowedDocumentTypes.toTypedArray())
-            }
-        },
+        onPickDocument = { viewModel.onPickerRequested(PickerSource.DOCUMENT) },
+        onPickerTipConfirmed = viewModel::onPickerTipConfirmed,
+        onPickerTipDismissed = viewModel::onPickerTipDismissed,
         onRemoveAttachment = viewModel::onRemoveAttachment,
         onSubmit = viewModel::onSubmit
     )
@@ -172,6 +178,8 @@ internal fun JournalEditorScreen(
     onPickGallery: () -> Unit,
     onPickCamera: () -> Unit,
     onPickDocument: () -> Unit,
+    onPickerTipConfirmed: () -> Unit,
+    onPickerTipDismissed: () -> Unit,
     onRemoveAttachment: (Long) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
@@ -210,6 +218,9 @@ internal fun JournalEditorScreen(
     }
     if (state.isLeavePromptVisible) {
         LeaveConfirmSheet(onKeep = onLeaveDismissed, onLeave = onLeaveConfirmed)
+    }
+    if (state.pendingPicker != null) {
+        PickerTipSheet(onOpen = onPickerTipConfirmed, onDismiss = onPickerTipDismissed)
     }
     if (state.isPickingDate) {
         SecureDayPicker(
@@ -319,6 +330,45 @@ private fun LeaveConfirmSheet(onKeep: () -> Unit, onLeave: () -> Unit) {
                     text = stringResource(R.string.journal_leave_confirm),
                     style = InteriorTypeVoice.bodyStrong,
                     color = V2Palette.accentNotice.stroke
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
+}
+
+/**
+ * Aviso antes de abrir un selector del sistema (H-5, v0.3.2): esas pantallas no traen una
+ * «X» y en los teléfonos con gestos no hay botón de atrás a la vista, así que quien no
+ * sabe deslizar desde el borde no encuentra cómo volver. Se dice cómo, y se puede desistir
+ * aquí, desde la propia app. «Abrir el selector» es la única acción llena; tocar fuera o
+ * atrás equivale a «Ahora no».
+ */
+@Composable
+private fun PickerTipSheet(onOpen: () -> Unit, onDismiss: () -> Unit) {
+    SecureSheet(onDismissRequest = onDismiss) {
+        V2SheetCard {
+            Text(
+                text = stringResource(R.string.journal_picker_tip_title),
+                style = InteriorTypeVoice.cardTitle,
+                color = V2Palette.inkPrimary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.journal_picker_tip_body),
+                style = InteriorTypeVoice.caption,
+                color = V2Palette.inkSecondary,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(18.dp))
+            V2PrimaryButton(text = stringResource(R.string.journal_picker_tip_open), onClick = onOpen)
+            Spacer(modifier = Modifier.height(6.dp))
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.journal_picker_tip_dismiss),
+                    style = InteriorTypeVoice.bodyStrong,
+                    color = V2Palette.inkSecondary
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))

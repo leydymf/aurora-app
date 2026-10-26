@@ -88,6 +88,11 @@ class JournalEditorViewModel @Inject constructor(
     private val _leaveEvents = Channel<Unit>(Channel.BUFFERED)
     val leaveEvents: Flow<Unit> = _leaveEvents.receiveAsFlow()
 
+    // Selector del sistema por abrir, ya con el aviso aceptado o no necesario. Consumo
+    // único, como la captura: un replay abriría el selector solo al recrear la Activity.
+    private val _pickerEvents = Channel<PickerSource>(Channel.BUFFERED)
+    val pickerEvents: Flow<PickerSource> = _pickerEvents.receiveAsFlow()
+
     // Se sale una sola vez: dos toques seguidos a la flecha (o a «Salir sin
     // guardar») dejarían dos eventos, y el segundo pop sacaría la pantalla de abajo.
     private var hasLeft = false
@@ -134,6 +139,30 @@ class JournalEditorViewModel @Inject constructor(
 
     fun onDetailChange(text: String) {
         _uiState.update { it.copy(detail = text, detailErrorRes = null) }
+    }
+
+    /**
+     * Tocar Galería o Archivo. La primera vez avisa cómo volver sin elegir nada: el selector
+     * del sistema no trae «X» y en los teléfonos con gestos no hay botón de atrás a la vista
+     * (H-5). Aceptado el aviso, el resto de la visita abre el selector directo.
+     */
+    fun onPickerRequested(source: PickerSource) {
+        if (!guardCapacity()) return
+        if (_uiState.value.hasSeenPickerTip) {
+            _pickerEvents.trySend(source)
+        } else {
+            _uiState.update { it.copy(pendingPicker = source, mediaErrorRes = null) }
+        }
+    }
+
+    fun onPickerTipConfirmed() {
+        val source = _uiState.value.pendingPicker ?: return
+        _uiState.update { it.copy(pendingPicker = null, hasSeenPickerTip = true) }
+        _pickerEvents.trySend(source)
+    }
+
+    fun onPickerTipDismissed() {
+        _uiState.update { it.copy(pendingPicker = null) }
     }
 
     /** Imagen elegida en el selector del sistema (galería); null = canceló. */

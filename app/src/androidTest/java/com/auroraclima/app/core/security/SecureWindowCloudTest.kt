@@ -169,7 +169,9 @@ class SecureWindowCloudTest {
                 onBack = {}, onLeaveConfirmed = {}, onLeaveDismissed = {}, onRetryLoad = {},
                 onOpenDatePicker = {}, onDismissDatePicker = {}, onDaySelected = {}, onKindSelected = {},
                 onRetryKinds = {}, onDetailChange = {}, onPickGallery = {}, onPickCamera = {},
-                onPickDocument = {}, onRemoveAttachment = {}, onSubmit = {}
+                onPickDocument = {},
+                onPickerTipConfirmed = {},
+                onPickerTipDismissed = {}, onRemoveAttachment = {}, onSubmit = {}
             )
         }
         composeRule.onNodeWithText(string(R.string.journal_leave_title)).assertExists()
