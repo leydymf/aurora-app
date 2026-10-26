@@ -96,13 +96,62 @@ class ActivationReachabilityGuardTest {
     }
 
     @Test
-    fun `antes del codigo de acceso solo se alcanzan consentimiento cuenta login y creacion del codigo`() {
+    fun `antes del codigo de acceso solo se alcanzan bienvenida consentimiento cuenta login y creacion del codigo`() {
         assertEquals(
             "Un camino nuevo antes de crear el código de acceso debe revisarse contra el " +
                 "descarte de la activación sin terminar (hallazgo A′), que borra los datos locales",
-            setOf("INTRO_ROUTE", "REGISTER_ROUTE", "ENTRY_SETUP_ROUTE", "SETUP_ROUTE"),
+            setOf("WELCOME_ROUTE", "INTRO_ROUTE", "REGISTER_ROUTE", "ENTRY_SETUP_ROUTE", "SETUP_ROUTE"),
             reachableBeforeAccessCode()
         )
+    }
+
+    @Test
+    fun `la entrada de activacion es la bienvenida y solo la abre el codigo de activacion`() {
+        // La bienvenida es la primera pantalla del flujo (v0.3.2) y, por eso, la
+        // dueña del descarte. Solo se navega a ella desde la rama OpenActivation,
+        // y vive en el grafo seguro (screen), nunca en la fachada (composable).
+        val entry = Regex("""OpenActivation\s*->\s*navController\.navigate\((\w+)\)""")
+            .find(navText)?.groupValues?.get(1)
+        assertEquals("WELCOME_ROUTE", entry)
+        assertEquals(1, Regex("""navigate\(WELCOME_ROUTE\)""").findAll(navText).count())
+        assertTrue(Regex("""\bscreen\(WELCOME_ROUTE\)""").containsMatchIn(navText))
+        assertTrue(!Regex("""composable\(WELCOME_ROUTE""").containsMatchIn(navText))
+        assertTrue(
+            "El grafo seguro debe arrancar en la bienvenida",
+            Regex("""secureGraph\([^)]*startDestination = WELCOME_ROUTE""").containsMatchIn(navText)
+        )
+    }
+
+    @Test
+    fun `el viewmodel de la entrada de activacion descarta la activacion sin terminar al crearse`() {
+        // El descarte (hallazgo A) debe vivir en la pantalla por la que se entra,
+        // no en una posterior a la que se llega después: se calcula la pantalla de
+        // entrada y se exige que su ViewModel lo lance en el init.
+        val entryRoute = requireNotNull(
+            Regex("""\b([A-Z]\w*Route)\(""").find(screenBlocks.getValue("WELCOME_ROUTE"))
+        ).groupValues[1]
+        val accountsDir = File(appDir, "accounts")
+        val routeFile = accountsDir.walkTopDown()
+            .first { it.extension == "kt" && "fun $entryRoute(" in it.readText() }
+        val viewModelName = requireNotNull(
+            // Solo código: un comentario que nombre la llamada no debe confundir a la guardia.
+            Regex("""^\s*hiltViewModel<(\w+)>""", RegexOption.MULTILINE).find(routeFile.readText())
+        ) { "$entryRoute no obtiene su ViewModel con hiltViewModel<…>()" }.groupValues[1]
+        val viewModelText = accountsDir.walkTopDown()
+            .first { it.nameWithoutExtension == viewModelName }.readText()
+
+        assertTrue(
+            "$viewModelName debe lanzar discardUnfinished() en su init",
+            Regex("""init\s*\{[^}]*discardUnfinished\(\)""").containsMatchIn(viewModelText)
+        )
+    }
+
+    @Test
+    fun `ningun popUpTo apunta al consentimiento porque la bienvenida queda debajo`() {
+        // Con la bienvenida como entrada, sacar la pila hasta el consentimiento
+        // dejaría la bienvenida bajo el código de acceso (atrás volvería a ella).
+        assertTrue(!navText.contains("popUpTo(INTRO_ROUTE)"))
+        assertTrue(navText.contains("popUpTo(WELCOME_ROUTE) { inclusive = true }"))
     }
 
     @Test
