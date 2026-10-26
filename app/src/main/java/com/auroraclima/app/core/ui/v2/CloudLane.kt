@@ -9,30 +9,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * «Carril» de la nube de salida rápida (RF-16) en una barra inferior fija: la nube
- * flota anclada abajo a la derecha (`SecureNavigation`, sin cambios) y la barra le
- * deja su sitio al final para que los botones queden en la MISMA línea, centrados
- * con ella y sin taparse.
- *
- * La geometría sale de las medidas de la nube ([CloudReturnSize], [CloudReturnMargin]):
- * el círculo mide lo que un botón de la V2 (52 dp) y la barra lo separa del borde lo
- * que la nube, así que ambos centros coinciden. Solo lo usan las pantallas cuya acción
- * va abajo a la altura de la nube (cuestionario, v0.3.2); el resto de pantallas sigue
- * con su aire final y la nube no se mueve en ninguna.
- */
-val CloudLaneGap = 12.dp
+/** Respiro entre los botones de una barra y la nube de salida rápida. */
+private val CloudLaneGap = 12.dp
 
-/** Espacio que la barra deja a su derecha: lo que ocupa la nube más un respiro, menos el margen que ya pone la pantalla. */
+/** Lo que la barra deja a su derecha: la nube y un respiro, menos el margen que la pantalla ya pone. */
 private fun laneEnd(parentEndPadding: Dp): Dp =
     (CloudReturnClearance + CloudLaneGap - parentEndPadding).coerceAtLeast(0.dp)
 
 /**
- * Una fila con el carril de la nube reservado. [parentEndPadding] es el margen
- * horizontal que la pantalla ya aplica a su columna.
+ * Una fila con el «carril» de la nube de salida rápida (RF-16) reservado, para una
+ * barra inferior fija: la nube flota anclada abajo a la derecha (`SecureNavigation`,
+ * sin cambios) y la barra le deja su sitio al final para que los botones queden en la
+ * MISMA línea, centrados con ella y sin taparse.
+ *
+ * La geometría sale de las medidas de la nube ([CloudReturnSize], [CloudReturnMargin]):
+ * el círculo mide lo que un botón de la V2 (52 dp) y la barra lo separa del borde lo
+ * que la nube, así que ambos centros coinciden. Solo lo usan las pantallas cuya acción
+ * va abajo a la altura de la nube (cuestionario, v0.3.2); el resto sigue con su aire
+ * final y la nube no se mueve en ninguna. [parentEndPadding] es el margen horizontal
+ * que la pantalla ya aplica a su columna.
  */
 @Composable
 fun CloudLaneBar(
@@ -72,25 +74,32 @@ fun CloudLanePair(
             .padding(end = laneEnd(parentEndPadding), bottom = CloudReturnMargin)
     ) { measurables, constraints ->
         val gap = CloudLaneGap.roundToPx()
-        val stackGap = STACK_GAP.roundToPx()
         val half = (constraints.maxWidth - gap) / 2
         val fits = measurables.all { it.maxIntrinsicWidth(CloudReturnSize.roundToPx()) <= half }
-        if (fits) {
-            val placeables = measurables.map { it.measure(constraints.copy(minWidth = half, maxWidth = half)) }
-            val height = placeables.maxOf { it.height }
-            layout(constraints.maxWidth, height) {
-                placeables[0].place(0, (height - placeables[0].height) / 2)
-                placeables[1].place(half + gap, (height - placeables[1].height) / 2)
-            }
-        } else {
-            val full = constraints.copy(minWidth = constraints.maxWidth)
-            val placeables = measurables.map { it.measure(full) }
-            val height = placeables.sumOf { it.height } + stackGap
-            layout(constraints.maxWidth, height) {
-                placeables[0].place(0, 0)
-                placeables[1].place(0, placeables[0].height + stackGap)
-            }
-        }
+        if (fits) placeSideBySide(measurables, constraints, half, gap) else placeStacked(measurables, constraints)
+    }
+}
+
+private fun MeasureScope.placeSideBySide(
+    measurables: List<Measurable>,
+    constraints: Constraints,
+    half: Int,
+    gap: Int
+): MeasureResult {
+    val placeables = measurables.map { it.measure(constraints.copy(minWidth = half, maxWidth = half)) }
+    val height = placeables.maxOf { it.height }
+    return layout(constraints.maxWidth, height) {
+        placeables[0].place(0, (height - placeables[0].height) / 2)
+        placeables[1].place(half + gap, (height - placeables[1].height) / 2)
+    }
+}
+
+private fun MeasureScope.placeStacked(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
+    val placeables = measurables.map { it.measure(constraints.copy(minWidth = constraints.maxWidth)) }
+    val stackGap = STACK_GAP.roundToPx()
+    return layout(constraints.maxWidth, placeables.sumOf { it.height } + stackGap) {
+        placeables[0].place(0, 0)
+        placeables[1].place(0, placeables[0].height + stackGap)
     }
 }
 

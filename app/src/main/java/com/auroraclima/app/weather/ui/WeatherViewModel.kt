@@ -57,7 +57,9 @@ class WeatherViewModel @Inject constructor(
     private var refreshJob: Job? = null
 
     init {
-        viewModelScope.launch {
+        // Dueño único del refresco: elegir otra ciudad o reintentar lo cancela y el
+        // refresco inicial no puede pisar después a la ciudad elegida.
+        refreshJob = viewModelScope.launch {
             val city = repository.getDefaultCity() ?: return@launch
             repository.getCachedSnapshot()?.let { cached ->
                 _uiState.update { it.copy(weather = cached.toCardUiState()) }

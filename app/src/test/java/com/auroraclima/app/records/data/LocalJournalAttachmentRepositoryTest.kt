@@ -103,6 +103,19 @@ class LocalJournalAttachmentRepositoryTest {
     }
 
     @Test
+    fun `el adjunto lleva la fecha en que se adjunto y la conserva al listarlo`() = runTest {
+        // H-6: el nombre genérico («Imagen 1 · 12 oct») sale de esta fecha; un 0 se vería como «1 ene».
+        val before = System.currentTimeMillis()
+        stageCapture()
+
+        val imported = repository.importCapture(AttachmentPolicy.STAGED_OWNER).getOrThrow()
+
+        assertTrue(imported.createdAtEpochMillis >= before)
+        val listed = repository.attachments(AttachmentPolicy.STAGED_OWNER).getOrThrow().single()
+        assertEquals(imported.createdAtEpochMillis, listed.createdAtEpochMillis)
+    }
+
+    @Test
     fun `cancelar la captura descarta el temporal sin dejar nada`() = runTest {
         stageCapture()
 

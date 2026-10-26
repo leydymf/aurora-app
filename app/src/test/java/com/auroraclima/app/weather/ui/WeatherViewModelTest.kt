@@ -283,6 +283,24 @@ class WeatherViewModelTest {
     }
 
     @Test
+    fun `elegir ciudad con el refresco inicial pendiente no deja que la ciudad anterior lo pise`() = runTest {
+        val elegida = bucaramanga().copy(id = 2, name = "Girón")
+        repository.defaultCity = bucaramanga()
+        repository.refreshResult = Result.success(sampleSnapshot())
+        repository.refreshDelayMs = 5_000
+        val viewModel = createViewModel()
+        runCurrent()
+
+        repository.refreshResult = Result.success(sampleSnapshot().copy(cityName = "Girón"))
+        repository.refreshDelayMs = 1_000
+        viewModel.onCitySelected(elegida)
+        advanceUntilIdle()
+
+        assertEquals("Girón", viewModel.uiState.value.weather?.cityName)
+        assertFalse(viewModel.uiState.value.isLoadingWeather)
+    }
+
+    @Test
     fun `al abrir sin datos guardados y sin red se muestra el error con reintento`() = runTest {
         repository.defaultCity = bucaramanga()
         repository.refreshResult = Result.failure(IOException("sin red"))
