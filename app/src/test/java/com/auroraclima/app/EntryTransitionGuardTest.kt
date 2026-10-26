@@ -44,7 +44,7 @@ class EntryTransitionGuardTest {
         val branches = gateBranch.findAll(navText).associate { it.groupValues[1] to it.groupValues[2].trim() }
 
         assertEquals("Unit", branches.getValue("PassThrough"))
-        assertEquals("navController.navigate(INTRO_ROUTE)", branches.getValue("OpenActivation"))
+        assertEquals("navController.navigate(WELCOME_ROUTE)", branches.getValue("OpenActivation"))
     }
 
     @Test

@@ -77,12 +77,13 @@ private val INFO_SECTIONS = listOf(
 )
 
 /**
- * Consentimiento informado (RF-17), mockup v2-05 (P04).
+ * Consentimiento informado (RF-17), mockup v2-05 (P04). Detrás está la bienvenida:
+ * la flecha de la marca y el gesto atrás vuelven a ella (v0.3.2).
  * «No aceptar» converge en la salida rápida: regreso inmediato al clima sin
  * dejar rastro y sin haber recolectado nada (RF-18).
  */
 @Composable
-fun ConsentRoute(onAccepted: () -> Unit) {
+fun ConsentRoute(onAccepted: () -> Unit, onBack: () -> Unit) {
     val viewModel: ConsentViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
     val sessionManager = LocalSessionManager.current
@@ -91,7 +92,8 @@ fun ConsentRoute(onAccepted: () -> Unit) {
             state = state,
             onAcceptanceChange = viewModel::onAcceptanceChange,
             onAccept = onAccepted,
-            onReject = sessionManager::closeNow
+            onReject = sessionManager::closeNow,
+            onBack = onBack
         )
     }
 }
@@ -102,6 +104,7 @@ internal fun ConsentScreen(
     onAcceptanceChange: (Boolean) -> Unit,
     onAccept: () -> Unit,
     onReject: () -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -112,13 +115,7 @@ internal fun ConsentScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        BrandHeader()
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.account_intro_what),
-            style = InteriorTypeVoice.bodyStrong,
-            color = V2Palette.inkPrimary
-        )
+        BrandHeader(onBack = onBack)
         Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = stringResource(R.string.account_intro_title),

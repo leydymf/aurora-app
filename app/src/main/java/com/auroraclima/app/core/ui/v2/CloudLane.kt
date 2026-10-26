@@ -30,7 +30,7 @@ private fun laneEnd(parentEndPadding: Dp): Dp =
  * La geometría sale de las medidas de la nube ([CloudReturnSize], [CloudReturnMargin]):
  * el círculo mide lo que un botón de la V2 (52 dp) y la barra lo separa del borde lo
  * que la nube, así que ambos centros coinciden. Solo lo usan las pantallas cuya acción
- * va abajo a la altura de la nube (cuestionario, v0.3.2); el resto sigue con su aire
+ * va abajo a la altura de la nube (cuestionario y bienvenida, v0.3.2); el resto sigue con su aire
  * final y la nube no se mueve en ninguna. [parentEndPadding] es el margen horizontal
  * que la pantalla ya aplica a su columna.
  */

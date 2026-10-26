@@ -31,6 +31,7 @@ import com.auroraclima.app.accounts.ui.LoginRoute
 import com.auroraclima.app.accounts.ui.PrivacyScreen
 import com.auroraclima.app.accounts.ui.SignOutViewModel
 import com.auroraclima.app.accounts.ui.SilentSessionViewModel
+import com.auroraclima.app.accounts.ui.WelcomeRoute
 import com.auroraclima.app.content.ui.AGENCY_ID_ARG
 import com.auroraclima.app.content.ui.AgencyDetailRoute
 import com.auroraclima.app.content.ui.LinesRoute
@@ -91,21 +92,30 @@ fun AuroraApp(sessionManager: SessionManager) {
             // Toda ruta interna vive dentro del grafo seguro: bloqueo de capturas y
             // de recientes, botón nube de salida rápida y reporte de interacción
             // garantizados por construcción (RNF-02, RF-16, RNF-03).
-            secureGraph(route = INNER_ROUTE, startDestination = INTRO_ROUTE) {
-                // Primer uso (RF-05 → RF-17 → RF-07 → RF-08): consentimiento,
-                // cuenta y código. Rechazar el consentimiento converge en la
-                // salida rápida (RF-18); las pantallas no navegan por sí mismas —
-                // los destinos se deciden solo aquí (guardia RF-06).
+            secureGraph(route = INNER_ROUTE, startDestination = WELCOME_ROUTE) {
+                // Primer uso (RF-05 → RF-17 → RF-07 → RF-08): bienvenida,
+                // consentimiento, cuenta y código. Rechazar el consentimiento
+                // converge en la salida rápida (RF-18); las pantallas no navegan
+                // por sí mismas — los destinos se deciden solo aquí (guardia RF-06).
+                // La bienvenida es la entrada del flujo (y quien descarta una
+                // activación sin terminar): sin flecha, detrás solo está el clima.
+                screen(WELCOME_ROUTE) {
+                    WelcomeRoute(onNext = { navController.navigate(INTRO_ROUTE) })
+                }
                 screen(INTRO_ROUTE) {
-                    ConsentRoute(onAccepted = { navController.navigate(REGISTER_ROUTE) })
+                    ConsentRoute(
+                        onAccepted = { navController.navigate(REGISTER_ROUTE) },
+                        // Flecha = gesto atrás: regresa a la bienvenida (v0.3.2).
+                        onBack = { navController.popBackStack() }
+                    )
                 }
                 screen(REGISTER_ROUTE) {
                     CreateAccountRoute(
                         onAccountCreated = {
-                            // Atrás no debe regresar al formulario ni al
-                            // consentimiento ya otorgado.
+                            // Atrás no debe regresar al formulario, al
+                            // consentimiento ya otorgado ni a la bienvenida.
                             navController.navigate(SETUP_ROUTE) {
-                                popUpTo(INTRO_ROUTE) { inclusive = true }
+                                popUpTo(WELCOME_ROUTE) { inclusive = true }
                             }
                         },
                         // RF-39: cuenta existente en un dispositivo nuevo —
@@ -128,7 +138,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                     LoginRoute(
                         onAccessGranted = {
                             navController.navigate(SETUP_ROUTE) {
-                                popUpTo(INTRO_ROUTE) { inclusive = true }
+                                popUpTo(WELCOME_ROUTE) { inclusive = true }
                             }
                         },
                         // Flecha = gesto atrás: regresa al formulario de creación.
@@ -450,7 +460,7 @@ private fun HomeRoute(navController: NavHostController) {
     LaunchedEffect(viewModel) {
         viewModel.gateEvents.collect { destination ->
             when (destination) {
-                SearchGateResult.OpenActivation -> navController.navigate(INTRO_ROUTE)
+                SearchGateResult.OpenActivation -> navController.navigate(WELCOME_ROUTE)
                 // Código correcto: primero la marca (~700 ms), después el reingreso. Un código
                 // que no coincide cae en PassThrough y no navega a ninguna parte (RF-12, RF-13).
                 SearchGateResult.OpenAccess -> navController.navigate(ARRIVAL_ROUTE)
@@ -476,6 +486,7 @@ private fun HomeRoute(navController: NavHostController) {
 private const val HOME_ROUTE = "home"
 private const val FORECAST_ROUTE = "forecast"
 private const val INNER_ROUTE = "inner"
+private const val WELCOME_ROUTE = "welcome"
 private const val INTRO_ROUTE = "intro"
 private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"

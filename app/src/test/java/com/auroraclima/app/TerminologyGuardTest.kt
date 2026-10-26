@@ -128,7 +128,7 @@ class TerminologyGuardTest {
         assertTrue(diferencia.contains("distinto de la contraseña de tu cuenta"))
         assertTrue(diferencia.contains("buscador de ciudades"))
 
-        assertTrue(strings.getValue("account_intro_what").startsWith("Aurora es un espacio privado"))
+        assertTrue(strings.getValue("welcome_what").startsWith("Aurora es un espacio privado"))
 
         val aviso = strings.getValue("account_delete_final_notice")
         assertTrue(aviso.contains("de este teléfono y de la nube"))

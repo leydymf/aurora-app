@@ -11,11 +11,9 @@ import com.auroraclima.app.core.security.FakeAccessCodePresence
 import com.auroraclima.app.core.security.FakeSyncKeyManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -44,12 +42,12 @@ class ConsentViewModelTest {
     @Test
     fun `la casilla nace sin preseleccionar`() {
         // RF-17 criterio 1: sin casillas preseleccionadas
-        assertFalse(ConsentViewModel(discardUnfinished).uiState.value.isAccepted)
+        assertFalse(ConsentViewModel().uiState.value.isAccepted)
     }
 
     @Test
     fun `marcar y desmarcar la casilla actualiza el estado`() {
-        val viewModel = ConsentViewModel(discardUnfinished)
+        val viewModel = ConsentViewModel()
         viewModel.onAcceptanceChange(true)
         assertTrue(viewModel.uiState.value.isAccepted)
 
@@ -58,27 +56,15 @@ class ConsentViewModelTest {
     }
 
     @Test
-    fun `abrir el consentimiento descarta los restos de un registro sin terminar`() = runTest {
-        // Hallazgo A (v0.3.2): el consentimiento es la entrada del flujo de activación.
-        repository.activeSession = true
-        credentials.save("cuenta-a@correo.co", "clave-cuenta-a")
-
-        ConsentViewModel(discardUnfinished)
-        runCurrent()
-
-        assertNull(credentials.stored)
-        assertFalse(repository.activeSession)
-    }
-
-    @Test
     fun `consentimiento y cuenta B nueva sobre los restos de la cuenta A`() = runTest {
-        // Camino completo del atacante: código de activación → consentimiento →
-        // «crear cuenta» con otra cuenta. B no hereda la sesión, el blob ni los
+        // Camino completo del atacante: código de activación → bienvenida →
+        // consentimiento → «crear cuenta» con otra cuenta. B no hereda la sesión, el blob ni los
         // datos locales de A.
         repository.callLog = callLog
         repository.activeSession = true
         credentials.save("cuenta-a@correo.co", "clave-cuenta-a")
-        val consent = ConsentViewModel(discardUnfinished)
+        WelcomeViewModel(discardUnfinished)
+        val consent = ConsentViewModel()
         consent.onAcceptanceChange(true)
         val createAccount = CreateAccountViewModel(
             CreateAccountUseCase(repository, FakeSyncKeyManager(), credentials, discardUnfinished)

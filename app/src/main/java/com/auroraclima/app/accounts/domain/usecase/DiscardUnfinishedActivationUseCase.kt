@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
  * lo local es solo lo restaurado, que la nube repone al volver a escribir la
  * contraseña (lo vigila `ActivationReachabilityGuardTest`).
  *
- * Corre al abrir el consentimiento (la única entrada del flujo de activación),
+ * Corre al abrir la bienvenida (la única entrada del flujo de activación),
  * antes de crear una cuenta y al abrir el login de activación. Retomar el
  * registro sigue siendo posible, pero solo volviendo a escribir la contraseña.
  *
@@ -37,7 +37,7 @@ import kotlinx.coroutines.withContext
  * toca nada; ante la duda (lectura fallida) tampoco, porque borrar la sesión,
  * el blob o los datos de una usuaria activa sería irreparable.
  *
- * Singleton con mutex: el consentimiento lo lanza sin esperarlo y el login o la
+ * Singleton con mutex: la bienvenida lo lanza sin esperarlo y el login o la
  * creación de cuenta lo vuelven a pedir antes de hablar con el proveedor; el
  * mutex garantiza que ningún descarte tardío corra DESPUÉS de una sesión nueva.
  */
@@ -58,7 +58,7 @@ class DiscardUnfinishedActivationUseCase @Inject constructor(
             // que ningún reingreso silencioso pueda reconstruir la sesión.
             credentials.erase()
             repository.signOut()
-            // Sin cancelación a mitad: el pop del consentimiento no debe dejar
+            // Sin cancelación a mitad: el pop de la bienvenida no debe dejar
             // la mitad de los almacenes borrada y la otra mitad viva.
             withContext(NonCancellable) {
                 // Antes de borrar, que nada de la otra cuenta siga escribiendo:
