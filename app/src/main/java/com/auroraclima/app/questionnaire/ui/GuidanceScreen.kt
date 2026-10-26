@@ -52,7 +52,7 @@ import com.auroraclima.app.core.security.SecureSheet
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.AccentChip
 import com.auroraclima.app.core.ui.v2.CloudLaneBar
-import com.auroraclima.app.core.ui.v2.CloudLanePair
+import com.auroraclima.app.core.ui.v2.CloudLaneStack
 import com.auroraclima.app.core.ui.v2.IconListRow
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.RowChevron
@@ -252,19 +252,20 @@ private fun IntroContent(state: GuidanceUiState, onStart: () -> Unit, onLeaveReq
             V2NoticeCard(questionnaire.notice)
             Spacer(modifier = Modifier.height(16.dp))
         }
+        // Abajo y en vertical: «Ahora no» queda en la línea de la nube (v0.3.2).
         Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            V2PrimaryButton(text = stringResource(R.string.guidance_start), onClick = onStart)
-            TextButton(
-                onClick = onLeaveRequested,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text(
-                    text = stringResource(R.string.guidance_not_now),
-                    style = InteriorTypeVoice.bodyStrong,
-                    color = V2Palette.inkSecondary
-                )
-            }
-            Spacer(modifier = Modifier.height(GUIDANCE_BOTTOM_CLEARANCE))
+            CloudLaneStack(
+                first = { V2PrimaryButton(text = stringResource(R.string.guidance_start), onClick = onStart) },
+                second = {
+                    TextButton(onClick = onLeaveRequested) {
+                        Text(
+                            text = stringResource(R.string.guidance_not_now),
+                            style = InteriorTypeVoice.bodyStrong,
+                            color = V2Palette.inkSecondary
+                        )
+                    }
+                }
+            )
         }
     }
 }
@@ -490,7 +491,7 @@ private fun ResultContent(
 @Composable
 private fun ResultActionsBar(isSaved: Boolean, onSave: () -> Unit, onFinish: () -> Unit) {
     Spacer(modifier = Modifier.height(8.dp))
-    CloudLanePair(
+    CloudLaneStack(
         first = {
             if (isSaved) {
                 AccentChip(
@@ -859,9 +860,3 @@ private fun dialNumber(context: Context, number: String) {
         context.startActivity(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)))
     }
 }
-
-/**
- * Aire final de la portada para que sus botones no queden bajo la nube de la esquina
- * (RF-16). Preguntas y resultado usan [CloudLaneBar] y [CloudLanePair] en su lugar.
- */
-private val GUIDANCE_BOTTOM_CLEARANCE = 88.dp

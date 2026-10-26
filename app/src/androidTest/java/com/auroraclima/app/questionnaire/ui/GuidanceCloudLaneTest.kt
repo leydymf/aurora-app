@@ -25,6 +25,7 @@ import com.auroraclima.app.core.security.TestSession
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.configureLikeMainActivity
+import com.auroraclima.app.core.ui.v2.windowHeightPx
 import com.auroraclima.app.questionnaire.domain.model.Block
 import com.auroraclima.app.questionnaire.domain.model.Dimension
 import com.auroraclima.app.questionnaire.domain.model.GuidanceLevel
@@ -89,16 +90,28 @@ class GuidanceCloudLaneTest {
     }
 
     @Test
-    fun resultadoGuardarTerminarYLaNubeQuedanEnUnaMismaLinea() {
+    fun portadaComenzarYAhoraNoVanAbajoEnVerticalYAhoraNoEnLaLineaDeLaNube() {
+        show(intro())
+
+        val start = rect(string(R.string.guidance_start))
+        val notNow = rect(string(R.string.guidance_not_now))
+        val cloud = cloud()
+        assertDisjoint(start, notNow, cloud)
+        assertTrue("«Comenzar» arriba de «Ahora no»", start.bottom <= notNow.top)
+        assertSameLine(notNow, cloud)
+        assertNearBottom(start)
+    }
+
+    @Test
+    fun resultadoGuardarArribaYTerminarEnLaLineaDeLaNube() {
         show(result())
 
         val save = rect(string(R.string.guidance_result_save))
         val finish = rect(string(R.string.guidance_result_finish))
         val cloud = cloud()
-        assertSameLine(save, cloud)
-        assertSameLine(finish, cloud)
         assertDisjoint(save, finish, cloud)
-        assertTrue("«Guardar» es la acción principal y va primero", save.left < finish.left)
+        assertTrue("«Guardar» es la acción principal y va arriba", save.bottom <= finish.top)
+        assertSameLine(finish, cloud)
     }
 
     @Test
@@ -110,15 +123,13 @@ class GuidanceCloudLaneTest {
     }
 
     @Test
-    fun resultadoConFuenteGrandeLosBotonesSeApilanSinTaparLaNube() {
+    fun resultadoConFuenteGrandeEnPantallaPequenaNadaSeTapa() {
         show(result(), size = SMALL, fontScale = 2f)
 
         val save = rect(string(R.string.guidance_result_save))
         val finish = rect(string(R.string.guidance_result_finish))
-        val cloud = cloud()
-        assertDisjoint(save, finish, cloud)
-        assertTrue("apilados: «Guardar» arriba de «Terminar»", save.bottom <= finish.top)
-        assertSameLine(finish, cloud)
+        assertDisjoint(save, finish, cloud())
+        assertSameLine(finish, cloud())
         composeRule.onNodeWithText(string(R.string.guidance_result_save)).assertIsDisplayed()
     }
 
@@ -129,6 +140,7 @@ class GuidanceCloudLaneTest {
         composeRule.onNodeWithText(string(R.string.guidance_result_saved)).assertIsDisplayed()
         val finish = rect(string(R.string.guidance_result_finish))
         assertDisjoint(finish, cloud())
+        assertSameLine(finish, cloud())
     }
 
     private fun show(state: GuidanceUiState, size: DpSize? = null, fontScale: Float = 1f) {
@@ -175,6 +187,12 @@ class GuidanceCloudLaneTest {
         assertEquals("deben compartir línea: $a y $b", a.center.y, b.center.y, LINE_TOLERANCE_PX)
     }
 
+    /** El botón queda en la parte baja de la pantalla, no suelto arriba (portada, v0.3.2). */
+    private fun assertNearBottom(button: Rect) {
+        val bottom = composeRule.windowHeightPx().toFloat()
+        assertTrue("el botón termina en ${button.bottom} px de $bottom", button.bottom > bottom * 0.7f)
+    }
+
     private fun assertDisjoint(vararg rects: Rect) {
         for (i in rects.indices) {
             for (j in i + 1 until rects.size) {
@@ -184,6 +202,12 @@ class GuidanceCloudLaneTest {
     }
 
     private fun string(id: Int) = composeRule.activity.getString(id)
+
+    private fun intro() = GuidanceUiState(
+        isLoading = false,
+        questionnaire = sampleQuestionnaire(),
+        phase = GuidancePhase.INTRO
+    )
 
     private fun question() = GuidanceUiState(
         isLoading = false,

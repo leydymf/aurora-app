@@ -1,5 +1,8 @@
 package com.auroraclima.app.core.ui.v2
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,11 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Measurable
-import androidx.compose.ui.layout.MeasureResult
-import androidx.compose.ui.layout.MeasureScope
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -53,53 +51,35 @@ fun CloudLaneBar(
 }
 
 /**
- * Dos acciones en el carril: lado a lado cuando caben —cada una con la mitad— y, si
- * el texto es largo, la pantalla es estrecha o la fuente es grande, una sobre otra
- * con la segunda a la altura de la nube; nunca un botón con el texto cortado.
+ * Dos acciones una sobre otra en el carril: la primera arriba y la segunda en la
+ * MISMA línea que la nube, a la que no tapa (el carril está reservado a su derecha).
+ * Siempre en vertical —así lo pidió la usuaria tras probar la barra lado a lado— y
+ * con cualquier tamaño de letra: nunca un botón con el texto cortado. La segunda
+ * ocupa al menos el alto de la nube y se centra en él, así que un botón de texto
+ * (p. ej. «Ahora no») también queda centrado con ella.
  */
 @Composable
-fun CloudLanePair(
+fun CloudLaneStack(
     first: @Composable () -> Unit,
     second: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     parentEndPadding: Dp = 24.dp
 ) {
-    Layout(
-        content = {
-            first()
-            second()
-        },
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(end = laneEnd(parentEndPadding), bottom = CloudReturnMargin)
-    ) { measurables, constraints ->
-        val gap = CloudLaneGap.roundToPx()
-        val half = (constraints.maxWidth - gap) / 2
-        val fits = measurables.all { it.maxIntrinsicWidth(CloudReturnSize.roundToPx()) <= half }
-        if (fits) placeSideBySide(measurables, constraints, half, gap) else placeStacked(measurables, constraints)
-    }
-}
-
-private fun MeasureScope.placeSideBySide(
-    measurables: List<Measurable>,
-    constraints: Constraints,
-    half: Int,
-    gap: Int
-): MeasureResult {
-    val placeables = measurables.map { it.measure(constraints.copy(minWidth = half, maxWidth = half)) }
-    val height = placeables.maxOf { it.height }
-    return layout(constraints.maxWidth, height) {
-        placeables[0].place(0, (height - placeables[0].height) / 2)
-        placeables[1].place(half + gap, (height - placeables[1].height) / 2)
-    }
-}
-
-private fun MeasureScope.placeStacked(measurables: List<Measurable>, constraints: Constraints): MeasureResult {
-    val placeables = measurables.map { it.measure(constraints.copy(minWidth = constraints.maxWidth)) }
-    val stackGap = STACK_GAP.roundToPx()
-    return layout(constraints.maxWidth, placeables.sumOf { it.height } + stackGap) {
-        placeables[0].place(0, 0)
-        placeables[1].place(0, placeables[0].height + stackGap)
+            .padding(end = laneEnd(parentEndPadding), bottom = CloudReturnMargin),
+        verticalArrangement = Arrangement.spacedBy(STACK_GAP)
+    ) {
+        first()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = CloudReturnSize),
+            contentAlignment = Alignment.Center
+        ) {
+            second()
+        }
     }
 }
 

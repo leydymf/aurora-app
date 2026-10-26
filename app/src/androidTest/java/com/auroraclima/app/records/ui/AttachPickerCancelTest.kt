@@ -67,7 +67,10 @@ class AttachPickerCancelTest {
     @Test
     fun cancelarElSelectorDeImagenesVuelveAlEditorSinPerderLoEscrito() = cancelFrom("Galería")
 
-    private fun cancelFrom(button: String) {
+    @Test
+    fun cancelarElSelectorDeDocumentosConElGestoDeAtras() = cancelFrom("Archivo", gesture = true)
+
+    private fun cancelFrom(button: String, gesture: Boolean = false) {
         setHarness()
         composeRule.onNodeWithText("Entrar").performClick()
         composeRule.waitForIdle()
@@ -78,7 +81,8 @@ class AttachPickerCancelTest {
         waitUntilActivity(Lifecycle.State.CREATED)
         // El selector del sistema ya está al frente: se le da tiempo de pintar.
         Thread.sleep(SETTLE_MS)
-        instrumentation.uiAutomation.executeShellCommand("input keyevent 4").close()
+        val back = if (gesture) EDGE_SWIPE_BACK else "input keyevent 4"
+        instrumentation.uiAutomation.executeShellCommand(back).close()
         waitUntilActivity(Lifecycle.State.RESUMED)
         composeRule.waitForIdle()
 
@@ -161,5 +165,8 @@ class AttachPickerCancelTest {
         const val WAIT_MS = 15_000L
         const val POLL_MS = 100L
         const val SETTLE_MS = 2_000L
+
+        // Gesto de atrás de la navegación por gestos: desliza desde el borde izquierdo.
+        const val EDGE_SWIPE_BACK = "input swipe 2 1200 600 1200 150"
     }
 }
