@@ -59,8 +59,9 @@
     <string name="access_guide_practice_title">Practica tu entrada.</string>
     <string name="access_guide_practice_body">Escribe tu código de acceso en esta barra, igual que lo harás en el clima.</string>
     <string name="access_guide_practice_retry">Aún no coincide. Escríbelo completo, tal como lo creaste.</string>
-    <string name="access_guide_practice_done">Así entras a Aurora. En el clima se verá exactamente igual que ahora.</string>
-    <string name="access_guide_practice_exit">Ahora toca la nube de la esquina para practicar tu salida.</string>
+    <string name="access_guide_practice_hint">Escribe aquí tu código de acceso</string>
+    <string name="access_guide_practice_done">Así se entra a Aurora: escribiendo tu código de acceso en el buscador del clima</string>
+    <string name="access_guide_practice_cloud_hint">Toca la nube para volver al clima</string>
     <string name="access_back_to_weather">Volver al clima</string>
     <string name="welcome_what">Aurora es un espacio privado para informarte, orientarte y guardar registros de forma segura.</string>
     <string name="welcome_hint">Antes de empezar, te contamos cómo cuidamos tu información.</string>

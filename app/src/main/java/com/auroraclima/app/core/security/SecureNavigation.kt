@@ -11,19 +11,27 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -101,11 +109,37 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
         window?.let(SecureFlagCounter::acquire)
         onDispose { window?.let(SecureFlagCounter::release) }
     }
-    Box(modifier = Modifier.fillMaxSize().trackSessionInteraction()) {
-        content()
-        QuickExitCloud(modifier = Modifier.align(Alignment.BottomEnd), bottomInset = cloudBottomInset)
+    val cloudAnchor = remember { CloudAnchor() }
+    CompositionLocalProvider(LocalCloudAnchor provides cloudAnchor) {
+        // La nube va DESPUÉS del contenido: queda por encima de todo lo que la pantalla
+        // dibuje, también de una capa que oscurezca el resto (recorrido de Inicio), y
+        // el primer toque siempre le llega a ella (RF-16).
+        Box(modifier = Modifier.fillMaxSize().trackSessionInteraction()) {
+            content()
+            QuickExitCloud(
+                modifier = Modifier.align(Alignment.BottomEnd),
+                bottomInset = cloudBottomInset,
+                onPlaced = { cloudAnchor.bounds = it }
+            )
+        }
     }
 }
+
+/**
+ * Dónde quedó la nube de la pantalla segura en curso, en coordenadas de la ventana;
+ * null hasta su primera colocación. Es solo geometría: la leen las señales que la
+ * apuntan (la práctica del tutorial y el recorrido de Inicio) para dibujar un halo o
+ * dejarla iluminada. El toque, el anclaje y `closeNow` no cambian por ella. Las nubes
+ * de las ventanas propias (`SecureWindow`) no la escriben: viven en otra ventana.
+ */
+@Stable
+class CloudAnchor internal constructor() {
+    var bounds: Rect? by mutableStateOf(null)
+        internal set
+}
+
+/** El [CloudAnchor] de la pantalla segura en curso; null fuera del grafo seguro. */
+val LocalCloudAnchor = staticCompositionLocalOf<CloudAnchor?> { null }
 
 /**
  * La nube de salida rápida (RF-16) con su anclaje y su gesto, los mismos en la ruta
@@ -114,9 +148,10 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
  * compartidas con keyboardAware) vienen de core/ui. El inset del teclado la mantiene
  * visible y pulsable con el teclado abierto: con edge-to-edge, sin él quedaba debajo
  * (v0.3.2). [bottomInset] la eleva sobre una barra de pestañas (ver [SecureGraphScope]).
+ * [onPlaced] recibe el círculo (no la franja con sus márgenes) cada vez que se mueve.
  */
 @Composable
-internal fun QuickExitCloud(modifier: Modifier, bottomInset: Dp = 0.dp) {
+internal fun QuickExitCloud(modifier: Modifier, bottomInset: Dp = 0.dp, onPlaced: ((Rect) -> Unit)? = null) {
     val sessionManager = LocalSessionManager.current
     CloudReturnVisual(
         onClick = sessionManager::closeNow,
@@ -125,6 +160,7 @@ internal fun QuickExitCloud(modifier: Modifier, bottomInset: Dp = 0.dp) {
             .imePadding()
             .padding(bottom = bottomInset)
             .padding(CloudReturnMargin)
+            .then(if (onPlaced == null) Modifier else Modifier.onGloballyPositioned { onPlaced(it.boundsInWindow()) })
     )
 }
 

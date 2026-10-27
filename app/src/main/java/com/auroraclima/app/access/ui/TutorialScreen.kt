@@ -4,15 +4,18 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,27 +26,47 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.LocalCloudAnchor
 import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.security.SecureTextEntry
 import com.auroraclima.app.core.ui.components.BrandHeader
+import com.auroraclima.app.core.ui.rememberReduceMotion
 import com.auroraclima.app.core.ui.v2.AccentPair
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
+import com.auroraclima.app.core.ui.v2.CueArrow
+import com.auroraclima.app.core.ui.v2.CueArrowWidth
 import com.auroraclima.app.core.ui.v2.IconListRow
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.PulsePlan
 import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2Icons
@@ -53,6 +76,9 @@ import com.auroraclima.app.core.ui.v2.V2SecondaryButton
 import com.auroraclima.app.core.ui.v2.V2StepHeader
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.keyboardAware
+import com.auroraclima.app.core.ui.v2.pulseHalo
+import com.auroraclima.app.core.ui.v2.rememberPulsePhase
+import kotlin.math.roundToInt
 
 /**
  * Tutorial del espacio interno (RF-10; mockup v2-08, P07). Paso 3 de 3.
@@ -96,11 +122,20 @@ fun TutorialRoute(isReview: Boolean, onClose: () -> Unit, onSkip: () -> Unit) {
                 // interacción o la inactividad expulsaría a mitad de práctica (P-15).
                 sessionManager.registerInteraction()
                 viewModel.onPracticeInputChange(it)
-            }
+            },
+            // «Quitar animaciones» deja el halo y la flecha quietos (ADR 2026-10-25 (c)).
+            cuePlan = PulsePlan.forMotion(reduceMotion = rememberReduceMotion())
         )
     }
 }
 
+/**
+ * La práctica señala dónde actuar (v0.3.3): primero la barra, con halo, flecha y
+ * etiqueta; al coincidir el código, la etiqueta pasa a confirmar el ingreso y la
+ * señal se muda a la nube real de la esquina. La señal de la nube va en una capa
+ * sobre el contenido desplazable, en la posición que publica el grafo seguro
+ * ([LocalCloudAnchor]); la nube sigue por encima de todo y su toque no cambia.
+ */
 @Composable
 internal fun TutorialScreen(
     state: TutorialUiState,
@@ -109,36 +144,50 @@ internal fun TutorialScreen(
     onSkip: () -> Unit,
     onBack: () -> Unit,
     onPracticeInputChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cuePlan: PulsePlan = PulsePlan.forMotion(reduceMotion = false)
 ) {
-    Column(
+    val showsCloudCue = state.step == TutorialStep.PRACTICE && state.practiceStatus == PracticeStatus.MATCHED
+    // Lo que ocupa la señal de la nube desde abajo: el contenido deja ese aire al
+    // final para que ningún texto quede debajo de la etiqueta.
+    var cloudCueClearance by remember { mutableStateOf(0.dp) }
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(V2Palette.screenBackground)
-            .keyboardAware()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
-        // En la primera página del primer uso no hay a dónde volver: detrás solo
-        // está el clima.
-        BrandHeader(onBack = onBack.takeIf { state.showsBack(isReview) })
-        Spacer(modifier = Modifier.height(16.dp))
-        if (state.step == TutorialStep.PRACTICE) {
-            PracticeContent(
-                input = state.practiceInput,
-                status = state.practiceStatus,
-                onInputChange = onPracticeInputChange
-            )
-        } else {
-            OverviewContent(
-                isReview = isReview,
-                showSkip = state.showsSkip(isReview),
-                onStartPractice = onStartPractice,
-                onSkip = onSkip
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .keyboardAware()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
+            // En la primera página del primer uso no hay a dónde volver: detrás solo
+            // está el clima.
+            BrandHeader(onBack = onBack.takeIf { state.showsBack(isReview) })
+            Spacer(modifier = Modifier.height(16.dp))
+            if (state.step == TutorialStep.PRACTICE) {
+                PracticeContent(
+                    input = state.practiceInput,
+                    status = state.practiceStatus,
+                    cuePlan = cuePlan,
+                    onInputChange = onPracticeInputChange
+                )
+            } else {
+                OverviewContent(
+                    isReview = isReview,
+                    showSkip = state.showsSkip(isReview),
+                    onStartPractice = onStartPractice,
+                    onSkip = onSkip
+                )
+            }
+            // Aire final para no chocar con el botón nube de la esquina ni con su señal.
+            Spacer(modifier = Modifier.height(maxOf(64.dp, if (showsCloudCue) cloudCueClearance else 0.dp)))
         }
-        // Aire final para no chocar con el botón nube de la esquina.
-        Spacer(modifier = Modifier.height(64.dp))
+        if (showsCloudCue) {
+            CloudCue(plan = cuePlan, onClearanceChange = { cloudCueClearance = it })
+        }
     }
 }
 
@@ -266,8 +315,24 @@ private fun PracticeTeaserCard() {
     }
 }
 
+/**
+ * Paso 1 de la señal: etiqueta y flecha sobre la barra, y la barra con halo. Al
+ * coincidir, la etiqueta se vuelve la confirmación (en el verde de «listo») y se
+ * cierra el teclado, para que la nube vuelva a su esquina y la señal la encuentre
+ * ahí; el paso 2 lo pinta [CloudCue]. La lógica de la práctica sigue en el ViewModel.
+ */
 @Composable
-private fun PracticeContent(input: String, status: PracticeStatus, onInputChange: (String) -> Unit) {
+private fun PracticeContent(
+    input: String,
+    status: PracticeStatus,
+    cuePlan: PulsePlan,
+    onInputChange: (String) -> Unit
+) {
+    val matched = status == PracticeStatus.MATCHED
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(matched) {
+        if (matched) focusManager.clearFocus()
+    }
     Text(
         text = stringResource(R.string.access_guide_practice_tag),
         style = InteriorTypeVoice.label,
@@ -286,45 +351,131 @@ private fun PracticeContent(input: String, status: PracticeStatus, onInputChange
         color = V2Palette.inkSecondary
     )
     Spacer(modifier = Modifier.height(16.dp))
-    PracticeSearchBar(value = input, onValueChange = onInputChange)
-    when (status) {
-        PracticeStatus.TYPING -> Unit
-        PracticeStatus.MISMATCH -> {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.access_guide_practice_retry),
-                style = InteriorTypeVoice.caption,
-                color = V2Palette.inkSecondary
-            )
-        }
-        PracticeStatus.MATCHED -> {
-            Spacer(modifier = Modifier.height(14.dp))
-            PracticeSuccessCard()
-            Spacer(modifier = Modifier.height(12.dp))
-            // Invitación a la salida real en el rosa de avisos (regla 1).
-            Text(
-                text = stringResource(R.string.access_guide_practice_exit),
-                style = InteriorTypeVoice.body,
-                color = V2Palette.accentNotice.stroke,
+    // La fase solo corre mientras la barra lleva la señal.
+    val barPhase = if (matched) null else rememberPulsePhase(cuePlan)
+    if (barPhase == null) {
+        PracticeSuccessCard(
+            modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+    } else {
+        // El lila de «entrar con el código» (regla 1), el mismo de la llave.
+        CueLabel(
+            text = stringResource(R.string.access_guide_practice_hint),
+            accent = V2Palette.accentRecognize
+        )
+        CueArrow(
+            phase = barPhase,
+            color = V2Palette.accentRecognize.stroke,
+            modifier = Modifier.padding(start = BAR_ARROW_INSET, top = 4.dp, bottom = 6.dp)
+        )
+    }
+    PracticeSearchBar(value = input, onValueChange = onInputChange, haloPhase = barPhase)
+    if (status == PracticeStatus.MISMATCH) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = stringResource(R.string.access_guide_practice_retry),
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary
+        )
+    }
+}
+
+/**
+ * Paso 2 de la señal: halo alrededor de la nube real y, encima, la etiqueta con su
+ * flecha. El halo se dibuja en el contenido, que queda DEBAJO de la nube, así que
+ * solo asoma su aro; nada de esta capa recibe toques. Sin grafo seguro (sin nube
+ * que señalar) no pinta nada.
+ */
+@Composable
+private fun CloudCue(plan: PulsePlan, onClearanceChange: (Dp) -> Unit) {
+    val cloud = LocalCloudAnchor.current?.bounds ?: return
+    val phase = rememberPulsePhase(plan)
+    val density = LocalDensity.current
+    var origin by remember { mutableStateOf<Offset?>(null) }
+    var area by remember { mutableStateOf(IntSize.Zero) }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned {
+                origin = it.positionInWindow()
+                area = it.size
+            }
+    ) {
+        val start = origin ?: return@Box
+        val local = cloud.translate(-start)
+        with(density) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(V2Corner.control)
-                    .background(V2Palette.accentNotice.tint)
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .offset { IntOffset(local.left.roundToInt(), local.top.roundToInt()) }
+                    .size(width = local.width.toDp(), height = local.height.toDp())
+                    .pulseHalo(phase, V2Palette.accentCloud.stroke, cornerRadius = (local.width / 2).toDp())
             )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(
+                        start = 24.dp,
+                        end = (area.width - local.right).coerceAtLeast(0f).toDp(),
+                        bottom = (area.height - local.top).coerceAtLeast(0f).toDp() + CLOUD_CUE_GAP
+                    )
+                    .onGloballyPositioned { onClearanceChange((area.height - it.positionInParent().y).toDp()) },
+                horizontalAlignment = Alignment.End
+            ) {
+                // El violeta es exclusivo de la salida (regla 1).
+                CueLabel(
+                    text = stringResource(R.string.access_guide_practice_cloud_hint),
+                    accent = V2Palette.accentCloud,
+                    modifier = Modifier
+                        .widthIn(max = CLOUD_CUE_MAX_WIDTH)
+                        .semantics { liveRegion = LiveRegionMode.Polite }
+                )
+                CueArrow(
+                    phase = phase,
+                    color = V2Palette.accentCloud.stroke,
+                    modifier = Modifier.padding(
+                        top = 4.dp,
+                        end = ((local.width.toDp() - CueArrowWidth) / 2).coerceAtLeast(0.dp)
+                    )
+                )
+            }
         }
     }
 }
+
+/** Etiqueta de la señal: texto fuerte sobre el tinte de su acento, legible sobre cualquier fondo. */
+@Composable
+private fun CueLabel(text: String, accent: AccentPair, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = InteriorTypeVoice.bodyStrong,
+        color = accent.stroke,
+        modifier = modifier
+            .clip(V2Corner.control)
+            .background(accent.tint)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    )
+}
+
+/** La flecha de la barra apunta al tramo donde se escribe, no al borde. */
+private val BAR_ARROW_INSET = 24.dp
+
+/** Aire entre la flecha y la nube. */
+private val CLOUD_CUE_GAP = 6.dp
+
+/** La etiqueta de la nube no cruza toda la pantalla: se lee junto a la esquina. */
+private val CLOUD_CUE_MAX_WIDTH = 260.dp
 
 /**
  * Réplica visual de la barra V2 de la fachada (v2-01): la práctica se ve igual
  * que el uso real, por eso usa el icono meteorológico de búsqueda y no la
  * librería interna. Lleva el mismo contorno gris que la barra real muestra sobre
  * fondo plano (aquí siempre lo está): la píldora blanca sola daba 1.12:1 sobre
- * el lila, bajo el 3:1 de WCAG §1.4.11.
+ * el lila, bajo el 3:1 de WCAG §1.4.11. Con [haloPhase] lleva el halo de la señal
+ * (paso 1 de la práctica); el halo se dibuja por fuera y no cambia su tamaño.
  */
 @Composable
-private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
+private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit, haloPhase: State<Float>?) {
     val focusManager = LocalFocusManager.current
     SecureTextEntry(hideSuggestions = true) {
         TextField(
@@ -332,6 +483,13 @@ private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxWidth()
+                .then(
+                    if (haloPhase == null) {
+                        Modifier
+                    } else {
+                        Modifier.pulseHalo(haloPhase, V2Palette.accentRecognize.stroke, cornerRadius = BAR_HALO_RADIUS)
+                    }
+                )
                 .border(width = 1.dp, color = V2Palette.controlOutline, shape = V2Corner.pill),
             textStyle = InteriorTypeVoice.body.copy(color = V2Palette.inkPrimary),
             leadingIcon = {
@@ -366,10 +524,16 @@ private fun PracticeSearchBar(value: String, onValueChange: (String) -> Unit) {
     }
 }
 
-/** Ingreso de práctica logrado: visto en el verde de «listo» (regla 1). */
+/** Radio del halo de la barra: el de su píldora (56 dp de alto). */
+private val BAR_HALO_RADIUS = 28.dp
+
+/**
+ * Ingreso de práctica logrado: visto en el verde de «listo» (regla 1). Ocupa el
+ * lugar de la etiqueta de la barra; su texto dice cómo se entra.
+ */
 @Composable
-private fun PracticeSuccessCard() {
-    SoftCard {
+private fun PracticeSuccessCard(modifier: Modifier = Modifier) {
+    SoftCard(modifier = modifier) {
         Row(verticalAlignment = Alignment.Top) {
             Icon(
                 painter = painterResource(V2Icons.synced),

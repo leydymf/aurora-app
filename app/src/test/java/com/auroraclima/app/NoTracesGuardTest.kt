@@ -250,7 +250,10 @@ class NoTracesGuardTest {
             "CloudReturnVisual",
             // Leen la sesión por dentro: llamarlos no nombra ningún token anterior.
             "QuickExitCloud",
-            "trackSessionInteraction"
+            "trackSessionInteraction",
+            // Dónde está la nube (v0.3.3): la fachada no tiene nube que señalar.
+            // Cubre también `LocalCloudAnchor`.
+            "CloudAnchor"
         )
         // Excepción deliberada y acotada, registrada en el ADR 2026-10-10 (c):
         // `weather/ui/WeatherScreen` SÍ importa `core/security/SecureTextEntry`.
