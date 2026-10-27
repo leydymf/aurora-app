@@ -18,11 +18,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Las tres tarjetas de «Acciones rápidas» (P09) deben medir SIEMPRE lo mismo,
- * en cualquier ancho y con cualquier escala de fuente del sistema (ajuste
+ * En fila, las tres tarjetas de «Acciones rápidas» (P09) deben medir SIEMPRE lo
+ * mismo, en cualquier ancho y con cualquier escala de fuente del sistema (ajuste
  * pedido en la corrida manual §8-A3): «Guardar una nota» ocupa dos líneas
  * donde las otras dos ocupan una, y antes eso dejaba la fila despareja según
- * el dispositivo. La altura la fija la tarjeta más alta de la fila.
+ * el dispositivo. La altura la fija la tarjeta más alta de la fila. Cuando no
+ * caben en fila con la letra elegida se apilan (v0.3.3, `QuickAccessLabelTest`):
+ * por eso el caso de letra grande va en una pantalla ancha, donde siguen en fila.
  */
 @RunWith(AndroidJUnit4::class)
 class QuickAccessRowHeightTest {
@@ -40,8 +42,8 @@ class QuickAccessRowHeightTest {
     }
 
     @Test
-    fun lasTresTarjetasMidenLoMismoConFuenteGrande() {
-        assertEqualHeights(widthDp = 312, fontScale = 2f)
+    fun lasTresTarjetasMidenLoMismoConFuenteGrandeEnPantallaAncha() {
+        assertEqualHeights(widthDp = 552, fontScale = 1.5f)
     }
 
     /**
@@ -60,7 +62,7 @@ class QuickAccessRowHeightTest {
                 LocalDensity provides Density(density = base.density, fontScale = fontScale)
             ) {
                 AuroraV2Theme(V2Voice.Interior) {
-                    QuickAccessRow(
+                    QuickAccessCards(
                         onCall = {},
                         onSaveNote = {},
                         onLearn = {},
@@ -75,6 +77,9 @@ class QuickAccessRowHeightTest {
         // Cardinalidad primero: si la fila cambiara, el fallo debe ser legible
         // y no un índice fuera de rango (auditoría 2026-10-06 H-4).
         assertEquals("La fila tiene exactamente tres tarjetas", 3, cards.fetchSemanticsNodes().size)
+        val tops = (0 until 3).map { index -> cards[index].fetchSemanticsNode().boundsInRoot.top }
+        // Precondición: van en fila. Apiladas, la prueba no diría nada de la fila.
+        assertEquals("Las tres tarjetas van en fila", 1, tops.map { Math.round(it) }.toSet().size)
         val heights = (0 until 3).map { index ->
             cards[index].fetchSemanticsNode().size.height
         }

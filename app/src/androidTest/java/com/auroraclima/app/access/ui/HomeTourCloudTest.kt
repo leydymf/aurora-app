@@ -1,7 +1,11 @@
 package com.auroraclima.app.access.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
@@ -10,6 +14,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.TestSession
 import com.auroraclima.app.core.ui.v2.SpotlightTargets
@@ -27,10 +33,18 @@ import org.junit.runners.Parameterized
  * por encima: si el velo la tapara, el toque simulado —que cae en el centro de la
  * nube— lo recibiría el velo y la sesión seguiría abierta. Una corrida por paso,
  * incluidos los intermedios, con letra normal y con letra 2.0 (botones apilados y
- * globo pegado al borde, donde más se acerca a la nube).
+ * globo pegado al borde, donde más se acerca a la nube), y con letra 2.0 en una
+ * pantalla pequeña, donde Acciones rápidas va apilada y su paso es el más alto.
  */
 @RunWith(Parameterized::class)
-class HomeTourCloudTest(private val step: HomeTourStep, private val fontScale: Float) {
+class HomeTourCloudTest(
+    private val step: HomeTourStep,
+    private val fontScale: Float,
+    private val smallScreen: Boolean
+) {
+    private val screen get() = if (smallScreen) ", pantalla de $SMALL" else ""
+    private val case get() = "En el paso ${step.number} (letra $fontScale$screen)"
+
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -47,7 +61,11 @@ class HomeTourCloudTest(private val step: HomeTourStep, private val fontScale: F
         session.setContent(composeRule) {
             val base = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale)) {
-                HomeTourHarness(step = step, onNext = {}, onSkip = {}, targets = SpotlightTargets())
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = if (smallScreen) Modifier.requiredSize(SMALL) else Modifier.fillMaxSize()) {
+                        HomeTourHarness(step = step, onNext = {}, onSkip = {}, targets = SpotlightTargets())
+                    }
+                }
             }
         }
         composeRule.runOnUiThread { session.sessionManager.startSession() }
@@ -67,7 +85,7 @@ class HomeTourCloudTest(private val step: HomeTourStep, private val fontScale: F
             .flatMap { composeRule.onAllNodesWithText(it).fetchSemanticsNodes() }
         buttons.forEach { button ->
             assertFalse(
-                "En el paso ${step.number} (letra $fontScale) la nube ($cloudBounds) tapa un botón " +
+                "$case la nube ($cloudBounds) tapa un botón " +
                     "(${button.boundsInWindow})",
                 button.boundsInWindow.overlaps(cloudBounds)
             )
@@ -77,16 +95,20 @@ class HomeTourCloudTest(private val step: HomeTourStep, private val fontScale: F
         composeRule.waitForIdle()
 
         assertFalse(
-            "En el paso ${step.number} (letra $fontScale) un toque a la nube debe cerrar la sesión",
+            "$case un toque a la nube debe cerrar la sesión",
             session.sessionManager.isSessionActive.value
         )
     }
 
     companion object {
+        private val SMALL = DpSize(320.dp, 568.dp)
+
+        // Un `DpSize` en el constructor no sirve: Kotlin le agrega un parámetro
+        // sintético por ser clase de valor y JUnit no encuentra el constructor.
         @JvmStatic
-        @Parameterized.Parameters(name = "paso {0}, letra {1}")
-        fun cases(): List<Array<Any>> = listOf(1f, 2f).flatMap { scale ->
-            HomeTourStep.entries.map { arrayOf(it, scale) }
+        @Parameterized.Parameters(name = "paso {0}, letra {1}, pantalla pequeña {2}")
+        fun cases(): List<Array<Any>> = listOf(1f to false, 2f to false, 2f to true).flatMap { (scale, small) ->
+            HomeTourStep.entries.map { arrayOf(it, scale, small) }
         }
     }
 }

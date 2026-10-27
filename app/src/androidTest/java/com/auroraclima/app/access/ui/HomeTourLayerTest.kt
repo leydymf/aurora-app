@@ -174,11 +174,16 @@ class HomeTourLayerTest {
     fun conLetraGrandeLoQueEstaFueraDeLaVistaSeDesplazaAntesDeIluminarse() {
         show(initial = null, fontScale = LARGE_FONT)
         // Sin recorrido, lo de abajo se lee: con letra 2.0 «Acciones rápidas» queda
-        // fuera de la vista. Su extensión completa: del rótulo al pie de la fila.
+        // fuera de la vista. Su extensión completa: del rótulo al pie de la tarjeta más
+        // baja (con letra 2.0 las tarjetas pueden ir apiladas).
         val label = composeRule.onNodeWithText(context.getString(R.string.access_home_section_quick))
             .fetchSemanticsNode()
-        val card = composeRule.onNodeWithText(context.getString(R.string.access_home_call)).fetchSemanticsNode()
-        val fullHeight = card.positionInRoot.y + card.size.height - label.positionInRoot.y
+        val bottom = listOf(R.string.access_home_call, R.string.access_home_note, R.string.access_home_learn)
+            .maxOf { id ->
+                val card = composeRule.onNodeWithText(context.getString(id)).fetchSemanticsNode()
+                card.positionInRoot.y + card.size.height
+            }
+        val fullHeight = bottom - label.positionInRoot.y
         val visibleBefore = targets.boundsOf(HomeTourStep.SHORTCUTS)?.height ?: 0f
         assertTrue(
             "Precondición: con letra grande la sección no se ve entera ($visibleBefore de $fullHeight px)",

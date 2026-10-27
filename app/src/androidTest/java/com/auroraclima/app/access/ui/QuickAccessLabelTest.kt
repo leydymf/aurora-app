@@ -3,9 +3,12 @@ package com.auroraclima.app.access.ui
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.TextLayoutResult
@@ -20,7 +23,6 @@ import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.breaksOnlyAtSpaces
-import com.auroraclima.app.core.ui.v2.scaledBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -30,11 +32,17 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
 /**
- * Las etiquetas de Acciones rápidas no parten palabras (v0.3.3): con letra grande,
- * «Informarme» se veía «Infor / ma…». En cualquier ancho y escala, cada etiqueta se
- * ve entera, en dos líneas como mucho, y si ocupa dos el corte va entre palabras. Con
- * letra normal en un ancho de teléfono no se reduce nada, y cuando se reduce es solo lo
- * necesario (con un 10 % más de letra ya no cabría).
+ * Las etiquetas de Acciones rápidas se ven enteras y con la letra que eligió la persona
+ * (v0.3.3). Con letra grande «Informarme» se veía «Infor / ma…»; después la letra se
+ * reducía hasta caber en la fila, y la autora pidió conservarla (WCAG 1.4.4): si no
+ * caben en fila, las tres tarjetas se apilan.
+ *
+ * En cada ancho y escala, cada etiqueta se ve entera, sin puntos suspensivos, cortada
+ * solo entre palabras y con la letra elegida. Las tarjetas van en fila con letra normal
+ * desde un teléfono de 360 dp, apiladas con letra 2.0 en un teléfono y apiladas con
+ * cualquier letra en una pantalla de 320 dp (decisión de la autora); y solo se apilan
+ * cuando alguna etiqueta no cabría en la fila sin reducirla (medido aquí por separado,
+ * no con la función de la pantalla).
  *
  * Se leen los cortes de línea de la maquetación que expone la semántica
  * (`GetTextLayoutResult`), que coinciden con los dibujados (comprobado contra
@@ -51,28 +59,18 @@ class QuickAccessLabelTest(private val widthDp: Int, private val fontScale: Floa
         .map { context.getString(it) }
     private val case get() = "ancho $widthDp dp, letra $fontScale"
     private lateinit var measurer: TextMeasurer
+    private lateinit var density: Density
 
     @Test
-    fun ningunaEtiquetaParteUnaPalabraNiSeCorta() {
-        composeRule.setContent {
-            val base = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale)) {
-                measurer = rememberTextMeasurer()
-                AuroraV2Theme(V2Voice.Interior) {
-                    QuickAccessRow(
-                        onCall = {},
-                        onSaveNote = {},
-                        onLearn = {},
-                        modifier = Modifier.requiredWidth(widthDp.dp)
-                    )
-                }
-            }
-        }
-        composeRule.waitForIdle()
+    fun cadaEtiquetaSeVeEnteraYConLaLetraElegida() {
+        show()
+        val stacked = isStacked(labels.map(::cardBounds))
 
         labels.forEach { label ->
             val layout = layoutOf(label)
-            assertTrue("$case, «$label»: más de dos líneas (${layout.lineCount})", layout.lineCount <= 2)
+            if (!stacked) {
+                assertTrue("$case, «$label»: más de dos líneas en la fila (${layout.lineCount})", layout.lineCount <= 2)
+            }
             assertFalse(
                 "$case, «$label»: cortada con puntos suspensivos",
                 layout.isLineEllipsized(layout.lineCount - 1)
@@ -85,36 +83,90 @@ class QuickAccessLabelTest(private val widthDp: Int, private val fontScale: Floa
                     label[end - 1].isWhitespace()
                 )
             }
-            if (fontScale == 1f && widthDp >= PHONE_WIDTH_DP) {
-                assertEquals(
-                    "$case, «$label»: con letra normal no se reduce",
-                    InteriorTypeVoice.label.fontSize,
-                    layout.layoutInput.style.fontSize
-                )
-            }
-            assertNotReducedTooMuch(label, layout)
+            assertEquals(
+                "$case, «$label»: la letra se redujo",
+                InteriorTypeVoice.label.fontSize,
+                layout.layoutInput.style.fontSize
+            )
         }
     }
 
+    @Test
+    fun seApilanSoloCuandoNoCabenEnFilaConLaLetraElegida() {
+        show()
+        val cards = labels.map(::cardBounds)
+        val stacked = isStacked(cards)
+
+        if (fontScale == 1f && widthDp >= PHONE_WIDTH_DP) assertFalse("$case: con letra normal van en fila", stacked)
+        if (fontScale == 2f && widthDp <= PHONE_WIDTH_DP) assertTrue("$case: con letra 2.0 se apilan", stacked)
+        // Decisión de la autora: también con letra normal, porque «Informarme» no cabe en
+        // su tarjeta sin reducirla. Es un dato medido (depende de cómo se dibuja la letra).
+        if (widthDp < PHONE_WIDTH_DP) assertTrue("$case: en una pantalla de 320 dp se apilan", stacked)
+
+        if (stacked) {
+            val widthPx = with(density) { widthDp.dp.toPx() }
+            cards.forEachIndexed { index, card ->
+                assertEquals("$case, «${labels[index]}»: apilada, va a lo ancho", widthPx, card.width, 1f)
+            }
+            cards.zipWithNext().forEach { (upper, lower) ->
+                assertTrue("$case: apiladas, en el orden de la fila", upper.bottom <= lower.top)
+            }
+            assertTrue(
+                "$case: se apilaron, pero las tres cabían en la fila con la letra elegida",
+                labels.any { !fitsInRowAtChosenSize(it) }
+            )
+        } else {
+            cards.zipWithNext().forEach { (start, end) ->
+                assertEquals("$case: en fila, a la misma altura", start.top, end.top, 1f)
+                assertTrue("$case: en fila, en orden", start.right <= end.left)
+            }
+        }
+    }
+
+    private fun show() {
+        composeRule.setContent {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale)) {
+                measurer = rememberTextMeasurer()
+                density = LocalDensity.current
+                AuroraV2Theme(V2Voice.Interior) {
+                    QuickAccessCards(
+                        onCall = {},
+                        onSaveNote = {},
+                        onLearn = {},
+                        modifier = Modifier.requiredWidth(widthDp.dp)
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+    }
+
+    /** Apiladas: una debajo de otra. En fila comparten la altura de su borde superior. */
+    private fun isStacked(cards: List<Rect>): Boolean = cards.zipWithNext().all { (a, b) -> a.bottom <= b.top }
+
+    /** La tarjeta que contiene la etiqueta: el nodo tocable que fusiona su texto. */
+    private fun cardBounds(label: String): Rect =
+        composeRule.onNode(hasText(label) and hasClickAction()).fetchSemanticsNode().boundsInRoot
+
     /**
-     * «Solo lo necesario»: si la etiqueta se redujo, con un 10 % más de letra (sin pasar
-     * de la elegida) ya no cabría sin partir una palabra o sin pasar de dos líneas.
+     * Si [label] cabría en una tarjeta de la fila con la letra elegida: cada palabra
+     * entera, dos líneas como mucho y los cortes entre palabras.
      */
-    private fun assertNotReducedTooMuch(label: String, layout: TextLayoutResult) {
-        val base = InteriorTypeVoice.label
-        val applied = layout.layoutInput.style.fontSize
-        if (applied.value >= base.fontSize.value) return
-        val bigger = base.scaledBy((applied.value / base.fontSize.value * TOLERANCE).coerceAtMost(1f))
-        val width = layout.layoutInput.constraints.maxWidth
+    private fun fitsInRowAtChosenSize(label: String): Boolean {
+        val width = with(density) {
+            quickAccessLabelWidthPx(
+                rowWidthPx = widthDp.dp.roundToPx(),
+                gapPx = QUICK_ACCESS_GAP.roundToPx(),
+                sidePaddingPx = QUICK_ACCESS_SIDE_PADDING.roundToPx(),
+                count = labels.size
+            )
+        }
+        val style = InteriorTypeVoice.label
         val words = label.split(" ").filter { it.isNotEmpty() }
-        val wordTooWide = words.any { measurer.measure(it, bigger, maxLines = 1, softWrap = false).size.width > width }
-        val wrapped = measurer.measure(label, bigger, constraints = Constraints(maxWidth = width))
-        val tooManyLines = wrapped.lineCount > 2
-        val breaksWord = !breaksOnlyAtSpaces(label, (0 until wrapped.lineCount).map(wrapped::getLineEnd))
-        assertTrue(
-            "$case, «$label»: reducida a $applied, pero con un 10 % más de letra también cabría",
-            wordTooWide || tooManyLines || breaksWord
-        )
+        if (words.any { measurer.measure(it, style, maxLines = 1, softWrap = false).size.width > width }) return false
+        val wrapped = measurer.measure(label, style, constraints = Constraints(maxWidth = width))
+        return wrapped.lineCount <= 2 && breaksOnlyAtSpaces(label, (0 until wrapped.lineCount).map(wrapped::getLineEnd))
     }
 
     /** La maquetación del texto de la etiqueta, tal como se dibujó. */
@@ -136,8 +188,5 @@ class QuickAccessLabelTest(private val widthDp: Int, private val fontScale: Floa
         fun cases(): List<Array<Any>> = listOf(272, PHONE_WIDTH_DP, 552).flatMap { width ->
             listOf(arrayOf<Any>(width, 1f), arrayOf<Any>(width, 2f))
         }
-
-        // Margen de «solo lo necesario»: el paso de reducción es de un 4 %.
-        private const val TOLERANCE = 1.1f
     }
 }

@@ -2,6 +2,7 @@ package com.auroraclima.app.access.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,12 +18,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,6 +53,7 @@ import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.WordSafeText
+import com.auroraclima.app.core.ui.v2.fitsWithoutShrinking
 import com.auroraclima.app.core.ui.v2.spotlightTarget
 
 /**
@@ -156,7 +161,7 @@ fun PanelScreen(
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        // La sección entera (rótulo y fila) es un solo paso del recorrido.
+        // La sección entera (rótulo y tarjetas) es un solo paso del recorrido.
         Column(modifier = Modifier.spotlightTarget(HomeTourStep.SHORTCUTS)) {
             Text(
                 text = stringResource(R.string.access_home_section_quick),
@@ -164,7 +169,7 @@ fun PanelScreen(
                 color = V2Palette.inkSecondary
             )
             Spacer(modifier = Modifier.height(10.dp))
-            QuickAccessRow(onCall = onCall, onSaveNote = onSaveNote, onLearn = onLearn)
+            QuickAccessCards(onCall = onCall, onSaveNote = onSaveNote, onLearn = onLearn)
         }
         // Aire final; la franja de la nube ya queda fuera de lo que se desplaza.
         Spacer(modifier = Modifier.height(24.dp))
@@ -172,19 +177,22 @@ fun PanelScreen(
 }
 
 /**
- * Los tres accesos rápidos de P09. La fila se mide con [IntrinsicSize.Min] y
- * cada tarjeta ocupa toda la altura resultante: así las tres miden lo mismo —
- * la altura de la más alta — en cualquier ancho de pantalla y con cualquier
- * escala de fuente, aunque una etiqueta ocupe dos líneas y las otras una
- * (mismo recurso que la tarjeta del listado de resultados). El ancho ya era
- * idéntico por los `weight(1f)`.
+ * Los tres accesos rápidos de P09: en una fila si caben, apilados si no.
  *
- * El ancho de texto de cada tarjeta se calcula aquí, una vez, y no dentro de la
- * tarjeta: la medida intrínseca no admite `BoxWithConstraints` por debajo (v0.3.3,
- * etiquetas que no parten palabras con letra grande; ver [QuickAccessCard]).
+ * En **fila** ([QuickAccessCardRow]) cuando las tres etiquetas caben en el ancho de su
+ * tarjeta con la letra que eligió la persona, sin reducirla: cada palabra entera y dos
+ * líneas como mucho. Con letra normal pasa desde un teléfono de 360 dp.
+ *
+ * **Apiladas** ([QuickAccessCardColumn]) cuando alguna no cabe, también con letra normal
+ * en una pantalla de 320 dp: la etiqueta conserva su letra (v0.3.3, decisión de la
+ * autora por WCAG 1.4.4: antes la letra se reducía hasta caber en la fila, a la mitad o
+ * algo más con letra 2.0).
+ *
+ * El ancho de texto en la fila se calcula aquí, una vez, y no dentro de la tarjeta: la
+ * medida intrínseca de la fila no admite `BoxWithConstraints` por debajo.
  */
 @Composable
-internal fun QuickAccessRow(
+internal fun QuickAccessCards(
     onCall: () -> Unit,
     onSaveNote: () -> Unit,
     onLearn: () -> Unit,
@@ -198,6 +206,9 @@ internal fun QuickAccessRow(
         QuickAccessItem(V2Icons.media, V2Palette.accentGroup, R.string.access_home_note, onSaveNote),
         QuickAccessItem(V2Icons.guide, V2Palette.accentGroup, R.string.access_home_learn, onLearn)
     )
+    val labels = items.map { stringResource(it.labelRes) }
+    // El medidor cambia con la densidad, la escala de letra y la dirección.
+    val measurer = rememberTextMeasurer()
     BoxWithConstraints(modifier = modifier) {
         val labelWidthPx = with(LocalDensity.current) {
             quickAccessLabelWidthPx(
@@ -207,15 +218,53 @@ internal fun QuickAccessRow(
                 count = items.size
             )
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(QUICK_ACCESS_GAP)
-        ) {
-            items.forEach { item ->
-                QuickAccessCard(item = item, labelWidthPx = labelWidthPx, modifier = Modifier.weight(1f))
+        val fitsInRow = remember(labels, labelWidthPx, measurer) {
+            labels.all { label ->
+                fitsWithoutShrinking(measurer, label, InteriorTypeVoice.label, labelWidthPx, QUICK_ACCESS_LABEL_LINES)
             }
+        }
+        if (fitsInRow) {
+            QuickAccessCardRow(items = items, labels = labels, labelWidthPx = labelWidthPx)
+        } else {
+            QuickAccessCardColumn(items = items, labels = labels)
+        }
+    }
+}
+
+/**
+ * Las tarjetas en fila. La fila se mide con [IntrinsicSize.Min] y cada tarjeta ocupa
+ * toda la altura resultante: así miden lo mismo —la altura de la más alta— aunque una
+ * etiqueta ocupe dos líneas y las otras una (mismo recurso que la tarjeta del listado
+ * de resultados). El ancho ya era idéntico por los `weight(1f)`.
+ */
+@Composable
+private fun QuickAccessCardRow(items: List<QuickAccessItem>, labels: List<String>, labelWidthPx: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(QUICK_ACCESS_GAP)
+    ) {
+        items.forEachIndexed { index, item ->
+            QuickAccessCard(
+                item = item,
+                label = labels[index],
+                labelWidthPx = labelWidthPx,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+/** Las tarjetas apiladas a lo ancho, en el mismo orden que en la fila ([QuickAccessStackedCard]). */
+@Composable
+private fun QuickAccessCardColumn(items: List<QuickAccessItem>, labels: List<String>) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(QUICK_ACCESS_GAP)
+    ) {
+        items.forEachIndexed { index, item ->
+            QuickAccessStackedCard(item = item, label = labels[index])
         }
     }
 }
@@ -237,14 +286,13 @@ internal fun quickAccessLabelWidthPx(rowWidthPx: Int, gapPx: Int, sidePaddingPx:
     if (count <= 0) 0 else ((rowWidthPx - (count - 1) * gapPx) / count - 2 * sidePaddingPx).coerceAtLeast(0)
 
 /**
- * Acceso rápido de P09: tarjeta vertical con insignia de acento y etiqueta.
- * Llena la altura que fija la fila y centra su contenido. La etiqueta va en dos
- * líneas como mucho y nunca parte una palabra: con letra grande, si su palabra
- * más larga no cabe en [labelWidthPx] o el texto no entra en dos líneas, la letra
- * se reduce solo lo necesario (`WordSafeText`, v0.3.3).
+ * Acceso rápido de P09 en la fila: tarjeta vertical con insignia de acento y
+ * etiqueta. Llena la altura que fija la fila y centra su contenido. La etiqueta va
+ * en dos líneas como mucho y nunca parte una palabra; la fila solo se arma si cabe
+ * con la letra elegida, así que `WordSafeText` no la reduce (queda como red).
  */
 @Composable
-private fun QuickAccessCard(item: QuickAccessItem, labelWidthPx: Int, modifier: Modifier = Modifier) {
+private fun QuickAccessCard(item: QuickAccessItem, label: String, labelWidthPx: Int, modifier: Modifier = Modifier) {
     SoftCard(
         modifier = modifier
             .fillMaxHeight()
@@ -262,7 +310,7 @@ private fun QuickAccessCard(item: QuickAccessItem, labelWidthPx: Int, modifier: 
             AccentBadge(iconRes = item.iconRes, accent = item.accent)
             Spacer(modifier = Modifier.height(10.dp))
             WordSafeText(
-                text = stringResource(item.labelRes),
+                text = label,
                 style = InteriorTypeVoice.label,
                 availableWidthPx = labelWidthPx,
                 maxLines = QUICK_ACCESS_LABEL_LINES,
@@ -273,18 +321,50 @@ private fun QuickAccessCard(item: QuickAccessItem, labelWidthPx: Int, modifier: 
     }
 }
 
-/** Tope de líneas de la etiqueta: el ícono y el texto deben caber centrados. */
+/**
+ * Acceso rápido apilado: a lo ancho, con la insignia al lado del texto, como las filas
+ * de tarjeta del Inicio. La etiqueta conserva la letra elegida y baja de línea entre
+ * palabras, sin tope de líneas; `WordSafeText` solo la reduciría si una palabra sola no
+ * cupiera a lo ancho.
+ */
+@Composable
+private fun QuickAccessStackedCard(item: QuickAccessItem, label: String) {
+    SoftCard(
+        modifier = Modifier
+            .clip(V2Corner.card)
+            .clickable(onClick = item.onClick, role = Role.Button),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AccentBadge(iconRes = item.iconRes, accent = item.accent)
+            Spacer(modifier = Modifier.width(14.dp))
+            BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                WordSafeText(
+                    text = label,
+                    style = InteriorTypeVoice.label,
+                    availableWidthPx = constraints.maxWidth,
+                    maxLines = Int.MAX_VALUE,
+                    color = V2Palette.inkPrimary
+                )
+            }
+        }
+    }
+}
+
+/** Tope de líneas de la etiqueta en la fila: el ícono y el texto deben caber centrados. */
 private const val QUICK_ACCESS_LABEL_LINES = 2
 
-/** Separación entre tarjetas: de ella sale el ancho de texto ([quickAccessLabelWidthPx]). */
-private val QUICK_ACCESS_GAP = 12.dp
+/** Separación entre tarjetas, en fila y apiladas: de ella sale el ancho de texto ([quickAccessLabelWidthPx]). */
+@VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+internal val QUICK_ACCESS_GAP = 12.dp
 
 /**
  * Margen lateral del texto dentro de cada tarjeta. Es el único margen horizontal que
  * `SoftCard` agrega hoy; si ganara otro (un borde, por ejemplo), hay que restarlo en
  * [quickAccessLabelWidthPx] o el ancho calculado quedaría más grande que el real.
  */
-private val QUICK_ACCESS_SIDE_PADDING = 10.dp
+@VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+internal val QUICK_ACCESS_SIDE_PADDING = 10.dp
 
 @Preview(name = "Inicio · 360 dp", widthDp = 360, heightDp = 760, showBackground = true, backgroundColor = 0xFFF3F1F7)
 @Composable

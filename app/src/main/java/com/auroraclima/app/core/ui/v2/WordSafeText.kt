@@ -22,6 +22,10 @@ import androidx.compose.ui.unit.isSpecified
  * anchos extremos fuera de lo probado, donde los puntos suspensivos quedan como último
  * recurso.
  *
+ * La reducción es una red, no la disposición: quien la usa decide antes con
+ * [fitsWithoutShrinking] cómo acomodarse para que no haga falta (Acciones rápidas se
+ * apilan en lugar de reducir la letra, WCAG 1.4.4).
+ *
  * Recibe el ancho en píxeles en lugar de medirlo: quien la usa puede estar dentro de
  * una medida intrínseca (la fila de Acciones rápidas iguala alturas así), donde un
  * `BoxWithConstraints` no se admite. Aplica el estilo y [maxLines] juntos, para que no
@@ -74,6 +78,23 @@ internal fun wordSafeStyle(
         fitsWithoutBreakingWords(measurer, text, words, style.scaledBy(candidate), availableWidthPx, maxLines)
     }
     return style.scaledBy(scale)
+}
+
+/**
+ * Si [text] cabe en [availableWidthPx] con [style] tal cual, sin reducir la letra: cada
+ * palabra entera, dentro de [maxLines] y con los cortes entre palabras. Sirve para
+ * decidir la disposición antes de que [WordSafeText] tenga que reducir.
+ */
+internal fun fitsWithoutShrinking(
+    measurer: TextMeasurer,
+    text: String,
+    style: TextStyle,
+    availableWidthPx: Int,
+    maxLines: Int
+): Boolean {
+    if (availableWidthPx <= 0) return false
+    val words = text.split(WHITESPACE).filter { it.isNotEmpty() }
+    return fitsWithoutBreakingWords(measurer, text, words, style, availableWidthPx, maxLines)
 }
 
 private fun fitsWithoutBreakingWords(
