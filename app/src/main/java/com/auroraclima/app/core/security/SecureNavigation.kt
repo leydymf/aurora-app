@@ -129,8 +129,9 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
  * Dónde quedó la nube de la pantalla segura en curso, en coordenadas de la ventana;
  * null hasta su primera colocación. Es solo geometría: la leen las señales que la
  * apuntan (la práctica del tutorial y el recorrido de Inicio) para dibujar un halo o
- * dejarla iluminada. El toque, el anclaje y `closeNow` no cambian por ella. Las nubes
- * de las ventanas propias (`SecureWindow`) no la escriben: viven en otra ventana.
+ * dejarla iluminada, y `reserveCloudLane` para que Inicio le deje su franja. El toque,
+ * el anclaje y `closeNow` no cambian por ella. Las nubes de las ventanas propias
+ * (`SecureWindow`) no la escriben: viven en otra ventana.
  */
 @Stable
 class CloudAnchor internal constructor() {

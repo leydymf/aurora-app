@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
  * Respiro entre la nube de salida rápida y lo que se le acerca: los botones de una
  * barra y, en Inicio, el final de la zona que se desplaza (`reserveCloudLane`).
  */
-val CloudLaneGap = 12.dp
+internal val CloudLaneGap = 12.dp
 
 /** Lo que la barra deja a su derecha: la nube y un respiro, menos el margen que la pantalla ya pone. */
 private fun laneEnd(parentEndPadding: Dp): Dp =
