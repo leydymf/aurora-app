@@ -159,21 +159,26 @@ fun PanelScreen(
         )
         Spacer(modifier = Modifier.height(10.dp))
         // Tarjeta del cuestionario: texto genérico sin números (D8); el lila es
-        // el acento fijo de «reconocer» (regla 1).
-        SoftCard {
+        // el acento fijo de «reconocer» (regla 1). Toda la tarjeta lo abre, como
+        // «Resultados guardados» (v0.3.3: un toque en el texto no hacía nada).
+        SoftCard(
+            modifier = Modifier
+                .clip(V2Corner.card)
+                .clickable(onClick = onStartGuidance, role = Role.Button)
+        ) {
             IconListRow(
                 iconRes = V2Icons.recognize,
                 accent = V2Palette.accentRecognize,
                 title = stringResource(R.string.access_panel_guide_title),
                 supportingText = stringResource(R.string.access_panel_guide_body)
             )
+            Spacer(modifier = Modifier.height(14.dp))
+            // Único botón lleno de la pantalla (regla 2), al pie de su tarjeta.
+            V2PrimaryButton(
+                text = stringResource(R.string.access_home_start),
+                onClick = onStartGuidance
+            )
         }
-        Spacer(modifier = Modifier.height(14.dp))
-        // Único botón lleno de la pantalla (regla 2).
-        V2PrimaryButton(
-            text = stringResource(R.string.access_home_start),
-            onClick = onStartGuidance
-        )
         Spacer(modifier = Modifier.height(14.dp))
         // Resultados guardados (RF-31): el listado vive junto al cuestionario
         // que los produce; el destino lo decide la navegación raíz (RF-06, §2).
