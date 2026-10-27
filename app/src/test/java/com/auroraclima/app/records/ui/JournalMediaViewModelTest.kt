@@ -113,7 +113,9 @@ class JournalMediaViewModelTest {
     fun `sin renderizador una pagina pedida devuelve null`() = runTest {
         attachments.contentResult = Result.success(AttachmentContent.Image(tinyJpeg()))
         val viewModel = viewModel()
-        advanceUntilIdle()
+        // Igual que arriba: se espera a que la decodificación termine en su hilo real;
+        // si no, puede volver a Main mientras la regla lo restablece (falla intermitente).
+        viewModel.uiState.first { !it.isLoading }
 
         assertNull(viewModel.page(index = 0, targetWidth = 720))
     }
