@@ -33,7 +33,7 @@ class TextFitTest {
     }
 
     @Test
-    fun `si ningun candidato sirve devuelve el ultimo probado`() {
+    fun `si ningun candidato sirve devuelve el siguiente de la serie sin probarlo`() {
         val tried = mutableListOf<Float>()
 
         val scale = firstFittingScale(1f) {

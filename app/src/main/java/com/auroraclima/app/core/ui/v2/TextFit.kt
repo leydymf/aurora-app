@@ -22,8 +22,9 @@ internal fun oneLineScale(textWidth: Int, available: Int): Float =
  * La primera escala de la serie [start], [start]·[SHRINK_STEP], [start]·[SHRINK_STEP]², …
  * que cumple [fits]. El ancho del texto no escala en proporción a la letra (medido:
  * «Llamar» ocupa 209 px a 13 sp y 203 px a 12 sp, no 193), así que cada candidato se
- * comprueba en vez de suponerlo. Si ninguno de los [MAX_SHRINK_STEPS] primeros cumple,
- * devuelve el último probado: es el último recurso de anchos extremos.
+ * comprueba en vez de suponerlo. Prueba los [MAX_SHRINK_STEPS] − 1 primeros; si ninguno
+ * cumple, devuelve el siguiente de la serie sin probarlo, el más pequeño: es el último
+ * recurso de anchos extremos.
  */
 internal fun firstFittingScale(start: Float, fits: (Float) -> Boolean): Float {
     var scale = start.coerceAtMost(1f)

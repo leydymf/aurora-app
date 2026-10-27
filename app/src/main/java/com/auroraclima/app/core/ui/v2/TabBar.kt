@@ -107,8 +107,9 @@ fun V2TabBar(
  * quedaba debajo de la nube de salida rápida, que flota a una altura fija sobre la
  * barra (`V2TabBarHeight`) y no se mueve. Ahora la etiqueta conserva el tamaño de
  * letra elegido si cabe, y si no, se reduce solo lo necesario para el ancho de su
- * pestaña ([firstFittingScale], comprobando cada candidato); nunca se corta ni se
- * esconde (regla 3).
+ * pestaña ([firstFittingScale], comprobando cada candidato); no se corta ni se esconde
+ * (regla 3), salvo en anchos extremos fuera de lo probado, donde queda con la letra
+ * más pequeña de la serie y lo que sobra se recorta.
  */
 @Composable
 private fun TabLabel(text: String, color: Color) {
@@ -119,6 +120,8 @@ private fun TabLabel(text: String, color: Color) {
         val available = constraints.maxWidth
         // El medidor cambia con la densidad, la escala de letra y la dirección.
         val style = remember(text, base, available, measurer) {
+            // Sin ancho todavía (maquetación transitoria) no hay nada que ajustar.
+            if (available <= 0) return@remember base
             fun widthAt(style: TextStyle) = measurer.measure(text, style, maxLines = 1, softWrap = false).size.width
             // El ancho no escala en proporción a la letra: cada candidato se comprueba
             // midiendo (con la cuenta proporcional sola, «Mi registro» se recortaba en

@@ -149,8 +149,8 @@ class InnerTabsCloudClearanceTest(
     @Composable
     private fun TabPage() {
         when (tab) {
-            TabCase.INICIO -> PanelScreen({}, {}, {}, {}, {}, {})
-            TabCase.GUIA -> GuideHomeScreen(onOpenTopics = {}, onOpenRoutes = {}, onOpenLines = {})
+            TabCase.HOME -> PanelScreen({}, {}, {}, {}, {}, {})
+            TabCase.GUIDE -> GuideHomeScreen(onOpenTopics = {}, onOpenRoutes = {}, onOpenLines = {})
         }
     }
 
@@ -199,8 +199,8 @@ class InnerTabsCloudClearanceTest(
 
     /** Las dos pestañas que se desplazan, con su última tarjeta y si tienen engranaje. */
     enum class TabCase(val index: Int, @StringRes val lastCard: Int, val hasSettings: Boolean) {
-        INICIO(HOME_TAB, R.string.access_home_learn, hasSettings = true),
-        GUIA(GUIDE_TAB, R.string.content_topics_lines_button, hasSettings = false)
+        HOME(HOME_TAB, R.string.access_home_learn, hasSettings = true),
+        GUIDE(GUIDE_TAB, R.string.content_topics_lines_button, hasSettings = false)
     }
 
     companion object {
