@@ -71,19 +71,40 @@ fun InnerTabsHost(
             onReplayHandled = onReplayTourHandled,
             onShowHome = { selectedTab = HOME_TAB }
         ) {
-            Column(modifier = modifier.fillMaxSize()) {
-                OfflineChip(isOffline)
-                Box(modifier = Modifier.weight(1f)) {
-                    TabPage(
-                        selectedTab = selectedTab,
-                        tabStateHolder = tabStateHolder,
-                        actions = actions,
-                        onShowGuide = { selectedTab = GUIDE_TAB }
-                    )
-                }
-                InnerTabBar(selectedTab = selectedTab, onSelect = { selectedTab = it })
+            InnerTabsLayout(
+                selectedTab = selectedTab,
+                onSelectTab = { selectedTab = it },
+                modifier = modifier,
+                isOffline = isOffline
+            ) {
+                TabPage(
+                    selectedTab = selectedTab,
+                    tabStateHolder = tabStateHolder,
+                    actions = actions,
+                    onShowGuide = { selectedTab = GUIDE_TAB }
+                )
             }
         }
+    }
+}
+
+/**
+ * La maquetación de las pestañas: el chip sin conexión, la pestaña elegida ([page]) y
+ * la barra. La usan [InnerTabsHost] y las pruebas que necesitan la composición real (la
+ * franja de la nube, el recorrido por Inicio), para que no haya copias que diverjan.
+ */
+@Composable
+internal fun InnerTabsLayout(
+    selectedTab: Int,
+    onSelectTab: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    isOffline: Boolean = false,
+    page: @Composable () -> Unit
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        OfflineChip(isOffline)
+        Box(modifier = Modifier.weight(1f)) { page() }
+        InnerTabBar(selectedTab = selectedTab, onSelect = onSelectTab)
     }
 }
 
@@ -169,10 +190,10 @@ private fun TabPage(
 /**
  * La barra Inicio · Guía · Mi registro. Guía y Mi registro son dos pasos del
  * recorrido por Inicio: aquí se marcan, en el único sitio que sabe qué pestaña es
- * cuál (lo reutiliza la prueba del recorrido).
+ * cuál.
  */
 @Composable
-internal fun InnerTabBar(selectedTab: Int, onSelect: (Int) -> Unit) {
+private fun InnerTabBar(selectedTab: Int, onSelect: (Int) -> Unit) {
     V2TabBar(
         items = listOf(
             V2TabItem(V2Icons.home, stringResource(R.string.access_tab_home)),
@@ -191,6 +212,7 @@ internal fun InnerTabBar(selectedTab: Int, onSelect: (Int) -> Unit) {
     )
 }
 
-private const val HOME_TAB = 0
-private const val GUIDE_TAB = 1
-private const val JOURNAL_TAB = 2
+// Índices de las pestañas; los usan también las pruebas que arman la maquetación real.
+internal const val HOME_TAB = 0
+internal const val GUIDE_TAB = 1
+internal const val JOURNAL_TAB = 2

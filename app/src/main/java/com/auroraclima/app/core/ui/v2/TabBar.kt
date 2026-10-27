@@ -26,10 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.isSpecified
 import com.auroraclima.app.R
 
 /** Una pestaña de [V2TabBar]: icono de contorno + etiqueta corta. */
@@ -107,7 +107,8 @@ fun V2TabBar(
  * quedaba debajo de la nube de salida rápida, que flota a una altura fija sobre la
  * barra (`V2TabBarHeight`) y no se mueve. Ahora la etiqueta conserva el tamaño de
  * letra elegido si cabe, y si no, se reduce solo lo necesario para el ancho de su
- * pestaña ([oneLineScale]); nunca se corta ni se esconde (regla 3).
+ * pestaña ([firstFittingScale], comprobando cada candidato); nunca se corta ni se
+ * esconde (regla 3).
  */
 @Composable
 private fun TabLabel(text: String, color: Color) {
@@ -118,31 +119,18 @@ private fun TabLabel(text: String, color: Color) {
         val available = constraints.maxWidth
         // El medidor cambia con la densidad, la escala de letra y la dirección.
         val style = remember(text, base, available, measurer) {
-            val measured = measurer.measure(text, base, maxLines = 1, softWrap = false).size.width
-            val scale = oneLineScale(measured, available)
-            when {
-                scale >= 1f -> base
-                // Un interlineado sin especificar no se puede escalar: queda el de la letra.
-                base.lineHeight.isSpecified -> base.copy(
-                    fontSize = base.fontSize * scale,
-                    lineHeight = base.lineHeight * scale
-                )
-                else -> base.copy(fontSize = base.fontSize * scale)
+            fun widthAt(style: TextStyle) = measurer.measure(text, style, maxLines = 1, softWrap = false).size.width
+            // El ancho no escala en proporción a la letra: cada candidato se comprueba
+            // midiendo (con la cuenta proporcional sola, «Mi registro» se recortaba en
+            // 320 dp con letra 2.0, `InnerTabBarLabelTest`).
+            val scale = firstFittingScale(oneLineScale(widthAt(base), available)) { candidate ->
+                widthAt(base.scaledBy(candidate)) <= available
             }
+            base.scaledBy(scale)
         }
         Text(text = text, style = style, color = color, maxLines = 1, softWrap = false)
     }
 }
-
-/**
- * Cuánto reducir una etiqueta de [textWidth] para que quepa en [available] (ambos en
- * píxeles): 1 si ya cabe. Un poco por debajo del cociente exacto, para que el redondeo
- * de la medida no la vuelva a partir. Pura, para probarla en la JVM.
- */
-internal fun oneLineScale(textWidth: Int, available: Int): Float =
-    if (textWidth <= available || textWidth <= 0 || available <= 0) 1f else available.toFloat() / textWidth * FIT_MARGIN
-
-private const val FIT_MARGIN = 0.97f
 
 @Preview(showBackground = true, backgroundColor = 0xFFF3F1F7)
 @Composable

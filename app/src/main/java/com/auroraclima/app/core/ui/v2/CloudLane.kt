@@ -16,7 +16,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Respiro entre la nube de salida rápida y lo que se le acerca: los botones de una
- * barra y, en Inicio, el final de la zona que se desplaza (`reserveCloudLane`).
+ * barra y, en Inicio y en la portada de la Guía, el final de la zona que se desplaza
+ * (`reserveCloudLane`).
  */
 internal val CloudLaneGap = 12.dp
 

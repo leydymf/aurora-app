@@ -1,97 +1,100 @@
 package com.auroraclima.app.core.ui.v2
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.isSpecified
 
 /**
- * Estilo para una etiqueta corta que no parte palabras (v0.3.3). Con letra grande,
- * «Informarme» se partía en «Infor / ma…» en las tarjetas de Acciones rápidas. Ahora
- * la etiqueta conserva la letra elegida si su palabra más larga cabe en
- * [availableWidth] (píxeles) y el texto entero entra en [maxLines] líneas; si no, la
- * letra se reduce solo lo necesario. Las líneas se cortan entre palabras y el texto
- * nunca se corta ni se esconde.
+ * Una etiqueta corta que no parte palabras (v0.3.3). Con letra grande, «Informarme» se
+ * partía en «Infor / ma…» en las tarjetas de Acciones rápidas. Ahora conserva la letra
+ * elegida si cada palabra cabe entera en [availableWidthPx] y el texto entra en
+ * [maxLines] líneas; si no, la letra se reduce solo lo necesario (dentro de un paso de
+ * [SHRINK_STEP]). Las líneas se cortan entre palabras y el texto se ve entero, salvo en
+ * anchos extremos fuera de lo probado, donde los puntos suspensivos quedan como último
+ * recurso.
  *
- * Recibe el ancho en lugar de medirlo: quien la usa puede estar dentro de una medida
- * intrínseca (la fila de Acciones rápidas iguala alturas así), donde un
- * `BoxWithConstraints` no se admite. Las etiquetas de pestaña tienen su propia regla,
- * de una línea (`TabLabel`).
+ * Recibe el ancho en píxeles en lugar de medirlo: quien la usa puede estar dentro de
+ * una medida intrínseca (la fila de Acciones rápidas iguala alturas así), donde un
+ * `BoxWithConstraints` no se admite. Aplica el estilo y [maxLines] juntos, para que no
+ * puedan desacoplarse. Vive en `core/ui/v2` aunque hoy la use una sola pantalla: es
+ * presentación genérica, junto a las primitivas de `TextFit.kt` que comparte con las
+ * etiquetas de pestaña (que conservan su regla de una línea, `TabLabel`).
  */
 @Composable
-fun rememberWordSafeStyle(text: String, style: TextStyle, availableWidth: Int, maxLines: Int): TextStyle {
+fun WordSafeText(
+    text: String,
+    style: TextStyle,
+    availableWidthPx: Int,
+    maxLines: Int,
+    color: Color,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign? = null
+) {
     // El medidor cambia con la densidad, la escala de letra y la dirección.
     val measurer = rememberTextMeasurer()
-    return remember(text, style, availableWidth, maxLines, measurer) {
-        wordSafeStyle(measurer, text, style, availableWidth, maxLines)
+    val fitted = remember(text, style, availableWidthPx, maxLines, measurer) {
+        wordSafeStyle(measurer, text, style, availableWidthPx, maxLines)
     }
+    Text(
+        text = text,
+        style = fitted,
+        color = color,
+        modifier = modifier,
+        textAlign = textAlign,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis
+    )
 }
 
 /**
- * La primera reducción apunta a que la palabra más larga quepa en una línea
- * ([oneLineScale]), pero el ancho del texto no escala en proporción a la letra
- * (medido: «Llamar» ocupa 209 px a 13 sp y 203 px a 12 sp, no 193). Por eso cada
- * candidato se comprueba midiendo ([fitsWithoutBreakingWords]) y, si no sirve, se
- * reduce en pasos pequeños.
+ * Empieza por la escala que haría caber la palabra más larga ([oneLineScale]) y busca
+ * con [firstFittingScale] la primera que de verdad cumple: cada palabra entera, el
+ * texto dentro de [maxLines] y cada corte en un espacio.
  */
 internal fun wordSafeStyle(
     measurer: TextMeasurer,
     text: String,
     style: TextStyle,
-    availableWidth: Int,
+    availableWidthPx: Int,
     maxLines: Int
 ): TextStyle {
-    if (availableWidth <= 0 || !style.fontSize.isSpecified) return style
+    if (availableWidthPx <= 0 || !style.fontSize.isSpecified) return style
     val words = text.split(WHITESPACE).filter { it.isNotEmpty() }
     val widestWord = words.maxOfOrNull { wordWidth(measurer, it, style) } ?: return style
-    var scale = oneLineScale(widestWord, availableWidth)
-    repeat(MAX_STEPS) {
-        val candidate = style.scaledBy(scale)
-        if (fitsWithoutBreakingWords(measurer, text, words, candidate, availableWidth, maxLines)) return candidate
-        scale *= STEP
+    val scale = firstFittingScale(oneLineScale(widestWord, availableWidthPx)) { candidate ->
+        fitsWithoutBreakingWords(measurer, text, words, style.scaledBy(candidate), availableWidthPx, maxLines)
     }
     return style.scaledBy(scale)
 }
 
-/**
- * Cada palabra cabe entera en el ancho, el texto entra en [maxLines] líneas y cada
- * corte de línea cae en un espacio.
- */
 private fun fitsWithoutBreakingWords(
     measurer: TextMeasurer,
     text: String,
     words: List<String>,
     style: TextStyle,
-    availableWidth: Int,
+    availableWidthPx: Int,
     maxLines: Int
 ): Boolean {
-    if (words.any { wordWidth(measurer, it, style) > availableWidth }) return false
+    if (words.any { wordWidth(measurer, it, style) > availableWidthPx }) return false
     val layout = measurer.measure(
         text = text,
         style = style,
         maxLines = maxLines,
-        constraints = Constraints(maxWidth = availableWidth)
+        constraints = Constraints(maxWidth = availableWidthPx)
     )
-    if (layout.hasVisualOverflow) return false
-    return (0 until layout.lineCount - 1).all { line ->
-        val end = layout.getLineEnd(line)
-        end in 1..text.length && text[end - 1].isWhitespace()
-    }
+    return !layout.hasVisualOverflow && breaksOnlyAtSpaces(text, (0 until layout.lineCount).map(layout::getLineEnd))
 }
 
 private fun wordWidth(measurer: TextMeasurer, word: String, style: TextStyle): Int =
     measurer.measure(word, style, maxLines = 1, softWrap = false).size.width
 
-private fun TextStyle.scaledBy(scale: Float): TextStyle = when {
-    scale >= 1f -> this
-    // Un interlineado sin especificar no se puede escalar: queda el de la letra.
-    lineHeight.isSpecified -> copy(fontSize = fontSize * scale, lineHeight = lineHeight * scale)
-    else -> copy(fontSize = fontSize * scale)
-}
-
 private val WHITESPACE = Regex("\\s+")
-private const val MAX_STEPS = 12
-private const val STEP = 0.92f
