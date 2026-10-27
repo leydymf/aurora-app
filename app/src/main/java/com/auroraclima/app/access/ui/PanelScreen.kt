@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -46,6 +48,7 @@ import com.auroraclima.app.core.ui.v2.V2Icons
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
 import com.auroraclima.app.core.ui.v2.V2Voice
+import com.auroraclima.app.core.ui.v2.rememberWordSafeStyle
 import com.auroraclima.app.core.ui.v2.spotlightTarget
 
 /**
@@ -175,6 +178,10 @@ fun PanelScreen(
  * escala de fuente, aunque una etiqueta ocupe dos líneas y las otras una
  * (mismo recurso que la tarjeta del listado de resultados). El ancho ya era
  * idéntico por los tres `weight(1f)`.
+ *
+ * El ancho de texto de cada tarjeta se calcula aquí, una vez, y no dentro de la
+ * tarjeta: la medida intrínseca no admite `BoxWithConstraints` por debajo (v0.3.3,
+ * etiquetas que no parten palabras con letra grande; ver [QuickAccessCard]).
  */
 @Composable
 internal fun QuickAccessRow(
@@ -183,47 +190,60 @@ internal fun QuickAccessRow(
     onLearn: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Verde para llamar (regla 1); neutro para lo que agrupa varias
-        // cosas (nota con adjuntos, guía) — regla 5. La redacción evita el
-        // término del mockup vedado por el guardián de camuflaje (RNF-05).
-        QuickAccessCard(
-            iconRes = V2Icons.call,
-            accent = V2Palette.accentCare,
-            label = stringResource(R.string.access_home_call),
-            onClick = onCall,
-            modifier = Modifier.weight(1f)
-        )
-        QuickAccessCard(
-            iconRes = V2Icons.media,
-            accent = V2Palette.accentGroup,
-            label = stringResource(R.string.access_home_note),
-            onClick = onSaveNote,
-            modifier = Modifier.weight(1f)
-        )
-        QuickAccessCard(
-            iconRes = V2Icons.guide,
-            accent = V2Palette.accentGroup,
-            label = stringResource(R.string.access_home_learn),
-            onClick = onLearn,
-            modifier = Modifier.weight(1f)
-        )
+    BoxWithConstraints(modifier = modifier) {
+        val labelWidth = with(LocalDensity.current) {
+            (constraints.maxWidth - 2 * QUICK_ACCESS_GAP.roundToPx()) / 3 - 2 * QUICK_ACCESS_SIDE_PADDING.roundToPx()
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(QUICK_ACCESS_GAP)
+        ) {
+            // Verde para llamar (regla 1); neutro para lo que agrupa varias
+            // cosas (nota con adjuntos, guía) — regla 5. La redacción evita el
+            // término del mockup vedado por el guardián de camuflaje (RNF-05).
+            QuickAccessCard(
+                iconRes = V2Icons.call,
+                accent = V2Palette.accentCare,
+                label = stringResource(R.string.access_home_call),
+                labelWidth = labelWidth,
+                onClick = onCall,
+                modifier = Modifier.weight(1f)
+            )
+            QuickAccessCard(
+                iconRes = V2Icons.media,
+                accent = V2Palette.accentGroup,
+                label = stringResource(R.string.access_home_note),
+                labelWidth = labelWidth,
+                onClick = onSaveNote,
+                modifier = Modifier.weight(1f)
+            )
+            QuickAccessCard(
+                iconRes = V2Icons.guide,
+                accent = V2Palette.accentGroup,
+                label = stringResource(R.string.access_home_learn),
+                labelWidth = labelWidth,
+                onClick = onLearn,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
 /**
  * Acceso rápido de P09: tarjeta vertical con insignia de acento y etiqueta.
- * Llena la altura que fija la fila y centra su contenido; la etiqueta se acota
- * a dos líneas para que con fuente grande la fila no crezca sin control.
+ * Llena la altura que fija la fila y centra su contenido. La etiqueta va en dos
+ * líneas como mucho y nunca parte una palabra: con letra grande, si su palabra
+ * más larga no cabe en [labelWidth] o el texto no entra en dos líneas, la letra
+ * se reduce solo lo necesario (`rememberWordSafeStyle`, v0.3.3).
  */
 @Composable
 private fun QuickAccessCard(
     @DrawableRes iconRes: Int,
     accent: AccentPair,
     label: String,
+    labelWidth: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -232,7 +252,7 @@ private fun QuickAccessCard(
             .fillMaxHeight()
             .clip(V2Corner.card)
             .clickable(onClick = onClick, role = Role.Button),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 16.dp)
+        contentPadding = PaddingValues(horizontal = QUICK_ACCESS_SIDE_PADDING, vertical = 16.dp)
     ) {
         Column(
             modifier = Modifier
@@ -245,7 +265,7 @@ private fun QuickAccessCard(
             Spacer(modifier = Modifier.height(10.dp))
             Text(
                 text = label,
-                style = InteriorTypeVoice.label,
+                style = rememberWordSafeStyle(label, InteriorTypeVoice.label, labelWidth, QUICK_ACCESS_LABEL_LINES),
                 color = V2Palette.inkPrimary,
                 textAlign = TextAlign.Center,
                 maxLines = QUICK_ACCESS_LABEL_LINES,
@@ -257,6 +277,10 @@ private fun QuickAccessCard(
 
 /** Tope de líneas de la etiqueta: el ícono y el texto deben caber centrados. */
 private const val QUICK_ACCESS_LABEL_LINES = 2
+
+/** Separación entre tarjetas y margen lateral de cada una: de ellos sale el ancho de texto. */
+private val QUICK_ACCESS_GAP = 12.dp
+private val QUICK_ACCESS_SIDE_PADDING = 10.dp
 
 @Preview(name = "Inicio · 360 dp", widthDp = 360, heightDp = 760, showBackground = true, backgroundColor = 0xFFF3F1F7)
 @Composable
