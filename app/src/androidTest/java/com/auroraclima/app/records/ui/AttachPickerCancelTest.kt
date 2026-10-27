@@ -1,6 +1,7 @@
 package com.auroraclima.app.records.ui
 
 import android.app.Instrumentation
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -34,6 +35,7 @@ import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -68,7 +70,13 @@ class AttachPickerCancelTest {
     fun cancelarElSelectorDeImagenesVuelveAlEditorSinPerderLoEscrito() = cancelFrom("Galería")
 
     @Test
-    fun cancelarElSelectorDeDocumentosConElGestoDeAtras() = cancelFrom("Archivo", gesture = true)
+    fun cancelarElSelectorDeDocumentosConElGestoDeAtras() {
+        // El gesto de atrás llegó con Android 10. Antes, deslizar desde el borde
+        // abre el cajón «Open from» del selector de documentos y no vuelve: ahí
+        // la vía es el botón de atrás, que cubren las otras dos pruebas.
+        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+        cancelFrom("Archivo", gesture = true)
+    }
 
     private fun cancelFrom(button: String, gesture: Boolean = false) {
         setHarness()
