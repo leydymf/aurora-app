@@ -64,7 +64,7 @@ object V2Icons {
      * acompaña al acento lila. Redibujada en contorno 1.9 (v2-10). */
     @DrawableRes val recognize = R.drawable.ic_compass_soft
 
-    /** Engranaje — abrir Configuración desde el Inicio (decisión D3: engranaje
+    /** Engranaje — abrir Ajustes desde el Inicio (decisión D3: engranaje
      * ya establecido, no el sol del mockup). */
     @DrawableRes val settings = R.drawable.ic_gear_soft
 

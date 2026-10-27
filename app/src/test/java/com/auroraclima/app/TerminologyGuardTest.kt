@@ -117,6 +117,18 @@ class TerminologyGuardTest {
     }
 
     @Test
+    fun `la pantalla de ajustes se llama Ajustes en todos los textos`() {
+        // v0.3.3, decisión de la autora: el título de la pantalla, el engranaje del Inicio,
+        // el recorrido y la pista del tutorial la nombraban de dos maneras.
+        assertEquals("Ajustes", strings.getValue("access_settings_title"))
+        assertEquals("Ajustes", strings.getValue("access_panel_settings"))
+        assertEquals("Ajustes", strings.getValue("access_tour_settings_title"))
+        val conOtroNombre = violaciones(Regex("""configuración""", RegexOption.IGNORE_CASE))
+
+        assertTrue("«Configuración» en un texto:\n" + conOtroNombre.joinToString("\n"), conOtroNombre.isEmpty())
+    }
+
+    @Test
     fun `todo codigo nombrado es de acceso o de activacion`() {
         val ambiguos = strings.filter { (id, texto) ->
             id !in idsExentosDeCodigoCompleto &&

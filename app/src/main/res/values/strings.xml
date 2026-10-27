@@ -73,7 +73,7 @@
     <string name="account_intro_avoid_title">Qué no hacemos.</string>
     <string name="account_intro_avoid_body">No compartimos tus datos con nadie. No enviamos notificaciones. Nada sale de aquí.</string>
     <string name="account_intro_rights_title">Tus derechos.</string>
-    <string name="account_intro_rights_body">Puedes consultar, corregir o eliminar todo cuando quieras, desde Configuración. Tratamiento conforme a la Ley 1581 de 2012.</string>
+    <string name="account_intro_rights_body">Puedes consultar, corregir o eliminar todo cuando quieras, desde Ajustes. Tratamiento conforme a la Ley 1581 de 2012.</string>
     <string name="account_intro_check">He leído y acepto el tratamiento de mis datos personales.</string>
     <string name="account_intro_accept">Aceptar y continuar</string>
     <string name="account_intro_reject">No aceptar y volver al clima</string>
@@ -126,7 +126,7 @@
     <string name="access_settings_change_password">Cambiar la contraseña de tu cuenta</string>
     <string name="access_settings_guide">Ver el tutorial otra vez</string>
     <string name="access_settings_tour">Ver el recorrido por la app</string>
-    <string name="access_change_tag">CONFIGURACIÓN · CÓDIGO DE ACCESO</string>
+    <string name="access_change_tag">AJUSTES · CÓDIGO DE ACCESO</string>
     <string name="access_change_title">Cambiar tu código de acceso.</string>
     <string name="access_change_current_label">Tu código de acceso actual</string>
     <string name="access_change_new_label">Nuevo código de acceso</string>
@@ -144,7 +144,7 @@
     <string name="access_settings_delete_account">Eliminar todo y salir</string>
     <string name="access_settings_delete_support">Tu cuenta y tus anotaciones</string>
     <string name="access_settings_footer">Aurora · Prototipo académico TRL 4 · UNAB 2026</string>
-    <string name="account_delete_tag">CONFIGURACIÓN · CUENTA</string>
+    <string name="account_delete_tag">AJUSTES · CUENTA</string>
     <string name="account_delete_title">Eliminar tu cuenta.</string>
     <string name="account_delete_body">Esta acción elimina de forma definitiva tu cuenta, tus registros y tu código de acceso: de este teléfono y de la nube, todo a la vez. No hay forma de recuperarlos después.</string>
     <string name="account_delete_requirements">Necesitarás conexión y la contraseña de tu cuenta. Si algo falla a mitad, nada se pierde: puedes intentarlo de nuevo.</string>
@@ -159,11 +159,11 @@
     <string name="account_delete_submit">Eliminar definitivamente</string>
     <string name="account_delete_error_offline">Necesitas conexión para completar esto. Nada se ha eliminado todavía; inténtalo cuando tengas red.</string>
     <string name="account_delete_error_generic">No se pudo completar. Puedes intentarlo de nuevo con calma.</string>
-    <string name="account_privacy_tag">CONFIGURACIÓN · PRIVACIDAD</string>
+    <string name="account_privacy_tag">AJUSTES · PRIVACIDAD</string>
     <string name="account_privacy_title">Decides tú, siempre.</string>
     <string name="access_panel_title">Estoy aquí.</string>
     <string name="access_panel_subtitle">Tómate el tiempo que necesites.</string>
-    <string name="access_panel_settings">Configuración</string>
+    <string name="access_panel_settings">Ajustes</string>
     <string name="access_tour_counter">%1$d de %2$d</string>
     <string name="access_tour_next">Siguiente</string>
     <string name="access_tour_skip">Saltar</string>
