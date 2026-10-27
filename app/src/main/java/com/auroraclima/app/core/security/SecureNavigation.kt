@@ -138,7 +138,7 @@ class CloudAnchor internal constructor() {
         internal set
 }
 
-/** El [CloudAnchor] de la pantalla segura en curso; null fuera del grafo seguro. */
+/** El [CloudAnchor] de la pantalla segura en curso; null fuera del grafo seguro y dentro de una ventana propia. */
 val LocalCloudAnchor = staticCompositionLocalOf<CloudAnchor?> { null }
 
 /**

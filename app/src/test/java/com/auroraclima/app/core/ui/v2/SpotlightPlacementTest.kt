@@ -15,6 +15,14 @@ class SpotlightPlacementTest {
     private val top = 40f
     private val bottom = 1_000f
     private val gap = 10f
+    private val metrics = SpotlightMetrics(
+        edgeMargin = 16f,
+        maxBubbleWidth = 480f,
+        gap = 14f,
+        holePadding = 6f,
+        caretInset = 28f,
+        bubblePadding = 20f
+    )
 
     @Test
     fun `con sitio debajo va debajo`() {
@@ -42,10 +50,10 @@ class SpotlightPlacementTest {
     }
 
     @Test
-    fun `un globo mas alto que la franja empieza arriba de ella`() {
+    fun `un globo mas alto que la franja empieza en su borde superior`() {
         val spot = SpotlightPlacement.place(Rect(0f, 300f, 300f, 400f), 2_000f, top, bottom, gap)
 
-        assertTrue("nunca por encima de la franja usable", spot.top >= top)
+        assertEquals("nunca por encima de la franja usable", top, spot.top, 0f)
     }
 
     @Test
@@ -67,6 +75,66 @@ class SpotlightPlacementTest {
 
         assertEquals(0f, SpotlightPlacement.actionsEndInset(bubble, cloud, gap = 8f, contentPadding = 20f), 0f)
         assertEquals(0f, SpotlightPlacement.actionsEndInset(bubble, null, gap = 8f, contentPadding = 20f), 0f)
+    }
+
+    @Test
+    fun `de derecha a izquierda la nube esta a la izquierda y el recorte tambien`() {
+        // Globo de 16 a 344; nube a la izquierda, de 20 a 72, a la altura de sus botones.
+        val bubble = Rect(16f, 400f, 344f, 600f)
+        val cloud = Rect(20f, 540f, 72f, 592f)
+
+        val inset = SpotlightPlacement.actionsEndInset(
+            bubble,
+            cloud,
+            gap = 8f,
+            contentPadding = 20f,
+            rightToLeft = true
+        )
+
+        // La fila empieza en 16 + 20 = 36; debe empezar en 72 + 8 = 80.
+        assertEquals(44f, inset, 0.001f)
+        // Sin saber la dirección, el recorte se habría calculado contra el lado contrario.
+        assertTrue(SpotlightPlacement.actionsEndInset(bubble, cloud, 8f, 20f, rightToLeft = false) > 200f)
+    }
+
+    @Test
+    fun `el cuadro no deja bajar el globo de la nube y le recorta los botones`() {
+        // Pantalla de 360 de ancho; el elemento (una pestaña) abajo de todo y la nube 20
+        // por encima de la barra, a la derecha: el globo va encima del elemento y la cruza.
+        val tab = Rect(130f, 900f, 230f, 960f)
+        val cloud = Rect(288f, 828f, 340f, 880f)
+
+        val frame = SpotlightPlacement.frame(
+            target = tab,
+            keepClear = cloud,
+            areaWidth = 360f,
+            top = 40f,
+            bottom = 1_000f,
+            bubbleHeight = 200f,
+            metrics = metrics
+        )
+
+        assertTrue("el globo no baja del borde inferior de la nube", frame.bubble.bottom <= cloud.bottom + 0.001f)
+        assertTrue(
+            "la fila de botones termina antes de la nube",
+            frame.bubble.right - 20f - frame.actionsEndInset <= cloud.left - 14f
+        )
+        assertFalse("el pico apunta hacia abajo, al elemento", frame.caretPointsUp)
+        assertEquals("la franja del globo termina en la nube", cloud.bottom - 40f, frame.maxBubbleHeight, 0.001f)
+    }
+
+    @Test
+    fun `el cuadro centra el globo y deja el pico sobre el elemento`() {
+        val gear = Rect(300f, 60f, 348f, 108f)
+
+        val frame = SpotlightPlacement.frame(gear, null, 360f, 40f, 1_000f, 200f, metrics)
+
+        assertEquals(16f, frame.bubble.left, 0.001f)
+        assertEquals(344f, frame.bubble.right, 0.001f)
+        assertTrue(frame.caretPointsUp)
+        // El pico no se sale del globo aunque el elemento esté en la esquina.
+        assertEquals(344f - 28f, frame.caretX, 0.001f)
+        assertEquals(0f, frame.actionsEndInset, 0f)
     }
 
     @Test

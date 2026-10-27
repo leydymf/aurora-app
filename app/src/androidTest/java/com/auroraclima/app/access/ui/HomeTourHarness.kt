@@ -6,25 +6,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import com.auroraclima.app.InnerTabBar
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.SpotlightTargets
-import com.auroraclima.app.core.ui.v2.V2Icons
-import com.auroraclima.app.core.ui.v2.V2TabBar
 import com.auroraclima.app.core.ui.v2.V2TabBarHeight
-import com.auroraclima.app.core.ui.v2.V2TabItem
 import com.auroraclima.app.core.ui.v2.V2Voice
-import com.auroraclima.app.core.ui.v2.spotlightTarget
 
 /**
  * El Inicio con su barra de pestañas y el recorrido encima, dentro del grafo seguro
- * real: la misma composición que `InnerTabsHost` en la pestaña Inicio, sin los
- * ViewModels de Hilt (el paso lo da la prueba). La ruta declara el inset de la barra,
- * como el panel, así que la nube queda donde queda en la app.
+ * real: la misma composición que `InnerTabsHost` en la pestaña Inicio, con su misma
+ * barra (`InnerTabBar`) y sin los ViewModels de Hilt (el paso lo da la prueba). La
+ * ruta declara el inset de la barra, como el panel, así que la nube queda donde queda
+ * en la app.
  */
 @Composable
 internal fun HomeTourHarness(step: HomeTourStep?, onNext: () -> Unit, onSkip: () -> Unit, targets: SpotlightTargets) {
@@ -55,22 +52,8 @@ private fun HomeWithTabs() {
                 onLearn = {}
             )
         }
-        V2TabBar(
-            items = listOf(
-                V2TabItem(V2Icons.home, stringResource(R.string.access_tab_home)),
-                V2TabItem(V2Icons.guide, stringResource(R.string.access_tab_guide)),
-                V2TabItem(V2Icons.journal, stringResource(R.string.access_tab_journal))
-            ),
-            selectedIndex = 0,
-            onSelect = {},
-            itemModifier = { index ->
-                when (index) {
-                    1 -> Modifier.spotlightTarget(HomeTourStep.GUIDE)
-                    2 -> Modifier.spotlightTarget(HomeTourStep.JOURNAL)
-                    else -> Modifier
-                }
-            }
-        )
+        // La misma barra de la app, con sus pasos marcados (no una copia).
+        InnerTabBar(selectedTab = 0, onSelect = {})
     }
 }
 

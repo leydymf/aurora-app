@@ -7,6 +7,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -232,20 +233,24 @@ fun AuroraApp(sessionManager: SessionManager) {
                     val replayTour by entry.savedStateHandle.getStateFlow(TOUR_REPLAY_KEY, false).collectAsState()
                     InnerTabsHost(
                         isOffline = isOffline,
-                        onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
-                        onOpenGuidanceHistory = { navController.navigate(GUIDANCE_HISTORY_ROUTE) },
-                        onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
-                        onOpenTopics = { navController.navigate(TOPICS_ROUTE) },
-                        onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
-                        onOpenLines = { navController.navigate(LINES_ROUTE) },
-                        onAddJournalEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
-                        onOpenJournalEntry = { entryId ->
-                            navController.navigate("$JOURNAL_ROUTE/$entryId")
-                        },
-                        // Exportación selectiva (RF-45): solo ids opacos viajan
-                        // por la ruta; la pantalla vuelve a leer todo lo demás.
-                        onExportJournalEntries = { ids ->
-                            navController.navigate("$JOURNAL_EXPORT_BASE/${ids.joinToString(",")}")
+                        actions = remember(navController) {
+                            InnerTabsActions(
+                                onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
+                                onOpenGuidanceHistory = { navController.navigate(GUIDANCE_HISTORY_ROUTE) },
+                                onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
+                                onOpenTopics = { navController.navigate(TOPICS_ROUTE) },
+                                onOpenRoutes = { navController.navigate(ROUTES_ROUTE) },
+                                onOpenLines = { navController.navigate(LINES_ROUTE) },
+                                onAddJournalEntry = { navController.navigate(JOURNAL_NEW_ROUTE) },
+                                onOpenJournalEntry = { entryId ->
+                                    navController.navigate("$JOURNAL_ROUTE/$entryId")
+                                },
+                                // Exportación selectiva (RF-45): solo ids opacos viajan
+                                // por la ruta; la pantalla vuelve a leer todo lo demás.
+                                onExportJournalEntries = { ids ->
+                                    navController.navigate("$JOURNAL_EXPORT_BASE/${ids.joinToString(",")}")
+                                }
+                            )
                         },
                         replayTour = replayTour,
                         onReplayTourHandled = { entry.savedStateHandle[TOUR_REPLAY_KEY] = false }
@@ -510,9 +515,6 @@ private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ARRIVAL_ROUTE = "arrival"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
-
-// Bandera de la entrada del panel, no una ruta; nombre neutro porque queda legible en el APK.
-private const val TOUR_REPLAY_KEY = "replay"
 private const val SETTINGS_ROUTE = "settings"
 private const val PRIVACY_ROUTE = "privacy"
 private const val SETTINGS_CODE_ROUTE = "settings_code"
@@ -534,3 +536,6 @@ private const val TOPIC_DETAIL_ROUTE = "$TOPICS_ROUTE/{$TOPIC_ID_ARG}"
 private const val ROUTES_ROUTE = "routes"
 private const val AGENCY_DETAIL_ROUTE = "$ROUTES_ROUTE/{$ROUTE_ID_ARG}/{$AGENCY_ID_ARG}"
 private const val LINES_ROUTE = "lines"
+
+// Bandera de la entrada del panel, no una ruta; nombre neutro porque queda legible en el APK.
+private const val TOUR_REPLAY_KEY = "replay"

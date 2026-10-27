@@ -25,6 +25,12 @@ data class TutorialUiState(
      * 2026-08): en repaso (RF-11) no hay nada que saltar — la flecha ya regresa.
      */
     fun showsSkip(isReview: Boolean): Boolean = !isReview
+
+    /**
+     * Paso 2 de la señal de la práctica (v0.3.3): logrado el ingreso, el halo y la
+     * flecha pasan de la barra a la nube.
+     */
+    val showsCloudCue: Boolean get() = step == TutorialStep.PRACTICE && practiceStatus == PracticeStatus.MATCHED
 }
 
 /**

@@ -2,8 +2,10 @@ package com.auroraclima.app.access.ui
 
 import com.auroraclima.app.R
 import com.auroraclima.app.access.domain.model.CodeSlot
+import com.auroraclima.app.access.domain.usecase.CompleteCodeSetupUseCase
 import com.auroraclima.app.access.domain.usecase.CreateSecretCodeUseCase
 import com.auroraclima.app.access.domain.usecase.FakeCityNameDirectory
+import com.auroraclima.app.access.domain.usecase.FakeHomeTourRepository
 import com.auroraclima.app.access.domain.usecase.FakeSecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.FakeSecretCodeRepository
 import com.auroraclima.app.core.MainDispatcherRule
@@ -31,8 +33,10 @@ class CodeSetupViewModelTest {
     private val repository = FakeSecretCodeRepository()
     private val homeTour = FakeHomeTourRepository()
     private val viewModel = CodeSetupViewModel(
-        CreateSecretCodeUseCase(repository, hasher, FakeCityNameDirectory("bucaramanga", "bogota")),
-        homeTour
+        CompleteCodeSetupUseCase(
+            CreateSecretCodeUseCase(repository, hasher, FakeCityNameDirectory("bucaramanga", "bogota")),
+            homeTour
+        )
     )
 
     private fun TestScope.collectContinueEvents(): List<Unit> {
@@ -101,23 +105,7 @@ class CodeSetupViewModelTest {
     }
 
     @Test
-    fun `si no se puede marcar el recorrido el flujo continua igual`() = runTest {
-        homeTour.failWrites = true
-        val events = collectContinueEvents()
-
-        viewModel.onCodeChange("cielo2026")
-        viewModel.onConfirmCodeChange("cielo2026")
-        advanceUntilIdle()
-        viewModel.onSubmit()
-        advanceUntilIdle()
-
-        assertEquals(1, events.size)
-        assertFalse(homeTour.pending)
-        assertNull(viewModel.uiState.value.generalErrorRes)
-    }
-
-    @Test
-    fun `una clave rechazada no deja pendiente el recorrido`() = runTest {
+    fun `una confirmacion distinta no deja pendiente el recorrido`() = runTest {
         viewModel.onCodeChange("cielo2026")
         viewModel.onConfirmCodeChange("cielo2027")
         advanceUntilIdle()

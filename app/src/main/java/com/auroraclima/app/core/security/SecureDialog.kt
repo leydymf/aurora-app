@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -140,26 +141,29 @@ internal fun SecureWindow(
             window.setDimAmount(themeDimAmount(context))
             window.keepReleasedFocusOutOfFields()
         }
-        WindowBackdrop(
-            onClick = onDismissRequest.takeIf { dismissOnClickOutside },
-            contentAlignment = contentAlignment
-        ) {
-            Box(
-                modifier = contentModifier
-                    .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                    // El contenido consume el toque: tocarlo no debe descartar. Con un
-                    // gesto en lugar de `clickable` el desplazamiento por semántica
-                    // dejaba de llegar al último botón del diálogo (instrumentadas);
-                    // cómo lo agrupa TalkBack se revisa en P-120.
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
+        // El ancla de la ruta está en otra ventana y en otras coordenadas: aquí no vale.
+        CompositionLocalProvider(LocalCloudAnchor provides null) {
+            WindowBackdrop(
+                onClick = onDismissRequest.takeIf { dismissOnClickOutside },
+                contentAlignment = contentAlignment
             ) {
-                content()
+                Box(
+                    modifier = contentModifier
+                        .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                        // El contenido consume el toque: tocarlo no debe descartar. Con un
+                        // gesto en lugar de `clickable` el desplazamiento por semántica
+                        // dejaba de llegar al último botón del diálogo (instrumentadas);
+                        // cómo lo agrupa TalkBack se revisa en P-120.
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {}
+                        )
+                ) {
+                    content()
+                }
+                QuickExitCloud(modifier = Modifier.align(Alignment.BottomEnd))
             }
-            QuickExitCloud(modifier = Modifier.align(Alignment.BottomEnd))
         }
     }
 }

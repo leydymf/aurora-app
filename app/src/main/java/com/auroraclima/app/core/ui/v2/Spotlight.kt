@@ -11,11 +11,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -31,7 +31,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -43,7 +42,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.boundingRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -53,16 +51,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -133,15 +130,15 @@ fun Modifier.spotlightTarget(key: Any): Modifier = composed {
 }
 
 /**
- * Dónde va el globo respecto del elemento iluminado. Puro, para probarlo en la JVM:
- * debajo si cabe; si no, encima; y si no cabe en ninguno de los dos lados (letra muy
- * grande en una pantalla baja), pegado al borde del lado con más espacio, aunque
- * cubra parte del elemento.
+ * Dónde va todo lo que dibuja la capa (v0.3.3). Puro, para probarlo en la JVM: el
+ * globo va debajo del elemento si cabe; si no, encima; y si no cabe en ninguno de los
+ * dos lados (letra muy grande en una pantalla baja), pegado al borde del lado con más
+ * espacio, aunque cubra parte del elemento. Todo en las coordenadas de la capa.
  */
 object SpotlightPlacement {
     /**
-     * [target] y el resultado, en las coordenadas de la capa; [top]..[bottom] es la
-     * franja usable (sin barras del sistema) y [gap] el aire entre elemento y globo.
+     * [target] y el resultado en coordenadas de la capa; [top]..[bottom] es la franja
+     * usable (sin barras del sistema) y [gap] el aire entre elemento y globo.
      */
     fun place(target: Rect, bubbleHeight: Float, top: Float, bottom: Float, gap: Float): BubbleSpot {
         val roomBelow = bottom - (target.bottom + gap)
@@ -155,22 +152,88 @@ object SpotlightPlacement {
     }
 
     /**
-     * Cuánto acortar por la derecha la fila de botones del globo [bubble] para que
+     * Cuánto acortar por el lado final la fila de botones del globo [bubble] para que
      * [keepClear] (la nube) no quede encima de ninguno: cero si no se cruzan. La nube
      * va por encima de la capa y un toque en ella sale al clima; un botón debajo de
      * ella sería una salida por accidente. [contentPadding] es el margen interior del
-     * globo, que ya separa la fila de su borde.
+     * globo, que ya separa la fila de su borde. Con [rightToLeft] el lado final es el
+     * izquierdo, y allí está también la nube.
      */
-    fun actionsEndInset(bubble: Rect, keepClear: Rect?, gap: Float, contentPadding: Float): Float {
+    fun actionsEndInset(
+        bubble: Rect,
+        keepClear: Rect?,
+        gap: Float,
+        contentPadding: Float,
+        rightToLeft: Boolean = false
+    ): Float {
         if (keepClear == null) return 0f
         val crossesVertically = bubble.bottom > keepClear.top - gap && bubble.top < keepClear.bottom + gap
         if (!crossesVertically) return 0f
-        return (bubble.right - contentPadding - (keepClear.left - gap)).coerceAtLeast(0f)
+        val overlap = if (rightToLeft) {
+            keepClear.right + gap - (bubble.left + contentPadding)
+        } else {
+            bubble.right - contentPadding - (keepClear.left - gap)
+        }
+        return overlap.coerceAtLeast(0f)
+    }
+
+    /**
+     * El cuadro completo de un paso: el hueco alrededor de [target], el globo de alto
+     * [bubbleHeight] centrado en [areaWidth], su pico y el margen de su fila de botones.
+     * El globo no baja del borde inferior de [keepClear]: así la nube solo puede cruzar
+     * su franja de botones, y esa franja se acorta (ver [actionsEndInset]).
+     */
+    fun frame(
+        target: Rect,
+        keepClear: Rect?,
+        areaWidth: Float,
+        top: Float,
+        bottom: Float,
+        bubbleHeight: Float,
+        metrics: SpotlightMetrics,
+        rightToLeft: Boolean = false
+    ): SpotlightFrame {
+        val hole = target.inflate(metrics.holePadding)
+        val lowest = keepClear?.let { min(bottom, it.bottom) } ?: bottom
+        val width = min(areaWidth - 2 * metrics.edgeMargin, metrics.maxBubbleWidth)
+        val left = (areaWidth - width) / 2
+        val spot = place(hole, bubbleHeight, top, lowest, metrics.gap)
+        val bubble = Rect(left, spot.top, left + width, spot.top + bubbleHeight)
+        val caretMin = left + metrics.caretInset
+        val caretMax = left + width - metrics.caretInset
+        return SpotlightFrame(
+            hole = hole,
+            bubble = bubble,
+            maxBubbleHeight = (lowest - top).coerceAtLeast(0f),
+            caretX = if (caretMin <= caretMax) hole.center.x.coerceIn(caretMin, caretMax) else bubble.center.x,
+            caretPointsUp = spot.below,
+            actionsEndInset = actionsEndInset(bubble, keepClear, metrics.gap, metrics.bubblePadding, rightToLeft)
+        )
     }
 }
 
 /** El globo empieza en [top]; [below] dice si va debajo del elemento (su pico apunta hacia arriba). */
 data class BubbleSpot(val top: Float, val below: Boolean)
+
+/** Medidas de la capa en píxeles; las fija la capa con su densidad. */
+data class SpotlightMetrics(
+    val edgeMargin: Float,
+    val maxBubbleWidth: Float,
+    val gap: Float,
+    val holePadding: Float,
+    val caretInset: Float,
+    val bubblePadding: Float
+)
+
+/** Lo que dibuja la capa en un paso, en sus coordenadas. */
+data class SpotlightFrame(
+    val hole: Rect,
+    val bubble: Rect,
+    val maxBubbleHeight: Float,
+    val caretX: Float,
+    val caretPointsUp: Boolean,
+    val actionsEndInset: Float
+)
 
 /**
  * Capa de recorrido: un velo que oscurece toda su área menos [targetBounds] (en
@@ -180,8 +243,8 @@ data class BubbleSpot(val top: Float, val below: Boolean)
  * esté POR ENCIMA de esta capa (la nube del grafo seguro) sigue recibiendo el suyo.
  *
  * [keepClear] es un área que el globo respeta (la nube, en ventana): el globo no baja
- * de su borde inferior y, si la cruza, su fila de botones se acorta por la derecha
- * (lo recibe [bubble] como margen final) para que ningún botón quede debajo.
+ * de su borde inferior y, si la cruza, su fila de botones se acorta por el lado final
+ * (lo recibe [bubble] como margen) para que ningún botón quede debajo.
  */
 @Composable
 fun SpotlightLayer(
@@ -190,69 +253,72 @@ fun SpotlightLayer(
     keepClear: Rect? = null,
     bubble: @Composable (actionsEndInset: Dp) -> Unit
 ) {
+    val window = rememberWindowFrame()
+    var bubbleHeight by remember { mutableIntStateOf(0) }
+    val frame = spotlightFrameOf(window, targetBounds, keepClear, bubbleHeight)
+    Box(modifier = modifier.fillMaxSize().trackWindowFrame(window)) {
+        // Sin el alto del globo, ni pico ni globo: no se muestran en un lugar falso.
+        Scrim(hole = frame?.hole, caret = frame?.takeIf { bubbleHeight > 0 }?.caret())
+        if (frame != null) {
+            BubbleSlot(frame = frame, measured = bubbleHeight > 0, onHeight = { bubbleHeight = it }, bubble = bubble)
+        }
+    }
+}
+
+/** El cuadro del paso con las medidas, las barras del sistema y la dirección de esta pantalla. */
+@Composable
+private fun spotlightFrameOf(
+    window: WindowFrame,
+    targetBounds: Rect?,
+    keepClear: Rect?,
+    bubbleHeight: Int
+): SpotlightFrame? {
     val density = LocalDensity.current
     val systemBars = WindowInsets.systemBars
-    var origin by remember { mutableStateOf<Offset?>(null) }
-    var area by remember { mutableStateOf(IntSize.Zero) }
-    var bubbleHeight by remember { mutableIntStateOf(0) }
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .onGloballyPositioned {
-                origin = it.positionInWindow()
-                area = it.size
-            }
-    ) {
-        val start = origin
-        val hole = if (start == null || targetBounds == null) null else holeFor(targetBounds.translate(-start), density)
-        val clear = if (start == null || keepClear == null) null else keepClear.translate(-start)
-        with(density) {
-            val top = systemBars.getTop(density) + EDGE_MARGIN.toPx()
-            val edgeBottom = area.height - systemBars.getBottom(density) - EDGE_MARGIN.toPx()
-            val bottom = clear?.let { min(edgeBottom, it.bottom) } ?: edgeBottom
-            val width = min(area.width - 2 * EDGE_MARGIN.toPx(), BUBBLE_MAX_WIDTH.toPx())
-            val left = (area.width - width) / 2
-            val spot = hole?.let {
-                SpotlightPlacement.place(
-                    it.boundingRect,
-                    bubbleHeight.toFloat(),
-                    top,
-                    bottom,
-                    GAP.toPx()
-                )
-            }
-            val caret = if (hole != null && spot != null && bubbleHeight > 0) {
-                Caret(
-                    x = hole.boundingRect.center.x.coerceIn(
-                        left + CARET_INSET.toPx(),
-                        left + width - CARET_INSET.toPx()
-                    ),
-                    baseY = if (spot.below) spot.top else spot.top + bubbleHeight,
-                    pointsUp = spot.below
-                )
-            } else {
-                null
-            }
-            Scrim(hole = hole, caret = caret)
-            if (spot != null) {
-                val endInset = SpotlightPlacement.actionsEndInset(
-                    bubble = Rect(left, spot.top, left + width, spot.top + bubbleHeight),
-                    keepClear = clear,
-                    gap = GAP.toPx(),
-                    contentPadding = BUBBLE_PADDING.toPx()
-                )
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(left.roundToInt(), spot.top.roundToInt()) }
-                        .width(width.toDp())
-                        .heightIn(max = (bottom - top).coerceAtLeast(0f).toDp())
-                        .onSizeChanged { bubbleHeight = it.height }
-                        // El primer cuadro aún no conoce su alto: no se muestra en un lugar falso.
-                        .graphicsLayer { alpha = if (bubbleHeight == 0) 0f else 1f }
-                ) {
-                    bubble(endInset.toDp())
-                }
-            }
+    val rightToLeft = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val target = targetBounds?.let(window::toLocal) ?: return null
+    return with(density) {
+        SpotlightPlacement.frame(
+            target = target,
+            keepClear = keepClear?.let(window::toLocal),
+            areaWidth = window.size.width.toFloat(),
+            top = systemBars.getTop(this) + EDGE_MARGIN.toPx(),
+            bottom = window.size.height - systemBars.getBottom(this) - EDGE_MARGIN.toPx(),
+            bubbleHeight = bubbleHeight.toFloat(),
+            metrics = SpotlightMetrics(
+                edgeMargin = EDGE_MARGIN.toPx(),
+                maxBubbleWidth = BUBBLE_MAX_WIDTH.toPx(),
+                gap = GAP.toPx(),
+                holePadding = HOLE_PADDING.toPx(),
+                caretInset = CARET_INSET.toPx(),
+                bubblePadding = BUBBLE_PADDING.toPx()
+            ),
+            rightToLeft = rightToLeft
+        )
+    }
+}
+
+/**
+ * El globo en su lugar. Posición absoluta (no se refleja en derecha a izquierda): el
+ * cuadro ya viene en coordenadas reales de la capa.
+ */
+@Composable
+private fun BubbleSlot(
+    frame: SpotlightFrame,
+    measured: Boolean,
+    onHeight: (Int) -> Unit,
+    bubble: @Composable (actionsEndInset: Dp) -> Unit
+) {
+    with(LocalDensity.current) {
+        Box(
+            modifier = Modifier
+                .absoluteOffset { IntOffset(frame.bubble.left.roundToInt(), frame.bubble.top.roundToInt()) }
+                .width(frame.bubble.width.toDp())
+                .heightIn(max = frame.maxBubbleHeight.toDp())
+                .onSizeChanged { onHeight(it.height) }
+                .graphicsLayer { alpha = if (measured) 1f else 0f }
+        ) {
+            bubble(frame.actionsEndInset.toDp())
         }
     }
 }
@@ -261,7 +327,8 @@ fun SpotlightLayer(
  * Globo del recorrido: título en negrita, frase y contador, que TalkBack lee juntos
  * en cada paso (un nodo, región viva), y los botones de al menos 48 dp. «Saltar»
  * ([skipLabel]) es la acción callada; el botón lleno avanza. Con letra muy grande
- * los botones se apilan y el texto se desplaza dentro del globo.
+ * los botones se apilan y el texto se desplaza dentro del globo. [actionsEndInset]
+ * acorta la fila de botones por el lado final (la nube, ver [SpotlightLayer]).
  */
 @Composable
 fun SpotlightBubble(
@@ -301,20 +368,36 @@ fun SpotlightBubble(
             Text(text = counter, style = InteriorTypeVoice.label, color = V2Palette.inkSecondary)
         }
         Spacer(modifier = Modifier.height(16.dp))
-        // El margen final deja libre la columna de la nube cuando el globo la cruza.
-        val actions = Modifier.padding(end = actionsEndInset)
-        if (LocalDensity.current.fontScale >= STACKED_BUTTONS_FONT_SCALE) {
-            Column(modifier = actions) {
-                V2PrimaryButton(text = primaryLabel, onClick = onPrimary)
-                if (skipLabel != null) {
-                    SkipButton(label = skipLabel, onClick = onSkip, modifier = Modifier.fillMaxWidth())
-                }
+        BubbleActions(
+            primaryLabel = primaryLabel,
+            onPrimary = onPrimary,
+            skipLabel = skipLabel,
+            onSkip = onSkip,
+            modifier = Modifier.padding(end = actionsEndInset)
+        )
+    }
+}
+
+/** «Saltar» y el botón lleno; con letra muy grande, apilados (el lleno primero). */
+@Composable
+private fun BubbleActions(
+    primaryLabel: String,
+    onPrimary: () -> Unit,
+    skipLabel: String?,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (LocalDensity.current.fontScale >= STACKED_BUTTONS_FONT_SCALE) {
+        Column(modifier = modifier) {
+            V2PrimaryButton(text = primaryLabel, onClick = onPrimary)
+            if (skipLabel != null) {
+                SkipButton(label = skipLabel, onClick = onSkip, modifier = Modifier.fillMaxWidth())
             }
-        } else {
-            Row(modifier = actions, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (skipLabel != null) SkipButton(label = skipLabel, onClick = onSkip)
-                V2PrimaryButton(text = primaryLabel, onClick = onPrimary, modifier = Modifier.weight(1f))
-            }
+        }
+    } else {
+        Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (skipLabel != null) SkipButton(label = skipLabel, onClick = onSkip)
+            V2PrimaryButton(text = primaryLabel, onClick = onPrimary, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -329,15 +412,14 @@ private fun SkipButton(label: String, onClick: () -> Unit, modifier: Modifier = 
 /** Pico del globo: base sobre su borde en [baseY], apuntando arriba o abajo. */
 private data class Caret(val x: Float, val baseY: Float, val pointsUp: Boolean)
 
-/** El hueco con aire alrededor y esquinas que acompañan la forma (un círculo si es pequeño y cuadrado). */
-private fun holeFor(target: Rect, density: Density): RoundRect = with(density) {
-    val padded = target.inflate(HOLE_PADDING.toPx())
-    val radius = min(HOLE_RADIUS.toPx(), min(padded.width, padded.height) / 2)
-    RoundRect(padded, CornerRadius(radius))
-}
+private fun SpotlightFrame.caret(): Caret = Caret(
+    x = caretX,
+    baseY = if (caretPointsUp) bubble.top else bubble.bottom,
+    pointsUp = caretPointsUp
+)
 
 @Composable
-private fun Scrim(hole: RoundRect?, caret: Caret?) {
+private fun Scrim(hole: Rect?, caret: Caret?) {
     Canvas(
         modifier = Modifier
             .fillMaxSize()
@@ -352,18 +434,18 @@ private fun Scrim(hole: RoundRect?, caret: Caret?) {
                 }
             }
     ) {
+        // Esquinas que acompañan la forma: un círculo si el hueco es pequeño y cuadrado.
+        val rounded = hole?.let {
+            RoundRect(it, CornerRadius(min(HOLE_RADIUS.toPx(), min(it.width, it.height) / 2)))
+        }
         val veil = Path().apply {
             fillType = PathFillType.EvenOdd
             addRect(Rect(Offset.Zero, size))
-            hole?.let { addRoundRect(it) }
+            rounded?.let { addRoundRect(it) }
         }
         drawPath(veil, V2Palette.spotlightScrim)
-        hole?.let {
-            drawPath(
-                Path().apply { addRoundRect(it) },
-                color = Color.White,
-                style = Stroke(width = RING_WIDTH.toPx())
-            )
+        rounded?.let {
+            drawPath(Path().apply { addRoundRect(it) }, color = Color.White, style = Stroke(width = RING_WIDTH.toPx()))
         }
         caret?.let {
             val half = CARET_HALF_WIDTH.toPx()

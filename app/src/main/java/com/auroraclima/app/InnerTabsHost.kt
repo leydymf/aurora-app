@@ -53,19 +53,12 @@ import com.auroraclima.app.records.ui.JournalListRoute
  * El recorrido por Inicio (v0.3.3, [HomeTourHost]) envuelve las pestañas y su barra:
  * ilumina elementos de Inicio, dos pestañas de la barra y la nube. Su estado también
  * es de esta entrada; [replayTour] llega de Ajustes y se apaga con [onReplayTourHandled].
+ * Los destinos llegan juntos en [actions].
  */
 @Composable
 fun InnerTabsHost(
     isOffline: Boolean,
-    onOpenGuidance: () -> Unit,
-    onOpenGuidanceHistory: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenTopics: () -> Unit,
-    onOpenRoutes: () -> Unit,
-    onOpenLines: () -> Unit,
-    onAddJournalEntry: () -> Unit,
-    onOpenJournalEntry: (Long) -> Unit,
-    onExportJournalEntries: (List<Long>) -> Unit,
+    actions: InnerTabsActions,
     replayTour: Boolean,
     onReplayTourHandled: () -> Unit,
     modifier: Modifier = Modifier
@@ -78,114 +71,124 @@ fun InnerTabsHost(
             onReplayHandled = onReplayTourHandled,
             onShowHome = { selectedTab = HOME_TAB }
         ) {
-            TabsContent(
-                isOffline = isOffline,
-                selectedTab = selectedTab,
-                onSelectTab = { selectedTab = it },
-                tabStateHolder = tabStateHolder,
-                onOpenGuidance = onOpenGuidance,
-                onOpenGuidanceHistory = onOpenGuidanceHistory,
-                onOpenSettings = onOpenSettings,
-                onOpenTopics = onOpenTopics,
-                onOpenRoutes = onOpenRoutes,
-                onOpenLines = onOpenLines,
-                onAddJournalEntry = onAddJournalEntry,
-                onOpenJournalEntry = onOpenJournalEntry,
-                onExportJournalEntries = onExportJournalEntries,
-                modifier = modifier
+            Column(modifier = modifier.fillMaxSize()) {
+                OfflineChip(isOffline)
+                Box(modifier = Modifier.weight(1f)) {
+                    TabPage(
+                        selectedTab = selectedTab,
+                        tabStateHolder = tabStateHolder,
+                        actions = actions,
+                        onShowGuide = { selectedTab = GUIDE_TAB }
+                    )
+                }
+                InnerTabBar(selectedTab = selectedTab, onSelect = { selectedTab = it })
+            }
+        }
+    }
+}
+
+/**
+ * Los destinos del espacio interno que se abren desde las pestañas; los decide la
+ * navegación raíz (guardia RF-06). Agrupados para que pasen de una vez.
+ */
+class InnerTabsActions(
+    val onOpenGuidance: () -> Unit,
+    val onOpenGuidanceHistory: () -> Unit,
+    val onOpenSettings: () -> Unit,
+    val onOpenTopics: () -> Unit,
+    val onOpenRoutes: () -> Unit,
+    val onOpenLines: () -> Unit,
+    val onAddJournalEntry: () -> Unit,
+    val onOpenJournalEntry: (Long) -> Unit,
+    val onExportJournalEntries: (List<Long>) -> Unit
+)
+
+/**
+ * Indicador sobrio del modo local (P-31 opción C): sin jerga técnica y con icono
+ * además del color (regla 3 — el color nunca informa solo).
+ */
+@Composable
+private fun OfflineChip(isOffline: Boolean) {
+    if (!isOffline) return
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        AccentChip(
+            text = stringResource(R.string.access_offline_chip),
+            accent = V2Palette.accentGroup,
+            iconRes = V2Icons.waiting
+        )
+    }
+}
+
+/** La pestaña elegida, con su estado guardado en [tabStateHolder] al alternar. */
+@Composable
+private fun TabPage(
+    selectedTab: Int,
+    tabStateHolder: SaveableStateHolder,
+    actions: InnerTabsActions,
+    onShowGuide: () -> Unit
+) {
+    when (selectedTab) {
+        GUIDE_TAB -> tabStateHolder.SaveableStateProvider(GUIDE_TAB) {
+            // Portada de la Guía (v2-11): las tres secciones son
+            // destinos del grafo seguro; la pestaña solo agrupa.
+            GuideHomeScreen(
+                onOpenTopics = actions.onOpenTopics,
+                onOpenRoutes = actions.onOpenRoutes,
+                onOpenLines = actions.onOpenLines
+            )
+        }
+        JOURNAL_TAB -> tabStateHolder.SaveableStateProvider(JOURNAL_TAB) {
+            JournalListRoute(
+                onBack = null,
+                onAddEntry = actions.onAddJournalEntry,
+                onEntrySelected = actions.onOpenJournalEntry,
+                onExportSelected = actions.onExportJournalEntries
+            )
+        }
+        else -> tabStateHolder.SaveableStateProvider(HOME_TAB) {
+            // Accesos rápidos de P09 (v2-10): Llamar → líneas de atención (RF-23),
+            // guardar → editor del registro (RF-32/33), Informarme → pestaña Guía
+            // (RF-21). Todo por rutas o estado local — sin imports entre features.
+            PanelScreen(
+                onStartGuidance = actions.onOpenGuidance,
+                onOpenHistory = actions.onOpenGuidanceHistory,
+                onOpenSettings = actions.onOpenSettings,
+                onCall = actions.onOpenLines,
+                onSaveNote = actions.onAddJournalEntry,
+                onLearn = onShowGuide
             )
         }
     }
 }
 
-/** Las tres pestañas y su barra; la pestaña elegida y su estado los guarda [InnerTabsHost]. */
+/**
+ * La barra Inicio · Guía · Mi registro. Guía y Mi registro son dos pasos del
+ * recorrido por Inicio: aquí se marcan, en el único sitio que sabe qué pestaña es
+ * cuál (lo reutiliza la prueba del recorrido).
+ */
 @Composable
-private fun TabsContent(
-    isOffline: Boolean,
-    selectedTab: Int,
-    onSelectTab: (Int) -> Unit,
-    tabStateHolder: SaveableStateHolder,
-    onOpenGuidance: () -> Unit,
-    onOpenGuidanceHistory: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenTopics: () -> Unit,
-    onOpenRoutes: () -> Unit,
-    onOpenLines: () -> Unit,
-    onAddJournalEntry: () -> Unit,
-    onOpenJournalEntry: (Long) -> Unit,
-    onExportJournalEntries: (List<Long>) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.fillMaxSize()) {
-        // Indicador sobrio del modo local (P-31 opción C): sin jerga técnica
-        // y con icono además del color (regla 3 — el color nunca informa solo).
-        if (isOffline) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                AccentChip(
-                    text = stringResource(R.string.access_offline_chip),
-                    accent = V2Palette.accentGroup,
-                    iconRes = V2Icons.waiting
-                )
+internal fun InnerTabBar(selectedTab: Int, onSelect: (Int) -> Unit) {
+    V2TabBar(
+        items = listOf(
+            V2TabItem(V2Icons.home, stringResource(R.string.access_tab_home)),
+            V2TabItem(V2Icons.guide, stringResource(R.string.access_tab_guide)),
+            V2TabItem(V2Icons.journal, stringResource(R.string.access_tab_journal))
+        ),
+        selectedIndex = selectedTab,
+        onSelect = onSelect,
+        itemModifier = { index ->
+            when (index) {
+                GUIDE_TAB -> Modifier.spotlightTarget(HomeTourStep.GUIDE)
+                JOURNAL_TAB -> Modifier.spotlightTarget(HomeTourStep.JOURNAL)
+                else -> Modifier
             }
         }
-        Box(modifier = Modifier.weight(1f)) {
-            when (selectedTab) {
-                GUIDE_TAB -> tabStateHolder.SaveableStateProvider(GUIDE_TAB) {
-                    // Portada de la Guía (v2-11): las tres secciones son
-                    // destinos del grafo seguro; la pestaña solo agrupa.
-                    GuideHomeScreen(
-                        onOpenTopics = onOpenTopics,
-                        onOpenRoutes = onOpenRoutes,
-                        onOpenLines = onOpenLines
-                    )
-                }
-                JOURNAL_TAB -> tabStateHolder.SaveableStateProvider(JOURNAL_TAB) {
-                    JournalListRoute(
-                        onBack = null,
-                        onAddEntry = onAddJournalEntry,
-                        onEntrySelected = onOpenJournalEntry,
-                        onExportSelected = onExportJournalEntries
-                    )
-                }
-                else -> tabStateHolder.SaveableStateProvider(HOME_TAB) {
-                    // Accesos rápidos de P09 (v2-10): Llamar → líneas de
-                    // atención (RF-23), guardar → editor del registro
-                    // (RF-32/33), Informarme → pestaña Guía (RF-21). Todo
-                    // por rutas o estado local — sin imports entre features.
-                    PanelScreen(
-                        onStartGuidance = onOpenGuidance,
-                        onOpenHistory = onOpenGuidanceHistory,
-                        onOpenSettings = onOpenSettings,
-                        onCall = onOpenLines,
-                        onSaveNote = onAddJournalEntry,
-                        onLearn = { onSelectTab(GUIDE_TAB) }
-                    )
-                }
-            }
-        }
-        V2TabBar(
-            items = listOf(
-                V2TabItem(V2Icons.home, stringResource(R.string.access_tab_home)),
-                V2TabItem(V2Icons.guide, stringResource(R.string.access_tab_guide)),
-                V2TabItem(V2Icons.journal, stringResource(R.string.access_tab_journal))
-            ),
-            selectedIndex = selectedTab,
-            onSelect = onSelectTab,
-            // Guía y Mi registro son dos pasos del recorrido por Inicio.
-            itemModifier = { index ->
-                when (index) {
-                    GUIDE_TAB -> Modifier.spotlightTarget(HomeTourStep.GUIDE)
-                    JOURNAL_TAB -> Modifier.spotlightTarget(HomeTourStep.JOURNAL)
-                    else -> Modifier
-                }
-            }
-        )
-    }
+    )
 }
 
 private const val HOME_TAB = 0

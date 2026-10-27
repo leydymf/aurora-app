@@ -3,9 +3,8 @@ package com.auroraclima.app.access.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
-import com.auroraclima.app.access.domain.repository.HomeTourRepository
+import com.auroraclima.app.access.domain.usecase.CompleteCodeSetupUseCase
 import com.auroraclima.app.access.domain.usecase.CreateSecretCodeResult
-import com.auroraclima.app.access.domain.usecase.CreateSecretCodeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -23,14 +22,12 @@ import kotlinx.coroutines.launch
  * este estado mientras la usuaria la teclea: al guardarse queda solo el hash
  * (criterio 3) y los campos se limpian; jamás toca Firebase ni logs.
  *
- * Con el código creado termina la activación (ver `DiscardUnfinishedActivationUseCase`):
- * aquí queda pendiente el recorrido por Inicio, que aparece la primera vez que se
- * llega al panel, se termine o se salte el tutorial (v0.3.3).
+ * Con el código creado termina la activación: [CompleteCodeSetupUseCase] deja además
+ * pendiente el recorrido por Inicio (v0.3.3).
  */
 @HiltViewModel
 class CodeSetupViewModel @Inject constructor(
-    private val createSecretCode: CreateSecretCodeUseCase,
-    private val homeTour: HomeTourRepository
+    private val completeCodeSetup: CompleteCodeSetupUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CodeSetupUiState())
     val uiState: StateFlow<CodeSetupUiState> = _uiState.asStateFlow()
@@ -49,7 +46,7 @@ class CodeSetupViewModel @Inject constructor(
         // Reglas en vivo (criterio 2): solo la última tecla cuenta.
         checkJob?.cancel()
         checkJob = viewModelScope.launch {
-            val checks = createSecretCode.check(value)
+            val checks = completeCodeSetup.check(value)
             _uiState.update {
                 it.copy(hasMinLength = checks.hasMinLength, isNotRealCity = checks.isNotRealCity)
             }
@@ -81,14 +78,11 @@ class CodeSetupViewModel @Inject constructor(
         }
         _uiState.update { it.copy(isLoading = true, confirmErrorRes = null, generalErrorRes = null) }
         viewModelScope.launch {
-            when (val result = createSecretCode(current.code)) {
+            when (val result = completeCodeSetup(current.code)) {
                 CreateSecretCodeResult.Created -> {
                     // Higiene de estado sensible: la clave no permanece en memoria
                     // del estado una vez guardado el hash.
                     _uiState.update { it.copy(isLoading = false, code = "", confirmCode = "") }
-                    // Mejor esfuerzo y antes de continuar: si no se pudo guardar,
-                    // el recorrido simplemente no aparece; el flujo sigue igual.
-                    homeTour.markPending()
                     _continueEvents.tryEmit(Unit)
                 }
                 is CreateSecretCodeResult.Rejected -> _uiState.update {

@@ -5,13 +5,15 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,14 +34,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -78,6 +80,8 @@ import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.keyboardAware
 import com.auroraclima.app.core.ui.v2.pulseHalo
 import com.auroraclima.app.core.ui.v2.rememberPulsePhase
+import com.auroraclima.app.core.ui.v2.rememberWindowFrame
+import com.auroraclima.app.core.ui.v2.trackWindowFrame
 import kotlin.math.roundToInt
 
 /**
@@ -147,7 +151,6 @@ internal fun TutorialScreen(
     modifier: Modifier = Modifier,
     cuePlan: PulsePlan = PulsePlan.forMotion(reduceMotion = false)
 ) {
-    val showsCloudCue = state.step == TutorialStep.PRACTICE && state.practiceStatus == PracticeStatus.MATCHED
     // Lo que ocupa la señal de la nube desde abajo: el contenido deja ese aire al
     // final para que ningún texto quede debajo de la etiqueta.
     var cloudCueClearance by remember { mutableStateOf(0.dp) }
@@ -168,24 +171,14 @@ internal fun TutorialScreen(
             BrandHeader(onBack = onBack.takeIf { state.showsBack(isReview) })
             Spacer(modifier = Modifier.height(16.dp))
             if (state.step == TutorialStep.PRACTICE) {
-                PracticeContent(
-                    input = state.practiceInput,
-                    status = state.practiceStatus,
-                    cuePlan = cuePlan,
-                    onInputChange = onPracticeInputChange
-                )
+                PracticeContent(state.practiceInput, state.practiceStatus, cuePlan, onPracticeInputChange)
             } else {
-                OverviewContent(
-                    isReview = isReview,
-                    showSkip = state.showsSkip(isReview),
-                    onStartPractice = onStartPractice,
-                    onSkip = onSkip
-                )
+                OverviewContent(isReview, state.showsSkip(isReview), onStartPractice, onSkip)
             }
             // Aire final para no chocar con el botón nube de la esquina ni con su señal.
-            Spacer(modifier = Modifier.height(maxOf(64.dp, if (showsCloudCue) cloudCueClearance else 0.dp)))
+            Spacer(modifier = Modifier.height(maxOf(64.dp, if (state.showsCloudCue) cloudCueClearance else 0.dp)))
         }
-        if (showsCloudCue) {
+        if (state.showsCloudCue) {
             CloudCue(plan = cuePlan, onClearanceChange = { cloudCueClearance = it })
         }
     }
@@ -333,6 +326,33 @@ private fun PracticeContent(
     LaunchedEffect(matched) {
         if (matched) focusManager.clearFocus()
     }
+    PracticeIntro()
+    Spacer(modifier = Modifier.height(16.dp))
+    // Con el ingreso logrado la señal se muda a la nube: aquí la fase se queda quieta.
+    val phase = rememberPulsePhase(if (matched) PulsePlan.still else cuePlan)
+    if (matched) {
+        PracticeSuccessCard(
+            modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+    } else {
+        BarCue(phase)
+    }
+    // La barra va fuera de las ramas: no se recrea al coincidir el código.
+    PracticeSearchBar(value = input, onValueChange = onInputChange, haloPhase = phase.takeUnless { matched })
+    if (status == PracticeStatus.MISMATCH) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = stringResource(R.string.access_guide_practice_retry),
+            style = InteriorTypeVoice.caption,
+            color = V2Palette.inkSecondary
+        )
+    }
+}
+
+/** Rótulo, título y frase de la práctica. */
+@Composable
+private fun PracticeIntro() {
     Text(
         text = stringResource(R.string.access_guide_practice_tag),
         style = InteriorTypeVoice.label,
@@ -350,95 +370,87 @@ private fun PracticeContent(
         style = InteriorTypeVoice.body,
         color = V2Palette.inkSecondary
     )
-    Spacer(modifier = Modifier.height(16.dp))
-    // La fase solo corre mientras la barra lleva la señal.
-    val barPhase = if (matched) null else rememberPulsePhase(cuePlan)
-    if (barPhase == null) {
-        PracticeSuccessCard(
-            modifier = Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-    } else {
-        // El lila de «entrar con el código» (regla 1), el mismo de la llave.
-        CueLabel(
-            text = stringResource(R.string.access_guide_practice_hint),
-            accent = V2Palette.accentRecognize
-        )
-        CueArrow(
-            phase = barPhase,
-            color = V2Palette.accentRecognize.stroke,
-            modifier = Modifier.padding(start = BAR_ARROW_INSET, top = 4.dp, bottom = 6.dp)
-        )
-    }
-    PracticeSearchBar(value = input, onValueChange = onInputChange, haloPhase = barPhase)
-    if (status == PracticeStatus.MISMATCH) {
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = stringResource(R.string.access_guide_practice_retry),
-            style = InteriorTypeVoice.caption,
-            color = V2Palette.inkSecondary
-        )
-    }
+}
+
+/** Etiqueta y flecha sobre la barra, en el lila de «entrar con el código» (regla 1), el de la llave. */
+@Composable
+private fun BarCue(phase: State<Float>) {
+    CueLabel(
+        text = stringResource(R.string.access_guide_practice_hint),
+        accent = V2Palette.accentRecognize
+    )
+    CueArrow(
+        phase = phase,
+        color = V2Palette.accentRecognize.stroke,
+        modifier = Modifier.padding(start = BAR_ARROW_INSET, top = 4.dp, bottom = 6.dp)
+    )
 }
 
 /**
  * Paso 2 de la señal: halo alrededor de la nube real y, encima, la etiqueta con su
  * flecha. El halo se dibuja en el contenido, que queda DEBAJO de la nube, así que
  * solo asoma su aro; nada de esta capa recibe toques. Sin grafo seguro (sin nube
- * que señalar) no pinta nada.
+ * que señalar) no pinta nada. Las posiciones son absolutas: la nube llega en
+ * coordenadas reales de la ventana, también en derecha a izquierda.
  */
 @Composable
 private fun CloudCue(plan: PulsePlan, onClearanceChange: (Dp) -> Unit) {
-    val cloud = LocalCloudAnchor.current?.bounds ?: return
+    val cloudBounds = LocalCloudAnchor.current?.bounds ?: return
+    val window = rememberWindowFrame()
     val phase = rememberPulsePhase(plan)
-    val density = LocalDensity.current
-    var origin by remember { mutableStateOf<Offset?>(null) }
-    var area by remember { mutableStateOf(IntSize.Zero) }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .onGloballyPositioned {
-                origin = it.positionInWindow()
-                area = it.size
-            }
-    ) {
-        val start = origin ?: return@Box
-        val local = cloud.translate(-start)
-        with(density) {
+    Box(modifier = Modifier.fillMaxSize().trackWindowFrame(window)) {
+        val cloud = window.toLocal(cloudBounds) ?: return@Box
+        with(LocalDensity.current) {
             Box(
                 modifier = Modifier
-                    .offset { IntOffset(local.left.roundToInt(), local.top.roundToInt()) }
-                    .size(width = local.width.toDp(), height = local.height.toDp())
-                    .pulseHalo(phase, V2Palette.accentCloud.stroke, cornerRadius = (local.width / 2).toDp())
+                    .absoluteOffset { IntOffset(cloud.left.roundToInt(), cloud.top.roundToInt()) }
+                    .size(width = cloud.width.toDp(), height = cloud.height.toDp())
+                    .pulseHalo(phase, V2Palette.accentCloud.stroke, cornerRadius = (cloud.width / 2).toDp())
             )
-            Column(
+        }
+        CloudHint(cloud = cloud, area = window.size, phase = phase, onClearanceChange = onClearanceChange)
+    }
+}
+
+/**
+ * Etiqueta y flecha encima de la nube, alineadas con el borde de la nube que da a la
+ * orilla de la pantalla (la derecha, o la izquierda en derecha a izquierda), y la
+ * flecha sobre su centro.
+ */
+@Composable
+private fun BoxScope.CloudHint(cloud: Rect, area: IntSize, phase: State<Float>, onClearanceChange: (Dp) -> Unit) {
+    val onRight = cloud.center.x >= area.width / 2f
+    with(LocalDensity.current) {
+        val edge = (if (onRight) area.width - cloud.right else cloud.left).coerceAtLeast(0f).toDp()
+        val arrowInset = ((cloud.width.toDp() - CueArrowWidth) / 2).coerceAtLeast(0.dp)
+        Column(
+            modifier = Modifier
+                .align(if (onRight) AbsoluteAlignment.BottomRight else AbsoluteAlignment.BottomLeft)
+                .absolutePadding(
+                    left = if (onRight) CLOUD_CUE_ROOM else edge,
+                    right = if (onRight) edge else CLOUD_CUE_ROOM,
+                    bottom = (area.height - cloud.top).coerceAtLeast(0f).toDp() + CLOUD_CUE_GAP
+                )
+                .onGloballyPositioned { onClearanceChange((area.height - it.positionInParent().y).toDp()) },
+            horizontalAlignment = if (onRight) AbsoluteAlignment.Right else AbsoluteAlignment.Left
+        ) {
+            // El violeta es exclusivo de la salida (regla 1).
+            CueLabel(
+                text = stringResource(R.string.access_guide_practice_cloud_hint),
+                accent = V2Palette.accentCloud,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(
-                        start = 24.dp,
-                        end = (area.width - local.right).coerceAtLeast(0f).toDp(),
-                        bottom = (area.height - local.top).coerceAtLeast(0f).toDp() + CLOUD_CUE_GAP
-                    )
-                    .onGloballyPositioned { onClearanceChange((area.height - it.positionInParent().y).toDp()) },
-                horizontalAlignment = Alignment.End
-            ) {
-                // El violeta es exclusivo de la salida (regla 1).
-                CueLabel(
-                    text = stringResource(R.string.access_guide_practice_cloud_hint),
-                    accent = V2Palette.accentCloud,
-                    modifier = Modifier
-                        .widthIn(max = CLOUD_CUE_MAX_WIDTH)
-                        .semantics { liveRegion = LiveRegionMode.Polite }
+                    .widthIn(max = CLOUD_CUE_MAX_WIDTH)
+                    .semantics { liveRegion = LiveRegionMode.Polite }
+            )
+            CueArrow(
+                phase = phase,
+                color = V2Palette.accentCloud.stroke,
+                modifier = Modifier.absolutePadding(
+                    top = 4.dp,
+                    left = if (onRight) 0.dp else arrowInset,
+                    right = if (onRight) arrowInset else 0.dp
                 )
-                CueArrow(
-                    phase = phase,
-                    color = V2Palette.accentCloud.stroke,
-                    modifier = Modifier.padding(
-                        top = 4.dp,
-                        end = ((local.width.toDp() - CueArrowWidth) / 2).coerceAtLeast(0.dp)
-                    )
-                )
-            }
+            )
         }
     }
 }
@@ -465,6 +477,9 @@ private val CLOUD_CUE_GAP = 6.dp
 
 /** La etiqueta de la nube no cruza toda la pantalla: se lee junto a la esquina. */
 private val CLOUD_CUE_MAX_WIDTH = 260.dp
+
+/** Aire mínimo entre la etiqueta de la nube y la orilla opuesta de la pantalla. */
+private val CLOUD_CUE_ROOM = 24.dp
 
 /**
  * Réplica visual de la barra V2 de la fachada (v2-01): la práctica se ve igual

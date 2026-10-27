@@ -1,12 +1,15 @@
 package com.auroraclima.app.access.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.TestSession
 import com.auroraclima.app.core.ui.v2.SpotlightTargets
@@ -23,10 +26,11 @@ import org.junit.runners.Parameterized
  * velo vive en el contenido de la ruta y la nube la dibuja `SecureScreen` después,
  * por encima: si el velo la tapara, el toque simulado —que cae en el centro de la
  * nube— lo recibiría el velo y la sesión seguiría abierta. Una corrida por paso,
- * incluidos los intermedios.
+ * incluidos los intermedios, con letra normal y con letra 2.0 (botones apilados y
+ * globo pegado al borde, donde más se acerca a la nube).
  */
 @RunWith(Parameterized::class)
-class HomeTourCloudTest(private val step: HomeTourStep) {
+class HomeTourCloudTest(private val step: HomeTourStep, private val fontScale: Float) {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -41,7 +45,10 @@ class HomeTourCloudTest(private val step: HomeTourStep) {
     @Test
     fun unToqueALaNubeSaleEnEstePaso() {
         session.setContent(composeRule) {
-            HomeTourHarness(step = step, onNext = {}, onSkip = {}, targets = SpotlightTargets())
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale)) {
+                HomeTourHarness(step = step, onNext = {}, onSkip = {}, targets = SpotlightTargets())
+            }
         }
         composeRule.runOnUiThread { session.sessionManager.startSession() }
         composeRule.waitForIdle()
@@ -60,7 +67,8 @@ class HomeTourCloudTest(private val step: HomeTourStep) {
             .flatMap { composeRule.onAllNodesWithText(it).fetchSemanticsNodes() }
         buttons.forEach { button ->
             assertFalse(
-                "En el paso ${step.number} la nube ($cloudBounds) tapa un botón (${button.boundsInWindow})",
+                "En el paso ${step.number} (letra $fontScale) la nube ($cloudBounds) tapa un botón " +
+                    "(${button.boundsInWindow})",
                 button.boundsInWindow.overlaps(cloudBounds)
             )
         }
@@ -69,14 +77,16 @@ class HomeTourCloudTest(private val step: HomeTourStep) {
         composeRule.waitForIdle()
 
         assertFalse(
-            "En el paso ${step.number} un toque a la nube debe cerrar la sesión",
+            "En el paso ${step.number} (letra $fontScale) un toque a la nube debe cerrar la sesión",
             session.sessionManager.isSessionActive.value
         )
     }
 
     companion object {
         @JvmStatic
-        @Parameterized.Parameters(name = "paso {0}")
-        fun steps(): List<HomeTourStep> = HomeTourStep.entries
+        @Parameterized.Parameters(name = "paso {0}, letra {1}")
+        fun cases(): List<Array<Any>> = listOf(1f, 2f).flatMap { scale ->
+            HomeTourStep.entries.map { arrayOf(it, scale) }
+        }
     }
 }

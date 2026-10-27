@@ -1,4 +1,4 @@
-package com.auroraclima.app.access.ui
+package com.auroraclima.app.access.domain.usecase
 
 import com.auroraclima.app.access.domain.repository.HomeTourRepository
 

@@ -46,7 +46,10 @@ data class PulsePlan(val periodMillis: Long) {
         const val STATIC_PHASE = 0.5f
         private const val PERIOD_MILLIS = 1_600L
 
-        fun forMotion(reduceMotion: Boolean): PulsePlan = PulsePlan(if (reduceMotion) 0L else PERIOD_MILLIS)
+        /** Quieto: el de «Quitar animaciones», y el de una señal que ya se mudó a otro sitio. */
+        val still = PulsePlan(periodMillis = 0L)
+
+        fun forMotion(reduceMotion: Boolean): PulsePlan = if (reduceMotion) still else PulsePlan(PERIOD_MILLIS)
     }
 }
 

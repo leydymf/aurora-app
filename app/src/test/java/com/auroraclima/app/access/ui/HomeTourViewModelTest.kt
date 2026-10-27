@@ -1,5 +1,6 @@
 package com.auroraclima.app.access.ui
 
+import com.auroraclima.app.access.domain.usecase.FakeHomeTourRepository
 import com.auroraclima.app.core.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -21,11 +22,14 @@ class HomeTourViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `con la marca pendiente empieza en el primer paso`() = runTest {
-        val viewModel = HomeTourViewModel(FakeHomeTourRepository(pending = true))
+    fun `con la marca pendiente empieza en el primer paso y la consume una vez`() = runTest {
+        val repository = FakeHomeTourRepository(pending = true)
+        val viewModel = HomeTourViewModel(repository)
         advanceUntilIdle()
 
         assertEquals(HomeTourStep.START, viewModel.uiState.value.step)
+        assertEquals(1, repository.consumeCalls)
+        assertFalse(repository.pending)
     }
 
     @Test
