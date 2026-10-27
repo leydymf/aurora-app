@@ -41,10 +41,17 @@ val V2TabBarHeight = 68.dp
  * Barra de pestañas del sistema V2 (mockups v2-01/03 en la fachada; v2-10 y
  * siguientes en el espacio interno). Blanca, con la píldora [V2Palette.tabIndicator]
  * detrás del icono activo; la etiqueta acompaña siempre al icono (regla 3) y la
- * tipografía sale del tema, así que cada voz conserva la suya.
+ * tipografía sale del tema, así que cada voz conserva la suya. [itemModifier] agrega
+ * algo a una pestaña concreta (el recorrido por Inicio marca así las que ilumina).
  */
 @Composable
-fun V2TabBar(items: List<V2TabItem>, selectedIndex: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun V2TabBar(
+    items: List<V2TabItem>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    itemModifier: (Int) -> Modifier = { Modifier }
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -57,6 +64,7 @@ fun V2TabBar(items: List<V2TabItem>, selectedIndex: Int, onSelect: (Int) -> Unit
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .then(itemModifier(index))
                     .heightIn(min = 48.dp)
                     .clickable { onSelect(index) }
                     .padding(vertical = 2.dp),

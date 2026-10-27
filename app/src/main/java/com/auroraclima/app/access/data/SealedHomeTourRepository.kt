@@ -2,7 +2,7 @@ package com.auroraclima.app.access.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.auroraclima.app.access.domain.repository.IntroNoteRepository
+import com.auroraclima.app.access.domain.repository.HomeTourRepository
 import com.auroraclima.app.core.security.PayloadCipher
 import com.auroraclima.app.core.security.SealedPayload
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -14,27 +14,32 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Marca «aviso pendiente» sellada con la llave de datos de la cuenta (el mismo
+ * Marca «recorrido pendiente» sellada con la llave de datos de la cuenta (el mismo
  * [PayloadCipher] que cifra los registros), nunca en texto plano: ni el valor
  * ni su significado se leen del archivo. El archivo y las claves tienen nombres
  * neutros, como los demás de la casa (RNF-05).
  *
  * Usa el [PayloadCipher] de la casa, cuya llave es la DEK de la cuenta (RF-39):
- * el aviso queda atado a ella a propósito. Sin DEK (cuenta nueva sin llave) o
- * con otra (respaldo reiniciado) la marca no abre y el aviso simplemente no
+ * la marca queda atada a ella a propósito. Sin DEK (cuenta nueva sin llave) o
+ * con otra (respaldo reiniciado) la marca no abre y el recorrido simplemente no
  * aparece; es el fallo aceptable, nunca un error visible.
  *
  * Consumir borra la marca ANTES de abrirla: si el proceso muere en medio, el
- * aviso se pierde en lugar de repetirse (aparece una sola vez, a lo sumo). Si ni
- * el borrado se confirma en disco, la marca podría reaparecer; es de mejor
+ * recorrido se pierde en lugar de repetirse (aparece una sola vez, a lo sumo). Si
+ * ni el borrado se confirma en disco, la marca podría reaparecer; es de mejor
  * esfuerzo, como el resto de los borrados. El borrado total de la cuenta lo
- * hace [IntroNoteEraser].
+ * hace [HomeTourEraser].
+ *
+ * Es el mecanismo del aviso de bienvenida de v0.3.2, que el recorrido reemplaza
+ * (v0.3.3): mismo archivo, mismas claves y misma marca. Una marca de aviso que
+ * hubiera quedado de v0.3.2 se lee como recorrido pendiente, que es lo que
+ * significa: esa persona aún no había llegado a Inicio.
  */
 @Singleton
-class SealedIntroNoteRepository @Inject constructor(
+class SealedHomeTourRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val cipher: PayloadCipher
-) : IntroNoteRepository {
+) : HomeTourRepository {
     private val preferences: SharedPreferences by lazy {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }

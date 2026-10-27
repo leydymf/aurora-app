@@ -59,6 +59,7 @@ fun SettingsScreen(
     onChangeCode: () -> Unit,
     onChangePassword: () -> Unit,
     onReopenGuide: () -> Unit,
+    onReplayTour: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -116,6 +117,15 @@ fun SettingsScreen(
                 accent = V2Palette.accentProtection,
                 title = stringResource(R.string.access_settings_guide),
                 onClick = onReopenGuide,
+                trailing = { RowChevron() }
+            )
+            // El recorrido por Inicio (v0.3.3), junto al tutorial y en su mismo azul:
+            // las dos son ayudas para usar la app. Vuelve al Inicio y lo empieza.
+            IconListRow(
+                iconRes = V2Icons.home,
+                accent = V2Palette.accentProtection,
+                title = stringResource(R.string.access_settings_tour),
+                onClick = onReplayTour,
                 trailing = { RowChevron() }
             )
         }

@@ -225,8 +225,11 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // (v2-10, D3) como estado local de esta única entrada — cambiar de
                 // pestaña no navega y el estado muere con el pop del grafo (RF-06).
                 // El inset eleva la nube por encima de la barra de pestañas (RF-16).
-                screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) {
+                screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) { entry ->
                     val isOffline by silentSession.isOffline.collectAsState()
+                    // «Ver el recorrido por la app» de Ajustes deja la bandera en esta
+                    // entrada y vuelve; el recorrido empieza y la bandera se apaga.
+                    val replayTour by entry.savedStateHandle.getStateFlow(TOUR_REPLAY_KEY, false).collectAsState()
                     InnerTabsHost(
                         isOffline = isOffline,
                         onOpenGuidance = { navController.navigate(GUIDANCE_ROUTE) },
@@ -244,11 +247,13 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onExportJournalEntries = { ids ->
                             navController.navigate("$JOURNAL_EXPORT_BASE/${ids.joinToString(",")}")
                         },
-                        onOpenTutorial = { navController.navigate(GUIDE_REVIEW_ROUTE) }
+                        replayTour = replayTour,
+                        onReplayTourHandled = { entry.savedStateHandle[TOUR_REPLAY_KEY] = false }
                     )
                 }
-                // Configuración del espacio interno (P21): reabrir el tutorial
-                // (RF-11) reutiliza la ruta de repaso ya prevista.
+                // Ajustes del espacio interno (P21): reabrir el tutorial (RF-11)
+                // reutiliza la ruta de repaso ya prevista; el recorrido por Inicio
+                // vuelve al panel, que es donde se recorre.
                 screen(SETTINGS_ROUTE) {
                     // RF-19 con la opción C de P-31: el cierre explícito destruye
                     // primero el blob del reingreso silencioso (SignOutViewModel)
@@ -267,6 +272,14 @@ fun AuroraApp(sessionManager: SessionManager) {
                         // re-cifra registros); pantalla de accounts.
                         onChangePassword = { navController.navigate(SETTINGS_PASSWORD_ROUTE) },
                         onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) },
+                        onReplayTour = {
+                            // Ajustes solo se abre desde el panel: la entrada anterior es la suya.
+                            navController.previousBackStackEntry
+                                ?.takeIf { it.destination.route == PANEL_ROUTE }
+                                ?.savedStateHandle
+                                ?.set(TOUR_REPLAY_KEY, true)
+                            navController.popBackStack()
+                        },
                         onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) },
                         onSignOut = signOutViewModel::onSignOut,
                         onDeleteAccount = { navController.navigate(SETTINGS_ACCOUNT_ROUTE) }
@@ -497,6 +510,9 @@ private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ARRIVAL_ROUTE = "arrival"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
+
+// Bandera de la entrada del panel, no una ruta; nombre neutro porque queda legible en el APK.
+private const val TOUR_REPLAY_KEY = "replay"
 private const val SETTINGS_ROUTE = "settings"
 private const val PRIVACY_ROUTE = "privacy"
 private const val SETTINGS_CODE_ROUTE = "settings_code"

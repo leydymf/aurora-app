@@ -14,8 +14,6 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -26,8 +24,7 @@ class TutorialViewModelTest {
 
     private val hasher = FakeSecretCodeHasher()
     private val repository = FakeSecretCodeRepository()
-    private val introNote = FakeIntroNoteRepository()
-    private val viewModel = TutorialViewModel(ValidateSecretCodeUseCase(repository, hasher), introNote)
+    private val viewModel = TutorialViewModel(ValidateSecretCodeUseCase(repository, hasher))
 
     private suspend fun seedUserCode(code: String = "amanecer26") {
         repository.seed(CodeSlot.USER, code, hasher)
@@ -130,22 +127,7 @@ class TutorialViewModelTest {
     }
 
     @Test
-    fun `saltar en el primer uso deja el aviso pendiente antes de emitir la navegacion`() = runTest {
-        // El panel lee la marca al crearse: si el evento saliera antes que la
-        // escritura, el aviso podría perderse por una carrera.
-        var pendingWhenNavigated: Boolean? = null
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.skipEvents.collect { pendingWhenNavigated = introNote.pending }
-        }
-
-        viewModel.onSkip(isReview = false)
-        advanceUntilIdle()
-
-        assertEquals(true, pendingWhenNavigated)
-    }
-
-    @Test
-    fun `un doble toque en saltar marca y navega una sola vez`() = runTest {
+    fun `un doble toque en saltar navega una sola vez`() = runTest {
         val events = collectSkipEvents()
 
         run {
@@ -155,42 +137,16 @@ class TutorialViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, events.size)
-        assertEquals(1, introNote.markCalls)
     }
 
     @Test
-    fun `saltar sigue navegando aunque no se pueda guardar el aviso`() = runTest {
-        introNote.failWrites = true
-        val events = collectSkipEvents()
-
-        viewModel.onSkip(isReview = false)
-        advanceUntilIdle()
-
-        assertEquals(1, events.size)
-        assertFalse(introNote.pending)
-    }
-
-    @Test
-    fun `saltar en el repaso no deja ningun aviso pendiente`() = runTest {
+    fun `saltar en el repaso tambien navega`() = runTest {
         val events = collectSkipEvents()
 
         viewModel.onSkip(isReview = true)
         advanceUntilIdle()
 
         assertEquals(1, events.size)
-        assertFalse(introNote.pending)
-    }
-
-    @Test
-    fun `terminar el tutorial sin saltar no deja ningun aviso pendiente`() = runTest {
-        seedUserCode()
-        viewModel.onStartPractice()
-        viewModel.onPracticeInputChange("amanecer26")
-        advanceUntilIdle()
-
-        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
-        assertFalse(introNote.pending)
-        assertTrue(introNote.markCalls == 0)
     }
 
     @Test

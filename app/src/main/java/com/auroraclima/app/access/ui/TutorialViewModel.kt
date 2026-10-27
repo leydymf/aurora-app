@@ -2,7 +2,6 @@ package com.auroraclima.app.access.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.auroraclima.app.access.domain.repository.IntroNoteRepository
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
 import com.auroraclima.app.core.security.SearchGateResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,8 +25,7 @@ import kotlinx.coroutines.launch
  */
 @HiltViewModel
 class TutorialViewModel @Inject constructor(
-    private val validateSecretCode: ValidateSecretCodeUseCase,
-    private val introNote: IntroNoteRepository
+    private val validateSecretCode: ValidateSecretCodeUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TutorialUiState())
     val uiState: StateFlow<TutorialUiState> = _uiState.asStateFlow()
@@ -43,31 +41,24 @@ class TutorialViewModel @Inject constructor(
     val closeEvents: SharedFlow<Unit> = _closeEvents.asSharedFlow()
 
     private var practiceCheckJob: Job? = null
-    private var skipInFlight = false
+    private var skipped = false
 
     /**
      * Saltar es solo una decisión de navegación: no toca la máquina de pasos ni
      * la práctica, así que reabrir el tutorial desde Ajustes (RF-11) lo encuentra
-     * intacto, como la primera vez.
-     *
-     * En el primer uso deja además pendiente el aviso de bienvenida del Inicio,
-     * y lo hace ANTES de emitir el evento: el panel lee la marca al crearse y no
-     * debe adelantarse a ella. Si no se pudo guardar, el aviso simplemente no
-     * aparece; saltar nunca falla.
+     * intacto, como la primera vez. El recorrido por Inicio no depende de saltar:
+     * quedó pendiente al crear el código de acceso (v0.3.3).
      */
     fun onSkip(isReview: Boolean) {
         if (isReview) {
             _skipEvents.tryEmit(Unit)
             return
         }
-        // Un segundo toque mientras el primero escribe no debe re-marcar el aviso
-        // después de que el panel ya lo consumió.
-        if (skipInFlight) return
-        skipInFlight = true
-        viewModelScope.launch {
-            introNote.markPending()
-            _skipEvents.emit(Unit)
-        }
+        // Un segundo toque antes de que la navegación saque el tutorial de la pila
+        // no debe abrir el panel dos veces.
+        if (skipped) return
+        skipped = true
+        _skipEvents.tryEmit(Unit)
     }
 
     fun onNext() {

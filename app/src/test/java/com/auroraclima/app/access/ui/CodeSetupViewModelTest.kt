@@ -29,8 +29,10 @@ class CodeSetupViewModelTest {
 
     private val hasher = FakeSecretCodeHasher()
     private val repository = FakeSecretCodeRepository()
+    private val homeTour = FakeHomeTourRepository()
     private val viewModel = CodeSetupViewModel(
-        CreateSecretCodeUseCase(repository, hasher, FakeCityNameDirectory("bucaramanga", "bogota"))
+        CreateSecretCodeUseCase(repository, hasher, FakeCityNameDirectory("bucaramanga", "bogota")),
+        homeTour
     )
 
     private fun TestScope.collectContinueEvents(): List<Unit> {
@@ -77,6 +79,52 @@ class CodeSetupViewModelTest {
         // Higiene: la clave no permanece en el estado tras guardarse
         assertEquals("", viewModel.uiState.value.code)
         assertEquals("", viewModel.uiState.value.confirmCode)
+    }
+
+    @Test
+    fun `crear el codigo deja pendiente el recorrido antes de continuar`() = runTest {
+        // Con el código creado termina la activación: el recorrido por Inicio sale
+        // la primera vez que se llega al panel, se termine o se salte el tutorial.
+        var pendingWhenContinued: Boolean? = null
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.continueEvents.collect { pendingWhenContinued = homeTour.pending }
+        }
+
+        viewModel.onCodeChange("cielo2026")
+        viewModel.onConfirmCodeChange("cielo2026")
+        advanceUntilIdle()
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(true, pendingWhenContinued)
+        assertEquals(1, homeTour.markCalls)
+    }
+
+    @Test
+    fun `si no se puede marcar el recorrido el flujo continua igual`() = runTest {
+        homeTour.failWrites = true
+        val events = collectContinueEvents()
+
+        viewModel.onCodeChange("cielo2026")
+        viewModel.onConfirmCodeChange("cielo2026")
+        advanceUntilIdle()
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertFalse(homeTour.pending)
+        assertNull(viewModel.uiState.value.generalErrorRes)
+    }
+
+    @Test
+    fun `una clave rechazada no deja pendiente el recorrido`() = runTest {
+        viewModel.onCodeChange("cielo2026")
+        viewModel.onConfirmCodeChange("cielo2027")
+        advanceUntilIdle()
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(0, homeTour.markCalls)
     }
 
     @Test

@@ -1,9 +1,9 @@
 package com.auroraclima.app.access.ui
 
-import com.auroraclima.app.access.domain.repository.IntroNoteRepository
+import com.auroraclima.app.access.domain.repository.HomeTourRepository
 
-/** Aviso de bienvenida en memoria para las pruebas de los ViewModels. */
-class FakeIntroNoteRepository(var pending: Boolean = false) : IntroNoteRepository {
+/** Recorrido pendiente en memoria para las pruebas de los ViewModels. */
+class FakeHomeTourRepository(var pending: Boolean = false) : HomeTourRepository {
     var failWrites = false
     var failReads = false
     var markCalls = 0

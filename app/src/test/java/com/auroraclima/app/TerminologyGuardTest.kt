@@ -26,6 +26,11 @@ class TerminologyGuardTest {
     // Exención declarada: va justo bajo el título «Tu código de acceso.», así que «Este código» no es ambiguo.
     private val idsExentosDeCodigoCompleto = setOf("access_setup_difference")
 
+    // Exención declarada (v0.3.3, decisión de la autora): el paso «Mi registro» del recorrido
+    // cuenta que el PDF se protege «con contraseña» sin nombrar ninguna credencial de la cuenta;
+    // la contraseña del archivo PDF se nombra entera en la pantalla de exportación.
+    private val idsExentosDeContrasenaDeCuenta = setOf("access_tour_journal_body")
+
     private fun violaciones(patron: Regex, exentos: List<String> = emptyList()): List<String> =
         strings.filter { (id, texto) -> exentos.none { id.startsWith(it) } && patron.containsMatchIn(texto) }
             .map { (id, texto) -> "$id: $texto" }
@@ -40,7 +45,7 @@ class TerminologyGuardTest {
     @Test
     fun `toda contrasena nombrada es la de la cuenta`() {
         val sinCuenta = strings.filter { (id, texto) ->
-            prefijosExentosDeContrasena.none { id.startsWith(it) } &&
+            prefijosExentosDeContrasena.none { id.startsWith(it) } && id !in idsExentosDeContrasenaDeCuenta &&
                 Regex("""contraseña""", RegexOption.IGNORE_CASE).containsMatchIn(texto) &&
                 !texto.contains("cuenta", ignoreCase = true)
         }.map { (id, texto) -> "$id: $texto" }

@@ -15,20 +15,20 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * El aviso de bienvenida pendiente se guarda sellado (nunca en claro), se
+ * El recorrido pendiente se guarda sellado (nunca en claro), se
  * consume al leerse y muere con la cuenta (RF-20). El cifrador es el falso
  * reversible de las pruebas JVM; el Keystore real no existe en esta JVM.
  */
 @RunWith(RobolectricTestRunner::class)
-class SealedIntroNoteRepositoryTest {
+class SealedHomeTourRepositoryTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private val repository = SealedIntroNoteRepository(context, ReversiblePayloadCipher())
+    private val repository = SealedHomeTourRepository(context, ReversiblePayloadCipher())
 
     private fun prefsXml(): String =
         File(context.applicationInfo.dataDir, "shared_prefs/view_meta.xml").takeIf { it.exists() }?.readText().orEmpty()
 
     @Test
-    fun `sin marca no hay aviso pendiente`() = runTest {
+    fun `sin marca no hay recorrido pendiente`() = runTest {
         assertEquals(false, repository.consumePending().getOrThrow())
     }
 
@@ -51,6 +51,7 @@ class SealedIntroNoteRepositoryTest {
         assertFalse(xml.contains("true"))
         assertFalse(xml.contains("pending", ignoreCase = true))
         assertFalse(xml.contains("tutorial", ignoreCase = true))
+        assertFalse(xml.contains("tour", ignoreCase = true))
     }
 
     @Test
@@ -65,7 +66,7 @@ class SealedIntroNoteRepositoryTest {
     fun `borrar la cuenta retira la marca pendiente`() = runTest {
         repository.markPending().getOrThrow()
 
-        IntroNoteEraser(repository).erase()
+        HomeTourEraser(repository).erase()
 
         assertEquals(false, repository.consumePending().getOrThrow())
         assertFalse(prefsXml().contains("v1"))
@@ -74,12 +75,12 @@ class SealedIntroNoteRepositoryTest {
     @Test
     fun `descartar una activacion sin terminar tambien la retira`() {
         // Sin exención: a esa cuenta nadie la estrenó (ver KDoc del eraser).
-        assertFalse(IntroNoteEraser(repository).keptOnUnfinishedActivation)
+        assertFalse(HomeTourEraser(repository).keptOnUnfinishedActivation)
     }
 
     @Test
     fun `si la llave no existe marcar falla y no deja nada a medias`() = runTest {
-        val noKey = SealedIntroNoteRepository(context, FailingCipher())
+        val noKey = SealedHomeTourRepository(context, FailingCipher())
 
         assertTrue(noKey.markPending().isFailure)
         assertFalse(prefsXml().contains("v1"))
@@ -89,7 +90,7 @@ class SealedIntroNoteRepositoryTest {
     fun `una marca que no abre se descarta y cuenta como no pendiente`() = runTest {
         repository.markPending().getOrThrow()
         // Otra cuenta o un dato adulterado: el mismo contenido con otro cifrador que no abre.
-        val otherAccount = SealedIntroNoteRepository(context, FailingCipher(sealWorks = true))
+        val otherAccount = SealedHomeTourRepository(context, FailingCipher(sealWorks = true))
 
         assertTrue(otherAccount.consumePending().isFailure)
         // Y no se queda atascada: la siguiente lectura ya no la encuentra.
@@ -99,7 +100,7 @@ class SealedIntroNoteRepositoryTest {
     @Test
     fun `una marca con otro contenido no cuenta como pendiente`() = runTest {
         val spy = RecordingCipher()
-        val tampered = SealedIntroNoteRepository(context, spy)
+        val tampered = SealedHomeTourRepository(context, spy)
         tampered.markPending().getOrThrow()
         spy.replaceWithOtherContent = true
 

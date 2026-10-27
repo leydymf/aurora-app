@@ -3,6 +3,7 @@ package com.auroraclima.app.access.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.access.domain.repository.HomeTourRepository
 import com.auroraclima.app.access.domain.usecase.CreateSecretCodeResult
 import com.auroraclima.app.access.domain.usecase.CreateSecretCodeUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,10 +22,15 @@ import kotlinx.coroutines.launch
  * Creación de la clave personal (RF-08). La clave en claro vive únicamente en
  * este estado mientras la usuaria la teclea: al guardarse queda solo el hash
  * (criterio 3) y los campos se limpian; jamás toca Firebase ni logs.
+ *
+ * Con el código creado termina la activación (ver `DiscardUnfinishedActivationUseCase`):
+ * aquí queda pendiente el recorrido por Inicio, que aparece la primera vez que se
+ * llega al panel, se termine o se salte el tutorial (v0.3.3).
  */
 @HiltViewModel
 class CodeSetupViewModel @Inject constructor(
-    private val createSecretCode: CreateSecretCodeUseCase
+    private val createSecretCode: CreateSecretCodeUseCase,
+    private val homeTour: HomeTourRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CodeSetupUiState())
     val uiState: StateFlow<CodeSetupUiState> = _uiState.asStateFlow()
@@ -80,6 +86,9 @@ class CodeSetupViewModel @Inject constructor(
                     // Higiene de estado sensible: la clave no permanece en memoria
                     // del estado una vez guardado el hash.
                     _uiState.update { it.copy(isLoading = false, code = "", confirmCode = "") }
+                    // Mejor esfuerzo y antes de continuar: si no se pudo guardar,
+                    // el recorrido simplemente no aparece; el flujo sigue igual.
+                    homeTour.markPending()
                     _continueEvents.tryEmit(Unit)
                 }
                 is CreateSecretCodeResult.Rejected -> _uiState.update {
