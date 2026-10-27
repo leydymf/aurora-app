@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
@@ -256,7 +257,9 @@ fun SpotlightLayer(
     val window = rememberWindowFrame()
     var bubbleHeight by remember { mutableIntStateOf(0) }
     val frame = spotlightFrameOf(window, targetBounds, keepClear, bubbleHeight)
-    Box(modifier = modifier.fillMaxSize().trackWindowFrame(window)) {
+    // Alineación absoluta: el globo se coloca con coordenadas reales de la capa, y una
+    // alineación relativa lo reflejaría en derecha a izquierda antes de desplazarlo.
+    Box(modifier = modifier.fillMaxSize().trackWindowFrame(window), contentAlignment = AbsoluteAlignment.TopLeft) {
         // Sin el alto del globo, ni pico ni globo: no se muestran en un lugar falso.
         Scrim(hole = frame?.hole, caret = frame?.takeIf { bubbleHeight > 0 }?.caret())
         if (frame != null) {

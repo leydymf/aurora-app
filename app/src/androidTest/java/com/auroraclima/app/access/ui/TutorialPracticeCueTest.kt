@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -26,9 +28,11 @@ import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -158,6 +162,32 @@ class TutorialPracticeCueTest {
         assertArrayEquals("El halo y la flecha de la nube no se mueven", before, pixels(region))
     }
 
+    @Test
+    fun deDerechaAIzquierdaLaSenalRodeaLaNubeDondeEsta() {
+        // La nube va a la izquierda: el halo debe asomar junto a ella (no reflejado al
+        // otro lado) y la etiqueta quedar encima, alineada con su borde izquierdo.
+        showForCapture(PulsePlan.forMotion(reduceMotion = true), LayoutDirection.Rtl)
+        match()
+
+        val cloud = cloudSample()
+        assertTrue(
+            "La nube de muestra está a la izquierda",
+            cloud.center.x < composeRule.onRoot().fetchSemanticsNode().size.width / 2
+        )
+        val probeX = cloud.left - with(composeRule.density) { 3.dp.toPx() }
+        assertNotEquals(
+            "El halo asoma junto a la nube",
+            V2Palette.screenBackground.toArgb(),
+            pixelAt(probeX, cloud.center.y)
+        )
+        val cue = node(cloudHint).boundsInRoot
+        assertTrue("La etiqueta va encima de la nube", cue.bottom <= cloud.top + PIXEL_ROUNDING)
+        assertTrue(
+            "La etiqueta empieza alineada con la nube (${cue.left} y ${cloud.left})",
+            abs(cue.left - cloud.left) <= PIXEL_ROUNDING + 1
+        )
+    }
+
     /** El tutorial dentro del grafo seguro real: la nube y su ancla las pone `SecureScreen`. */
     private fun showInSecureGraph() {
         session.setContent(composeRule) {
@@ -173,13 +203,14 @@ class TutorialPracticeCueTest {
     }
 
     /** Sin bandera de seguridad, para poder capturar; una nube de muestra en su esquina. */
-    private fun showForCapture(plan: PulsePlan) {
+    private fun showForCapture(plan: PulsePlan, layoutDirection: LayoutDirection = LayoutDirection.Ltr) {
         composeRule.mainClock.autoAdvance = false
         val anchor = CloudAnchor()
         composeRule.setContent {
             CompositionLocalProvider(
                 LocalSessionManager provides session.sessionManager,
-                LocalCloudAnchor provides anchor
+                LocalCloudAnchor provides anchor,
+                LocalLayoutDirection provides layoutDirection
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Tutorial(plan)
@@ -189,6 +220,7 @@ class TutorialPracticeCueTest {
                             .padding(20.dp)
                             .size(52.dp)
                             .background(V2Palette.accentCloud.tint)
+                            .testTag(CLOUD_SAMPLE)
                             .onGloballyPositioned { anchor.bounds = it.boundsInWindow() }
                     )
                 }
@@ -232,6 +264,9 @@ class TutorialPracticeCueTest {
 
     private fun bar(): SemanticsNode = composeRule.onNode(hasSetTextAction()).fetchSemanticsNode()
 
+    /** La nube de muestra (va donde la pondría el grafo: abajo en la esquina final). */
+    private fun cloudSample() = composeRule.onNodeWithTag(CLOUD_SAMPLE).fetchSemanticsNode().boundsInRoot
+
     /** De la etiqueta al pie de la barra, con el margen que ocupa el halo abierto. */
     private fun barRegion(): Rect {
         val margin = with(composeRule.density) { 16.dp.toPx() }
@@ -267,5 +302,6 @@ class TutorialPracticeCueTest {
         // Un cuarto del ciclo: el halo animado va a medio abrir y ya se nota.
         const val CAPTURE_GAP_MS = 400L
         const val SETTLE_FRAMES = 5
+        const val CLOUD_SAMPLE = "cloud_sample"
     }
 }

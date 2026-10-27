@@ -47,4 +47,19 @@ class TutorialUiStateTest {
             assertFalse(state.showsSkip(isReview = true))
         }
     }
+
+    @Test
+    fun `la senal pasa a la nube solo en la practica con el ingreso logrado`() {
+        // v0.3.3: el halo y la flecha se mudan de la barra a la nube al coincidir el código.
+        assertTrue(TutorialUiState(step = TutorialStep.PRACTICE, practiceStatus = PracticeStatus.MATCHED).showsCloudCue)
+    }
+
+    @Test
+    fun `fuera de ese caso la senal no va a la nube`() {
+        val others = TutorialStep.entries.flatMap { step ->
+            PracticeStatus.entries.map { status -> TutorialUiState(step = step, practiceStatus = status) }
+        }.filterNot { it.step == TutorialStep.PRACTICE && it.practiceStatus == PracticeStatus.MATCHED }
+
+        others.forEach { assertFalse("$it", it.showsCloudCue) }
+    }
 }

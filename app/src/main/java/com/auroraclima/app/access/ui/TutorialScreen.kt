@@ -398,7 +398,9 @@ private fun CloudCue(plan: PulsePlan, onClearanceChange: (Dp) -> Unit) {
     val cloudBounds = LocalCloudAnchor.current?.bounds ?: return
     val window = rememberWindowFrame()
     val phase = rememberPulsePhase(plan)
-    Box(modifier = Modifier.fillMaxSize().trackWindowFrame(window)) {
+    // Alineación absoluta, como las posiciones: una relativa reflejaría el halo en
+    // derecha a izquierda antes de desplazarlo.
+    Box(modifier = Modifier.fillMaxSize().trackWindowFrame(window), contentAlignment = AbsoluteAlignment.TopLeft) {
         val cloud = window.toLocal(cloudBounds) ?: return@Box
         with(LocalDensity.current) {
             Box(

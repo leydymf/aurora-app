@@ -2,7 +2,7 @@ package com.auroraclima.app.access.domain.usecase
 
 import com.auroraclima.app.access.domain.repository.HomeTourRepository
 
-/** Recorrido pendiente en memoria para las pruebas de los ViewModels. */
+/** Recorrido pendiente en memoria para las pruebas de los ViewModels y de los casos de uso. */
 class FakeHomeTourRepository(var pending: Boolean = false) : HomeTourRepository {
     var failWrites = false
     var failReads = false

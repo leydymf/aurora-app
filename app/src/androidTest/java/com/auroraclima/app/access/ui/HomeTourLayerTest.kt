@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -18,8 +19,10 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.auroraclima.app.R
@@ -64,11 +67,18 @@ class HomeTourLayerTest {
         composeRule.configureLikeMainActivity()
     }
 
-    private fun show(initial: HomeTourStep?, fontScale: Float = 1f) {
+    private fun show(
+        initial: HomeTourStep?,
+        fontScale: Float = 1f,
+        layoutDirection: LayoutDirection = LayoutDirection.Ltr
+    ) {
         step = initial
         session.setContent(composeRule) {
             val base = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(base.density, fontScale)) {
+            CompositionLocalProvider(
+                LocalDensity provides Density(base.density, fontScale),
+                LocalLayoutDirection provides layoutDirection
+            ) {
                 HomeTourHarness(
                     step = step,
                     onNext = { step = step?.next },
@@ -200,6 +210,40 @@ class HomeTourLayerTest {
             bubbleBounds.bottom <= cloud.top + PIXEL_ROUNDING
         )
         assertEquals(1, composeRule.onAllNodesWithText(done).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun deDerechaAIzquierdaElGloboVaCentradoYNoPoneBotonesBajoLaNube() {
+        // Con un idioma de derecha a izquierda la nube va a la izquierda; el globo se
+        // ubica con coordenadas reales y su fila de botones se acorta por ese lado.
+        show(HomeTourStep.first, layoutDirection = LayoutDirection.Rtl)
+        val width = composeRule.onRoot().fetchSemanticsNode().boundsInWindow.width
+        val cloudNode = composeRule.onNodeWithContentDescription(context.getString(R.string.access_back_to_weather))
+
+        HomeTourStep.entries.forEach { expected ->
+            composeRule.runOnUiThread { step = expected }
+            composeRule.waitForIdle()
+            val (title, body, counter) = tourTexts(context, expected)
+            // El globo va centrado. Se mide su texto, sin recortar: el contenedor no tiene
+            // nodo propio y los límites recortados por la ventana esconderían un globo
+            // que se sale de la pantalla (el desvío de R-1 era de 16 dp a la derecha).
+            val node = bubble(title, body, counter).fetchSemanticsNode()
+            val center = node.positionInWindow.x + node.size.width / 2f
+            assertTrue(
+                "Paso ${expected.number}: el globo debe ir centrado (centro en $center, pantalla de $width)",
+                abs(center - width / 2f) <= PIXEL_ROUNDING + 1
+            )
+            val cloud = cloudNode.fetchSemanticsNode().boundsInWindow
+            listOf(next, skip, done)
+                .flatMap { composeRule.onAllNodesWithText(it).fetchSemanticsNodes() }
+                .forEach { button ->
+                    assertTrue(
+                        "Paso ${expected.number}: la nube ($cloud) tapa un botón (${button.boundsInWindow})",
+                        !button.boundsInWindow.overlaps(cloud)
+                    )
+                }
+        }
+        assertTrue("La nube está a la izquierda", cloudNode.fetchSemanticsNode().boundsInWindow.center.x < width / 2)
     }
 
     /** El nodo del globo que TalkBack lee entero: título, frase y contador. */
