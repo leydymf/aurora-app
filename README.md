@@ -8,7 +8,7 @@ Prototipo desarrollado como trabajo de grado de Ingeniería de Sistemas en la Un
 
 Para muchas mujeres que viven violencia, tener en el teléfono una aplicación que muestre de forma evidente que buscan ayuda puede ser un riesgo. Por eso Aurora se presenta como una aplicación de clima completa: muestra el pronóstico, permite buscar ciudades y no usa nombres, íconos, permisos ni notificaciones que revelen su propósito.
 
-Al escribir una clave personal en la barra de búsqueda de ciudades, la aplicación abre el espacio privado. Si la clave no es correcta, la respuesta es la misma que la de una búsqueda sin resultados.
+Al escribir un código de acceso personal en la barra de búsqueda de ciudades, la aplicación abre el espacio privado. Si el código no es correcto, la respuesta es la misma que la de una búsqueda sin resultados.
 
 ## Funcionalidades
 
@@ -30,10 +30,10 @@ Al escribir una clave personal en la barra de búsqueda de ciudades, la aplicaci
 
 ## Pruebas y evaluación
 
-- 802 pruebas unitarias y 47 pruebas instrumentadas, sin fallos.
+- 973 pruebas unitarias y 107 pruebas instrumentadas, sin fallos, en Android 8.0 (API 26) y Android 11 (API 30).
 - ktlint y Android Lint sin errores.
 - Pruebas manuales según el plan de pruebas del proyecto.
-- Evaluación de seguridad con OWASP MASVS v2.1.0 y MASTG v2.0.0 sobre el APK de release. De los 20 controles evaluados, 17 se cumplen (7 sin observaciones y 10 con observaciones) y 3 no aplican. Se registraron 10 hallazgos: 7 corregidos, 1 informativo cerrado y 2 de severidad baja pendientes para antes de un piloto (firmar el APK con un certificado propio y retirar dos actividades exportadas por una librería).
+- Evaluación de seguridad con OWASP MASVS v2.1.0 y MASTG v2.0.0 sobre el APK de release. De los 20 controles evaluados, 17 se cumplen (7 sin observaciones y 10 con observaciones) y 3 no aplican. Se registraron 12 hallazgos: 9 corregidos, 1 informativo cerrado y 2 de severidad baja pendientes para antes de un piloto (firmar el APK con un certificado propio y retirar dos actividades exportadas por una librería).
 
 ## Arquitectura
 
@@ -42,7 +42,7 @@ La aplicación sigue el patrón MVVM con inyección de dependencias con Hilt. El
 ```
 app/src/main/java/com/auroraclima/app/
 ├── weather/        pantalla de clima (API Open-Meteo)
-├── access/         entrada con clave, tutorial y configuración
+├── access/         entrada con código, tutorial y configuración
 ├── accounts/       cuenta, sincronización, recuperación y borrado
 ├── content/        guía de orientación
 ├── records/        registro de hechos y exportación

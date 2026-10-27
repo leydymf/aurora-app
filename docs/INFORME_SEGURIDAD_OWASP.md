@@ -387,6 +387,11 @@ de inicialización, fuente de aleatoriedad y proveedor.
 - Ningún `Cipher.getInstance(..., "proveedor")`: se usa el proveedor por defecto
   de la plataforma, y «AndroidKeyStore» solo donde corresponde.
 
+> **Errata (2026-10-27, H-12).** Desde v0.3.2 la frase «Tampoco se usa
+> `MessageDigest`» deja de ser cierta: `AttachmentStore` usa SHA-256 para comprobar
+> que cada adjunto abre completo tras sellarlo. Compara la integridad de un dato
+> propio, no protege un secreto. El hallazgo y su corrección están en §11.3.
+
 **Evidencia.** EV-04 · EV-06 [7] · pruebas de JVM `DekPayloadCipherTest` (6),
 `DekMediaCipherTest` (7), `PasswordKeyWrapperTest` (8),
 `Pbkdf2PasswordKeyDerivationTest` (4) e instrumentadas `KeystorePayloadCipherTest`
@@ -532,6 +537,12 @@ aplican**: Aurora no usa biometría ni `KeyguardManager`, por decisión de
 camuflaje —un prompt biométrico sobre una app de clima sería un distinguidor.
 
 **Evidencia.** EV-13 [1][4][5][5·bis][6] · EV-06 [3][4] · EV-04 [8] · EV-05.
+
+> **Errata (2026-10-27, H-11).** La verificación recorrió el reingreso con código de
+> acceso ya creado, no un registro interrumpido antes de crearlo. En ese caso, el
+> inicio de sesión de la activación abría sin pedir la contraseña de la cuenta. Lo
+> encontró la evaluación heurística y se corrigió en v0.3.2: el hallazgo, su
+> corrección y su efecto en el resultado están en §11.2.
 
 #### MASVS-AUTH-3 · «Las operaciones sensibles piden autenticación adicional» — **Pasa**
 
@@ -2250,3 +2261,260 @@ APK. Es un atajo de reconocimiento, no una credencial.
 peticiones a la app auténtica firmada y es la mitigación de fondo del registro
 abierto. Exige código, configuración y un build firmado de release, y sin usuarias
 reales no paga su costo hoy. Registrado en P-109.
+
+## 11. Re-verificación en v0.3.2
+
+> **Las secciones 1 a 10 no se tocan**, salvo dos erratas, en §5.2 y §5.3, que
+> remiten aquí.
+> Esta sección dice qué controles tocaron los cambios de v0.3.2, registra dos
+> hallazgos nuevos con su corrección y deja el recuento.
+
+v0.3.2 (etiqueta `v0.3.2-trl4`, 2026-10-27) reúne los ajustes de la evaluación
+heurística con evaluadoras y el cierre de la versión para las sesiones SUS. No se
+repitió la evaluación completa: se revisaron el código y las pruebas de cada
+cambio, y la auditora de seguridad del proyecto revisó cada tramo.
+
+**Nota de nomenclatura.** La evaluación heurística también numera sus hallazgos
+como H-1, H-2… Aquí H-11 y H-12 siguen la numeración de **este** informe; los de
+la evaluación heurística se citan como «hallazgo heurístico».
+
+### 11.1 Qué controles tocaron los cambios
+
+| Cambio de v0.3.2 | Commits | Controles | Efecto en el resultado |
+|---|---|---|---|
+| El inicio de sesión de la activación pide siempre la contraseña de la cuenta; se descartan la sesión, las credenciales y los datos de un registro interrumpido; ninguna subida a la nube sin código de acceso | `c5aa4e2`, `524197a`, `6bdf494` | AUTH-2, STORAGE-2, PRIVACY-4 | Cierra **H-11** (§11.2). Sin cambio frente a lo emitido en v0.3.1 (§11.4) |
+| El cambio del código de acceso pide escribir el nuevo dos veces (RF-09) | `29e4d7e` | AUTH-3 | Refuerzo. Sigue **Pasa** |
+| Ventana propia única (`SecureWindow`) con `FLAG_SECURE` y la nube; nube sobre el teclado; la inactividad cuenta los toques dentro de las hojas | `66d4666` … `0667ec0` | PLATFORM-3, AUTH-2 (cierre de sesión, RNF-03) | `NoTracesGuardTest` exige `SecureOn` en cada `Dialog(` de `core/security`. Sigue **Pasa con observación**: el residual de accesibilidad de §10.1 no cambia |
+| Transición de entrada con la marca, dentro del grafo seguro | `e9988f2` | PLATFORM-3 | Captura bloqueada desde el primer cuadro (`EntryTransitionGuardTest`). Sin cambio |
+| Aviso tras saltar el tutorial: una marca sellada con la DEK en un archivo de preferencias neutro (`view_meta`), que se borra al leerse | `e9988f2` | STORAGE-1 | Dato nuevo en disco, cifrado y con nombre neutro; muere con RF-20 y con el descarte de una activación sin terminar. Sin cambio |
+| Nombre genérico de los adjuntos («Imagen 1 · 12 oct») | `610603a` | PRIVACY-1 | El nombre original sigue sin guardarse; solo se usa la fecha `created_at`, que ya existía. Sin cambio |
+| Carga, error y plazo de 10 s en la fachada | `eae7cc5`, `afe329a` | AUTH-2 (indistinguibilidad, RF-13) | Un código erróneo recorre los mismos estados y tiempos que una ciudad en los cuatro desenlaces (`WeatherViewModelTest`). Sin cambio |
+| Terminología de las credenciales; guardián del DEX con los términos de 3 letras solo en cadenas reales | `4f8c442` … `423de0c`, `c4a93b3` | Camuflaje (RNF-05) | El guardián sigue con 0 hallazgos nuevos sobre el release. Sin cambio |
+| Adjuntos: trozos de 32 KB hacia el Keystore y verificación tras sellar | `343b97e` | CRYPTO-1, STORAGE-1 | Cierra **H-12** (§11.3). Sin cambio frente a lo emitido en v0.3.1 (§11.4) |
+
+### 11.2 H-11 · Media · Cerrado en v0.3.2 · La activación aceptaba la sesión de un registro interrumpido
+
+**Qué pasaba (v0.3.0 y v0.3.1).**
+- **El escenario:** un registro se cortaba después de crear la cuenta y antes de
+  crear el código de acceso.
+- **Qué sobrevivía:** la sesión viva del proveedor y las credenciales cifradas
+  guardadas para el reingreso.
+- **Qué permitía:** al volver con el código de activación, el inicio de sesión de
+  la activación —el mismo `LoginViewModel` del reingreso— abría sin pedir la
+  contraseña de la cuenta. Desde ahí se podía crear un código de acceso y entrar
+  al espacio interno con esa cuenta.
+- **Agravante (hallazgo heurístico A′):** los datos que esa cuenta hubiera
+  restaurado desde la nube quedaban a la vista de una cuenta nueva creada encima,
+  y podían subir a la nube de esta.
+- **Qué hacía falta:** el teléfono en la mano y el código de activación.
+
+**Por qué Media y no Alta.** Con el criterio de §6, el impacto de la variante A′
+es de nivel alto: quien la aprovecha lee los registros restaurados de otra
+persona, sin root, sin descompilar y sin conocer su código de acceso, como en H-7.
+La gravedad baja a Media por probabilidad, por dos frenos que no dependen de la
+app corregida:
+- **El momento exacto:** la activación tenía que cortarse justo entre el inicio de
+  sesión y la creación del código de acceso. Una salida rápida en ese momento es
+  verosímil, pero la ventana es corta y solo existe una vez por instalación.
+- **El código de activación:** hace falta el código único del piloto, que se
+  entrega en persona (P-20). En el build de depuración es público (§10.10), y por
+  eso un despliegue real debe cambiarlo (P-108).
+
+La evaluación de §5.3 no lo detectó: recorrió el reingreso con código ya creado,
+no el registro cortado. Lo encontró la evaluación heurística (hallazgo A).
+
+**Corrección** (detalle en el ADR 2026-10-24 de `docs/ARQUITECTURA.md`):
+- **Detección:** un contrato `AccessCodePresence` en `core/security`.
+- **Descarte:** `DiscardUnfinishedActivationUseCase` borra la sesión, las
+  credenciales y los datos locales mientras no exista código de acceso. Corre al
+  abrir la bienvenida, antes de crear una cuenta y al abrir el inicio de sesión
+  de activación, que desde entonces siempre pide la contraseña.
+- **Subidas:** las tres vías de subida y los dos reconciliadores esperan al
+  código de acceso.
+- **Pruebas:** `DiscardUnfinishedActivationUseCaseTest`, `LoginViewModelTest`,
+  `ActivationReachabilityGuardTest` (que calcula la alcanzabilidad sobre la
+  navegación real), `WelcomeViewModelTest` y las pruebas de sincronización de
+  `records` y `questionnaire`.
+- **Corrida manual:** pendiente, P-116.
+
+**Lo que queda, ya registrado:**
+- **P-115:** la caché de Firestore no se vacía en el descarte.
+- **P-125 y P-130:** rastros de una activación cortada hasta el siguiente intento.
+- **P-118, anterior a v0.3.2:** con el código ya creado, cerrar sesión y entrar
+  con otra cuenta puede subir los registros locales de la primera a la nube de la
+  segunda.
+  - Exige el código de acceso de la primera cuenta, que ya da acceso a esos
+    registros.
+  - Se anota como observación de MASVS-STORAGE-2, que ya está en «Pasa con
+    observación».
+
+**Efecto en el resultado:** MASVS-AUTH-2 queda en **Pasa** en v0.3.2: corregido y
+probado con pruebas automáticas, con la corrida manual P-116 todavía pendiente. Lo
+que queda de H-11 (P-115, P-125 y P-130) son rastros locales de una activación
+cortada, no una vía de entrada: el inicio de sesión de la activación pide la
+contraseña de la cuenta aunque el descarte quede a medias. Por eso esas tres
+observaciones se anotan en MASVS-STORAGE-2 y no en AUTH-2. El veredicto de §5.3 no
+se reescribe; se agrega allí una errata que remite aquí.
+
+### 11.3 H-12 · Baja · Cerrado en v0.3.2 · El cifrado de adjuntos dependía del tamaño de cada escritura en Android 8.0 y 8.1
+
+**Qué pasaba.**
+- **El defecto de la plataforma:** en Android 8.0 y 8.1 (API 26 y 27), si una sola
+  llamada a `update()` o `doFinal()` le entrega más de unos 128 KB, el AES-GCM del
+  Android Keystore devuelve solo la salida del último trozo interno y no lanza
+  error.
+- **Medido en emulador** con una sonda de una llamada:
+  - `update(256 KB)` devolvió 131 072 bytes, en API 26 y en API 27.
+  - Al descifrar, un `doFinal` de 128 KB o más devolvió texto incompleto sin
+    excepción.
+  - En API 30 no ocurre.
+- **Dónde estaba expuesto el código:** `KeystoreMediaCipher` (`local_media_key`)
+  sellaba con `CipherOutputStream`, que pasa cada escritura entera a `update()`.
+  Solo el sellado estaba expuesto: `CipherInputStream` lee de 512 bytes en 512 y
+  llama a `doFinal()` sin entrada, así que la apertura nunca dependió del defecto
+  (era solo lenta). `KeystoreMediaCipherTest`, que escribe 3 MB de una vez,
+  fallaba en API 26 desde `v0.3.1-trl4`; se comprobó en esa etiqueta y en
+  `0667ec0` y `e9988f2`.
+
+**Por qué la app no se veía afectada.** La app escribía en trozos de 8 KB al copiar
+documentos y al restaurar desde la nube, y de 4 KB al comprimir una imagen. Medido
+en API 26 de archivo a archivo, con 1, 4 y 10 MB, todo quedó íntegro y con el
+SHA-256 de origen. Pero la corrección dependía del búfer de quien llamara, y nada
+habría detectado un fallo. Por eso la gravedad es **Baja** y la corrección,
+preventiva.
+
+**Corrección (`343b97e`; ADR 2026-10-27).**
+- **Trozos acotados:** el Keystore nunca recibe más de 32 KB por llamada, ni al
+  sellar ni al abrir (`core/security/SlicedCipherStreams.kt`). Al abrir, los trozos
+  son por rendimiento y para que el tope no dependa de la implementación de
+  `CipherInputStream`.
+- **Verificación tras sellar:** `AttachmentStore.write` abre cada adjunto completo
+  después de sellarlo y compara el SHA-256 de lo leído con el de lo escrito.
+  - Si no coincide, o si algo falla (incluido un `Error` de quien escribe), borra
+    el archivo.
+  - Si falla la comprobación, además, la importación termina con
+    `AttachmentNotSavedException` y el editor muestra «No se pudo guardar el
+    adjunto. Inténtalo de nuevo.» sin cerrarse.
+- **Formato y llave:** sin cambios.
+- **Uso nuevo de `MessageDigest`:** SHA-256 compara la integridad de un dato
+  propio, no protege un secreto. Desde aquí deja de ser cierta la frase de §5.2
+  «Tampoco se usa `MessageDigest`».
+
+**Verificación.**
+
+| Qué | Dónde | Resultado |
+|---|---|---|
+| 64 KB, 256 KB, 1 MB y 10 MB (tope de adjunto), con una escritura grande y con escrituras de 8 KB | `KeystoreMediaCipherTest`, API 26, 27 y 30 | en verde |
+| Lo sellado con el código de v0.3.1 abre con el nuevo, y al revés | `KeystoreMediaCipherCompatibilityTest`, API 26, 27 y 30 | en verde |
+| Archivos sellados por el **APK de `v0.3.1-trl4`** en el dispositivo, abiertos con v0.3.2 sin desinstalar | API 30, 64 KB y 1 MB | SHA-256 idéntico; archivos de prueba borrados |
+| Ninguna llamada al cifrador pasa de 32 KB: lo fija la lógica de troceo de la app, probada en la JVM | `SlicedCipherStreamsTest` (JVM, AES-GCM real) | en verde |
+| Un sellado que pierde bytes, una apertura que lanza o un `Error` de quien escribe no dejan archivo | `AttachmentStoreTest`, `LocalJournalAttachmentRepositoryTest` | en verde |
+| El aviso se ve en el editor y la pantalla sigue viva | `JournalEditorViewModelTest`, `JournalEditorMediaErrorTest` | en verde |
+
+**Salvedad de memoria.**
+- **En disco:** la verificación no deja copias en claro.
+- **En memoria:** el contenido completo de cada adjunto pasa por memoria al final
+  de cada apertura, en **todas** las versiones de Android. El descifrado AES-GCM
+  del Keystore no entrega nada hasta comprobar el sello, y entonces lo entrega
+  entero (`BufferAllOutputUntilDoFinalStreamer`). Por eso nunca suelta claro sin
+  autenticar.
+- **Qué añade la verificación:** esa misma exposición transitoria, una vez más al
+  guardar. A eso se suma un búfer de hasta 32 KB de claro, sin poner a cero, al
+  sellar.
+- **Cómo encaja en el residual existente:** es el mismo residual de memoria de
+  §5.1 (MASTG-TEST-0011, P-33, P-35), que exige acceso a la memoria del proceso y
+  queda fuera del modelo de amenaza. El arreglo que entrega el Keystore y el búfer
+  de la verificación se ponen a cero al cerrar; no así el búfer interno del
+  Keystore ni las copias que hacen el visor y la exportación (`readBytes`).
+- **Fuente de «en todas las versiones»:** se comprobó en las fuentes del SDK de
+  API 35 (keystore2, `AndroidKeyStoreAuthenticatedAESCipherSpi`); en API 23 a 30
+  lo hace la clase equivalente de `android.security.keystore`.
+
+**Rendimiento.** La misma corrección acortó mucho la apertura. Se midió en la misma
+corrida y con la misma llave el camino de v0.3.1 y el de v0.3.2, un emulador a la
+vez y con el computador anfitrión cargado (detalle del método en
+`docs/RESULTADOS_PRUEBAS.md` §0.3):
+
+| API (Android) | Tamaño | Guardar v0.3.1 | Guardar v0.3.2 (con verificación) | Abrir v0.3.1 | Abrir v0.3.2 |
+|---|---|---|---|---|---|
+| 26 (8.0) | 1 MB | 0,21–0,32 s | 0,19–0,25 s | 4,5–4,9 s | 0,10–0,20 s |
+| 26 (8.0) | 10 MB | 1,4–2,6 s | 1,1–1,9 s | 78–108 s | 0,6–1,05 s |
+| 27 (8.1) | 1 MB | 0,16–0,20 s | 0,14–0,15 s | 2,2–3,3 s | 0,04–0,05 s |
+| 27 (8.1) | 10 MB | 1,6–2,0 s | 1,9–2,05 s | 99 s | 1,04–1,05 s |
+| 30 (11) | 1 MB | 0,65–2,7 s | 0,36–0,91 s | 18–21 s | 0,10–0,32 s |
+| 30 (11) | 10 MB | 10,5–12,0 s | 5,1–6,6 s | 184–189 s | 1,9–3,2 s |
+
+**Otros cifradores con el Keystore.** Se revisó si alguno compartía el patrón de
+una sola llamada grande.
+
+| Cifrador | Qué procesa | Afectado |
+|---|---|---|
+| `DatabaseKeyManager` | Frase de la base de datos, 32 B | No |
+| `LocalDekStore` | DEK, 32 B | No |
+| `LocalCredentialStore` | Correo y contraseña, bloques de 512 B | No |
+| `KeystoreSecretCodeHasher` | HMAC, que no produce salida intermedia | No |
+| `KeystorePayloadCipher` | Ya solo se usa para destruir su llave | No |
+| `DekMediaCipher`, `DekPayloadCipher`, `PasswordKeyWrapper` | Llaves en memoria, por software, sin Keystore | No |
+| Exportación PDF | Cifrado de PdfBox, por software | No |
+
+**Pendientes nuevos, registrados en `docs/PENDIENTES.md`:**
+- **P-131:** repetir la prueba y la medición en un teléfono con Android 8.x. No es
+  una observación de ningún control, sino una verificación pendiente.
+- **P-132 (observación de MASVS-STORAGE-1):** el `CipherOutputStream` de
+  `DekMediaCipher` se traga un fallo de escritura del último bloque. En la subida
+  al respaldo podría quedar una copia sin sello marcada como sincronizada. Se
+  anota en STORAGE-1 y no en CRYPTO-1 porque el cifrador produce una salida
+  correcta: lo que falla es la escritura, y el envoltorio se traga el error. En
+  H-12, en cambio, era el propio cifrador del Keystore el que devolvía una salida
+  incompleta sin error, y eso es uso de la criptografía (CRYPTO-1). Al restaurar,
+  GCM detecta que falta el sello y no entrega nada, así que el defecto de P-132 es
+  de durabilidad del respaldo.
+- **P-133 (observación de MASVS-STORAGE-1):** si el proceso muere entre sellar e
+  insertar la fila, quedan archivos cifrados sin fila que solo borra RF-20.
+
+**Efecto en el resultado:**
+- **MASVS-CRYPTO-1 sigue en Pasa:** los algoritmos, modos, llaves y nonces son los
+  mismos, y la corrección solo hace robusto su uso ante un defecto de la plataforma.
+- **MASVS-STORAGE-1 sigue en Pasa con observación.**
+
+### 11.4 Recuento
+
+| Resultado | v0.3.1 (emitido, §10.8) | v0.3.1 (con lo que se sabe hoy) | v0.3.2 |
+|---|---|---|---|
+| **Pasa** | 7 | 5 | **7** |
+| **Pasa con observación** | 10 | 12 — entran AUTH-2 (H-11) y CRYPTO-1 (H-12) | **10** |
+| **Falla** | 0 | 0 | **0** |
+| **No aplica** | 3 | 3 | 3 |
+
+**La columna de v0.3.1 que se emitió no era el estado real.** AUTH-2 y CRYPTO-1
+figuraban en «Pasa» limpio con H-11 y H-12 sin descubrir. Con la convención de
+§10.8 —un control con observación viva queda en «Pasa con observación»— v0.3.1
+habría dado **5 · 12 · 0 · 3**. El argumento de §10.8 para H-9 y H-10 («los
+controles ya estaban con observación») aquí no sirve, porque esos dos controles
+estaban limpios.
+
+**En v0.3.2 los dos vuelven a «Pasa»** porque H-11 y H-12 se corrigieron dentro de
+la misma versión, y lo que queda de ellos no cae en AUTH-2 ni en CRYPTO-1:
+- **MASVS-STORAGE-2** suma P-118, P-115, P-125 y P-130. Ya estaba en «Pasa con
+  observación».
+- **MASVS-STORAGE-1** suma P-132 y P-133. Ya estaba en «Pasa con observación».
+- **P-131** es una verificación pendiente, no una observación.
+
+El recuento de v0.3.2 es **7 · 10 · 0 · 3**. El «Pasa» de AUTH-2 cuelga además de
+la corrida manual P-116, que sigue pendiente.
+
+### 11.5 Estado de la suite
+
+Corrida del 2026-10-27 sobre `cb83e31`:
+- **Host:** `ktlintCheck assembleDebug lint test assembleRelease` con `app/build`
+  borrado. 973 pruebas de JVM por variante en 123 clases, 0 fallos
+  (eran 802 en v0.3.1). ktlint sin violaciones. Lint con 0 errores. Guardián del
+  DEX: 387 486 cadenas (149 744 distintas), 49 términos, 58 excepciones, canarios en verde y 0 hallazgos nuevos.
+- **Instrumentadas:** 107 en 27 clases, 0 fallos en API 30 y en
+  API 26 (eran 47). En API 26 se omite la variante con gesto de
+  `AttachPickerCancelTest`, porque el gesto no existe antes de Android 10.
+- **API 27:** 13 pruebas de las tres clases del cifrado, en verde.
+- **Panel:** 91 pruebas en verde.
+
+Los fallos que el emulador de API 26 producía por diálogos de ANR del sistema están
+explicados en `docs/RESULTADOS_PRUEBAS.md` §0.1.

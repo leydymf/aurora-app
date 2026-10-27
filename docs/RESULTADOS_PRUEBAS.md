@@ -20,6 +20,118 @@
 > contención de fallos en el arranque, §9.2). La línea base de comparación es la corrida v0.3.0 · UI V2
 > (2026-08-12, rama `ui-v2`, hoy fusionada en `main`).
 
+## 0. Cierre de `v0.3.2-trl4` (2026-10-26/27) — cifra vigente
+
+v0.3.2 reúne los ajustes de la evaluación heurística (prompts 1 a 5) y el cierre
+de la versión para las sesiones SUS (prompt 6). Las secciones 1 a 9 describen
+versiones anteriores y no se tocan, salvo la fila de CP-21 de la §4.
+
+### 0.1 Corrida automatizada
+
+| Qué | `v0.3.1-trl4` | `v0.3.2-trl4` | Cambio |
+|---|---|---|---|
+| Pruebas de JVM por variante (debug y release) | 802 en 106 clases | **973 en 123 clases**, 0 fallos, 0 ignoradas | +172 nuevas, 1 retirada |
+| Instrumentadas | 47 en 12 clases | **107 en 27 clases** | +60 nuevas, 0 retiradas |
+| — en API 30 (`Aurora_GamaMedia_API30`) | 47, 0 fallos | 107, 0 fallos, 0 omitidas | |
+| — en API 26 (`Aurora_API26`, `minSdk`) | no se corrió completa | 107, 0 fallos, 1 omitida | ver abajo |
+| — en API 27 (`Aurora_API27`, creado en este cierre) | — | 13 de las tres clases del cifrado de adjuntos, 0 fallos | §0.2 |
+| Panel web (`npm test`, vitest) | 91 | **91**, 0 fallos | sin cambios en `admin/` |
+| ktlint | sin violaciones | sin violaciones | |
+| Android Lint (debug) | 0 errores | 0 errores, 60 avisos | ningún aviso en los archivos nuevos |
+| Guardián del DEX (`verificarCamuflajeDex`) | 0 hallazgos | 0 hallazgos nuevos; 387 486 cadenas (149 744 distintas), 49 términos, 58 excepciones, canarios en verde | |
+
+Corrida del 2026-10-27 sobre `cb83e31`, el último commit de código de la versión.
+Comando: `./gradlew ktlintCheck assembleDebug lint test assembleRelease` con
+`app/build` borrado y los demonios de Gradle detenidos, en una sola invocación.
+Las instrumentadas, con
+`connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true`,
+un emulador a la vez y recién arrancado (manual técnico §13.13).
+
+- **La prueba retirada** es `WeatherViewModelTest` «un fallo de red en la busqueda
+  se muestra como sin resultados». H-1 cambió ese comportamiento: un fallo de red
+  ahora muestra un error con «Reintentar», y la sustituyó «un fallo de red en la
+  busqueda muestra el error con reintento» (commit `eae7cc5`).
+- **La omitida en API 26** es `AttachPickerCancelTest`, la variante del gesto de
+  atrás. El gesto llegó con Android 10; antes, deslizar desde el borde abre el
+  cajón «Open from» del selector de documentos. La prueba se omite por debajo de
+  API 29, y las variantes con el botón de atrás pasan.
+- **Fallos del emulador de API 26 que no eran de la app.**
+  - Durante el cierre fallaron `SecureWindowCloudTest` (dos pruebas de teclado) y
+    `AttachPickerCancelTest`. Las capturas mostraron un diálogo «System UI isn't
+    responding», y el registro de eventos ANR repetidos de Play Services, que
+    tapaban la pantalla y se llevaban la tecla atrás.
+  - Con un solo emulador y arranque en frío, las dos clases pasan (9 de 9 en dos
+    corridas seguidas, y 3 de 3).
+  - `KeystoreMediaCipherTest` fallaba por otra causa, que sí era real (§0.2).
+- **Prueba intermitente corregida.** `JournalMediaViewModelTest` «sin renderizador
+  una pagina pedida devuelve null» falló una vez en release dentro de la corrida
+  completa. La prueba terminaba sin esperar la decodificación de la imagen, que
+  corre en un hilo real (`Dispatchers.Default`): si la decodificación volvía a
+  `Main` justo cuando la regla lo restablecía, chocaban. Ahora espera el estado
+  final, como las otras dos pruebas de la clase. Antes del arreglo pasó 15 de 15
+  veces aislada, y después 10 de 10 aislada y en la corrida completa. La prueba
+  databa del 2026-07-24.
+- **Cuentas en la nube:** ninguna prueba crea cuentas reales (las de cuentas usan
+  un servicio falso), así que no quedó nada que borrar.
+
+### 0.2 Cifrado de adjuntos en Android 8.0 y 8.1
+
+`KeystoreMediaCipherTest` fallaba en API 26 desde `v0.3.1-trl4` (se comprobó en esa
+etiqueta y en `0667ec0` y `e9988f2`). La causa era un defecto de Android 8.0 y 8.1:
+
+- **El defecto:** si una sola llamada a `update()` o `doFinal()` le entrega más de
+  unos 128 KB, el AES-GCM del Keystore devuelve solo la salida del último trozo
+  interno y no lanza error. Una sonda dio 131 072 bytes para 256 KB en API 26 y en
+  API 27. En API 30 no ocurre.
+- **La app no estaba afectada:** escribía en trozos de 8 KB o menos (8 KB al copiar
+  documentos y al restaurar desde la nube; 4 KB al comprimir una imagen). Medido en
+  API 26 de archivo a archivo con 1, 4 y 10 MB, todo íntegro.
+- **La corrección fue preventiva:** el cifrador nunca entrega al Keystore más de
+  32 KB por llamada, y el almacén verifica cada adjunto tras sellarlo.
+
+El detalle, con las pruebas nuevas y la comprobación entre versiones, está en
+`docs/INFORME_SEGURIDAD_OWASP.md` §11.3.
+
+### 0.3 Mejora de rendimiento: guardar y abrir adjuntos
+
+La corrección también cambió el rendimiento. Una prueba instrumentada temporal (no
+versionada) midió en la misma corrida, y con la misma llave del Keystore, el
+camino de v0.3.1 y el de v0.3.2. «Guardar» en v0.3.2 incluye la verificación (el
+archivo se vuelve a abrir completo). La fuente se copió en trozos de 8 KB, como en
+la app. Hubo un emulador encendido a la vez, con el Mac en una carga media de 6 a
+12; cada fila resume dos o tres corridas.
+
+| API (Android) | Tamaño | Guardar v0.3.1 | Guardar v0.3.2 (con verificación) | Abrir v0.3.1 | Abrir v0.3.2 |
+|---|---|---|---|---|---|
+| 26 (8.0) | 1 MB | 0,21–0,32 s | 0,19–0,25 s | 4,5–4,9 s | 0,10–0,20 s |
+| 26 (8.0) | 10 MB | 1,4–2,6 s | 1,1–1,9 s | 78–108 s | 0,6–1,05 s |
+| 27 (8.1) | 1 MB | 0,16–0,20 s | 0,14–0,15 s | 2,2–3,3 s | 0,04–0,05 s |
+| 27 (8.1) | 10 MB | 1,6–2,0 s | 1,9–2,05 s | 99 s | 1,04–1,05 s |
+| 30 (11) | 1 MB | 0,65–2,7 s | 0,36–0,91 s | 18–21 s | 0,10–0,32 s |
+| 30 (11) | 10 MB | 10,5–12,0 s | 5,1–6,6 s | 184–189 s | 1,9–3,2 s |
+
+10 MB es el tope de un adjunto (`AttachmentPolicy.MAX_DOCUMENT_BYTES`).
+
+- **Abrir:** pasó de minutos a uno o pocos segundos. `CipherInputStream` entregaba
+  al Keystore 512 bytes por llamada; el código nuevo le entrega 32 KB.
+- **Guardar:** quedó igual o más rápido a pesar de la verificación, porque las
+  escrituras pequeñas se juntan en trozos de 32 KB.
+  - Sin ese búfer, la primera versión de la corrección tardaba 12–15 s en guardar
+    10 MB en API 30 con el Mac cargado. Sellar costaba lo mismo que en v0.3.1,
+    unas 1 280 llamadas al Keystore.
+  - Con el búfer, el tope de adjunto queda por debajo de 10 s en API 30 en las
+    peores condiciones medidas. En un momento de poca carga dio 1,18 s.
+- **Validez:** los valores absolutos dependen de la carga del computador y no son
+  tiempos de un teléfono. La comparación vale porque los dos caminos se midieron
+  en la misma corrida. P-131 pide repetirla en un teléfono con Android 8.
+
+### 0.4 Corridas manuales que siguen pendientes
+
+Las de los prompts de v0.3.2 están en `docs/PENDIENTES.md`: P-116 (activación y
+confirmación del código de acceso), P-128 (fachada, adjuntos y cuestionario en el
+emulador) y P-129, cerrado (bienvenida). Para las sesiones SUS cuenta además
+`docs/PREPARACION_SESIONES.md`.
+
 ## 1. Resumen de la corrida automatizada (2026-10-05, corrida final de cierre)
 
 Comandos: `./gradlew cleanTestDebugUnitTest cleanTestReleaseUnitTest test
@@ -210,7 +322,7 @@ respecto de v0.3.0 en **negrita**.
 | CP-18 | RF-29, RF-30 | PASA + MANUAL (§8-A9) | Auto: `CalculateGuidanceLevelUseCaseTest` (19), **`GuidanceSeverityTest` (2 — par semafórico fijo por orden de nivel, reversión P-41), `PaletteContrastTest` (7 — los cuatro pares `accentSeverity` cumplen contraste)**. P-43 (incluido «aviso fijo visible sin scroll» con la tarjeta semafórica dominante) en §8-A9. |
 | CP-19 | RF-31 | **PASA + MANUAL (§8-A9)** | **Antes NO APLICA. Auto: `GuidanceViewModelTest` (guardar exige confirmación en hoja segura; «Terminar»/salida rápida/abandono no persisten nada — criterio 1), `LocalSavedOutcomeRepositoryTest` (5 — mínimo consultable fecha + nivel + tipos en `guidance_store.db` cifrada, RNF-04), `FirestoreOutcomeSyncRepositoryTest` (4 — sellado con la DEK de RF-39 a `outcomes`), `OutcomeSyncReconcilerTest` (2 — restauración), `GuidanceHistoryViewModelTest` (7 — listado, detalle, eliminación con doble confirmación), `DeleteSavedOutcomeUseCaseTest` (3 — propagación remota como RF-36), `OutcomeErasersTest` (2 — cascada RF-20). Manual: guardado sin red + reconexión (P-69a), restauración en B y cascada** en §8-A9/B1/A14. |
 | CP-20 | RF-32 | PASA + MANUAL (§8-A7) | Auto: `JournalEditorViewModelTest` (**33 — los chips de tipo son los topics publicados en su orden y visual; sin catálogo → «Sin tipo»; tipo retirado conserva el último nombre**), **`LoadEntryKindsUseCaseTest` (2), `ResolvedKindTest` (5), `AddJournalEntryUseCaseTest` (9), `JournalDatabaseMigrationTest` (6 — Room v4→v5 conserva los tipos como `storageCode`), `JournalDaoTest` (6)**. P-46 bloqueante y **P-73(c)** en §8-A7/B1/P1. |
-| CP-21 | RF-33 | PASA + MANUAL ✅ (§8-A8, 2026-10-07) | Auto: `LocalJournalAttachmentRepositoryTest` (18) y compañía. P-59 ✅ (§8-A8). |
+| CP-21 | RF-33 | PASA + MANUAL ✅ (§8-A8, 2026-10-07) | Auto: `LocalJournalAttachmentRepositoryTest` (18) y compañía. P-59 ✅ (§8-A8). **v0.3.2:** `LocalJournalAttachmentRepositoryTest` (20), `AttachmentStoreTest` (6), `SlicedCipherStreamsTest` (7), `KeystoreMediaCipherTest` (10) y `KeystoreMediaCipherCompatibilityTest` (2) en API 26, 27 y 30, `JournalEditorMediaErrorTest` (1), `AttachPickerCancelTest` y `AttachmentListTest` (§0.2; P-131 pide el teléfono). |
 | CP-22 | RF-34, RF-35, RF-36 | PASA + MANUAL (§8-A7) | Auto: `JournalDetailViewModelTest` (12), `UpdateJournalEntryUseCaseTest` (3), `JournalListViewModelTest` (15). P-46 bloqueante (§8-A7). |
 | CP-23 | RF-37, RF-38 | PASA + MANUAL ✅ + §8-A4 | Auto: `FirestoreJournalSyncRepositoryTest` (**15 — payload v3 con el id del topic; lectura tolerante de v2 vía `LegacyKindCodes`**), `JournalSyncReconcilerTest` (9). P-49 ✅; **sync diferida tras la entrada sin red** en §8-A4. |
 | CP-24 | RF-39 | PASA + MANUAL (§8-B1..B4) | Auto: como v0.2.0 + payload v3 en la restauración. P-61 bloqueante **(ahora incluye `outcomes` de RF-31 y la restauración v3 de P-73c)** en §8-B. |

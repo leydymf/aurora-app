@@ -29,7 +29,7 @@ El sistema debe permitir buscar ciudades por nombre y seleccionar una como prede
 2. Al seleccionar una ciudad se muestra su clima.
 3. La ciudad seleccionada queda recordada como predeterminada al reabrir la app.
 
-*Notas:* La barra de búsqueda es también la puerta del doble fondo (RF-12).
+*Notas:* La barra de búsqueda es también la puerta del doble fondo (RF-12). **v0.3.2 (evaluación heurística, H-1):** la búsqueda y el clima muestran un indicador de carga y, ante un fallo de red o tras 10 s sin respuesta, un mensaje de error con «Reintentar». Al elegir una ciudad no se muestra el clima guardado de otra: el respaldo local vale solo para la ciudad predeterminada (RF-03).
 
 ## RF-03 — Clima actual
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-02
@@ -61,7 +61,7 @@ El sistema debe habilitar el primer acceso al doble fondo únicamente mediante u
 1. El código de activación ingresado en la barra de búsqueda abre el proceso de creación de cuenta.
 2. Ninguna otra acción de la interfaz habilita el doble fondo.
 
-*Notas:* El código de activación se difunde por canales seguros (fundaciones, material institucional). Validar mecanismo con la directora.
+*Notas:* El código de activación se difunde por canales seguros (fundaciones, material institucional). Validar mecanismo con la directora. **v0.3.2 (evaluación heurística):** con el código de activación se abre primero una bienvenida (logo, qué es Aurora y «Siguiente») y desde ella el consentimiento (RF-17). El descarte de un registro interrumpido (hallazgo A, RF-39) corre al abrir la bienvenida.
 
 ## RF-06 — Ausencia de indicios del doble fondo
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-05, RNF-05
@@ -83,7 +83,7 @@ El sistema debe permitir crear una cuenta con correo y contraseña de mínimo 8 
 2. Un correo ya registrado es rechazado sin revelar datos de terceros.
 3. Una contraseña débil es rechazada indicando los requisitos.
 
-*Notas:* Solo accesible tras la activación del doble fondo y la aceptación del consentimiento.
+*Notas:* Solo accesible tras la activación del doble fondo y la aceptación del consentimiento. **v0.3.2 (evaluación heurística):** las reglas de la contraseña de la cuenta se muestran bajo el campo y se marcan en vivo mientras se escribe; cada regla se anuncia a los lectores de pantalla con su texto y su estado («cumplida» o «pendiente»). Todos los textos dicen «contraseña de la cuenta», para distinguirla del código de acceso y de la contraseña del archivo PDF (`TerminologyGuardTest`).
 
 ## RF-08 — Creación de código secreto
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-07
@@ -95,7 +95,7 @@ El sistema debe permitir a la usuaria definir un código secreto personal de mí
 2. Nombres de ciudad o códigos de menos de 6 caracteres son rechazados explicando la regla.
 3. El código nunca se almacena en texto legible.
 
-*Notas:* Reemplaza al código de activación para los accesos siguientes.
+*Notas:* Reemplaza al código de activación para los accesos siguientes. **v0.3.2 (evaluación heurística):** la pantalla se titula «Tu código de acceso.» y aclara que el código es distinto de la contraseña de la cuenta y que se escribe en el buscador de ciudades. «Código de acceso» reemplazó en todos los textos a «clave personal» y sus variantes; la terminología de las cuatro credenciales está en `docs/MANUAL_TECNICO.md` §7.1.
 
 ## RF-09 — Cambio de código secreto
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-08, RF-15
@@ -117,7 +117,7 @@ El sistema debe presentar, tras la creación del código, un tutorial del doble 
 1. Al finalizar la creación del código inicia el tutorial (ingreso, salida rápida y qué ve un tercero).
 2. La usuaria realiza al menos un ingreso de práctica con su código y una salida rápida antes de finalizar.
 
-*Notas:* Clave para la apropiación segura de la app (HU-08). **Refinamiento (2026-08, decisión de la usuaria):** el tutorial es **saltable** — «Saltar por ahora» (acción secundaria; el primario sigue siendo continuar con la práctica) aparece en sus dos flujos de aparición (tras crear el código en cuenta nueva, y tras restaurar en dispositivo nuevo por RF-39) y navega al panel, el mismo destino donde termina el flujo completo; una línea bajo el botón recuerda que puede volver a verse desde Ajustes (RF-11). Los criterios 1 y 2 describen el camino completo cuando la usuaria no salta; en modo repaso (RF-11) no se ofrece saltar.
+*Notas:* Clave para la apropiación segura de la app (HU-08). **Refinamiento (2026-08, decisión de la usuaria):** el tutorial es **saltable** — «Saltar por ahora» (acción secundaria; el primario sigue siendo continuar con la práctica) aparece en sus dos flujos de aparición (tras crear el código en cuenta nueva, y tras restaurar en dispositivo nuevo por RF-39) y navega al panel, el mismo destino donde termina el flujo completo; una línea bajo el botón recuerda que puede volver a verse desde Ajustes (RF-11). Los criterios 1 y 2 describen el camino completo cuando la usuaria no salta; en modo repaso (RF-11) no se ofrece saltar. **v0.3.2 (evaluación heurística):** el tutorial lleva la flecha de volver, equivalente al gesto atrás, salvo en su primera página durante el primer uso. Quien salta el tutorial en el primer uso ve en el Inicio, una sola vez, una tarjeta que recuerda cómo volver a entrar («Estás en Aurora, tu espacio privado. Para volver aquí, escribe tu código de acceso en el buscador de ciudades.»), con «Ver el tutorial» y «Entendido». La marca que la hace aparecer se guarda cifrada con la DEK de la cuenta y se borra al leerse (CP-06).
 
 ## RF-11 — Reapertura del tutorial
 **Tipo:** Funcional · **Prioridad:** Baja · **Dependencias:** RF-10
@@ -138,7 +138,7 @@ El sistema debe abrir el acceso a Aurora cuando el texto de la barra de búsqued
 1. El código exacto abre Aurora (inicio de sesión, o pantalla principal si hay sesión activa).
 2. Cualquier variación del código se trata como búsqueda normal.
 
-*Notas:* Puerta única de entrada al doble fondo. **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el criterio 1 se amplía — el código correcto abre la pantalla principal también cuando existe la credencial local cifrada (reingreso silencioso): el espacio interno se abre SIEMPRE con los datos locales y la sesión de la cuenta se confirma en segundo plano; el inicio de sesión manual solo aparece sin credencial local o si la confirmación es rechazada. Ver ADR 2026-08-19 en `docs/ARQUITECTURA.md`.
+*Notas:* Puerta única de entrada al doble fondo. **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el criterio 1 se amplía — el código correcto abre la pantalla principal también cuando existe la credencial local cifrada (reingreso silencioso): el espacio interno se abre SIEMPRE con los datos locales y la sesión de la cuenta se confirma en segundo plano; el inicio de sesión manual solo aparece sin credencial local o si la confirmación es rechazada. Ver ADR 2026-08-19 en `docs/ARQUITECTURA.md`. **v0.3.2 (evaluación heurística):** al abrir con el código de acceso se muestra unos 700 ms la marca de Aurora antes del Inicio. Esa transición ya está dentro del grafo seguro, así que el bloqueo de capturas y la nube rigen desde su primer cuadro. Solo la apertura por código la muestra: un código que no coincide y la activación no la tocan. Con «Quitar animaciones» del sistema la marca se muestra quieta durante el mismo tiempo (CP-07).
 
 ## RF-13 — Respuesta indistinguible de búsqueda
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-02, RF-12
@@ -149,7 +149,7 @@ El sistema debe responder a entradas que no sean ciudad ni código con el mensaj
 1. El nombre de una ciudad muestra su clima con comportamiento normal.
 2. Un texto que no es ciudad ni código responde 'No se encontraron resultados', idéntico a cualquier búsqueda fallida.
 
-*Notas:* Evita que el doble fondo sea detectable por ensayo y error.
+*Notas:* Evita que el doble fondo sea detectable por ensayo y error. **v0.3.2 (H-1):** el indicador de carga arranca con la tecla y depende solo de la longitud del texto. Un código erróneo recorre los mismos estados y tiempos que una ciudad (carga, resultados, sin resultados o error), y un código válido abre aunque la búsqueda falle o expire.
 
 ## RF-14 — Limpieza de la barra de búsqueda
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12
@@ -172,7 +172,7 @@ El sistema debe permitir iniciar sesión con correo y contraseña, mostrando err
 2. Credenciales incorrectas muestran un error genérico que no indica cuál campo falló.
 3. Tras 5 intentos fallidos consecutivos se aplica un bloqueo temporal.
 
-*Notas:* **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el inicio de sesión puede ser SILENCIOSO — con la credencial local cifrada, la sesión se confirma en segundo plano sin formulario. El silencioso NO cuenta para el bloqueo del criterio 3 (no es superficie de adivinación; su rechazo destruye la credencial local y fuerza el login manual, que sí cuenta). Los criterios 1–3 aplican intactos al formulario manual. Ver ADR 2026-08-19.
+*Notas:* **Refinamiento 2026-08-15 (P-31 opción C, acta §2):** el inicio de sesión puede ser SILENCIOSO — con la credencial local cifrada, la sesión se confirma en segundo plano sin formulario. El silencioso NO cuenta para el bloqueo del criterio 3 (no es superficie de adivinación; su rechazo destruye la credencial local y fuerza el login manual, que sí cuenta). Los criterios 1–3 aplican intactos al formulario manual. Ver ADR 2026-08-19. **v0.3.2 (hallazgo A):** en el flujo de activación el inicio de sesión pide siempre la contraseña de la cuenta (ver RF-39). El aviso de bloqueo nombra el inicio de sesión: «Por tu seguridad, el inicio de sesión queda en pausa unos minutos.»
 
 ## RF-16 — Salida rápida
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12
@@ -184,7 +184,7 @@ El sistema debe ofrecer en todas las pantallas de Aurora un botón de salida rá
 2. Al tocarlo, en menos de 1 segundo se muestra el clima con la barra vacía.
 3. El botón atrás y la navegación no permiten regresar a Aurora ni dejan rastro visible de la sesión.
 
-*Notas:* Mecanismo central de protección en uso (HU-11).
+*Notas:* Mecanismo central de protección en uso (HU-11). **v0.3.2 (evaluación heurística):** con el teclado abierto, la nube queda sobre él y la pantalla se ajusta para que el campo y el botón final sigan alcanzables. Un solo toque sale también con una hoja, un diálogo o el selector de fecha abiertos: cada ventana propia lleva la misma nube (`SecureWindow`, P-122). Las barras inferiores reservan el carril de la nube para que nunca tape un botón (H-4).
 
 ## RF-17 — Consentimiento informado
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-05
@@ -195,7 +195,7 @@ El sistema debe presentar el consentimiento informado antes de la creación de l
 1. No es posible continuar sin aceptación explícita (sin casillas preseleccionadas).
 2. El consentimiento puede releerse desde la sección de privacidad.
 
-*Notas:* Conforme a la Ley 1581 de 2012.
+*Notas:* Conforme a la Ley 1581 de 2012. **v0.3.2 (evaluación heurística):** el consentimiento va después de la bienvenida (RF-05), y la flecha y el gesto atrás vuelven a ella. La descripción de qué es Aurora pasó del consentimiento a la bienvenida, y el texto de lo que se guarda nombra cada credencial por su nombre único.
 
 ## RF-18 — No recolección sin consentimiento
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-17
@@ -229,7 +229,7 @@ El sistema debe permitir eliminar la cuenta con doble confirmación, suprimiendo
 2. Se eliminan cuenta, registros y evidencias del dispositivo y de la nube.
 3. Iniciar sesión con esas credenciales ya no es posible.
 
-*Notas:* Derecho de supresión, Ley 1581 de 2012.
+*Notas:* Derecho de supresión, Ley 1581 de 2012. **v0.3.2 (evaluación heurística):** la confirmación final dice el alcance: «Se borrarán tu cuenta y todos tus datos de este teléfono y de la nube. Para volver a usar Aurora tendrás que instalarla de nuevo.»
 
 ## RF-21 — Consulta de tipos de violencia
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-12, RF-24
@@ -305,7 +305,7 @@ El sistema debe presentar el cuestionario orientador permitiendo avanzar, retroc
 1. La usuaria puede avanzar, retroceder y abandonar en cualquier momento.
 2. Al abandonar no se guarda ninguna respuesta.
 
-*Notas:* Preguntas de elaboración propia, lenguaje no revictimizante validado con la directora. No se utiliza la escala Danger Assessment.
+*Notas:* Preguntas de elaboración propia, lenguaje no revictimizante validado con la directora. No se utiliza la escala Danger Assessment. **v0.3.2 (evaluación heurística):** salir a medias pregunta antes («¿Salir ahora?»; las respuestas se descartan). La nube y el cierre por inactividad nunca preguntan. En las preguntas, la fila de botones va en el carril de la nube (H-4).
 
 ## RF-28 — Descarte de respuestas en salida rápida
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-16, RF-27
@@ -347,7 +347,7 @@ El sistema debe almacenar el resultado del cuestionario únicamente cuando la us
 1. Descartar o salir no deja registro alguno.
 2. Guardar exige confirmación expresa y el resultado queda protegido y consultable.
 
-*Notas:* La usuaria mantiene control total sobre su información. **Implementado (2026-08-14, rama mejoras-v3; ADR y acta §3.2):** botón «Guardar este resultado» con hoja segura de confirmación (criterio 2); se persiste solo fecha + nivel + tipos reconocidos (RNF-04) en el almacén cifrado `guidance_store.db`, viaja sellado con la DEK de RF-39 (`/users/{uid}/outcomes`) y se restaura multi-dispositivo; listado consultable en Inicio con detalle y eliminación individual (doble confirmación, propagación remota como RF-36) y cascada RF-20. Descartar/salida rápida no dejan registro (criterio 1, regresión RF-28 probada).
+*Notas:* La usuaria mantiene control total sobre su información. **Implementado (2026-08-14, rama mejoras-v3; ADR y acta §3.2):** botón «Guardar este resultado» con hoja segura de confirmación (criterio 2); se persiste solo fecha + nivel + tipos reconocidos (RNF-04) en el almacén cifrado `guidance_store.db`, viaja sellado con la DEK de RF-39 (`/users/{uid}/outcomes`) y se restaura multi-dispositivo; listado consultable en Inicio con detalle y eliminación individual (doble confirmación, propagación remota como RF-36) y cascada RF-20. Descartar/salida rápida no dejan registro (criterio 1, regresión RF-28 probada). **v0.3.2 (evaluación heurística):** salir del resultado sin guardarlo pregunta antes. «Guardar» pasó a ser la acción principal y «Terminar» la secundaria, una sobre otra y alineadas con la nube (H-4).
 
 ## RF-32 — Registro de incidentes
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-15, RNF-01
@@ -358,7 +358,7 @@ El sistema debe permitir registrar incidentes con fecha, tipo de violencia y des
 1. Con los campos obligatorios completos, el incidente se guarda protegido.
 2. Si falta un campo obligatorio, se indica sin perder lo ya escrito.
 
-*Notas:* **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** el «tipo de violencia» se elige entre los tipos publicados en la Guía (RF-21), que son la única fuente — mismo orden, icono y acento; un tipo nuevo o editado desde el panel aparece en el registro en la siguiente actualización de contenido. Si el catálogo no está disponible (sin conexión y sin caché de contenido), registrar sigue siendo posible con la opción neutra «Sin tipo», y el tipo se elige después al editar (RF-35); el criterio 2 se mantiene: sin tipo elegido no se guarda. Un registro cuyo tipo dejó de publicarse se muestra con su último nombre conocido (o «Sin tipo») y el visual neutro, nunca se pierde. Los registros anteriores migran su tipo al id del tema equivalente (local, nube y restauración en otro dispositivo, RF-37/RF-39); su instantánea de nombre nace vacía, así que sin catálogo disponible se ven como «Sin tipo» hasta que haya contenido o se editen.
+*Notas:* **Refinamiento 2026-10-03 (cierre P-68, ADR 2026-10-03):** el «tipo de violencia» se elige entre los tipos publicados en la Guía (RF-21), que son la única fuente — mismo orden, icono y acento; un tipo nuevo o editado desde el panel aparece en el registro en la siguiente actualización de contenido. Si el catálogo no está disponible (sin conexión y sin caché de contenido), registrar sigue siendo posible con la opción neutra «Sin tipo», y el tipo se elige después al editar (RF-35); el criterio 2 se mantiene: sin tipo elegido no se guarda. Un registro cuyo tipo dejó de publicarse se muestra con su último nombre conocido (o «Sin tipo») y el visual neutro, nunca se pierde. Los registros anteriores migran su tipo al id del tema equivalente (local, nube y restauración en otro dispositivo, RF-37/RF-39); su instantánea de nombre nace vacía, así que sin catálogo disponible se ven como «Sin tipo» hasta que haya contenido o se editen. **v0.3.2 (evaluación heurística):** salir del editor con cambios sin guardar pregunta antes («¿Salir sin guardar?»); sin cambios, sale directo. La flecha y el gesto atrás se comportan igual.
 
 ## RF-33 — Evidencias adjuntas
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-32
@@ -369,7 +369,7 @@ El sistema debe permitir adjuntar imágenes a un incidente desde galería o cám
 1. Se pueden adjuntar imágenes desde galería o cámara.
 2. Las evidencias quedan protegidas, asociadas al incidente y visibles solo dentro de Aurora.
 
-*Notas:* Nota provisional (política de evidencias aprobada por la directora el 2026-07-21, `docs/DECISIONES_DIRECTORA.md` §5; pendiente reflejar en el xlsx fuente): el alcance se AMPLÍA a tres vías sin permisos — imágenes de galería, foto con la cámara DEL SISTEMA con salida directa al almacén cifrado (sin pasar por la galería) y archivos existentes (PDF, documentos, audio) —; se EXCLUYE la grabación de audio propia (permiso de micrófono delator). Al importar imágenes se eliminan los metadatos (GPS incluido). Las evidencias son SOLO LOCALES (sin sincronización) en esta etapa (§5.3). Ver ADR 2026-07-24 en `docs/ARQUITECTURA.md`.
+*Notas:* Nota provisional (política de evidencias aprobada por la directora el 2026-07-21, `docs/DECISIONES_DIRECTORA.md` §5; pendiente reflejar en el xlsx fuente): el alcance se AMPLÍA a tres vías sin permisos — imágenes de galería, foto con la cámara DEL SISTEMA con salida directa al almacén cifrado (sin pasar por la galería) y archivos existentes (PDF, documentos, audio) —; se EXCLUYE la grabación de audio propia (permiso de micrófono delator). Al importar imágenes se eliminan los metadatos (GPS incluido). Las evidencias son SOLO LOCALES (sin sincronización) en esta etapa (§5.3). Ver ADR 2026-07-24 en `docs/ARQUITECTURA.md`. **v0.3.2 (evaluación heurística):** (H-5) antes de abrir el selector de Galería o de Archivo, la primera vez en cada visita al editor, una hoja explica cómo volver sin elegir nada; cancelar el selector deja a la persona en el editor con lo escrito. (H-6) Cada adjunto se muestra con su ícono y un nombre genérico («Imagen 1 · 12 oct»), nunca con el nombre del archivo original. **Cierre de v0.3.2:** en Android 8.0 y 8.1 el Keystore truncaba sin error el cifrado cuando una sola llamada recibía más de unos 128 KB. La app no se veía afectada, porque escribía en trozos de 8 KB o menos. Aun así, el cifrador entrega ahora al Keystore trozos de 32 KB, y el almacén abre cada adjunto completo después de sellarlo: si no coincide con lo escrito, no se guarda y el editor muestra «No se pudo guardar el adjunto. Inténtalo de nuevo.». El formato de los archivos no cambió (CP-21).
 
 ## RF-34 — Listado cronológico de incidentes
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-32
@@ -390,7 +390,7 @@ El sistema debe permitir editar los incidentes persistiendo los cambios de forma
 **Criterios de aceptación:**
 1. Los cambios de un incidente editado se guardan protegidos y se reflejan en la sincronización.
 
-*Notas:* -
+*Notas:* **v0.3.2 (evaluación heurística):** igual que al crear (RF-32), salir de la edición con cambios sin guardar pregunta antes.
 
 ## RF-36 — Eliminación de incidentes
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-32, RF-37
@@ -412,7 +412,7 @@ El sistema debe sincronizar los registros cifrados con la nube por canal seguro,
 1. Los cambios (crear, editar, eliminar) se sincronizan por canal cifrado.
 2. Solo la cuenta de la usuaria puede acceder a sus registros.
 
-*Notas:* -
+*Notas:* **v0.3.2 (hallazgo A):** ninguna subida a la nube ocurre mientras no exista código de acceso en el dispositivo, desde ningún punto (crear, editar, guardar o reconciliar). Lo pendiente sube en la primera reconciliación con código.
 
 ## RF-38 — Sincronización diferida sin conexión
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-37
@@ -501,7 +501,7 @@ El sistema debe permitir a la usuaria seleccionar uno o varios registros de inci
 5. La usuaria elige guardar o compartir el archivo mediante el selector del sistema, sin que la app pida permisos nuevos ni conserve copias temporales.
 6. Las pantallas de selección y exportación bloquean capturas de pantalla.
 
-*Notas:* Surge de la consulta con el comité de género: los casos se demoran por falta de fechas y pruebas. El archivo exportado sale del cifrado de Aurora; se mitiga con contraseña, nombre neutro y aviso previo (HU-35). Agregado el 2026-10-02; el 2026-10-03 la usuaria amplió el criterio 3 de «imágenes» a todos los adjuntos tras la revisión en emulador: un documento adjunto que solo se menciona no sirve como prueba.
+*Notas:* Surge de la consulta con el comité de género: los casos se demoran por falta de fechas y pruebas. El archivo exportado sale del cifrado de Aurora; se mitiga con contraseña, nombre neutro y aviso previo (HU-35). Agregado el 2026-10-02; el 2026-10-03 la usuaria amplió el criterio 3 de «imágenes» a todos los adjuntos tras la revisión en emulador: un documento adjunto que solo se menciona no sirve como prueba. **v0.3.2 (evaluación heurística):** la contraseña se llama «contraseña del archivo PDF» en todos los textos, y una frase aclara que solo sirve para abrir ese archivo y que no es la contraseña de la cuenta ni el código de acceso. La regla de longitud (mínimo 10 caracteres) se marca en vivo.
 
 ## RF-46 — Recuperación de la contraseña por correo
 **Tipo:** Funcional · **Prioridad:** Media · **Dependencias:** RF-15, RF-39

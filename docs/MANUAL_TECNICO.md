@@ -1,7 +1,7 @@
 # Aurora — Manual técnico
 
 > Entregable «manual técnico de la aplicación» de la Fase 3.
-> Última revisión: 2026-10-14 · Versión del código descrita: `v0.3.1-trl4`.
+> Última revisión: 2026-10-27 · Versión del código descrita: `v0.3.2-trl4`.
 
 ## 1. Propósito y alcance del manual
 
@@ -159,7 +159,7 @@ MVVM con Clean Architecture en tres capas, organizado **por feature**:
 app/src/main/java/com/auroraclima/app/
 ├── core/            Transversal: security, database, network, catalog, directory, ui, startup
 ├── weather/         Fachada de clima (RF-01..RF-04)
-├── access/          Entrada por clave, tutorial, configuración (RF-05..RF-16)
+├── access/          Entrada por código, tutorial, configuración (RF-05..RF-16)
 ├── accounts/        Cuenta, consentimiento, sincronización de llaves (RF-07, RF-17..RF-20, RF-46)
 ├── content/         Guía de orientación (RF-21..RF-26)
 ├── questionnaire/   Cuestionario y su resultado (RF-27..RF-31)
@@ -198,7 +198,13 @@ error visible puede revelar el espacio protegido.
   nunca ve texto en claro.
 - **Adjuntos:** se guardan en `filesDir/media_store/` con nombre opaco y
   contenido sellado por stream; el mapeo registro↔archivo vive cifrado en la base.
-  Para el respaldo se re-cifran y se trocean en documentos de Firestore.
+  Para el respaldo se re-cifran y se trocean en documentos de Firestore. Desde
+  v0.3.2, `KeystoreMediaCipher` nunca entrega al Keystore más de 32 KB por llamada
+  (en Android 8.0 y 8.1 una llamada mayor de unos 128 KB se truncaba sin error), y
+  `AttachmentStore` abre cada adjunto completo después de sellarlo y compara su
+  SHA-256 con lo escrito: si no coincide, borra el archivo y la importación falla
+  con un aviso propio. El formato en disco no cambió. Detalle en
+  `docs/INFORME_SEGURIDAD_OWASP.md` §11.
 
 ### 4.3 Capas de seguridad
 
@@ -421,7 +427,7 @@ keystore propio fuera del repositorio (`.gitignore` ya veda `*.jks` y
 v2 y v3.
 
 **Versión.** `versionCode = 1` y `versionName = "1.0"` nunca se subieron; la
-versión real del proyecto la llevan las etiquetas de git (`v0.3.1-trl4` es la
+versión real del proyecto la llevan las etiquetas de git (`v0.3.2-trl4` es la
 vigente). Si el proyecto va a distribuirse, hay que empezar a versionar el
 `build.gradle.kts`.
 
@@ -482,37 +488,81 @@ motivo escrito al lado y una entrada en `docs/PENDIENTES.md`.
 
 ### 7.1 Cómo funciona hoy
 
-El espacio protegido se abre **solo** escribiendo una clave en la barra de
-búsqueda de ciudades. Hay dos ranuras de clave (`CodeSlot`):
+**Terminología (v0.3.2).** La aplicación maneja cuatro credenciales, y desde
+v0.3.2 cada una tiene un solo nombre en todos los textos. `TerminologyGuardTest`
+falla si un texto vuelve a usar «clave», «PIN» o «llave», si nombra una
+contraseña sin decir de cuál se trata o si llama «código» a algo que no sea el
+código de acceso o el de activación.
 
-1. **Activación.** Clave única del prototipo, que abre el flujo de registro la
-   primera vez (consentimiento → cuenta → clave personal → tutorial).
-2. **Usuaria.** La clave personal que la propia usuaria crea (mínimo 6
+| Credencial | Qué es | Dónde se escribe |
+|---|---|---|
+| **Código de activación** | Código único del prototipo; abre el primer uso | Buscador de ciudades |
+| **Código de acceso** | Lo crea la usuaria; abre el espacio protegido a partir de entonces | Buscador de ciudades |
+| **Contraseña de la cuenta** | La de la cuenta de Firebase (correo y contraseña); es también la raíz del respaldo de RF-39 | Crear cuenta, iniciar sesión, cambiarla, restablecerla y eliminar la cuenta |
+| **Contraseña del archivo PDF** | Protege solo un archivo exportado (RF-45) | Pantalla de exportación |
+
+Hasta v0.3.1 los textos decían «clave personal» o «clave» para el código de
+acceso; algunos documentos anteriores conservan ese nombre.
+
+El espacio protegido se abre **solo** escribiendo un código en la barra de
+búsqueda de ciudades. Hay dos ranuras (`CodeSlot`):
+
+1. **`ACTIVATION`.** El código de activación, único del prototipo, que abre el
+   primer uso: bienvenida → consentimiento → cuenta → código de acceso →
+   tutorial. La bienvenida se agregó en v0.3.2.
+2. **`USER`.** El código de acceso que crea la propia usuaria (mínimo 6
    caracteres y que no sea el nombre de una ciudad real, verificado contra un
-   directorio local de unas 620 entradas en `res/raw/city_index.txt`). Se guarda
-   solo como hash con salt.
+   directorio local de unas 620 entradas en `res/raw/city_index.txt`). Desde
+   v0.3.2 se escribe dos veces, al crearlo y al cambiarlo. Se guarda solo como
+   hash con salt.
 
 `ValidateSecretCodeUseCase` consulta **primero la ranura de usuaria**: en cuanto
-existe clave personal, la de activación **deja de abrir**. Cualquier texto que no
-coincida —y cualquier fallo interno— devuelve el mismo resultado que una búsqueda
-de ciudad sin resultados.
+existe código de acceso, el de activación **deja de abrir**. Cualquier texto que
+no coincida —y cualquier fallo interno— devuelve el mismo resultado que una
+búsqueda de ciudad sin resultados.
 
-La clave de activación **solo se siembra en builds debug**, por
-`DebugSecretCodeSeeder` (`app/src/debug/java/.../access/data/`), que la escribe en
+El código de activación **solo se siembra en builds debug**, por
+`DebugSecretCodeSeeder` (`app/src/debug/java/.../access/data/`), que lo escribe en
 el primer arranque si la ranura está vacía. El valor concreto está en ese archivo
-y no se reproduce aquí porque el repositorio es público. La decisión de que sea
-una clave única entregada en persona está cerrada en P-20
-(`docs/DECISIONES_DIRECTORA.md` §1.2).
+y no se reproduce aquí. La decisión de que sea un código único entregado en
+persona está cerrada en P-20 (`docs/DECISIONES_DIRECTORA.md` §1.2).
+
+**Flujos que cambiaron en v0.3.2** (evaluación heurística; el detalle y el motivo
+de cada uno están en los ADR de esa versión en `docs/ARQUITECTURA.md`):
+
+- **Registro interrumpido (hallazgo A).** Mientras no existe código de acceso, una
+  sesión viva del proveedor o unas credenciales guardadas ya no abren el paso:
+  vienen de un registro cortado y se descartan, junto con los datos locales que
+  esa cuenta hubiera restaurado. El descarte corre al abrir la bienvenida, antes
+  de crear una cuenta y al abrir el inicio de sesión de activación, que siempre
+  pide la contraseña de la cuenta. Ninguna subida a la nube ocurre sin código de
+  acceso. El reingreso con código de acceso ya creado (P-31 C) no cambió.
+- **Bienvenida.** El código de activación abre primero una pantalla con el logo y
+  qué es Aurora; desde ella se pasa al consentimiento, y desde el consentimiento
+  la flecha y el gesto atrás vuelven a ella.
+- **Entrada con el código de acceso.** Se muestra unos 700 ms la marca de Aurora,
+  ya dentro del grafo seguro, antes del Inicio.
+- **Tutorial saltado.** El Inicio muestra una sola vez una tarjeta que recuerda
+  cómo volver a entrar.
+- **Salida rápida.** La nube queda sobre el teclado y sale con un solo toque
+  también con una hoja, un diálogo o el selector de fecha abiertos.
+- **Salir con cambios sin guardar.** El editor de registros y el cuestionario
+  preguntan antes; la nube y el cierre por inactividad nunca preguntan.
+- **Adjuntos.** Antes del selector del sistema aparece una hoja que explica cómo
+  volver sin elegir nada; cada adjunto se muestra con un nombre genérico
+  («Imagen 1 · 12 oct»); cada archivo se verifica después de sellarlo (§4.2).
+- **Fachada.** La búsqueda y el clima muestran carga, y ante un fallo o tras 10 s,
+  un error con «Reintentar».
 
 Consecuencias prácticas:
 
 - **Para volver a hacer un primer uso completo hay que dejar la aplicación como
-  recién instalada** (desinstalar y reinstalar). Mientras exista clave personal,
-  la de activación no sirve. Procedimiento en `docs/PREPARACION_SESIONES.md`.
-- Si una usuaria olvida su clave personal, la vía aprobada (P-18, opción A) es
-  reinstalar o borrar datos → entrar con la clave de activación → iniciar sesión
-  con la cuenta existente → crear una clave nueva. Los registros vuelven desde la
-  nube. No se documenta dentro de la aplicación, para no dejar rastro.
+  recién instalada** (desinstalar y reinstalar). Mientras exista código de acceso,
+  el de activación no sirve. Procedimiento en `docs/PREPARACION_SESIONES.md`.
+- Si una usuaria olvida su código de acceso, la vía aprobada (P-18, opción A) es
+  reinstalar o borrar datos → entrar con el código de activación → iniciar sesión
+  con la cuenta existente → crear un código de acceso nuevo. Los registros vuelven
+  desde la nube. No se documenta dentro de la aplicación, para no dejar rastro.
 - En release, tras una eliminación total de cuenta el espacio protegido queda
   inaccesible en esa instalación, porque la resiembra solo existe en debug (P-55).
 
@@ -766,9 +816,14 @@ porque los guardianes de camuflaje y de recursos deben valer en ambas.
 - `docs/INFORME_SEGURIDAD_OWASP.md` — la evaluación MASVS/MASTG sobre el APK de
   release, con las evidencias en `docs/evidencias-owasp/`.
 
-Cifras vigentes al cierre de `v0.3.1-trl4`: unas 800 pruebas de JVM por variante y
-47 instrumentadas, sin fallos; ktlint sin violaciones; Android Lint con 0 errores;
-el panel con 91 pruebas en verde. La cifra exacta de cada corrida está fechada en
+Cifras vigentes al cierre de `v0.3.2-trl4` (2026-10-27): 973 pruebas de JVM por
+variante en 123 clases, sin fallos (eran 802 en `v0.3.1-trl4`); 107 instrumentadas
+en 27 clases, sin fallos en API 26 y API 30 (eran 47), con una omitida en API 26
+—la del gesto de atrás de `AttachPickerCancelTest`, que no existe antes de
+Android 10—; ktlint sin violaciones; Android Lint con 0 errores; el panel con 91
+pruebas en verde. Desde v0.3.2 las instrumentadas se corren en API 26 y en API 30:
+varias pruebas del teclado y del cifrado de adjuntos solo muestran su caso en
+Android 8. La cifra exacta de cada corrida está fechada en
 `docs/RESULTADOS_PRUEBAS.md` y es la referencia, no este párrafo.
 
 ### 10.3 Lo que no se puede automatizar
@@ -909,7 +964,7 @@ valores.
 ### 12.4 Registro de cuentas (P-109)
 
 El registro por correo y contraseña de Firebase Auth está **abierto por omisión**,
-y la clave de activación cierra la puerta de la interfaz, **no la API**. Quien
+y el código de activación cierra la puerta de la interfaz, **no la API**. Quien
 obtenga la clave web —que viaja en cualquier APK, como en toda aplicación de
 Firebase— puede crear cuentas directamente y leer el contenido de orientación, que
 es información de interés público (rutas y líneas de atención, no datos de
@@ -949,11 +1004,12 @@ del Android Keystore**. La nube no se toca.
 
 - **Evitarlo:** `-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true`,
   o correr las instrumentadas en un segundo emulador.
-- **Recuperarse:** `./gradlew installDebug`, entrar con la clave de activación (el
-  sembrador de debug la repone al estar vacía la ranura) → «¿Ya tienes una cuenta?
-  Inicia sesión» → correo y contraseña. La recuperación multi-dispositivo repone
-  los registros y los adjuntos desde la nube. Hay que **crear una clave personal
-  nueva**: la anterior se fue con el Keystore.
+- **Recuperarse:** `./gradlew installDebug`, entrar con el código de activación (el
+  sembrador de debug lo repone al estar vacía la ranura) → bienvenida →
+  consentimiento → «¿Ya tienes una cuenta? Inicia sesión.» → correo y contraseña
+  de la cuenta. La recuperación multi-dispositivo repone los registros y los
+  adjuntos desde la nube. Hay que **crear un código de acceso nuevo**: el anterior
+  se fue con el Keystore.
 
 ### 13.3 Un cambio de interfaz «no aparece» en el dispositivo
 
@@ -1043,10 +1099,29 @@ emulador, no una vía disponible en un teléfono.
 
 `DocumentsUI` no atiende toques sintéticos en sus filas (sí en los botones de la
 barra). Si hace falta elegir un archivo, la vía que funciona es la cámara. Además,
-`input text` escribe donde está el foco, no donde se toca, y con el teclado
-abierto la nube de salida queda tapada —no rota—. Patrón que funciona: tocar el
-campo → escribir → `input keyevent 4` para cerrar el teclado → volcar el árbol →
-tocar el siguiente campo con sus coordenadas nuevas.
+`input text` escribe donde está el foco, no donde se toca (desde v0.3.2 la nube de
+salida queda sobre el teclado; hasta v0.3.1 quedaba tapada). Patrón que funciona:
+tocar el campo → escribir → `input keyevent 4` para cerrar el teclado → volcar el
+árbol → tocar el siguiente campo con sus coordenadas nuevas.
+
+### 13.13 Las instrumentadas fallan «al azar» en el emulador de API 26
+
+Visto al cerrar v0.3.2. La imagen de API 26 acumula ANR de *System UI* y de Google
+Play Services, sobre todo con dos emuladores encendidos o tras varios reinicios.
+Su diálogo («System UI isn't responding») queda encima de todo y se lleva la tecla
+atrás, así que pruebas como `AttachPickerCancelTest` o `SecureWindowCloudTest`
+fallan sin que la app tenga nada que ver. Además, `adb` puede quedar colgado
+(`adb shell` no responde y Gradle informa «0 tests» o «No compatible devices»).
+
+- Comprobarlo: `adb logcat -d -b events | grep am_anr` y
+  `adb shell dumpsys window | grep mCurrentFocus` (si el foco es «Application Not
+  Responding», es esto).
+- Resolverlo: un emulador a la vez, arranque en frío (`emulator -avd <nombre>
+  -no-snapshot`), esperar a que se asiente antes de correr, y si `adb` no responde,
+  `adb kill-server`.
+- En API 26 la prueba del gesto de atrás de `AttachPickerCancelTest` se omite a
+  propósito: el gesto llegó con Android 10, y antes deslizar desde el borde abre el
+  cajón del selector de documentos.
 
 ## 14. Pendientes antes de un piloto
 
@@ -1070,11 +1145,12 @@ personas. El detalle de cada punto está en `docs/PENDIENTES.md` con su número.
 | **P-92** | Evaluar retirar con `tools:node="remove"` las dos actividades exportadas que `firebase-auth` fusiona en el manifiesto (`genericidp://` y `recaptcha://`), que Aurora no usa, y **verificar después** que login, creación de cuenta y recuperación siguen funcionando: Firebase puede usar reCAPTCHA como defensa antiabuso |
 | **P-118** | Ligar el dispositivo a la cuenta del primer inicio de sesión con código. Hoy, si alguien cierra sesión y entra con otra cuenta en el mismo teléfono, los registros locales de la primera pueden subir a la nube de la segunda. No afecta a las sesiones de evaluación: teléfonos propios, una cuenta de prueba por participante y reinstalación entre sesiones. Cambia el reingreso, por eso se dejó para después de ellas |
 | **P-112** | Hermano del anterior, solo en debug: retirar la `androidx.activity.ComponentActivity` exportada que fusiona `ui-test-manifest`, o mover esa dependencia a `androidTestImplementation`, y fijar la retirada en `ManifestMinimizationTest`. No se ve en pantalla y no afecta a las sesiones de evaluación, pero es superficie innecesaria en el artefacto que se instala en los teléfonos |
+| **P-131** | Repetir en un teléfono con Android 8.0 u 8.1, y en el del piloto, la prueba y la medición de adjuntos grandes. El defecto del Keystore de esas versiones y su corrección (v0.3.2) solo se midieron en emulador; guardar 10 MB con verificación tardó 5–6,6 s en el emulador de API 30 con el computador cargado |
 | **P-80** | Medir el arranque en frío **en el teléfono del piloto** (`adb shell am start -W`, TotalTime) contra el techo de 3 s de RNF-07. En emulador da 265 ms, pero un emulador ARM sobre Apple Silicon es mejor que un gama media real. Queda además la deuda conocida: `MainActivity` y la raíz de la app construyen Firebase en el hilo principal, y el refactor sugerido es diferirlos con `Provider` |
 | **P-107** | Repetir la verificación de que el teclado no aprende ni sugiere **con el teclado de fábrica de los teléfonos del piloto**. Lo medido solo demuestra que Gboard honra las banderas; honrarlas es decisión de cada teclado |
 | **P-65** | Decidir formalmente que el piloto se hace **solo con release**: en debug los identificadores semánticos de la interfaz quedan legibles en el DEX y la biblioteca de PDF escribe trazas en logcat. Nota: hoy esto choca con P-111, que impide probar un primer uso completo en release |
 | **P-55** | Ratificar con la directora que, en release, tras una eliminación total de cuenta el espacio protegido queda inaccesible en esa instalación y volver a usar la aplicación exige reinstalar |
-| **P-84** | Residual sin cierre posible: entre API 26 y 32 la clave a medio teclear puede quedar en la miniatura de recientes, porque la API que lo evita existe desde API 33 y el `minSdk` del proyecto es 26 |
+| **P-84** | Residual sin cierre posible: entre API 26 y 32 el código a medio teclear puede quedar en la miniatura de recientes, porque la API que lo evita existe desde API 33 y el `minSdk` del proyecto es 26 |
 | **P-95, P-105** | Residuales declarados de la protección de los campos sensibles: las acciones semánticas de accesibilidad (`CopyText`, `SetSelection`) siguen disponibles para un servicio de accesibilidad, y sin «copiar» la contraseña de exportación hay que transcribirla, lo que empuja a elegirla más corta |
 
 ### 14.3 Tareas de documentación de la autora

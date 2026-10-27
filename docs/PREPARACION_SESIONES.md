@@ -2,23 +2,28 @@
 
 > Para la evaluación heurística (3 a 5 evaluadoras) y las sesiones SUS (10 a 12
 > estudiantes), en uno o dos teléfonos Android propios.
-> Última revisión: 2026-10-14.
+> Última revisión: 2026-10-27 (build `v0.3.2-trl4`).
 
-Cada participante debe poder hacer el **primer uso completo**: activación con la
-clave en el buscador de ciudades → consentimiento → crear cuenta → clave personal
-→ tutorial. Eso obliga a dejar el teléfono como recién instalado entre una
-persona y la siguiente, porque en cuanto existe una clave personal la clave de
-activación deja de abrir (§3).
+Cada participante debe poder hacer el **primer uso completo**: activación con el
+código de activación en el buscador de ciudades → bienvenida → consentimiento →
+crear cuenta → código de acceso → tutorial. Eso obliga a dejar el teléfono como
+recién instalado entre una persona y la siguiente, porque en cuanto existe un
+código de acceso el código de activación deja de abrir (§3).
+
+**Terminología.** Desde v0.3.2 la aplicación llama a cada credencial por un solo
+nombre: **código de activación**, **código de acceso** (antes «clave personal»),
+**contraseña de la cuenta** y **contraseña del archivo PDF**. Conviene que el guion,
+las tarjetas y la facilitadora usen los mismos nombres que la pantalla.
 
 ---
 
-## 1. Qué build usar: debug de `v0.3.1-trl4`
+## 1. Qué build usar: debug de `v0.3.2-trl4`
 
 **La propuesta es correcta y es, hoy, la única opción viable.** El motivo y el
 costo, dichos completos:
 
 - La build **release no puede activarse en una instalación limpia**: ninguna build
-  de release siembra la clave de activación, porque `app/src/release/` no existe
+  de release siembra el código de activación, porque `app/src/release/` no existe
   (P-111, hermano de P-20). Sobre un teléfono recién instalado con release, la
   barra de búsqueda nunca abriría el espacio protegido y el primer uso sería
   imposible de ejercitar.
@@ -81,7 +86,7 @@ diferencia de debug.)
 
 | Diferencia | Dónde se nota |
 |---|---|
-| **Siembra de la clave de activación** | Solo en debug. Es la diferencia que hace posible la sesión |
+| **Siembra del código de activación** | Solo en debug. Es la diferencia que hace posible la sesión |
 | **Sin R8**: la build debug no ofusca ni reduce | Tamaño del APK y arranque: el release arranca en 228–265 ms en un emulador Pixel 2 / API 30 (P-80); el debug arranca algo más lento. En un teléfono real la diferencia es de décimas, pero **si alguien comenta la velocidad, hay que anotar que se midió sobre debug** |
 | **Trazas en logcat**: la biblioteca de PDF escribe avisos técnicos al exportar (fuentes y estructura de los PDF anexados; nunca contenido ni contraseñas) | Solo con `adb logcat` conectado. La regla que las silencia solo actúa con R8 (P-65) |
 | **Identificadores del sistema visual legibles en el DEX** | Solo decompilando el APK (P-65) |
@@ -91,9 +96,9 @@ diferencia de debug.)
 
 ### 1.3 Qué compilar exactamente
 
-Desde la etiqueta `v0.3.1-trl4` solo hay commits de documentación: el diff de
-`app/` y `admin/` contra `main` está vacío. Se puede compilar desde `main` y es el
-mismo código.
+Compilar la etiqueta `v0.3.2-trl4`. Si se compila desde `main`, comprobar antes
+que no haya cambios de código posteriores a la etiqueta:
+`git diff --stat v0.3.2-trl4 main -- app admin` debe salir vacío.
 
 ```bash
 cd ~/dev/unab/aurora
@@ -102,8 +107,8 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 # APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-(Si se prefiere compilar la etiqueta exacta: `git switch --detach v0.3.1-trl4`,
-compilar, y volver con `git switch main`.)
+(Para compilar la etiqueta exacta: `git switch --detach v0.3.2-trl4`, compilar, y
+volver con `git switch main`.)
 
 ---
 
@@ -118,11 +123,23 @@ reconocible:
 
 ```bash
 mkdir -p ~/aurora-sesiones
-cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.1.apk
-shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.1.apk   # anotar: identifica el APK de las sesiones
+cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.2.apk
+shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.2.apk   # anotar: identifica el APK de las sesiones
 ```
 
-El nombre del archivo es parte del camuflaje: `aurora-clima-0.3.1.apk` es
+APK de `v0.3.2-trl4` generado el 2026-10-27 desde `cb83e31` (el último commit de
+código; la etiqueta solo agrega documentación), con el JBR 21 de Android Studio:
+
+| Archivo | Tamaño | SHA-256 |
+|---|---|---|
+| `aurora-clima-0.3.2.apk` | 38 172 535 bytes (36,4 MiB) | `f08f46ff3d1d7c43a556098a8b2a97c9415b9c7caede7f1e5ce8fa6b153e2fa7` |
+
+El SHA-256 identifica **ese archivo**, no el código. El build debug no es
+reproducible byte a byte: el mismo día, una compilación limpia del mismo commit dio
+otro SHA-256. Por eso todas las sesiones usan esta copia de `~/aurora-sesiones/`, y
+no se vuelve a compilar entre una sesión y otra.
+
+El nombre del archivo es parte del camuflaje: `aurora-clima-0.3.2.apk` es
 coherente con una aplicación de clima. No usar nombres como `aurora-debug.apk` ni
 nada que mencione pruebas o el propósito real, porque el archivo queda a la vista
 en la carpeta de descargas del teléfono.
@@ -133,7 +150,7 @@ para todas las sesiones.
 
 ```bash
 # con el teléfono conectado por USB (solo esta vez, para pasar el archivo):
-adb push ~/aurora-sesiones/aurora-clima-0.3.1.apk /sdcard/Download/
+adb push ~/aurora-sesiones/aurora-clima-0.3.2.apk /sdcard/Download/
 ```
 
 Sin cable: pasarlo por la nube o por un cable de datos como archivo normal y
@@ -159,19 +176,19 @@ repositorio es público.
 
 ### 3.1 Por qué es obligatorio, no una formalidad
 
-`ValidateSecretCodeUseCase` consulta **primero** la ranura de clave personal. En
-cuanto una participante crea la suya, la clave de activación **ya no abre nada**:
-la siguiente persona no podría hacer el primer uso. Además hay que borrar la
-cuenta, la clave y los registros de la persona anterior.
+`ValidateSecretCodeUseCase` consulta **primero** la ranura del código de acceso.
+En cuanto una participante crea el suyo, el código de activación **ya no abre
+nada**: la siguiente persona no podría hacer el primer uso. Además hay que borrar
+la cuenta, el código de acceso y los registros de la persona anterior.
 
 ### 3.2 Procedimiento desde el propio teléfono, sin computador
 
 1. **Desinstalar.** Mantener pulsado el ícono de Aurora → *Desinstalar* (o
    *Ajustes → Aplicaciones → Aurora → Desinstalar*). Confirmar.
 2. **Reinstalar.** Abrir *Archivos* (o *Mis archivos*) → **Descargas** → tocar
-   `aurora-clima-0.3.1.apk` → *Instalar*.
-3. **Abrir la aplicación una vez.** El primer arranque es el que repone la clave
-   de activación. Comprobar que la fachada de clima carga.
+   `aurora-clima-0.3.2.apk` → *Instalar*.
+3. **Abrir la aplicación una vez.** El primer arranque es el que repone el
+   código de activación. Comprobar que la fachada de clima carga.
 4. **Cerrar la aplicación** y dejar el teléfono en la pantalla de inicio, listo
    para la siguiente participante.
 
@@ -202,7 +219,7 @@ entre sesiones.
 
 Desinstalar borra **todo el estado local**, que es exactamente lo que hace falta:
 
-- Las preferencias privadas, incluido el hash de la clave personal
+- Las preferencias privadas, incluido el hash del código de acceso
   (`search_index`) y los sobres cifrados de la base, el respaldo y las
   credenciales (`store_meta`, `backup_meta`, `account_meta`).
 - Las bases cifradas (`journal_store.db`, `guidance_store.db`) y la caché de
@@ -235,7 +252,7 @@ preferencias.
 ```bash
 export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
 adb uninstall com.auroraclima.app
-adb install -r ~/aurora-sesiones/aurora-clima-0.3.1.apk
+adb install -r ~/aurora-sesiones/aurora-clima-0.3.2.apk
 adb shell monkey -p com.auroraclima.app -c android.intent.category.LAUNCHER 1   # primer arranque: repone la activación
 ```
 
@@ -291,7 +308,7 @@ sentada al lado. Si por lo que sea lo rechazara, la alternativa es
 `heu01@example.com` / `sus01@example.com`: `example.com` está reservado por la
 IANA y no acepta correo.
 
-### 4.3 Contraseñas y clave personal
+### 4.3 Contraseña de la cuenta y código de acceso
 
 - **Contraseña de la cuenta:** una sola para todas las sesiones, de **12
   caracteres o más**, **generada fuera del repositorio** y escrita únicamente en
@@ -310,20 +327,21 @@ IANA y no acepta correo.
   > `users/{uid}/entries`—, así que permitiría descifrar y borrar los registros
   > que la participante acaba de crear. Las 600 000 iteraciones de PBKDF2 no
   > protegen nada si la contraseña se publica.
-- **Clave personal (la del buscador):** la elige **cada participante** y es parte
-  de lo que se evalúa. Dos reglas, que la pantalla muestra en vivo con
+- **Código de acceso (el del buscador):** lo elige **cada participante** y es
+  parte de lo que se evalúa. Dos reglas, que la pantalla muestra en vivo con
   palomitas: **6 caracteres o más** y **que no sea el nombre de una ciudad real**
-  (se verifica contra un directorio local de unas 620 entradas). Si alguien se
+  (se verifica contra un directorio local de unas 620 entradas). Desde v0.3.2 se
+  escribe dos veces («Escríbelo otra vez»). Si alguien se
   bloquea, la pista neutra es «una palabra que no sea un lugar». **Anotar en la
   hoja de observación los intentos rechazados**: es un hallazgo de usabilidad
   valioso, no un error de la participante.
-- **La clave de activación** la dice la facilitadora al empezar. Su valor está en
+- **El código de activación** lo dice la facilitadora al empezar. Su valor está en
   `app/src/debug/java/com/auroraclima/app/access/data/DebugSecretCodeSeeder.kt`;
   no se transcribe en este documento porque el repositorio es público.
 
 ### 4.4 Tres avisos operativos
 
-1. **No usar «¿Olvidaste tu contraseña?» durante las sesiones.** La plantilla del
+1. **No usar «¿Olvidaste la contraseña de tu cuenta?» durante las sesiones.** La plantilla del
    correo de recuperación todavía no se ha personalizado, y la que Firebase trae
    por omisión nombra el proyecto y usa un remitente de su propio dominio (P-19,
    bloqueante del piloto). Con direcciones `.test` el mensaje no llegaría a
@@ -349,7 +367,7 @@ IANA y no acepta correo.
 5. **La sesión se cierra a los 5 minutos de inactividad**, y también al pasar la
    aplicación a segundo plano. Una participante que se detenga a pensar en voz
    alta, atienda una llamada o se ponga a leer el consentimiento en papel vuelve a
-   la fachada de clima y tiene que teclear otra vez su clave personal. Es el
+   la fachada de clima y tiene que teclear otra vez su código de acceso. Es el
    comportamiento correcto del producto (RNF-03) y puede ser un hallazgo legítimo
    de usabilidad: la facilitadora debe saberlo para **no confundirlo con un fallo**
    y para anotarlo bien.
@@ -467,7 +485,7 @@ Notas:
       pantalla dentro del espacio protegido (§4.4, aviso 4).
 - [ ] Preparar el **consentimiento informado** y leer el encuadre del §4.5.
 - [ ] Imprimir las tarjetas: una por participante, con su correo, la contraseña
-      común y la pista para la clave personal.
+      común y la pista para el código de acceso.
 - [ ] Imprimir las **líneas de atención** para tenerlas a mano (§4.5, punto 3).
 - [ ] Idioma español, letra normal, tema claro, Wi-Fi funcionando.
 
