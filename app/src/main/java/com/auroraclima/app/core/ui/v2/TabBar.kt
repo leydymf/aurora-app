@@ -29,6 +29,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import com.auroraclima.app.R
 
 /** Una pestaña de [V2TabBar]: icono de contorno + etiqueta corta. */
@@ -115,10 +116,19 @@ private fun TabLabel(text: String, color: Color) {
     // Un poco de aire a los lados: una etiqueta ajustada no toca la de al lado.
     BoxWithConstraints(modifier = Modifier.padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
         val available = constraints.maxWidth
-        val style = remember(text, base, available) {
+        // El medidor cambia con la densidad, la escala de letra y la dirección.
+        val style = remember(text, base, available, measurer) {
             val measured = measurer.measure(text, base, maxLines = 1, softWrap = false).size.width
             val scale = oneLineScale(measured, available)
-            if (scale >= 1f) base else base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
+            when {
+                scale >= 1f -> base
+                // Un interlineado sin especificar no se puede escalar: queda el de la letra.
+                base.lineHeight.isSpecified -> base.copy(
+                    fontSize = base.fontSize * scale,
+                    lineHeight = base.lineHeight * scale
+                )
+                else -> base.copy(fontSize = base.fontSize * scale)
+            }
         }
         Text(text = text, style = style, color = color, maxLines = 1, softWrap = false)
     }

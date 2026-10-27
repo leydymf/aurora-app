@@ -91,6 +91,14 @@ class PanelCloudClearanceTest(private val fontScale: Float, private val smallScr
         }
         val atTheEnd = assertClearOf(cloud, "al final")
         assertVisible(atTheEnd, "la tarjeta «Informarme»", hasText(context.getString(R.string.access_home_learn)))
+        // Al final la tarjeta que la nube tapaba se ve entera, no solo un borde.
+        val learn = atTheEnd.first { hasText(context.getString(R.string.access_home_learn)).matches(it) }
+        assertEquals(
+            "$case: «Informarme» entera al final",
+            learn.size.height.toFloat(),
+            learn.boundsInWindow.height,
+            1f
+        )
     }
 
     private fun show() {
