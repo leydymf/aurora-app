@@ -10,6 +10,7 @@ import com.auroraclima.app.records.data.remote.JournalMediaRemoteSource
 import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentContent
 import com.auroraclima.app.records.domain.model.AttachmentKind
+import com.auroraclima.app.records.domain.model.AttachmentNotSavedException
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.repository.JournalAttachmentRepository
@@ -33,7 +34,10 @@ import kotlinx.coroutines.withContext
  * al vuelo y aborta al exceder, sin cargar nada completo en memoria).
  *
  * Los fallos (origen ilegible, tipo no permitido, tamaño excedido, BD cifrada)
- * son todos el MISMO `Result.failure` — la UI solo muestra el genérico (§3).
+ * son todos el MISMO `Result.failure` — la UI solo muestra el genérico (§3). La
+ * única excepción es [AttachmentNotSavedException], que lanza [AttachmentStore]
+ * cuando el archivo cifrado no abre completo tras sellarlo (v0.3.2): la fila no
+ * llega a insertarse y la UI ofrece reintentar.
  */
 @Singleton
 class LocalJournalAttachmentRepository @Inject constructor(

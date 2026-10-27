@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
+import com.auroraclima.app.records.domain.model.AttachmentNotSavedException
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.JournalEntry
 import com.auroraclima.app.records.domain.model.NewJournalEntry
@@ -47,7 +48,9 @@ import kotlinx.coroutines.launch
  * importan EN PREPARACIÓN (owner 0) y el guardado los reclama con el id nuevo.
  * El init barre huérfanos — adjuntos de creaciones abandonadas (salida rápida,
  * muerte de proceso) desaparecen antes de empezar. Todo fallo de importación
- * es el mensaje genérico; el único específico es «máximo alcanzado».
+ * es el mensaje genérico; los únicos específicos son «máximo alcanzado» y, desde
+ * v0.3.2, el adjunto que no quedó íntegro ([AttachmentNotSavedException]), que
+ * invita a reintentar.
  */
 @HiltViewModel
 class JournalEditorViewModel @Inject constructor(
@@ -328,8 +331,15 @@ class JournalEditorViewModel @Inject constructor(
                     _uiState.update { it.copy(isImporting = false) }
                     refreshAttachments()
                 }
-                .onFailure {
-                    _uiState.update { it.copy(isImporting = false, mediaErrorRes = R.string.journal_media_error) }
+                .onFailure { error ->
+                    // Si el archivo cifrado no quedó íntegro se dice que no se guardó
+                    // y que puede intentarlo de nuevo; cualquier otro fallo, el genérico.
+                    val message = if (error is AttachmentNotSavedException) {
+                        R.string.journal_media_save_error
+                    } else {
+                        R.string.journal_media_error
+                    }
+                    _uiState.update { it.copy(isImporting = false, mediaErrorRes = message) }
                 }
         }
     }

@@ -10,6 +10,7 @@ import com.auroraclima.app.records.data.local.JournalDatabase
 import com.auroraclima.app.records.data.local.JournalEntryRow
 import com.auroraclima.app.records.domain.model.AttachmentContent
 import com.auroraclima.app.records.domain.model.AttachmentKind
+import com.auroraclima.app.records.domain.model.AttachmentNotSavedException
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import java.io.File
 import kotlinx.coroutines.test.runTest
@@ -113,6 +114,29 @@ class LocalJournalAttachmentRepositoryTest {
         assertTrue(imported.createdAtEpochMillis >= before)
         val listed = repository.attachments(AttachmentPolicy.STAGED_OWNER).getOrThrow().single()
         assertEquals(imported.createdAtEpochMillis, listed.createdAtEpochMillis)
+    }
+
+    @Test
+    fun `si el adjunto cifrado no queda integro no se guarda nada y la importacion falla sin lanzar`() = runTest {
+        // v0.3.2: imita el defecto del Keystore de Android 8.0 (sellado truncado sin aviso).
+        val truncating = LocalJournalAttachmentRepository(
+            context = context,
+            storeAccess = JournalStoreAccess { database },
+            store = AttachmentStore(context, TruncatingMediaCipher()),
+            imageImporter = ImageImporter(),
+            captureBuffer = captureBuffer,
+            mediaRemote = mediaRemote,
+            mediaSync = mediaSync
+        )
+        stageCapture()
+
+        val result = truncating.importCapture(AttachmentPolicy.STAGED_OWNER)
+
+        assertTrue(result.exceptionOrNull() is AttachmentNotSavedException)
+        assertTrue("ningún archivo truncado en el almacén", mediaDir.listFiles().isNullOrEmpty())
+        val rows = database.attachmentDao().byOwner(AttachmentPolicy.STAGED_OWNER)
+        assertTrue("ninguna fila apunta a él", rows.isEmpty())
+        assertTrue("el temporal de la cámara tampoco queda", pendingDir.listFiles().isNullOrEmpty())
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.auroraclima.app.R
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.catalog.FakeCategoryCatalog
 import com.auroraclima.app.records.domain.model.AttachmentKind
+import com.auroraclima.app.records.domain.model.AttachmentNotSavedException
 import com.auroraclima.app.records.domain.model.AttachmentPolicy
 import com.auroraclima.app.records.domain.model.JournalAttachment
 import com.auroraclima.app.records.domain.model.JournalEntry
@@ -442,6 +443,29 @@ class JournalEditorViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.journal_media_error, state.mediaErrorRes)
         assertFalse(state.isImporting)
+    }
+
+    @Test
+    fun `si el adjunto no quedo integro avisa que no se guardo y deja seguir en el editor`() = runTest {
+        attachments.importResult = Result.failure(AttachmentNotSavedException())
+        val viewModel = viewModel()
+        advanceUntilIdle()
+        viewModel.onDetailChange("lo escrito")
+
+        viewModel.onDocumentPicked("content://picked/2")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(R.string.journal_media_save_error, state.mediaErrorRes)
+        assertFalse(state.isImporting)
+        assertTrue("no queda ningún adjunto a medias", state.attachments.isEmpty())
+        assertEquals("lo escrito sigue ahí", "lo escrito", state.detail)
+
+        // El aviso no bloquea: el siguiente intento se hace como siempre.
+        attachments.importResult = null
+        viewModel.onDocumentPicked("content://picked/3")
+        advanceUntilIdle()
+        assertNull(viewModel.uiState.value.mediaErrorRes)
     }
 
     @Test

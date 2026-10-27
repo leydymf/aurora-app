@@ -2,12 +2,16 @@ package com.auroraclima.app.records.domain.repository
 
 import com.auroraclima.app.records.domain.model.AttachmentBytes
 import com.auroraclima.app.records.domain.model.AttachmentContent
+import com.auroraclima.app.records.domain.model.AttachmentNotSavedException
 import com.auroraclima.app.records.domain.model.JournalAttachment
 
 /**
  * Adjuntos protegidos del historial (RF-33). Todo devuelve [Result]: la BD
  * cifrada, el almacén y la lectura del contenido elegido pueden fallar y esa
- * excepción jamás cruza a la UI (§3); se muestra el mensaje genérico.
+ * excepción jamás se lanza hacia la UI (§3). Se muestra el mensaje genérico,
+ * salvo un caso: si la importación falla con [AttachmentNotSavedException], el
+ * adjunto se cifró pero no quedó íntegro, no se guardó nada y se puede
+ * reintentar (v0.3.2; ADR 2026-10-27).
  *
  * Los orígenes elegidos por la usuaria llegan como URI en String (el dominio
  * no importa tipos de Android); la capa data los resuelve. La importación
@@ -16,16 +20,25 @@ import com.auroraclima.app.records.domain.model.JournalAttachment
  * metadatos (GPS incluido) re-codificándolas antes de cifrar.
  */
 interface JournalAttachmentRepository {
-    /** Importa una imagen elegida (galería): sanea metadatos, cifra y asocia a [owner]. */
+    /**
+     * Importa una imagen elegida (galería): sanea metadatos, cifra y asocia a [owner].
+     * Falla con [AttachmentNotSavedException] si el archivo cifrado no quedó íntegro.
+     */
     suspend fun importImage(uri: String, owner: Long): Result<JournalAttachment>
 
-    /** Importa un archivo existente (PDF/audio): valida lista blanca y tamaño, cifra y asocia. */
+    /**
+     * Importa un archivo existente (PDF/audio): valida lista blanca y tamaño, cifra y asocia.
+     * Falla con [AttachmentNotSavedException] si el archivo cifrado no quedó íntegro.
+     */
     suspend fun importDocument(uri: String, owner: Long): Result<JournalAttachment>
 
     /** Prepara una captura de cámara (RF-33): devuelve el URI privado para EXTRA_OUTPUT. */
     suspend fun beginCapture(): Result<String>
 
-    /** Importa la captura pendiente (sanea, cifra, borra el temporal) y la asocia a [owner]. */
+    /**
+     * Importa la captura pendiente (sanea, cifra, borra el temporal) y la asocia a [owner].
+     * Falla con [AttachmentNotSavedException] si el archivo cifrado no quedó íntegro.
+     */
     suspend fun importCapture(owner: Long): Result<JournalAttachment>
 
     /** Descarta una captura cancelada: elimina el temporal sin dejar rastro. */

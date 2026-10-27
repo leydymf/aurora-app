@@ -7,7 +7,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.security.KeyStore
 import javax.crypto.Cipher
-import javax.crypto.CipherInputStream
 import javax.crypto.CipherOutputStream
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -21,10 +20,18 @@ import javax.inject.Singleton
  * [KeystorePayloadCipher] y [DatabaseKeyManager] (AES/GCM/NoPadding, tag de
  * 128 bits, nonce nuevo por archivo) pero con alias propio y separado —
  * una responsabilidad, una llave — y streams en vez de arrays: un adjunto
- * puede pesar varios MB y nunca debe cargarse entero en memoria.
+ * puede pesar varios MB y al sellarlo nunca se carga entero en memoria. Al
+ * abrirlo, el Keystore entrega el claro completo en `doFinal`, después de
+ * comprobar el sello, en todas las versiones: nunca suelta claro sin autenticar.
  *
  * El formato en disco es `[nonce de 12 bytes][sellado GCM]`. El nonce no es
  * secreto; sin la llave del Keystore el resto es ilegible.
+ *
+ * El Keystore nunca recibe más de [KEYSTORE_SLICE_BYTES] por llamada, en ninguno
+ * de los dos sentidos y sin importar cuánto escriba o lea quien llama (v0.3.2,
+ * `SlicedCipherStreams.kt`): en Android 8.0 y 8.1 una llamada de más de unos
+ * 128 KB se truncaba sin error. Repartir en trozos no cambia el formato: lo
+ * sellado antes de v0.3.2 se abre igual.
  *
  * Consecuencia aceptada (misma que la BD y la sync): la llave está ligada al
  * dispositivo. Las evidencias son SOLO LOCALES por política (D0 §5.3), así
@@ -37,7 +44,7 @@ class KeystoreMediaCipher @Inject constructor() : MediaCipher {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, obtainKey())
         target.write(cipher.iv)
-        return CipherOutputStream(target, cipher)
+        return slicedSealing(CipherOutputStream(target, cipher))
     }
 
     override fun opening(source: InputStream): InputStream {
@@ -50,7 +57,7 @@ class KeystoreMediaCipher @Inject constructor() : MediaCipher {
         }
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, obtainKey(), GCMParameterSpec(TAG_SIZE_BITS, iv))
-        return CipherInputStream(source, cipher)
+        return SlicedCipherInputStream(source, cipher)
     }
 
     /**

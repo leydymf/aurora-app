@@ -1,5 +1,7 @@
 package com.auroraclima.app.records.domain.model
 
+import java.io.IOException
+
 /**
  * Un adjunto protegido de un registro (RF-33): imagen, documento o audio,
  * cifrado en el almacén local. Solo lo mínimo que la UI necesita para pintar
@@ -54,6 +56,14 @@ sealed interface AttachmentContent {
      */
     data class Document(val path: String) : AttachmentContent
 }
+
+/**
+ * El adjunto se cifró pero no quedó íntegro: al volver a abrirlo completo no
+ * coincidió con lo escrito (v0.3.2, defecto del Keystore de Android 8.0). No
+ * se guarda nada; la persona ve un aviso propio para intentarlo de nuevo, no
+ * el genérico de adjuntos.
+ */
+class AttachmentNotSavedException(cause: Throwable? = null) : IOException(cause)
 
 /**
  * Contenido descifrado de un adjunto de cualquier familia para la exportación

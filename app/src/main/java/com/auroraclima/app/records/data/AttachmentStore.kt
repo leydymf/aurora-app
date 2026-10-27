@@ -2,10 +2,13 @@ package com.auroraclima.app.records.data
 
 import android.content.Context
 import com.auroraclima.app.core.security.MediaCipher
+import com.auroraclima.app.records.domain.model.AttachmentNotSavedException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.DigestOutputStream
+import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,13 +42,25 @@ class AttachmentStore @Inject constructor(
      * Crea el archivo cifrado de [ref] y entrega a [write] el stream YA cifrante
      * para que vierta el contenido (nunca pasa por memoria completo). Si algo
      * falla, el archivo parcial se elimina antes de relanzar.
+     *
+     * Después de sellar, el archivo se abre completo y la huella SHA-256 de lo
+     * leído se compara con la de lo escrito (v0.3.2). Si no coinciden o la
+     * apertura falla, el archivo se elimina y se lanza
+     * [AttachmentNotSavedException]: nunca queda guardado un adjunto truncado.
+     * La comprobación no escribe copias en claro en disco. En memoria sí pasa el
+     * claro completo, como al abrir cualquier adjunto: el Keystore no entrega
+     * nada de un descifrado GCM hasta comprobar el sello, en todas las versiones.
      */
     fun write(ref: String, write: (OutputStream) -> Unit) {
         directory.mkdirs()
         val file = File(directory, ref)
         try {
-            file.outputStream().use { raw -> cipher.sealing(raw).use(write) }
-        } catch (error: Exception) {
+            val written = MessageDigest.getInstance(DIGEST_ALGORITHM)
+            file.outputStream().use { raw -> DigestOutputStream(cipher.sealing(raw), written).use(write) }
+            verify(file, written.digest())
+        } catch (error: Throwable) {
+            // También ante un Error de quien escribe (un OutOfMemoryError al
+            // comprimir una imagen): cerrar el stream sella lo parcial con un sello válido.
             file.delete()
             throw error
         }
@@ -89,10 +104,44 @@ class AttachmentStore @Inject constructor(
     private val viewDirectory: File
         get() = File(context.cacheDir, VIEW_DIRECTORY_NAME)
 
+    private fun verify(file: File, expected: ByteArray) {
+        val actual = try {
+            digestOf(file)
+        } catch (error: Exception) {
+            throw AttachmentNotSavedException(error)
+        } catch (error: OutOfMemoryError) {
+            // El Keystore retiene lo descifrado hasta el final (todas las versiones):
+            // un adjunto grande en un teléfono con poca memoria no debe cerrar la app.
+            throw AttachmentNotSavedException(error)
+        }
+        if (!MessageDigest.isEqual(expected, actual)) throw AttachmentNotSavedException()
+    }
+
+    private fun digestOf(file: File): ByteArray {
+        val digest = MessageDigest.getInstance(DIGEST_ALGORITHM)
+        val buffer = ByteArray(VERIFY_BUFFER_BYTES)
+        try {
+            file.inputStream().use { raw ->
+                cipher.opening(raw).use { input ->
+                    while (true) {
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        digest.update(buffer, 0, count)
+                    }
+                }
+            }
+        } finally {
+            buffer.fill(0)
+        }
+        return digest.digest()
+    }
+
     private companion object {
         // Nombres neutros (RNF-05), mismo criterio que journal_store/store_meta.
         const val DIRECTORY_NAME = "media_store"
         const val VIEW_DIRECTORY_NAME = "media_view"
         const val REF_SIZE_BYTES = 16
+        const val DIGEST_ALGORITHM = "SHA-256"
+        const val VERIFY_BUFFER_BYTES = 32 * 1024
     }
 }
