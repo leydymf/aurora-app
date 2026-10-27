@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.reserveCloudLane
 import com.auroraclima.app.core.ui.components.BrandHeader
 import com.auroraclima.app.core.ui.v2.AccentBadge
 import com.auroraclima.app.core.ui.v2.AccentPair
@@ -72,6 +73,9 @@ fun PanelScreen(
             .fillMaxSize()
             .background(V2Palette.screenBackground)
             .statusBarsPadding()
+            // La zona que se desplaza termina antes de la nube: ninguna tarjeta ni botón
+            // pasa por debajo de ella, con cualquier letra (v0.3.3). La nube no se mueve.
+            .reserveCloudLane()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
@@ -159,7 +163,7 @@ fun PanelScreen(
             Spacer(modifier = Modifier.height(10.dp))
             QuickAccessRow(onCall = onCall, onSaveNote = onSaveNote, onLearn = onLearn)
         }
-        // Aire final: la nube queda por encima de la barra de pestañas.
+        // Aire final; la franja de la nube ya queda fuera de lo que se desplaza.
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
