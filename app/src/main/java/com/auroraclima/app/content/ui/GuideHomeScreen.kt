@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.reserveCloudLane
 import com.auroraclima.app.core.ui.components.BrandHeader
 import com.auroraclima.app.core.ui.v2.AccentPair
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
@@ -55,6 +56,9 @@ fun GuideHomeScreen(
             .fillMaxSize()
             .background(V2Palette.screenBackground)
             .statusBarsPadding()
+            // La zona que se desplaza termina antes de la nube: ninguna tarjeta pasa por
+            // debajo de ella, con cualquier letra (v0.3.3, como el Inicio).
+            .reserveCloudLane()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
