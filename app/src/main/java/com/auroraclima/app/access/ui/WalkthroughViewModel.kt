@@ -6,8 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
 import com.auroraclima.app.access.domain.repository.WalkthroughMark
 import com.auroraclima.app.access.domain.repository.WalkthroughRepository
+import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
+import com.auroraclima.app.core.security.SearchGateResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,13 +28,22 @@ import kotlinx.coroutines.launch
  * salida real) muestra solo «¡Listo!». Un fallo de lectura equivale a ninguna marca:
  * la guía es una ayuda, nunca un error visible (§3). Desde Ajustes se repite completa
  * ([onReplay]).
+ *
+ * La parte 1 es la práctica de entrada de siempre: la barra evalúa lo tecleado con la
+ * MISMA puerta que la fachada ([ValidateSecretCodeUseCase]), solo da por logrado el
+ * ingreso con el código de acceso real y no abre nada. Lo tecleado vive en el estado
+ * mientras se escribe, se borra al dejar la parte 1 y muere con el ViewModel.
  */
 @HiltViewModel
 class WalkthroughViewModel @Inject constructor(
-    private val repository: WalkthroughRepository
+    private val repository: WalkthroughRepository,
+    private val validateSecretCode: ValidateSecretCodeUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WalkthroughUiState())
     val uiState: StateFlow<WalkthroughUiState> = _uiState.asStateFlow()
+
+    private var practiceCheckJob: Job? = null
+    private var advanceJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -68,7 +81,8 @@ class WalkthroughViewModel @Inject constructor(
     /** «Saltar guía» (cualquier tarjeta) y «Después» (parte 3): a «¡Listo!» con «Para recordar:». */
     fun onFinishEarly() {
         if (_uiState.value.step?.isCard != true) return
-        _uiState.update { it.copy(step = WalkthroughStep.DONE, reachedEarly = true) }
+        moveTo(WalkthroughStep.DONE)
+        _uiState.update { it.copy(reachedEarly = true) }
     }
 
     /** «Ir a mi espacio», en «¡Listo!». */
@@ -91,26 +105,94 @@ class WalkthroughViewModel @Inject constructor(
 
     /** Volver a verla desde Ajustes: completa desde «Conoce Aurora», sin tocar la marca. */
     fun onReplay() {
+        cancelPractice()
         _uiState.value = WalkthroughUiState(step = WalkthroughStep.OVERVIEW)
     }
 
+    /**
+     * Evaluación en vivo, como la barra real: cada tecla cuenta y solo la última
+     * importa. Al coincidir, la confirmación se ve un momento ([CONFIRM_MILLIS]) y la
+     * guía pasa sola a Inicio, si sigue en la parte 1. Logrado, queda fijo: editar el
+     * texto no lo quita.
+     */
+    fun onPracticeInputChange(value: String) {
+        val current = _uiState.value
+        if (current.step != WalkthroughStep.TYPE_IN) return
+        if (current.practiceStatus == PracticeStatus.MATCHED) {
+            _uiState.update { it.copy(practiceInput = value) }
+            return
+        }
+        _uiState.update { it.copy(practiceInput = value, practiceStatus = PracticeStatus.TYPING) }
+        practiceCheckJob?.cancel()
+        if (value.trim().length < ValidateSecretCodeUseCase.MIN_CODE_LENGTH) return
+        practiceCheckJob = viewModelScope.launch {
+            val matched = validateSecretCode.inspect(value) == SearchGateResult.OpenAccess
+            // OpenActivation no ocurre con un código de acceso creado; tampoco cuenta.
+            val status = if (matched) PracticeStatus.MATCHED else PracticeStatus.MISMATCH
+            _uiState.update { it.copy(practiceStatus = status) }
+            if (matched) advanceAfterConfirmation()
+        }
+    }
+
+    private fun advanceAfterConfirmation() {
+        advanceJob?.cancel()
+        advanceJob = viewModelScope.launch {
+            delay(CONFIRM_MILLIS)
+            if (_uiState.value.step == WalkthroughStep.TYPE_IN) moveTo(WalkthroughStep.GUIDE)
+        }
+    }
+
     private fun moveTo(step: WalkthroughStep) {
-        _uiState.update { it.copy(step = step) }
+        // Lo tecleado es el código de acceso real, sin máscara: no sale de la parte 1.
+        if (step != WalkthroughStep.TYPE_IN) cancelPractice()
+        _uiState.update {
+            if (step == WalkthroughStep.TYPE_IN) {
+                it.copy(step = step)
+            } else {
+                it.copy(step = step, practiceInput = "")
+            }
+        }
     }
 
     private fun close() {
+        cancelPractice()
         _uiState.value = WalkthroughUiState()
+    }
+
+    private fun cancelPractice() {
+        practiceCheckJob?.cancel()
+        advanceJob?.cancel()
+    }
+
+    companion object {
+        /** Cuánto se ve la confirmación de la parte 1 antes de pasar a Inicio. */
+        const val CONFIRM_MILLIS = 1_500L
     }
 }
 
 /**
  * [step] es el paso a la vista (null, sin guía). [reachedEarly]: «¡Listo!» llegó por
  * «Saltar guía» o «Después», sin la salida real (su texto es «Para recordar:»).
+ * [practiceInput] y [practiceStatus] son la barra de la parte 1.
  */
 data class WalkthroughUiState(
     val step: WalkthroughStep? = null,
-    val reachedEarly: Boolean = false
+    val reachedEarly: Boolean = false,
+    val practiceInput: String = "",
+    val practiceStatus: PracticeStatus = PracticeStatus.TYPING
 )
+
+/** Resultado en vivo de la barra de práctica. */
+enum class PracticeStatus {
+    /** Aún no hay texto suficiente para evaluar. */
+    TYPING,
+
+    /** El texto no es el código de acceso. */
+    MISMATCH,
+
+    /** Ingreso de práctica logrado: queda fijo aunque el texto cambie. */
+    MATCHED
+}
 
 /**
  * Los pasos de la guía en su orden: «Conoce Aurora», la parte 1 (Entrar), los seis de

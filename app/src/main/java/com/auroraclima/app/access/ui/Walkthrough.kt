@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.auroraclima.app.core.security.LocalSessionManager
 import com.auroraclima.app.core.ui.rememberReduceMotion
 import com.auroraclima.app.core.ui.v2.DrawPlan
 import com.auroraclima.app.core.ui.v2.LocalSpotlightTargets
@@ -38,6 +39,7 @@ fun WalkthroughHost(
 ) {
     val viewModel: WalkthroughViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsState()
+    val sessionManager = LocalSessionManager.current
     LaunchedEffect(replayRequested) {
         if (replayRequested) {
             viewModel.onReplay()
@@ -56,7 +58,13 @@ fun WalkthroughHost(
             onBack = viewModel::onBack,
             onFinishEarly = viewModel::onFinishEarly,
             onFinish = viewModel::onFinish,
-            onBackGesture = viewModel::onBackGesture
+            onBackGesture = viewModel::onBackGesture,
+            onPracticeInputChange = {
+                // El teclado es una ventana propia: cada tecla debe contar como
+                // interacción o la inactividad expulsaría a mitad de práctica (P-15).
+                sessionManager.registerInteraction()
+                viewModel.onPracticeInputChange(it)
+            }
         )
     }
     WalkthroughLayer(
@@ -75,7 +83,8 @@ class WalkthroughActions(
     val onBack: () -> Unit,
     val onFinishEarly: () -> Unit,
     val onFinish: () -> Unit,
-    val onBackGesture: () -> Unit
+    val onBackGesture: () -> Unit,
+    val onPracticeInputChange: (String) -> Unit
 )
 
 /**
@@ -147,7 +156,7 @@ fun WalkthroughLayer(
                 animationSpec = if (motion.isStatic) snap() else tween(motion.screenFadeMillis),
                 label = "escena"
             ) { scene ->
-                WalkthroughSceneContent(scene = scene, state = state, actions = actions)
+                WalkthroughSceneContent(scene = scene, state = state, actions = actions, motion = motion)
             }
         }
     }
@@ -173,13 +182,19 @@ internal enum class WalkthroughScene {
 }
 
 @Composable
-private fun WalkthroughSceneContent(scene: WalkthroughScene, state: WalkthroughUiState, actions: WalkthroughActions) {
+private fun WalkthroughSceneContent(
+    scene: WalkthroughScene,
+    state: WalkthroughUiState,
+    actions: WalkthroughActions,
+    motion: WalkthroughMotion
+) {
     when (scene) {
         WalkthroughScene.NONE -> Unit
         WalkthroughScene.OVERVIEW -> OverviewScreen(onStart = actions.onStart, onNotNow = actions.onNotNow)
+        WalkthroughScene.TYPE_IN -> TypeInScreen(state = state, actions = actions, motion = motion)
         WalkthroughScene.DONE -> DoneScreen(reachedEarly = state.reachedEarly, onFinish = actions.onFinish)
         // Mientras se funde hacia otra escena, la saliente conserva su último paso.
-        WalkthroughScene.TYPE_IN, WalkthroughScene.HOME -> {
+        WalkthroughScene.HOME -> {
             val step = remember { StepHolder() }.also { holder ->
                 state.step?.takeIf { WalkthroughScene.of(it) == scene }?.let { holder.step = it }
             }.step

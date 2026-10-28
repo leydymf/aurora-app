@@ -164,7 +164,8 @@ class SensitiveFieldsGuardTest {
      */
     private val camposFueraDelKit = listOf(
         "weather/ui/WeatherScreen.kt",
-        "access/ui/TutorialScreen.kt"
+        "access/ui/TutorialScreen.kt",
+        "access/ui/WalkthroughTypeIn.kt"
     )
 
     private fun fuentes(): Sequence<File> = mainDir.walkTopDown()

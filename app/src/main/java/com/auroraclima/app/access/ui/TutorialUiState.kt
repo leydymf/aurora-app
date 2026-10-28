@@ -53,15 +53,3 @@ enum class TutorialStep {
     /** Práctica real de ingreso y salida (criterio 2 de RF-10). */
     PRACTICE
 }
-
-/** Resultado en vivo de la barra de práctica. */
-enum class PracticeStatus {
-    /** Aún no hay texto suficiente para evaluar. */
-    TYPING,
-
-    /** El texto no es la clave de la usuaria. */
-    MISMATCH,
-
-    /** Ingreso de práctica logrado: queda fijo aunque el texto cambie. */
-    MATCHED
-}

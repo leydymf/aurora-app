@@ -1,11 +1,18 @@
 package com.auroraclima.app.access.ui
 
+import com.auroraclima.app.access.domain.model.CodeSlot
 import com.auroraclima.app.access.domain.repository.WalkthroughMark
+import com.auroraclima.app.access.domain.usecase.FakeSecretCodeHasher
+import com.auroraclima.app.access.domain.usecase.FakeSecretCodeRepository
 import com.auroraclima.app.access.domain.usecase.FakeWalkthroughRepository
+import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
+import com.auroraclima.app.access.domain.usecase.seed
 import com.auroraclima.app.core.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -23,9 +30,17 @@ class WalkthroughViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val hasher = FakeSecretCodeHasher()
+    private val codes = FakeSecretCodeRepository()
+
     private fun TestScope.viewModel(
         repository: FakeWalkthroughRepository = FakeWalkthroughRepository(WalkthroughMark.FROM_START)
-    ): WalkthroughViewModel = WalkthroughViewModel(repository).also { advanceUntilIdle() }
+    ): WalkthroughViewModel =
+        WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher)).also { advanceUntilIdle() }
+
+    private suspend fun seedUserCode(code: String = "amanecer26") {
+        codes.seed(CodeSlot.USER, code, hasher)
+    }
 
     private val step get() = WalkthroughStep.entries
 
@@ -181,5 +196,91 @@ class WalkthroughViewModelTest {
         assertEquals(WalkthroughStep.OVERVIEW, viewModel.uiState.value.step)
         assertFalse(viewModel.uiState.value.reachedEarly)
         assertEquals(0, repository.markCalls)
+    }
+
+    @Test
+    fun `la practica solo se logra con el codigo de acceso real`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+
+        viewModel.onPracticeInputChange("otracosa1")
+        advanceUntilIdle()
+        assertEquals(PracticeStatus.MISMATCH, viewModel.uiState.value.practiceStatus)
+        assertEquals(WalkthroughStep.TYPE_IN, viewModel.uiState.value.step)
+
+        viewModel.onPracticeInputChange("amanecer26")
+        runCurrent()
+        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `al coincidir confirma un momento y pasa sola a Inicio`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        viewModel.onPracticeInputChange("amanecer26")
+        runCurrent()
+
+        advanceTimeBy(WalkthroughViewModel.CONFIRM_MILLIS - 1)
+        runCurrent()
+        assertEquals("la confirmación sigue a la vista", WalkthroughStep.TYPE_IN, viewModel.uiState.value.step)
+        advanceTimeBy(2)
+        runCurrent()
+
+        assertEquals(WalkthroughStep.GUIDE, viewModel.uiState.value.step)
+        // Lo tecleado es el código real: no sale de la parte 1.
+        assertEquals("", viewModel.uiState.value.practiceInput)
+    }
+
+    @Test
+    fun `si se sale de la parte 1 durante la confirmacion no avanza sola`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        viewModel.onPracticeInputChange("amanecer26")
+        runCurrent()
+
+        viewModel.onBackGesture()
+        advanceUntilIdle()
+
+        assertEquals(WalkthroughStep.OVERVIEW, viewModel.uiState.value.step)
+        assertEquals("", viewModel.uiState.value.practiceInput)
+    }
+
+    @Test
+    fun `Siguiente en la parte 1 avanza sin escribir el codigo`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onStart()
+        viewModel.onNext()
+
+        assertEquals(WalkthroughStep.GUIDE, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `la barra no escucha fuera de la parte 1`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onPracticeInputChange("amanecer26")
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.uiState.value.practiceInput)
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `repetir desde Ajustes limpia la practica`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        viewModel.onPracticeInputChange("amanecer26")
+        runCurrent()
+
+        viewModel.onReplay()
+        advanceUntilIdle()
+
+        assertEquals(WalkthroughStep.OVERVIEW, viewModel.uiState.value.step)
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+        assertEquals("", viewModel.uiState.value.practiceInput)
     }
 }

@@ -149,33 +149,12 @@ fun AuroraApp(sessionManager: SessionManager) {
                 screen(SETUP_ROUTE) {
                     CodeSetupRoute(
                         onCodeCreated = {
-                            // Atrás no debe regresar al formulario de la clave ya creada.
-                            navController.navigate(GUIDE_ROUTE) {
-                                popUpTo(SETUP_ROUTE) { inclusive = true }
-                            }
-                        }
-                    )
-                }
-                // Paso 3 de 3: tutorial con práctica real (RF-10). No navega a
-                // ningún lado por sí mismo: terminar ES salir con la nube (la
-                // práctica de salida usa la salida real del grafo seguro) y el
-                // reingreso con la clave ejercita RF-12 de verdad.
-                screen(GUIDE_ROUTE) {
-                    // onClose inalcanzable en primer uso: la flecha se oculta en la
-                    // primera página (TutorialUiState.showsBack) y detrás ya no
-                    // hay nada — el setup se sacó de la pila al navegar aquí.
-                    TutorialRoute(
-                        isReview = false,
-                        onClose = {},
-                        // Saltar por ahora (refinamiento RF-10, 2026-08): aterriza
-                        // donde termina el flujo completo — el panel (tras la
-                        // práctica, el reingreso con sesión vigente salta directo
-                        // allí). La sesión ya existe: la creó RF-07 o el login de
-                        // RF-39. El tutorial no queda en la pila, igual que el
-                        // reingreso normal (ENTRY → PANEL).
-                        onSkip = {
+                            // Con el código creado termina la activación: al panel, donde
+                            // la guía de Aurora empieza por la marca que dejó la creación
+                            // (v0.3.4). La sesión ya existe (RF-07 o el login de RF-39).
+                            // Atrás no debe regresar al formulario del código ya creado.
                             navController.navigate(PANEL_ROUTE) {
-                                popUpTo(GUIDE_ROUTE) { inclusive = true }
+                                popUpTo(SETUP_ROUTE) { inclusive = true }
                             }
                         }
                     )
@@ -510,7 +489,6 @@ private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
 private const val ENTRY_SETUP_BASE = "entry_setup"
 private const val ENTRY_SETUP_ROUTE = "$ENTRY_SETUP_BASE/{$LOGIN_FLOW_ARG}"
-private const val GUIDE_ROUTE = "guide"
 private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ARRIVAL_ROUTE = "arrival"
 private const val ENTRY_ROUTE = "entry"
