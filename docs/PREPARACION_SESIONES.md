@@ -2,11 +2,11 @@
 
 > Para la evaluación heurística (3 a 5 evaluadoras) y las sesiones SUS (10 a 12
 > estudiantes), en uno o dos teléfonos Android propios.
-> Última revisión: 2026-10-27 (build `v0.3.2-trl4`).
+> Última revisión: 2026-10-27 (build `v0.3.3-trl4`).
 
 Cada participante debe poder hacer el **primer uso completo**: activación con el
 código de activación en el buscador de ciudades → bienvenida → consentimiento →
-crear cuenta → código de acceso → tutorial. Eso obliga a dejar el teléfono como
+crear cuenta → código de acceso → tutorial → recorrido guiado por Inicio. Eso obliga a dejar el teléfono como
 recién instalado entre una persona y la siguiente, porque en cuanto existe un
 código de acceso el código de activación deja de abrir (§3).
 
@@ -17,7 +17,7 @@ las tarjetas y la facilitadora usen los mismos nombres que la pantalla.
 
 ---
 
-## 1. Qué build usar: debug de `v0.3.2-trl4`
+## 1. Qué build usar: debug de `v0.3.3-trl4`
 
 **La propuesta es correcta y es, hoy, la única opción viable.** El motivo y el
 costo, dichos completos:
@@ -96,9 +96,9 @@ diferencia de debug.)
 
 ### 1.3 Qué compilar exactamente
 
-Compilar la etiqueta `v0.3.2-trl4`. Si se compila desde `main`, comprobar antes
+Compilar la etiqueta `v0.3.3-trl4`. Si se compila desde `main`, comprobar antes
 que no haya cambios de código posteriores a la etiqueta:
-`git diff --stat v0.3.2-trl4 main -- app admin` debe salir vacío.
+`git diff --stat v0.3.3-trl4 main -- app admin` debe salir vacío.
 
 ```bash
 cd ~/dev/unab/aurora
@@ -107,7 +107,7 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 # APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-(Para compilar la etiqueta exacta: `git switch --detach v0.3.2-trl4`, compilar, y
+(Para compilar la etiqueta exacta: `git switch --detach v0.3.3-trl4`, compilar, y
 volver con `git switch main`.)
 
 ---
@@ -123,23 +123,23 @@ reconocible:
 
 ```bash
 mkdir -p ~/aurora-sesiones
-cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.2.apk
-shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.2.apk   # anotar: identifica el APK de las sesiones
+cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.3.apk
+shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.3.apk   # anotar: identifica el APK de las sesiones
 ```
 
-APK de `v0.3.2-trl4` generado el 2026-10-27 desde `cb83e31` (el último commit de
+APK de `v0.3.3-trl4` generado el 2026-10-27 desde `c1e5c5a` (el último commit de
 código; la etiqueta solo agrega documentación), con el JBR 21 de Android Studio:
 
 | Archivo | Tamaño | SHA-256 |
 |---|---|---|
-| `aurora-clima-0.3.2.apk` | 38 172 535 bytes (36,4 MiB) | `f08f46ff3d1d7c43a556098a8b2a97c9415b9c7caede7f1e5ce8fa6b153e2fa7` |
+| `aurora-clima-0.3.3.apk` | 38 931 365 bytes (37,1 MiB) | `8ea320116078fc6d47df28cf1cf3e1debe81581fa6d6c3d43794cd1fa87cc0d2` |
 
 El SHA-256 identifica **ese archivo**, no el código. El build debug no es
 reproducible byte a byte: el mismo día, una compilación limpia del mismo commit dio
 otro SHA-256. Por eso todas las sesiones usan esta copia de `~/aurora-sesiones/`, y
 no se vuelve a compilar entre una sesión y otra.
 
-El nombre del archivo es parte del camuflaje: `aurora-clima-0.3.2.apk` es
+El nombre del archivo es parte del camuflaje: `aurora-clima-0.3.3.apk` es
 coherente con una aplicación de clima. No usar nombres como `aurora-debug.apk` ni
 nada que mencione pruebas o el propósito real, porque el archivo queda a la vista
 en la carpeta de descargas del teléfono.
@@ -150,7 +150,7 @@ para todas las sesiones.
 
 ```bash
 # con el teléfono conectado por USB (solo esta vez, para pasar el archivo):
-adb push ~/aurora-sesiones/aurora-clima-0.3.2.apk /sdcard/Download/
+adb push ~/aurora-sesiones/aurora-clima-0.3.3.apk /sdcard/Download/
 ```
 
 Sin cable: pasarlo por la nube o por un cable de datos como archivo normal y
@@ -186,7 +186,7 @@ la cuenta, el código de acceso y los registros de la persona anterior.
 1. **Desinstalar.** Mantener pulsado el ícono de Aurora → *Desinstalar* (o
    *Ajustes → Aplicaciones → Aurora → Desinstalar*). Confirmar.
 2. **Reinstalar.** Abrir *Archivos* (o *Mis archivos*) → **Descargas** → tocar
-   `aurora-clima-0.3.2.apk` → *Instalar*.
+   `aurora-clima-0.3.3.apk` → *Instalar*.
 3. **Abrir la aplicación una vez.** El primer arranque es el que repone el
    código de activación. Comprobar que la fachada de clima carga.
 4. **Cerrar la aplicación** y dejar el teléfono en la pantalla de inicio, listo
@@ -252,7 +252,7 @@ preferencias.
 ```bash
 export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
 adb uninstall com.auroraclima.app
-adb install -r ~/aurora-sesiones/aurora-clima-0.3.2.apk
+adb install -r ~/aurora-sesiones/aurora-clima-0.3.3.apk
 adb shell monkey -p com.auroraclima.app -c android.intent.category.LAUNCHER 1   # primer arranque: repone la activación
 ```
 
@@ -371,6 +371,14 @@ IANA y no acepta correo.
    comportamiento correcto del producto (RNF-03) y puede ser un hallazgo legítimo
    de usabilidad: la facilitadora debe saberlo para **no confundirlo con un fallo**
    y para anotarlo bien.
+6. **El recorrido guiado por Inicio sale una sola vez** (v0.3.3), la primera vez
+   que la participante llega a Inicio después de crear su código de acceso, haya
+   terminado el tutorial o lo haya saltado. Son siete pasos con «Siguiente» y
+   «Saltar». Si lo salta, o si la sesión se cierra a mitad (la nube, la inactividad o
+   el segundo plano), **no se repite ni se retoma**: queda en Ajustes → «Ver el
+   recorrido por la app». Para que la siguiente participante lo vea, el teléfono
+   debe quedar como recién instalado (§3). La facilitadora debe anotar si lo saltó
+   y no confundir su ausencia con un fallo.
 
 ### 4.5 Encuadre de la sesión
 

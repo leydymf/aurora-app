@@ -20,7 +20,68 @@
 > contención de fallos en el arranque, §9.2). La línea base de comparación es la corrida v0.3.0 · UI V2
 > (2026-08-12, rama `ui-v2`, hoy fusionada en `main`).
 
-## 0. Cierre de `v0.3.2-trl4` (2026-10-26/27) — cifra vigente
+## 0A. Cierre de `v0.3.3-trl4` (2026-10-27) — cifra vigente
+
+v0.3.3 reúne los ajustes del tercer evaluador de la evaluación heurística (prompt 7:
+práctica del tutorial resaltada, tarjeta del cuestionario, recorrido guiado por Inicio,
+franja de la nube, Acciones rápidas apiladas con letra grande) y el cierre de la versión
+para las sesiones SUS (prompt 8). La §0 describe `v0.3.2-trl4`, y de ella siguen vigentes
+la §0.2 (cifrado de adjuntos en Android 8.0 y 8.1) y la §0.3 (rendimiento de adjuntos).
+
+### 0A.1 Corrida automatizada
+
+| Qué | `v0.3.2-trl4` | `v0.3.3-trl4` | Cambio |
+|---|---|---|---|
+| Pruebas de JVM por variante (debug y release) | 973 en 123 clases | **1015 en 131 clases**, 0 fallos, 0 ignoradas | +42 netas |
+| Instrumentadas | 107 en 27 clases | **169 en 36 clases** | +62 netas |
+| — en API 30 (`Aurora_GamaMedia_API30`) | 107, 0 fallos | 169, 0 fallos, 0 omitidas | |
+| — en API 26 (`Aurora_API26`, `minSdk`) | 107, 0 fallos, 1 omitida | 169, 0 fallos, 1 omitida | la omitida es la del gesto, §0 |
+| Panel web (`npm test`, vitest) | 91 | **91**, 0 fallos | sin cambios en `admin/` |
+| ktlint | sin violaciones | sin violaciones | |
+| Android Lint (debug) | 0 errores, 60 avisos | 0 errores, 61 avisos | |
+| Guardián del DEX (`verificarCamuflajeDex`) | 0 hallazgos nuevos | 0 hallazgos nuevos; 396 870 cadenas (150 101 distintas), 49 términos, 58 excepciones, canarios en verde | |
+| APK debug de las sesiones | 38 172 535 bytes | 38 931 365 bytes (+758 830, +2,0 %) | `docs/PREPARACION_SESIONES.md` §2 |
+
+Corrida del 2026-10-27 sobre `c1e5c5a`, el último commit de código de la versión.
+Comando: `./gradlew ktlintCheck assembleDebug lint test assembleRelease`; las pruebas de
+JVM se forzaron además sin caché (`cleanTestDebugUnitTest cleanTestReleaseUnitTest test`).
+Las instrumentadas, con `connectedDebugAndroidTest`, un emulador a la vez, arrancado en
+frío y **sin ventana** (`-no-window`, manual técnico §13.13). Las pruebas retiradas son las
+del aviso de bienvenida de v0.3.2 (`IntroNoteViewModelTest`, `SealedIntroNoteRepositoryTest`,
+`IntroNoteCardTest`), que el recorrido reemplazó.
+
+### 0A.2 La prueba inestable del selector de fecha en API 26 (P-138)
+
+Al cerrar el prompt 7 falló una vez en API 26
+`SecureWindowCloudTest.conElSelectorDeFechaAbiertoUnToqueALaNubeSale`: durante 10 s la nube
+quedó 56 px encima del pie de «Aceptar». Se repitió y se diagnosticó antes de
+cerrar la versión (RF-16):
+
+| Corrida | Aperturas o corridas | Fallos |
+|---|---|---|
+| La prueba original, un proceso por corrida (`am instrument`) | 20 | 1 |
+| Selector reabierto dentro de un proceso | 60 | 2 |
+| Ídem, con la sonda de insets | 60 | 1 |
+| `SecureDayPickerInsetsTest` **sin** la corrección | 120 | 1 (apertura 76) |
+
+En todos los fallos las cifras fueron las mismas («Aceptar» termina en 1565 px y la nube
+empieza en 1509 en vez de 1604) y estables los 10 s, así que no era sincronización de la
+prueba. Con la sonda, `WindowInsets.ime` valía 0 en las aperturas buenas y 126 px (la
+altura de la barra de navegación, sin teclado) en la mala; la nube lleva `imePadding()` y
+el selector no, así que subía 95 px y cubría 56 px de «Aceptar». Corregido en `c1e5c5a`
+(`imePadding()` en el contenido del selector; la nube no cambió). **Con la corrección:**
+`SecureDayPickerInsetsTest` 120 aperturas por defecto (también 200 y 300 con
+`-e aperturas`) y la prueba original 40 de 40 corridas en API 26; los dos casos también en
+API 30. Se desconoce si ocurre en un teléfono real con Android 8: va a la corrida manual de
+P-137 (paso 9).
+
+### 0A.3 Corridas manuales pendientes
+
+El recorrido guiado y la práctica resaltada: P-137 en `docs/PENDIENTES.md` (siete pasos,
+interrupción, volver a verlo desde Ajustes, letra grande, TalkBack y recientes). Siguen
+abiertas las de v0.3.2 (§0.4). No se creó ninguna cuenta de prueba en la nube.
+
+## 0. Cierre de `v0.3.2-trl4` (2026-10-26/27) — cifra anterior
 
 v0.3.2 reúne los ajustes de la evaluación heurística (prompts 1 a 5) y el cierre
 de la versión para las sesiones SUS (prompt 6). Las secciones 1 a 9 describen
@@ -307,10 +368,10 @@ respecto de v0.3.0 en **negrita**.
 | CP-03 | RF-05, RF-06 | PASA + MANUAL (§8-A1/A2) | Auto: `ValidateSecretCodeUseCaseTest` (10) + guardianes. |
 | CP-04 | RF-07 | PASA + MANUAL (§8-A2) | Auto: `CreateAccountViewModelTest` (10), `CreateAccountUseCaseTest` (**11 — al crear la cuenta se guardan las credenciales cifradas para el reingreso silencioso**), `FirebaseAuthRepositoryTest` (15). |
 | CP-05 | RF-08, RF-09 | PASA + MANUAL ✅/parcial (§8-A3) | Auto: como v0.2.0. P-53 ✅; resta Device Explorer (P-28), **ahora junto a `account_meta.xml`** (§8-A3). |
-| CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ + **§8-A2** | Auto: `TutorialViewModelTest` (**10 — «Saltar por ahora»: el salto fija el logro sin práctica y la práctica sigue disponible desde Ajustes**), `TutorialUiStateTest` (5). P-34/P-53 ✅ (tutorial completo); **el salto se verifica en §8-A2**. |
+| CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ + **§8-A2** | Auto: `TutorialViewModelTest` (**10 — «Saltar por ahora»: el salto fija el logro sin práctica y la práctica sigue disponible desde Ajustes**), `TutorialUiStateTest` (5). P-34/P-53 ✅ (tutorial completo); **el salto se verifica en §8-A2**. **v0.3.3:** `HomeTourViewModelTest`, `CompleteCodeSetupUseCaseTest`, `SealedHomeTourRepositoryTest`, `PulsePlanTest`, `SpotlightPlacementTest` (JVM); `TutorialPracticeCueTest`, `HomeTourLayerTest`, `SettingsTourRowTest` (instrumentadas). Manual pendiente: **P-137**. |
 | CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (§8-A1) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4), **`NoTracesGuardTest` (8 — `RecentsThumbnailGuard` es el único archivo que toca la miniatura de recientes) y `RecentsThumbnailGuardTest` (6 — la decisión del latch, aislada como lógica pura porque la API de Android no expone getter del flag)**. **P-14 ✅ (2026-10-05): la miniatura SÍ mostraba el código a medias; la guard (API 33+, solo mientras se busca) se re-verificó en emulador con el APK `429f283`, y la auditoría final (A-1) la enganchó al ciclo de vida para cerrar la carrera sub-frame con la limpieza de ON_PAUSE.** P-11 bloqueante y **P-84 (residual: bajo API 33 no hay API y queda solo ON_PAUSE; mirado ya en §8-C2 (2026-10-13): confirmado en API 26 — en 3 de 4 corridas la miniatura conserva el texto tecleado y sus resultados; con una pantalla interna delante sale en blanco).** P-11 en §8-A1. **El reingreso silencioso no toca la barra: el código sigue siendo la única puerta (RF-12).** |
 | CP-08 | RF-15 | PASA + MANUAL (§8-A4/A5) | Auto: `SignInUseCaseTest` (16), `LoginViewModelTest` (11), **`SilentSignInUseCaseTest` (9 — éxito, rechazo definitivo destruye el blob, deshacer bajo `NonCancellable` tras la salida), `SilentSessionCoordinatorTest` (10 — local-first, confirmación en segundo plano, monitor de red, reintento acotado con espera creciente P-81), `SilentSessionViewModelTest` (2); instrumentada `LocalCredentialStoreTest` (11)**. Manual: P-29 (login manual) y **P-71 (reingreso silencioso)** en §8-A4/A5. |
-| CP-09 | RF-16 | PASA + MANUAL (§8-A4, A11) | Auto: `SessionManagerTest` (20), `SecureFlagLedgerTest` (5), **`SilentSignInUseCaseTest` (la salida rápida con el silencioso en vuelo deshace el login)**. Manual: P-27 (§8-A11) y **P-71(7)** (§8-A4). |
+| CP-09 | RF-16 | PASA + MANUAL (§8-A4, A11) | Auto: `SessionManagerTest` (20), `SecureFlagLedgerTest` (5), **`SilentSignInUseCaseTest` (la salida rápida con el silencioso en vuelo deshace el login)**. Manual: P-27 (§8-A11) y **P-71(7)** (§8-A4). **v0.3.3:** `CloudLaneReserveTest`, `CloudLaneReserveLayoutTest`, `InnerTabsCloudClearanceTest`, `HomeTourCloudTest`, `SecureDayPickerInsetsTest`, `SecureWindowInsetsGuardTest` (P-138, §0A.2). |
 | CP-10 | RF-17, RF-18 | PASA + MANUAL ✅ | Auto: `ConsentViewModelTest` (2). P-53 ✅; visual V2 en §8-A2. |
 | CP-11 | RF-19 | PASA + MANUAL ✅ + **§8-A5** | Auto: **`SignOutViewModelTest` (2 — cerrar sesión destruye el blob de credenciales y converge en `quickExit`)**, `SignOutSessionCleanupTest`. P-53 ✅; **P-71(4): tras cerrar sesión el reingreso exige código + credenciales** (§8-A5). |
 | CP-12 | RF-20 | PASA + MANUAL ✅ + **§8-A14** | Auto: como v0.2.0 + **`OutcomeErasersTest` (2 — cascada sobre `guidance_store.db` y `outcomes`) y `StoredCredentialsEraser` (vía `LocalAccountEraser`)**. P-54 E2E ✅; **P-71(5) `account_meta` inexistente y cascada de RF-31/RF-33** en §8-A14. **Regresión H-1 tras el ADR 2026-10-05: `PendingErasureRecoveryTest` (4) fija que la cascada local NO se construye en arranques normales, SÍ con la marca izada, y que si el conjunto ni se puede construir la marca sigue izada (nada se da por borrado); `AppStartupTest` (3) fija que un fallo de arranque no tumba el proceso ni impide las demás tareas (auditoría final A-2). La prueba manual va en §8-A14.** |
@@ -318,7 +379,7 @@ respecto de v0.3.0 en **negrita**.
 | CP-14 | RF-23 | PASA + MANUAL (§8-A11) | Auto: `AgencyDetailViewModelTest` (5), `LinesViewModelTest` (3). P-26 bloqueante (§8-A11). |
 | CP-15 | RF-24, RF-25 | PASA + MANUAL ✅ | Auto: parsing tolerante (`ContentDocumentParsingTest` 9 + 11). P-50 E2E ✅ (2026-07-17, §7). **La tolerancia cubre el esquema v2: campos ausentes o ids fuera de la biblioteca degradan sin tumbar el fetch.** |
 | CP-16 | RF-26, RNF-08 | MANUAL ✅ + §8-A4/A6 | P-50 ✅; **entrada local sin red con chip «Sin conexión» (RNF-08, P-31 C)** en §8-A4; indicador de la portada en §8-A6. |
-| CP-17 | RF-27, RF-28 | PASA + MANUAL (§8-A9) | Auto: `GuidanceViewModelTest` (24). P-43 bloqueante (§8-A9). |
+| CP-17 | RF-27, RF-28 | PASA + MANUAL (§8-A9) | Auto: `GuidanceViewModelTest` (24). P-43 bloqueante (§8-A9). **v0.3.3:** `PanelQuizCardTest` (la tarjeta entera abre el cuestionario). |
 | CP-18 | RF-29, RF-30 | PASA + MANUAL (§8-A9) | Auto: `CalculateGuidanceLevelUseCaseTest` (19), **`GuidanceSeverityTest` (2 — par semafórico fijo por orden de nivel, reversión P-41), `PaletteContrastTest` (7 — los cuatro pares `accentSeverity` cumplen contraste)**. P-43 (incluido «aviso fijo visible sin scroll» con la tarjeta semafórica dominante) en §8-A9. |
 | CP-19 | RF-31 | **PASA + MANUAL (§8-A9)** | **Antes NO APLICA. Auto: `GuidanceViewModelTest` (guardar exige confirmación en hoja segura; «Terminar»/salida rápida/abandono no persisten nada — criterio 1), `LocalSavedOutcomeRepositoryTest` (5 — mínimo consultable fecha + nivel + tipos en `guidance_store.db` cifrada, RNF-04), `FirestoreOutcomeSyncRepositoryTest` (4 — sellado con la DEK de RF-39 a `outcomes`), `OutcomeSyncReconcilerTest` (2 — restauración), `GuidanceHistoryViewModelTest` (7 — listado, detalle, eliminación con doble confirmación), `DeleteSavedOutcomeUseCaseTest` (3 — propagación remota como RF-36), `OutcomeErasersTest` (2 — cascada RF-20). Manual: guardado sin red + reconexión (P-69a), restauración en B y cascada** en §8-A9/B1/A14. |
 | CP-20 | RF-32 | PASA + MANUAL (§8-A7) | Auto: `JournalEditorViewModelTest` (**33 — los chips de tipo son los topics publicados en su orden y visual; sin catálogo → «Sin tipo»; tipo retirado conserva el último nombre**), **`LoadEntryKindsUseCaseTest` (2), `ResolvedKindTest` (5), `AddJournalEntryUseCaseTest` (9), `JournalDatabaseMigrationTest` (6 — Room v4→v5 conserva los tipos como `storageCode`), `JournalDaoTest` (6)**. P-46 bloqueante y **P-73(c)** en §8-A7/B1/P1. |

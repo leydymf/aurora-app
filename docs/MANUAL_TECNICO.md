@@ -1,7 +1,7 @@
 # Aurora — Manual técnico
 
 > Entregable «manual técnico de la aplicación» de la Fase 3.
-> Última revisión: 2026-10-27 · Versión del código descrita: `v0.3.2-trl4`.
+> Última revisión: 2026-10-27 · Versión del código descrita: `v0.3.3-trl4`.
 
 ## 1. Propósito y alcance del manual
 
@@ -427,7 +427,7 @@ keystore propio fuera del repositorio (`.gitignore` ya veda `*.jks` y
 v2 y v3.
 
 **Versión.** `versionCode = 1` y `versionName = "1.0"` nunca se subieron; la
-versión real del proyecto la llevan las etiquetas de git (`v0.3.2-trl4` es la
+versión real del proyecto la llevan las etiquetas de git (`v0.3.3-trl4` es la
 vigente). Si el proyecto va a distribuirse, hay que empezar a versionar el
 `build.gradle.kts`.
 
@@ -509,7 +509,8 @@ búsqueda de ciudades. Hay dos ranuras (`CodeSlot`):
 
 1. **`ACTIVATION`.** El código de activación, único del prototipo, que abre el
    primer uso: bienvenida → consentimiento → cuenta → código de acceso →
-   tutorial. La bienvenida se agregó en v0.3.2.
+   tutorial → recorrido guiado por Inicio. La bienvenida se agregó en v0.3.2 y el
+   recorrido en v0.3.3.
 2. **`USER`.** El código de acceso que crea la propia usuaria (mínimo 6
    caracteres y que no sea el nombre de una ciudad real, verificado contra un
    directorio local de unas 620 entradas en `res/raw/city_index.txt`). Desde
@@ -542,8 +543,9 @@ de cada uno están en los ADR de esa versión en `docs/ARQUITECTURA.md`):
   la flecha y el gesto atrás vuelven a ella.
 - **Entrada con el código de acceso.** Se muestra unos 700 ms la marca de Aurora,
   ya dentro del grafo seguro, antes del Inicio.
-- **Tutorial saltado.** El Inicio muestra una sola vez una tarjeta que recuerda
-  cómo volver a entrar.
+- **Tutorial saltado.** El Inicio mostró, en v0.3.2, una sola vez una tarjeta que recordaba
+  cómo volver a entrar. En v0.3.3 se retiró y la reemplaza el recorrido guiado
+  (abajo).
 - **Salida rápida.** La nube queda sobre el teclado y sale con un solo toque
   también con una hoja, un diálogo o el selector de fecha abiertos.
 - **Salir con cambios sin guardar.** El editor de registros y el cuestionario
@@ -553,6 +555,34 @@ de cada uno están en los ADR de esa versión en `docs/ARQUITECTURA.md`):
   («Imagen 1 · 12 oct»); cada archivo se verifica después de sellarlo (§4.2).
 - **Fachada.** La búsqueda y el clima muestran carga, y ante un fallo o tras 10 s,
   un error con «Reintentar».
+
+**Flujos que cambiaron en v0.3.3** (tercer evaluador de la evaluación heurística; el
+detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
+
+- **Práctica del tutorial.** La barra de búsqueda se resalta con un halo que
+  respira, una flecha y una etiqueta; al coincidir el código, la señal pasa a la
+  nube real. Con «Quitar animaciones» el halo queda fijo (`PulsePlan`).
+- **Recorrido guiado por Inicio.** Siete pasos (reconocer la situación, resultados
+  guardados, Guía, Mi registro, Ajustes, Acciones rápidas y la nube), con
+  «Siguiente» y «Saltar». Sale la primera vez que se llega a Inicio después de
+  crear el código de acceso, se haya terminado el tutorial o se haya saltado. La
+  marca que lo dispara está sellada con la DEK de la cuenta en el archivo de
+  preferencias `view_meta` (el mismo del aviso de v0.3.2) y se consume al crearse
+  el recorrido; muere con la eliminación de cuenta y con el descarte de una
+  activación sin terminar. Si la sesión se cierra a mitad, no se retoma. Se repite
+  desde Ajustes → «Ver el recorrido por la app». Vive en la misma ventana que las
+  pestañas, para que la nube quede encima del velo, y el gesto atrás equivale a
+  «Saltar».
+- **Tarjeta del cuestionario.** Toda la tarjeta lo abre y «Empezar» va dentro.
+- **Franja de la nube.** En Inicio y en la portada de la Guía la zona que se
+  desplaza termina antes de la nube (`reserveCloudLane`), con cualquier letra.
+- **Letra grande.** Las tres Acciones rápidas se apilan en lugar de reducir la
+  letra; las etiquetas de pestaña van en una línea.
+- **Ajustes.** La pantalla y todo texto visible se llaman «Ajustes», nunca
+  «Configuración» (`TerminologyGuardTest`).
+- **Selector de fecha.** Su contenido aparta el teclado igual que la nube
+  (`imePadding()`): en API 26 la plataforma reporta a veces un inset de teclado sin
+  teclado y la nube subía sobre «Aceptar» (P-138).
 
 Consecuencias prácticas:
 
@@ -816,13 +846,14 @@ porque los guardianes de camuflaje y de recursos deben valer en ambas.
 - `docs/INFORME_SEGURIDAD_OWASP.md` — la evaluación MASVS/MASTG sobre el APK de
   release, con las evidencias en `docs/evidencias-owasp/`.
 
-Cifras vigentes al cierre de `v0.3.2-trl4` (2026-10-27): 973 pruebas de JVM por
-variante en 123 clases, sin fallos (eran 802 en `v0.3.1-trl4`); 107 instrumentadas
-en 27 clases, sin fallos en API 26 y API 30 (eran 47), con una omitida en API 26
-—la del gesto de atrás de `AttachPickerCancelTest`, que no existe antes de
-Android 10—; ktlint sin violaciones; Android Lint con 0 errores; el panel con 91
-pruebas en verde. Desde v0.3.2 las instrumentadas se corren en API 26 y en API 30:
-varias pruebas del teclado y del cifrado de adjuntos solo muestran su caso en
+Cifras vigentes al cierre de `v0.3.3-trl4` (2026-10-27): 1015 pruebas de JVM por
+variante en 131 clases, sin fallos (eran 973 en `v0.3.2-trl4` y 802 en
+`v0.3.1-trl4`); 169 instrumentadas en 36 clases, sin fallos en API 26 y API 30
+(eran 107), con una omitida en API 26 —la del gesto de atrás de
+`AttachPickerCancelTest`, que no existe antes de Android 10—; ktlint sin
+violaciones; Android Lint con 0 errores; el panel con 91 pruebas en verde. Las
+instrumentadas se corren en API 26 y en API 30:
+varias pruebas del teclado, del selector de fecha y del cifrado de adjuntos solo muestran su caso en
 Android 8. La cifra exacta de cada corrida está fechada en
 `docs/RESULTADOS_PRUEBAS.md` y es la referencia, no este párrafo.
 
@@ -1119,6 +1150,10 @@ fallan sin que la app tenga nada que ver. Además, `adb` puede quedar colgado
 - Resolverlo: un emulador a la vez, arranque en frío (`emulator -avd <nombre>
   -no-snapshot`), esperar a que se asiente antes de correr, y si `adb` no responde,
   `adb kill-server`.
+- Si el equipo anfitrión está cargado, arrancar el AVD sin ventana
+  (`emulator -avd <nombre> -no-snapshot -no-window`): con la ventana, la suite
+  completa se proyectaba en más de 90 minutos y sin ella tardó menos de dos
+  minutos (2026-10-27). Las pruebas no necesitan ver la pantalla.
 - En API 26 la prueba del gesto de atrás de `AttachPickerCancelTest` se omite a
   propósito: el gesto llegó con Android 10, y antes deslizar desde el borde abre el
   cajón del selector de documentos.

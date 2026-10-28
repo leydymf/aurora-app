@@ -2286,7 +2286,7 @@ la evaluación heurística se citan como «hallazgo heurístico».
 | El cambio del código de acceso pide escribir el nuevo dos veces (RF-09) | `29e4d7e` | AUTH-3 | Refuerzo. Sigue **Pasa** |
 | Ventana propia única (`SecureWindow`) con `FLAG_SECURE` y la nube; nube sobre el teclado; la inactividad cuenta los toques dentro de las hojas | `66d4666` … `0667ec0` | PLATFORM-3, AUTH-2 (cierre de sesión, RNF-03) | `NoTracesGuardTest` exige `SecureOn` en cada `Dialog(` de `core/security`. Sigue **Pasa con observación**: el residual de accesibilidad de §10.1 no cambia |
 | Transición de entrada con la marca, dentro del grafo seguro | `e9988f2` | PLATFORM-3 | Captura bloqueada desde el primer cuadro (`EntryTransitionGuardTest`). Sin cambio |
-| Aviso tras saltar el tutorial: una marca sellada con la DEK en un archivo de preferencias neutro (`view_meta`), que se borra al leerse | `e9988f2` | STORAGE-1 | Dato nuevo en disco, cifrado y con nombre neutro; muere con RF-20 y con el descarte de una activación sin terminar. Sin cambio |
+| Aviso de bienvenida tras saltar el tutorial (retirado en v0.3.3, §12): una marca sellada con la DEK en un archivo de preferencias neutro (`view_meta`), que se borra al leerse (en v0.3.3 esa marca avisa de un recorrido guiado y no de una tarjeta; ver §12) | `e9988f2` | STORAGE-1 | Dato nuevo en disco, cifrado y con nombre neutro; muere con RF-20 y con el descarte de una activación sin terminar. Sin cambio |
 | Nombre genérico de los adjuntos («Imagen 1 · 12 oct») | `610603a` | PRIVACY-1 | El nombre original sigue sin guardarse; solo se usa la fecha `created_at`, que ya existía. Sin cambio |
 | Carga, error y plazo de 10 s en la fachada | `eae7cc5`, `afe329a` | AUTH-2 (indistinguibilidad, RF-13) | Un código erróneo recorre los mismos estados y tiempos que una ciudad en los cuatro desenlaces (`WeatherViewModelTest`). Sin cambio |
 | Terminología de las credenciales; guardián del DEX con los términos de 3 letras solo en cadenas reales | `4f8c442` … `423de0c`, `c4a93b3` | Camuflaje (RNF-05) | El guardián sigue con 0 hallazgos nuevos sobre el release. Sin cambio |
@@ -2518,3 +2518,69 @@ Corrida del 2026-10-27 sobre `cb83e31`:
 
 Los fallos que el emulador de API 26 producía por diálogos de ANR del sistema están
 explicados en `docs/RESULTADOS_PRUEBAS.md` §0.1.
+
+---
+
+## 12. Re-verificación en v0.3.3
+
+v0.3.3 (etiqueta `v0.3.3-trl4`, 2026-10-27) reúne los ajustes del tercer evaluador de la
+evaluación heurística y cierra la versión para las sesiones SUS. Igual que en §11, no se
+repitió la evaluación completa: se revisaron el código y las pruebas de cada cambio y, en
+cada tramo, la auditora de seguridad del proyecto. No cambió ninguna dependencia, ningún
+permiso ni el manifiesto, y no hay hallazgos nuevos de seguridad.
+
+### 12.1 Qué controles tocaron los cambios
+
+| Cambio de v0.3.3 | Commits | Controles | Efecto en el resultado |
+|---|---|---|---|
+| Recorrido guiado por Inicio en lugar de la tarjeta de bienvenida. Vive en la **misma ventana** que las pestañas (la ruta `panel`), así que hereda `FLAG_SECURE`, el registro de interacción y la nube; el contenido de abajo se oculta a TalkBack mientras está a la vista | `937593a`, `3058dca`, `a25f1ed` | PLATFORM-3 (captura y recientes), AUTH-2 (cierre de sesión, RNF-03) | Sin ventana propia nueva ni variante de `SecureWindow`. El primer toque sigue llegando a la nube. Sin cambio |
+| La marca que dispara el recorrido es la de v0.3.2: sellada con la DEK de la cuenta en el archivo de preferencias `view_meta`, con las mismas claves, y se consume al crearse el recorrido. Cambia **dónde se marca**: al crear el código de acceso (`CompleteCodeSetupUseCase`) | `937593a`, `3058dca` | STORAGE-1 | Ningún dato nuevo en disco ni en la nube: es el mismo bit, cifrado y con nombre neutro (§11.1). Muere con la eliminación de cuenta (RF-20) y con el descarte de una activación sin terminar (`HomeTourEraser`). Una marca de v0.3.2 que hubiera quedado se lee como recorrido pendiente. Sin cambio |
+| Práctica del tutorial con halo, flecha y etiqueta; `CloudAnchor` publica solo la geometría de la nube | `1300611` | PLATFORM-3 | Es geometría (límites del círculo), no datos; no cambia el toque ni `closeNow`. `NoTracesGuardTest` vedó el nombre del ancla a la fachada. Sin cambio |
+| «Configuración» pasa a «Ajustes»; textos del recorrido con el léxico de la app | `9a8c3ba`, `937593a` | Camuflaje (RNF-05) | El guardián del DEX sigue con 0 hallazgos nuevos sobre el release (§12.3); `TerminologyGuardTest` vigila los nombres. Sin cambio |
+| Franja de la nube (`reserveCloudLane`), etiquetas de pestaña y de Acciones rápidas, apilado con letra grande | `6d6076c` … `95759dd` | AUTH-2 (la salida rápida debe estar alcanzable, RF-16) | Solo maquetación; ningún dato. La nube no se mueve. Sin cambio |
+| El contenido del selector de fecha aparta el teclado igual que la nube (`imePadding()`; P-138) | `c1e5c5a` | AUTH-2 (cierre de sesión, RF-16) | Ver §12.2. Sin cambio en el resultado |
+
+### 12.2 P-138 · Informativa · Cerrada en v0.3.3 · La nube cubría la mitad de «Aceptar» en el selector de fecha
+
+**Qué ocurría.** En API 26 la plataforma reporta a veces un inset de teclado de unos 126 px
+(la altura de la barra de navegación) aunque no haya teclado. La nube lleva
+`systemBarsPadding().imePadding()` y el contenido del selector solo `systemBarsPadding()`,
+así que en ~3 % de las aperturas la nube subía 95 px y cubría 56 px (53 %) de «Aceptar», que
+está en su misma esquina. Un toque en esa mitad salía al clima en lugar de confirmar.
+
+**Alcance.** No era una pérdida de la salida rápida (la nube seguía saliendo con un
+toque, RF-16) ni exponía datos: era una salida accidental. Por eso no cambia el resultado
+de ningún control. Se midió con una sonda dentro de la ventana (`WindowInsets.ime` = 0 en
+las aperturas buenas, 126 px en la mala) y se reprodujo con las mismas cifras en 1 de 20
+corridas, 2 de 60, 1 de 60 y en la apertura 76 de 120 con la prueba nueva.
+
+**Corrección.** `imePadding()` en el contenido del selector, como ya tenían `SecureDialog` y
+`SecureSheet`; la nube no cambió. `SecureWindowInsetsGuardTest` exige que la nube y todo
+`SecureWindow` lo lleven, y `SecureDayPickerInsetsTest` abre el selector 120 veces y exige
+que «Aceptar» termine sobre la nube (pasó 120, 200 y 300 aperturas en API 26, y en API 30).
+El efecto aceptado es que con un inset espurio la tarjeta se achica 95 px (el calendario cede
+alto, los botones se miden primero). Falta confirmar en un teléfono real con Android 8 (P-137, paso 9).
+
+### 12.3 Recuento y estado de la suite
+
+| Resultado | v0.3.2 (§11.4) | v0.3.3 |
+|---|---|---|
+| **Pasa** | 7 | **7** |
+| **Pasa con observación** | 10 | **10** |
+| **Falla** | 0 | **0** |
+| **No aplica** | 3 | 3 |
+
+El recuento no cambia: ningún cambio de v0.3.3 abre ni cierra una observación de un control.
+Las observaciones vivas siguen siendo las de §11.4 (P-118, P-115, P-125, P-130, P-132, P-133;
+P-131 es una verificación pendiente). El «Pasa» de AUTH-2 sigue colgando de la corrida manual
+P-116, y la del recorrido (P-137) no es de seguridad, pero verifica a mano la miniatura de
+recientes con el recorrido a la vista.
+
+Corrida del 2026-10-27 sobre `c1e5c5a`:
+- **Host:** `ktlintCheck assembleDebug lint test assembleRelease`. 1015 pruebas de JVM por
+  variante en 131 clases, 0 fallos (eran 973). ktlint sin violaciones. Lint con 0 errores.
+  Guardián del DEX: 396 870 cadenas (150 101 distintas), 49 términos, 58 excepciones, canarios
+  en verde y 0 hallazgos nuevos.
+- **Instrumentadas:** 169 en 36 clases, 0 fallos en API 30 y en API 26 (eran 107). En API 26 se
+  omite la variante con gesto de `AttachPickerCancelTest`.
+- **Panel:** 91 pruebas en verde.

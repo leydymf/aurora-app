@@ -117,7 +117,7 @@ El sistema debe presentar, tras la creación del código, un tutorial del doble 
 1. Al finalizar la creación del código inicia el tutorial (ingreso, salida rápida y qué ve un tercero).
 2. La usuaria realiza al menos un ingreso de práctica con su código y una salida rápida antes de finalizar.
 
-*Notas:* Clave para la apropiación segura de la app (HU-08). **Refinamiento (2026-08, decisión de la usuaria):** el tutorial es **saltable** — «Saltar por ahora» (acción secundaria; el primario sigue siendo continuar con la práctica) aparece en sus dos flujos de aparición (tras crear el código en cuenta nueva, y tras restaurar en dispositivo nuevo por RF-39) y navega al panel, el mismo destino donde termina el flujo completo; una línea bajo el botón recuerda que puede volver a verse desde Ajustes (RF-11). Los criterios 1 y 2 describen el camino completo cuando la usuaria no salta; en modo repaso (RF-11) no se ofrece saltar. **v0.3.2 (evaluación heurística):** el tutorial lleva la flecha de volver, equivalente al gesto atrás, salvo en su primera página durante el primer uso. Quien salta el tutorial en el primer uso ve en el Inicio, una sola vez, una tarjeta que recuerda cómo volver a entrar («Estás en Aurora, tu espacio privado. Para volver aquí, escribe tu código de acceso en el buscador de ciudades.»), con «Ver el tutorial» y «Entendido». La marca que la hace aparecer se guarda cifrada con la DEK de la cuenta y se borra al leerse (CP-06).
+*Notas:* Clave para la apropiación segura de la app (HU-08). **Refinamiento (2026-08, decisión de la usuaria):** el tutorial es **saltable** — «Saltar por ahora» (acción secundaria; el primario sigue siendo continuar con la práctica) aparece en sus dos flujos de aparición (tras crear el código en cuenta nueva, y tras restaurar en dispositivo nuevo por RF-39) y navega al panel, el mismo destino donde termina el flujo completo; una línea bajo el botón recuerda que puede volver a verse desde Ajustes (RF-11). Los criterios 1 y 2 describen el camino completo cuando la usuaria no salta; en modo repaso (RF-11) no se ofrece saltar. **v0.3.2 (evaluación heurística):** el tutorial lleva la flecha de volver, equivalente al gesto atrás, salvo en su primera página durante el primer uso. **v0.3.3 (evaluación heurística):** la práctica resalta la barra de búsqueda con un halo que respira, una flecha y una etiqueta; al coincidir el código, la etiqueta pasa a la confirmación y la señal se muda a la nube real. Con «Quitar animaciones» el halo queda fijo. El aviso de bienvenida de v0.3.2 —una tarjeta en Inicio para quien saltaba el tutorial— se retiró y lo reemplaza un **recorrido guiado de siete pasos por Inicio** (reconocer la situación, resultados guardados, Guía, Mi registro, Ajustes, Acciones rápidas y la nube), con «Siguiente» y «Saltar». Sale la primera vez que se llega a Inicio después de crear el código de acceso, se haya terminado el tutorial o se haya saltado. La marca que lo hace aparecer se guarda cifrada con la DEK de la cuenta y se borra al crearse el recorrido: aparece por sí solo a lo sumo una vez y, si la sesión se cierra a mitad (nube, inactividad o segundo plano), no se repite ni se retoma. El gesto atrás equivale a «Saltar». Un fallo de la marca (sin DEK, respaldo reiniciado) solo hace que no aparezca; por defensa en profundidad, también se borra con la eliminación de la cuenta y con el descarte de una activación sin terminar (CP-06).
 
 ## RF-11 — Reapertura del tutorial
 **Tipo:** Funcional · **Prioridad:** Baja · **Dependencias:** RF-10
@@ -127,7 +127,7 @@ El sistema debe permitir reabrir el tutorial desde la configuración dentro del 
 **Criterios de aceptación:**
 1. El tutorial puede consultarse nuevamente desde la configuración de Aurora.
 
-*Notas:* -
+*Notas:* **v0.3.3:** Ajustes ofrece además «Ver el recorrido por la app», que vuelve a mostrar el recorrido guiado de siete pasos de RF-10 sobre Inicio; funciona aunque el recorrido ya se hubiera visto o interrumpido. La pantalla y todo texto visible se llaman «Ajustes» (`TerminologyGuardTest`). El paso de la fila de Ajustes al recorrido va a la corrida manual de CP-06 (P-137).
 
 ## RF-12 — Acceso por código secreto
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-08
@@ -184,7 +184,7 @@ El sistema debe ofrecer en todas las pantallas de Aurora un botón de salida rá
 2. Al tocarlo, en menos de 1 segundo se muestra el clima con la barra vacía.
 3. El botón atrás y la navegación no permiten regresar a Aurora ni dejan rastro visible de la sesión.
 
-*Notas:* Mecanismo central de protección en uso (HU-11). **v0.3.2 (evaluación heurística):** con el teclado abierto, la nube queda sobre él y la pantalla se ajusta para que el campo y el botón final sigan alcanzables. Un solo toque sale también con una hoja, un diálogo o el selector de fecha abiertos: cada ventana propia lleva la misma nube (`SecureWindow`, P-122). Las barras inferiores reservan el carril de la nube para que nunca tape un botón (H-4).
+*Notas:* Mecanismo central de protección en uso (HU-11). **v0.3.2 (evaluación heurística):** con el teclado abierto, la nube queda sobre él y la pantalla se ajusta para que el campo y el botón final sigan alcanzables. Un solo toque sale también con una hoja, un diálogo o el selector de fecha abiertos: cada ventana propia lleva la misma nube (`SecureWindow`, P-122). Las barras inferiores reservan el carril de la nube para que nunca tape un botón (H-4). **v0.3.3:** en Inicio y en la portada de la Guía la zona que se desplaza termina antes de la nube (`reserveCloudLane`), así que ninguna tarjeta ni botón pasa por debajo de ella; el recorrido guiado no la deja encima de «Siguiente» en ninguno de sus pasos; y el selector de fecha lee los mismos insets que la nube, de modo que nunca se cruzan (en API 26 la nube subía sobre «Aceptar» en ~3 % de las aperturas; P-138). Un toque en la nube sigue saliendo al clima en todos los casos.
 
 ## RF-17 — Consentimiento informado
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-05
@@ -305,7 +305,7 @@ El sistema debe presentar el cuestionario orientador permitiendo avanzar, retroc
 1. La usuaria puede avanzar, retroceder y abandonar en cualquier momento.
 2. Al abandonar no se guarda ninguna respuesta.
 
-*Notas:* Preguntas de elaboración propia, lenguaje no revictimizante validado con la directora. No se utiliza la escala Danger Assessment. **v0.3.2 (evaluación heurística):** salir a medias pregunta antes («¿Salir ahora?»; las respuestas se descartan). La nube y el cierre por inactividad nunca preguntan. En las preguntas, la fila de botones va en el carril de la nube (H-4).
+*Notas:* Preguntas de elaboración propia, lenguaje no revictimizante validado con la directora. No se utiliza la escala Danger Assessment. **v0.3.2 (evaluación heurística):** salir a medias pregunta antes («¿Salir ahora?»; las respuestas se descartan). La nube y el cierre por inactividad nunca preguntan. En las preguntas, la fila de botones va en el carril de la nube (H-4). **v0.3.3:** en Inicio toda la tarjeta del cuestionario lo abre y «Empezar» va dentro, al pie.
 
 ## RF-28 — Descarte de respuestas en salida rápida
 **Tipo:** Funcional · **Prioridad:** Alta · **Dependencias:** RF-16, RF-27
@@ -609,7 +609,7 @@ Las interfaces deben cumplir las heurísticas de Nielsen y los principios de ISO
 **Criterios de aceptación:**
 1. La evaluación heurística no deja hallazgos de severidad ≥ 3 sin resolver.
 
-*Notas:* Se evalúa sobre prototipos (Fase 2) y sobre la app (Fase 4).
+*Notas:* Se evalúa sobre prototipos (Fase 2) y sobre la app (Fase 4). **v0.3.3 (tercer evaluador heurístico):** con letra grande las tres Acciones rápidas de Inicio se apilan a lo ancho en lugar de reducir la letra (WCAG 1.4.4): van en fila si cada etiqueta cabe entera, sin partir palabras y con la letra elegida, y si no, una debajo de otra. Las etiquetas de las pestañas se mantienen en una línea, con la letra elegida si cabe y reducida solo lo necesario si no, comprobando cada tamaño midiendo (`QuickAccessLabelTest`, `QuickAccessRowHeightTest`, `InnerTabBarLabelTest`, `TextFitTest`, `TabLabelFitTest`).
 
 ## RNF-10 — Portabilidad
 **Tipo:** No Funcional · **Prioridad:** Media · **Dependencias:** -
