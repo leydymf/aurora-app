@@ -1,7 +1,11 @@
 package com.auroraclima.app.access.ui
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import com.auroraclima.app.access.domain.model.CodeSlot
 import com.auroraclima.app.access.domain.repository.WalkthroughMark
+import com.auroraclima.app.access.domain.repository.WalkthroughRepository
 import com.auroraclima.app.access.domain.usecase.FakeSecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.FakeSecretCodeRepository
 import com.auroraclima.app.access.domain.usecase.FakeWalkthroughRepository
@@ -9,6 +13,7 @@ import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
 import com.auroraclima.app.access.domain.usecase.seed
 import com.auroraclima.app.core.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -282,5 +287,93 @@ class WalkthroughViewModelTest {
         assertEquals(WalkthroughStep.OVERVIEW, viewModel.uiState.value.step)
         assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
         assertEquals("", viewModel.uiState.value.practiceInput)
+    }
+
+    private fun TestScope.toCloud(repository: FakeWalkthroughRepository): WalkthroughViewModel {
+        val viewModel = viewModel(repository)
+        viewModel.onStart()
+        while (viewModel.uiState.value.step != WalkthroughStep.CLOUD) viewModel.onNext()
+        advanceUntilIdle()
+        return viewModel
+    }
+
+    @Test
+    fun `al llegar a la nube se arma la marca de cierre`() = runTest {
+        val repository = FakeWalkthroughRepository(WalkthroughMark.FROM_START)
+        toCloud(repository)
+
+        assertEquals(WalkthroughMark.TO_FINISH, repository.stored)
+        assertEquals(listOf(WalkthroughMark.TO_FINISH), repository.history)
+    }
+
+    @Test
+    fun `dejar la nube sin salir desarma la marca`() = runTest {
+        val leave = listOf<(WalkthroughViewModel) -> Unit>(
+            { it.onBack() },
+            { it.onFinishEarly() },
+            { it.onBackGesture() }
+        )
+        leave.forEachIndexed { index, action ->
+            val repository = FakeWalkthroughRepository(WalkthroughMark.FROM_START)
+            val viewModel = toCloud(repository)
+
+            action(viewModel)
+            advanceUntilIdle()
+
+            assertNull("salida $index", repository.stored)
+            // Y la siguiente entrada no muestra «¡Listo!».
+            assertNull("salida $index", viewModel(repository).uiState.value.step)
+        }
+    }
+
+    @Test
+    fun `tras la salida real la siguiente entrada muestra Listo una sola vez`() = runTest {
+        val repository = FakeWalkthroughRepository(WalkthroughMark.FROM_START)
+        toCloud(repository)
+        // La nube: el panel sale de la pila y su ViewModel muere sin más.
+
+        val next = viewModel(repository)
+        assertEquals(WalkthroughStep.DONE, next.uiState.value.step)
+        assertFalse("texto de la salida real", next.uiState.value.reachedEarly)
+
+        assertNull(viewModel(repository).uiState.value.step)
+    }
+
+    @Test
+    fun `la marca se escribe aunque la salida cancele el ViewModel enseguida`() = runTest {
+        val slow = SlowMark()
+        val store = ViewModelStore()
+        val viewModel = ViewModelProvider(
+            store,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    WalkthroughViewModel(slow, ValidateSecretCodeUseCase(codes, hasher)) as T
+            }
+        )[WalkthroughViewModel::class.java]
+        advanceUntilIdle()
+        viewModel.onReplay()
+        viewModel.onStart()
+        while (viewModel.uiState.value.step != WalkthroughStep.CLOUD) viewModel.onNext()
+
+        // La nube cierra la sesión en el mismo cuadro: el ViewModel se limpia antes de
+        // que la escritura termine.
+        store.clear()
+        advanceUntilIdle()
+
+        assertEquals(WalkthroughMark.TO_FINISH, slow.stored)
+    }
+
+    /** Una marca que tarda en escribirse, para ver que la escritura no se cancela. */
+    private class SlowMark : WalkthroughRepository {
+        var stored: WalkthroughMark? = null
+
+        override suspend fun mark(mark: WalkthroughMark): Result<Unit> {
+            delay(200)
+            stored = mark
+            return Result.success(Unit)
+        }
+
+        override suspend fun consume(): Result<WalkthroughMark?> = Result.success(stored.also { stored = null })
     }
 }

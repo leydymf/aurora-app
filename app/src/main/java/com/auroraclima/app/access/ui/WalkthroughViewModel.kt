@@ -10,13 +10,16 @@ import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
 import com.auroraclima.app.core.security.SearchGateResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * La guía de Aurora (v0.3.4; RF-10, RF-11): una sola experiencia que reemplaza al
@@ -28,6 +31,16 @@ import kotlinx.coroutines.launch
  * salida real) muestra solo «¡Listo!». Un fallo de lectura equivale a ninguna marca:
  * la guía es una ayuda, nunca un error visible (§3). Desde Ajustes se repite completa
  * ([onReplay]).
+ *
+ * **Reanudación tras la salida real (parte 3).** La nube no se intercepta: tocarla es
+ * la salida rápida de siempre (RF-16), que saca el panel de la pila y cancela este
+ * ViewModel en el mismo cuadro. Por eso la marca [WalkthroughMark.TO_FINISH] se arma
+ * al LLEGAR al paso de la nube, en una escritura que no se cancela, y se desarma si se
+ * deja ese paso por otro camino («Atrás», «Después», «Saltar guía», el gesto atrás).
+ * En la siguiente entrada con el código de acceso, el panel crea un ViewModel nuevo
+ * —después de la transición de entrada—, que consume la marca y muestra «¡Listo!» una
+ * sola vez. Si la sesión se cierra en ese paso por inactividad o segundo plano también
+ * se muestra; es inofensivo y evita guardar el paso en cada avance (RNF-04).
  *
  * La parte 1 es la práctica de entrada de siempre: la barra evalúa lo tecleado con la
  * MISMA puerta que la fachada ([ValidateSecretCodeUseCase]), solo da por logrado el
@@ -105,6 +118,7 @@ class WalkthroughViewModel @Inject constructor(
 
     /** Volver a verla desde Ajustes: completa desde «Conoce Aurora», sin tocar la marca. */
     fun onReplay() {
+        if (_uiState.value.step == WalkthroughStep.CLOUD) disarmFinish()
         cancelPractice()
         _uiState.value = WalkthroughUiState(step = WalkthroughStep.OVERVIEW)
     }
@@ -143,6 +157,9 @@ class WalkthroughViewModel @Inject constructor(
     }
 
     private fun moveTo(step: WalkthroughStep) {
+        val from = _uiState.value.step
+        if (step == WalkthroughStep.CLOUD && from != WalkthroughStep.CLOUD) armFinish()
+        if (from == WalkthroughStep.CLOUD && step != WalkthroughStep.CLOUD) disarmFinish()
         // Lo tecleado es el código de acceso real, sin máscara: no sale de la parte 1.
         if (step != WalkthroughStep.TYPE_IN) cancelPractice()
         _uiState.update {
@@ -155,8 +172,29 @@ class WalkthroughViewModel @Inject constructor(
     }
 
     private fun close() {
+        if (_uiState.value.step == WalkthroughStep.CLOUD) disarmFinish()
         cancelPractice()
         _uiState.value = WalkthroughUiState()
+    }
+
+    /**
+     * Deja la marca antes de que la nube pueda tocarse. `UNDISPATCHED` la arranca en
+     * este mismo instante, sin esperar turno en ningún despachador (una corrutina
+     * cancelada antes de empezar no corre nunca), y `NonCancellable` la deja terminar
+     * aunque la salida real cancele el ViewModel enseguida. El repositorio hace las
+     * escrituras de a una, así que un desarme inmediato no se le adelanta.
+     */
+    private fun armFinish() {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) { repository.mark(WalkthroughMark.TO_FINISH) }
+        }
+    }
+
+    /** Retira la marca: se dejó el paso de la nube sin salir. */
+    private fun disarmFinish() {
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) { repository.consume() }
+        }
     }
 
     private fun cancelPractice() {
