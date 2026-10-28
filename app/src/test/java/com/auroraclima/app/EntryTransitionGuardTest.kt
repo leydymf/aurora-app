@@ -28,7 +28,10 @@ class EntryTransitionGuardTest {
     private val appDir = File(mainDir, "java/com/auroraclima/app")
     private val navText = File(appDir, "AuroraApp.kt").readText()
 
-    private val gateBranch = Regex("""SearchGateResult\.(\w+)\s*->([^\n]*)""")
+    // La rama puede ir envuelta en `leaveFacade(…) { … }` (cerrar el teclado antes de
+    // entrar, v0.3.4): el grupo 2 es la navegación de adentro.
+    private val gateBranch = Regex("""SearchGateResult\.(\w+)\s*->\s*(?:leaveFacade\([^)]*\)\s*\{\s*)?([^\n]*)""")
+    private val wrappedBranch = Regex("""SearchGateResult\.(\w+)\s*->\s*leaveFacade\(""")
 
     @Test
     fun `la transicion se alcanza solo desde la rama del codigo correcto`() {
@@ -74,6 +77,21 @@ class EntryTransitionGuardTest {
         // Y la pantalla solo avanza con su entrada reanudada.
         val screen = File(appDir, "access/ui/EntryTransitionScreen.kt").readText()
         assertTrue(screen.contains("lifecycle.withResumed { currentOnFinished() }"))
+    }
+
+    @Test
+    fun `las ramas que abren algo cierran el teclado antes y la que no abre nada no lo toca`() {
+        // v0.3.4: el teclado de la barra seguía arriba sobre el espacio privado. Un código
+        // que no coincide debe seguir siendo, en todo, una búsqueda de ciudad (RF-13).
+        val wrapped = wrappedBranch.findAll(navText).map { it.groupValues[1] }.toSet()
+        assertEquals(setOf("OpenAccess", "OpenActivation"), wrapped)
+        val exit = File(appDir, "FacadeExit.kt").readText()
+        val body = exit.substringAfter("internal suspend fun leaveFacade(")
+        val hide = body.indexOf("keyboard?.hide()")
+        val clear = body.indexOf("clearFocus(")
+        val navigate = body.indexOf("navigate()")
+        assertTrue("debe quitar el foco y cerrar el teclado", hide >= 0 && clear >= 0)
+        assertTrue("y solo después navegar", navigate > hide && navigate > clear)
     }
 
     @Test

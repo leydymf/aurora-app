@@ -82,7 +82,9 @@ class ActivationReachabilityGuardTest {
     /** Lo alcanzable desde la entrada de activación sin cruzar la creación del código. */
     private fun reachableBeforeAccessCode(): Set<String> {
         val entry = requireNotNull(
-            Regex("""OpenActivation\s*->\s*navController\.navigate\((\w+)\)""").find(navText)
+            Regex(
+                """OpenActivation\s*->\s*(?:leaveFacade\([^)]*\)\s*\{\s*)?navController\.navigate\((\w+)\)"""
+            ).find(navText)
         ) { "No se encontró la entrada de activación en AuroraApp.kt" }.groupValues[1]
         val reached = mutableSetOf(entry)
         val pending = ArrayDeque(listOf(entry))
@@ -110,7 +112,7 @@ class ActivationReachabilityGuardTest {
         // La bienvenida es la primera pantalla del flujo (v0.3.2) y, por eso, la
         // dueña del descarte. Solo se navega a ella desde la rama OpenActivation,
         // y vive en el grafo seguro (screen), nunca en la fachada (composable).
-        val entry = Regex("""OpenActivation\s*->\s*navController\.navigate\((\w+)\)""")
+        val entry = Regex("""OpenActivation\s*->\s*(?:leaveFacade\([^)]*\)\s*\{\s*)?navController\.navigate\((\w+)\)""")
             .find(navText)?.groupValues?.get(1)
         assertEquals("WELCOME_ROUTE", entry)
         assertEquals(1, Regex("""navigate\(WELCOME_ROUTE\)""").findAll(navText).count())
