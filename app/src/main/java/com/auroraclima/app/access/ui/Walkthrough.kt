@@ -10,9 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -203,15 +206,10 @@ private fun WalkthroughSceneContent(
         WalkthroughScene.DONE -> DoneScreen(reachedEarly = state.reachedEarly, onFinish = actions.onFinish)
         // Mientras se funde hacia otra escena, la saliente conserva su último paso.
         WalkthroughScene.HOME -> {
-            val step = remember { StepHolder() }.also { holder ->
-                state.step?.takeIf { WalkthroughScene.of(it) == scene }?.let { holder.step = it }
-            }.step
-            if (step != null) HomeScene(step = step, actions = actions, motion = motion)
+            var last by remember { mutableStateOf<WalkthroughStep?>(null) }
+            val current = state.step?.takeIf { WalkthroughScene.of(it) == scene }
+            SideEffect { if (current != null) last = current }
+            (current ?: last)?.let { HomeScene(step = it, actions = actions, motion = motion) }
         }
     }
-}
-
-/** El último paso de una escena, para la tarjeta que se desvanece. */
-private class StepHolder {
-    var step: WalkthroughStep? = null
 }

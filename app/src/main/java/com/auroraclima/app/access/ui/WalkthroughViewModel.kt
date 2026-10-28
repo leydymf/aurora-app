@@ -58,10 +58,14 @@ class WalkthroughViewModel @Inject constructor(
 
     private var practiceCheckJob: Job? = null
     private var advanceJob: Job? = null
+    private val markJob: Job
 
     init {
-        viewModelScope.launch {
+        markJob = viewModelScope.launch {
             if (!awaitReadableMark()) return@launch
+            // Si mientras se esperaba la llave ya empezó un repaso desde Ajustes, la
+            // marca no lo pisa: queda para la siguiente entrada.
+            if (_uiState.value.step != null) return@launch
             when (repository.consume().getOrNull()) {
                 WalkthroughMark.FROM_START -> _uiState.update { it.copy(step = WalkthroughStep.OVERVIEW) }
                 WalkthroughMark.TO_FINISH -> _uiState.update {
@@ -137,6 +141,7 @@ class WalkthroughViewModel @Inject constructor(
 
     /** Volver a verla desde Ajustes: completa desde «Conoce Aurora», sin tocar la marca. */
     fun onReplay() {
+        markJob.cancel()
         if (_uiState.value.step == WalkthroughStep.CLOUD) disarmFinish()
         cancelPractice()
         _uiState.value = WalkthroughUiState(step = WalkthroughStep.OVERVIEW)
@@ -185,7 +190,9 @@ class WalkthroughViewModel @Inject constructor(
             if (step == WalkthroughStep.TYPE_IN) {
                 it.copy(step = step)
             } else {
-                it.copy(step = step, practiceInput = "")
+                // La práctica vuelve a empezar si se regresa a la parte 1: con la barra
+                // vacía no debe quedar «Aún no coincide» ni la confirmación.
+                it.copy(step = step, practiceInput = "", practiceStatus = PracticeStatus.TYPING)
             }
         }
     }
@@ -241,7 +248,12 @@ data class WalkthroughUiState(
     val reachedEarly: Boolean = false,
     val practiceInput: String = "",
     val practiceStatus: PracticeStatus = PracticeStatus.TYPING
-)
+) {
+    // Sin lo tecleado: es el código de acceso real, en claro (mismo criterio que
+    // JournalExportUiState). Nada lo registra hoy; esto evita que un log futuro lo haga.
+    override fun toString(): String =
+        "WalkthroughUiState(step=$step, reachedEarly=$reachedEarly, practiceStatus=$practiceStatus)"
+}
 
 /** Resultado en vivo de la barra de práctica. */
 enum class PracticeStatus {

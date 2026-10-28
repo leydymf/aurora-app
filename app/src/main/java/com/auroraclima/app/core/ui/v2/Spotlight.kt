@@ -330,6 +330,10 @@ data class SpotlightStyle(
  * al cambiar, la tarjeta vuelve a aparecer y los trazos se dibujan otra vez. Con
  * [showBubble] en falso solo se ven el velo y el hueco (mientras el elemento se trae
  * a la vista).
+ *
+ * El contenido de [bubble] debe admitir medidas intrínsecas: la capa pregunta el alto
+ * que la tarjeta querría (no el recortado) para decidir dónde va. Un `Lazy*`, un
+ * `SubcomposeLayout` o un `BoxWithConstraints` ahí fallarían en ejecución.
  */
 @Composable
 fun SpotlightLayer(

@@ -36,7 +36,7 @@ class DekPayloadCipher @Inject constructor(
     }
 
     /** Hay DEK para la sesión vigente; sin sesión (tras la nube, antes del reingreso) no. */
-    override fun isReady(): Boolean = keyManager.currentDek() != null
+    override fun isReady(): Boolean = keyManager.currentDek()?.also { it.fill(0) } != null
 
     // Excepción neutra y sin mensaje (regla 4): se traduce aguas arriba.
     private fun requireKey(): SecretKeySpec {

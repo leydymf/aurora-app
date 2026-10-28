@@ -85,7 +85,7 @@ class CamouflageResourcesTest {
      * (v0.3.4, decisión de la autora). Así «SOS» suelto, «ic_sos» o «btn-sos» se
      * siguen cazando.
      *
-     * Solo para el texto de los recursos, que es prosa. Los literales y los
+     * Solo para la prosa de los recursos (el texto de <string> e <item>). Los literales y los
      * identificadores de Kotlin conservan la subcadena: ahí un `sosBoton` sí sería un
      * nombre propio, y es la red que el guardián del DEX declara que lo cubre.
      */
@@ -100,6 +100,24 @@ class CamouflageResourcesTest {
             if (antes?.isLetter() != true && despues?.isLetter() != true) return true
             desde = i + 1
         }
+    }
+
+    private val prosaDeRecurso =
+        Regex("""(<(?:string|item)\b[^>]*>)(.*?)(</(?:string|item)>)""", RegexOption.DOT_MATCHES_ALL)
+
+    /** El texto de los <string> e <item> de un recurso: la prosa que ve la persona. */
+    private fun textoDeStrings(xml: String): String =
+        prosaDeRecurso.findAll(xml).joinToString("\n") { it.groupValues[2] }
+
+    /** El recurso sin esa prosa: nombres, etiquetas y atributos. */
+    private fun sinTextoDeStrings(xml: String): String =
+        prosaDeRecurso.replace(xml) { it.groupValues[1] + it.groupValues[3] }
+
+    @Test
+    fun `en un recurso solo la prosa se juzga como palabra`() {
+        val xml = """<string name="btnsos">3 pasos</string>"""
+        assertTrue("el nombre del recurso sigue como subcadena", "sos" in sinTextoDeStrings(xml))
+        assertFalse("la prosa no", contieneEnTexto(textoDeStrings(xml), "sos"))
     }
 
     @Test
@@ -123,8 +141,13 @@ class CamouflageResourcesTest {
                 val terms = if (isResource) forbiddenEverywhere + forbiddenInResources else forbiddenEverywhere
                 val haystack = file.readText().lowercase() +
                     if (isResource) "\n" + file.name.lowercase() else ""
+                // En un recurso, solo la prosa (el texto de <string> e <item>) se juzga
+                // como palabra; nombres de archivo, etiquetas y atributos (`name="…"`)
+                // siguen como subcadena: ahí un «btnsos» sí sería un nombre propio.
+                val prose = if (isResource) textoDeStrings(haystack) else ""
+                val structure = if (isResource) sinTextoDeStrings(haystack) else haystack
                 terms
-                    .filter { if (isResource) contieneEnTexto(haystack, it) else it in haystack }
+                    .filter { it in structure || (isResource && contieneEnTexto(prose, it)) }
                     .map { term -> "${file.relativeTo(mainDir)}: contiene \"$term\"" }
             }
             .toList()

@@ -300,7 +300,7 @@ fun HandDrawnCue(
  * Lo que ocupa el círculo a mano alrededor de [target] (su caja), dentro de [area]: la
  * capa de recorrido aparta la tarjeta de aquí para que no tape el círculo.
  */
-fun handCueRing(target: Rect, density: Density, area: Rect? = null): Rect =
+internal fun handCueRing(target: Rect, density: Density, area: Rect? = null): Rect =
     boundsOf(handCircleAround(target, density, area))
 
 private fun handCircleAround(target: Rect, density: Density, area: Rect?): List<Offset> = with(density) {
@@ -356,15 +356,15 @@ private val ARROW_LEAD = 72.dp
 private val CARD_EDGE = 28.dp
 
 /** Escala del círculo que respira: casi nada, despacio ([PulsePlan.breathing]). */
-fun breathScale(phase: Float): Float = 1f + BREATH_AMPLITUDE * phase
+internal fun breathScale(phase: Float): Float = 1f + BREATH_AMPLITUDE * phase
 
 private const val BREATH_AMPLITUDE = 0.03f
 
 /** Grosor de los trazos a mano. */
-val HandStrokeWidth = 3.dp
+internal val HandStrokeWidth = 3.dp
 
 /** Dibuja la flecha hasta [progress] de su largo; la punta aparece al final. */
-fun DrawScope.drawCurlArrow(shape: CurlArrowShape, color: Color, progress: Float) {
+internal fun DrawScope.drawCurlArrow(shape: CurlArrowShape, color: Color, progress: Float) {
     val path = Path().apply {
         moveTo(shape.body.first().start.x, shape.body.first().start.y)
         shape.body.forEach { cubicTo(it.control1.x, it.control1.y, it.control2.x, it.control2.y, it.end.x, it.end.y) }
@@ -386,7 +386,7 @@ fun DrawScope.drawCurlArrow(shape: CurlArrowShape, color: Color, progress: Float
 }
 
 /** Dibuja el círculo a mano hasta [progress], con la escala [scale] (la respiración). */
-fun DrawScope.drawHandCircle(points: List<Offset>, color: Color, progress: Float, scale: Float = 1f) {
+internal fun DrawScope.drawHandCircle(points: List<Offset>, color: Color, progress: Float, scale: Float = 1f) {
     if (points.size < 2) return
     val path = Path().apply {
         moveTo(points.first().x, points.first().y)

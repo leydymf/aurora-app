@@ -71,4 +71,15 @@ class DekPayloadCipherTest {
         assertTrue(runCatching { without.seal("x".toByteArray(Charsets.UTF_8)) }.isFailure)
         assertTrue(runCatching { without.open(cipher.seal("x".toByteArray(Charsets.UTF_8))) }.isFailure)
     }
+
+    @Test
+    fun `esta lista solo con DEK y preguntarlo no la altera`() {
+        assertTrue(cipher.isReady())
+        // isReady borra su copia: lo sellado después sigue abriendo.
+        val plaintext = "cielo despejado".toByteArray(Charsets.UTF_8)
+        assertArrayEquals(plaintext, cipher.open(cipher.seal(plaintext)))
+
+        // Sin sesión (tras la nube), no hay DEK.
+        assertFalse(DekPayloadCipher(FakeSyncKeyManager(dek = null)).isReady())
+    }
 }

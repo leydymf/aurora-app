@@ -420,4 +420,37 @@ class WalkthroughViewModelTest {
         assertNull(viewModel.uiState.value.step)
         assertEquals("ni siquiera intenta leerla", 0, repository.consumeCalls)
     }
+
+    @Test
+    fun `un repaso pedido mientras se espera la llave no lo pisa Listo`() = runTest {
+        val repository = FakeWalkthroughRepository(WalkthroughMark.TO_FINISH).apply { ready = false }
+        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher))
+        runCurrent()
+        viewModel.onReplay()
+        repository.ready = true
+        advanceUntilIdle()
+
+        assertEquals(WalkthroughStep.OVERVIEW, viewModel.uiState.value.step)
+        assertEquals("la marca queda para la siguiente entrada", WalkthroughMark.TO_FINISH, repository.stored)
+    }
+
+    @Test
+    fun `volver a la parte 1 limpia el resultado de la practica`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        viewModel.onPracticeInputChange("otracosa1")
+        advanceUntilIdle()
+        viewModel.onNext()
+        viewModel.onBack()
+
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+        assertEquals("", viewModel.uiState.value.practiceInput)
+    }
+
+    @Test
+    fun `el estado no muestra lo tecleado al imprimirse`() {
+        val state = WalkthroughUiState(step = WalkthroughStep.TYPE_IN, practiceInput = "amanecer26")
+        assertFalse(state.toString().contains("amanecer26"))
+    }
 }

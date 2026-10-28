@@ -93,7 +93,8 @@ internal class FakeSyncKeyManager(
     val establishedPasswords = mutableListOf<String>()
     val rewrappedPasswords = mutableListOf<String>()
 
-    override fun currentDek(): ByteArray? = dek
+    // Copia nueva, como la real (LocalDekStore descifra en cada lectura).
+    override fun currentDek(): ByteArray? = dek?.copyOf()
 
     override fun currentGeneration(): Long? = generation
 
