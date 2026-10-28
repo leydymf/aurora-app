@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * El halo y la flecha de la práctica (v0.3.3) se mueven con un ciclo suave y, con
+ * El ciclo suave (v0.3.3; hoy, la respiración del círculo de la guía) se mueve y, con
  * «Quitar animaciones», quedan fijos (regla del ADR 2026-10-25 (c)).
  */
 class PulsePlanTest {

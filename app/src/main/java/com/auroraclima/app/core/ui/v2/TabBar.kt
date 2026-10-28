@@ -47,7 +47,7 @@ val V2TabBarHeight = 68.dp
  * siguientes en el espacio interno). Blanca, con la píldora [V2Palette.tabIndicator]
  * detrás del icono activo; la etiqueta acompaña siempre al icono (regla 3) y la
  * tipografía sale del tema, así que cada voz conserva la suya. [itemModifier] agrega
- * algo a una pestaña concreta (el recorrido por Inicio marca así las que ilumina).
+ * algo a una pestaña concreta (la guía de Aurora marca así las que ilumina).
  */
 @Composable
 fun V2TabBar(

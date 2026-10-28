@@ -853,7 +853,7 @@ private fun AdviceRow(text: String) {
  * exige permiso (RNF-04), no marca por sí solo y la app no conserva rastro. Sin
  * marcador instalado la acción se descarta en silencio (mismo criterio que el
  * único punto de salida de content, D4 S2 B-1). El cuestionario lo replica sin
- * importar content (§2), igual que la barra de práctica del tutorial.
+ * importar content (§2), igual que la barra de práctica de la guía.
  */
 private fun dialNumber(context: Context, number: String) {
     runCatching {

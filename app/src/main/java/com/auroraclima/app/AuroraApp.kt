@@ -21,7 +21,6 @@ import com.auroraclima.app.access.ui.ChangeCodeRoute
 import com.auroraclima.app.access.ui.CodeSetupRoute
 import com.auroraclima.app.access.ui.EntryTransitionRoute
 import com.auroraclima.app.access.ui.SettingsScreen
-import com.auroraclima.app.access.ui.TutorialRoute
 import com.auroraclima.app.accounts.ui.ChangePasswordRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
 import com.auroraclima.app.accounts.ui.CreateAccountRoute
@@ -159,17 +158,6 @@ fun AuroraApp(sessionManager: SessionManager) {
                         }
                     )
                 }
-                // Reapertura del tutorial (RF-11): mismo contenido en modo
-                // repaso; la flecha en la primera página regresa a donde estaba.
-                // En repaso no se ofrece «Saltar» (showsSkip); si llegara a
-                // emitirse, converge con el mismo regreso que onClose.
-                screen(GUIDE_REVIEW_ROUTE) {
-                    TutorialRoute(
-                        isReview = true,
-                        onClose = { navController.popBackStack() },
-                        onSkip = { navController.popBackStack() }
-                    )
-                }
                 // Transición de entrada: la marca de Aurora ~700 ms para que la
                 // persona sepa dónde está, y luego el reingreso. Solo la alcanza la
                 // puerta con el código correcto; la salida no pasa por aquí (RF-16).
@@ -207,9 +195,11 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // El inset eleva la nube por encima de la barra de pestañas (RF-16).
                 screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) { entry ->
                     val isOffline by silentSession.isOffline.collectAsState()
-                    // «Ver el recorrido por la app» de Ajustes deja la bandera en esta
-                    // entrada y vuelve; el recorrido empieza y la bandera se apaga.
-                    val replayTour by entry.savedStateHandle.getStateFlow(TOUR_REPLAY_KEY, false).collectAsState()
+                    // «Ver la guía de Aurora» de Ajustes deja la bandera en esta entrada
+                    // y vuelve; la guía empieza y la bandera se apaga.
+                    val replayWalkthrough by entry.savedStateHandle
+                        .getStateFlow(WALKTHROUGH_REPLAY_KEY, false)
+                        .collectAsState()
                     InnerTabsHost(
                         isOffline = isOffline,
                         actions = remember(navController) {
@@ -231,13 +221,12 @@ fun AuroraApp(sessionManager: SessionManager) {
                                 }
                             )
                         },
-                        replayTour = replayTour,
-                        onReplayTourHandled = { entry.savedStateHandle[TOUR_REPLAY_KEY] = false }
+                        replayWalkthrough = replayWalkthrough,
+                        onReplayWalkthroughHandled = { entry.savedStateHandle[WALKTHROUGH_REPLAY_KEY] = false }
                     )
                 }
-                // Ajustes del espacio interno (P21): reabrir el tutorial (RF-11)
-                // reutiliza la ruta de repaso ya prevista; el recorrido por Inicio
-                // vuelve al panel, que es donde se recorre.
+                // Ajustes del espacio interno (P21): volver a ver la guía de Aurora
+                // (RF-11) vuelve al panel, que es donde se recorre.
                 screen(SETTINGS_ROUTE) {
                     // RF-19 con la opción C de P-31: el cierre explícito destruye
                     // primero el blob del reingreso silencioso (SignOutViewModel)
@@ -255,13 +244,12 @@ fun AuroraApp(sessionManager: SessionManager) {
                         // RF-39: cambio de contraseña (re-envuelve la DEK, no
                         // re-cifra registros); pantalla de accounts.
                         onChangePassword = { navController.navigate(SETTINGS_PASSWORD_ROUTE) },
-                        onReopenGuide = { navController.navigate(GUIDE_REVIEW_ROUTE) },
-                        onReplayTour = {
+                        onReplayWalkthrough = {
                             // Ajustes solo se abre desde el panel: la entrada anterior es la suya.
                             navController.previousBackStackEntry
                                 ?.takeIf { it.destination.route == PANEL_ROUTE }
                                 ?.savedStateHandle
-                                ?.set(TOUR_REPLAY_KEY, true)
+                                ?.set(WALKTHROUGH_REPLAY_KEY, true)
                             navController.popBackStack()
                         },
                         onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) },
@@ -489,7 +477,6 @@ private const val REGISTER_ROUTE = "register"
 private const val SETUP_ROUTE = "setup"
 private const val ENTRY_SETUP_BASE = "entry_setup"
 private const val ENTRY_SETUP_ROUTE = "$ENTRY_SETUP_BASE/{$LOGIN_FLOW_ARG}"
-private const val GUIDE_REVIEW_ROUTE = "guide_review"
 private const val ARRIVAL_ROUTE = "arrival"
 private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
@@ -516,4 +503,4 @@ private const val AGENCY_DETAIL_ROUTE = "$ROUTES_ROUTE/{$ROUTE_ID_ARG}/{$AGENCY_
 private const val LINES_ROUTE = "lines"
 
 // Bandera de la entrada del panel, no una ruta; nombre neutro porque queda legible en el APK.
-private const val TOUR_REPLAY_KEY = "replay"
+private const val WALKTHROUGH_REPLAY_KEY = "replay"

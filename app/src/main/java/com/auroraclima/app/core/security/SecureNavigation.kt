@@ -112,7 +112,7 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
     val cloudAnchor = remember { CloudAnchor() }
     CompositionLocalProvider(LocalCloudAnchor provides cloudAnchor) {
         // La nube va DESPUÉS del contenido: queda por encima de todo lo que la pantalla
-        // dibuje, también de una capa que oscurezca el resto (recorrido de Inicio), y
+        // dibuje, también de una capa que oscurezca el resto (la guía de Aurora), y
         // el primer toque siempre le llega a ella (RF-16).
         Box(modifier = Modifier.fillMaxSize().trackSessionInteraction()) {
             content()
@@ -128,7 +128,7 @@ private fun SecureScreen(cloudBottomInset: Dp, content: @Composable () -> Unit) 
 /**
  * Dónde quedó la nube de la pantalla segura en curso, en coordenadas de la ventana;
  * null hasta su primera colocación. Es solo geometría: la leen las señales que la
- * apuntan (la práctica del tutorial y el recorrido de Inicio) para dibujar un halo o
+ * apuntan (la guía de Aurora) para dibujar un círculo o
  * dejarla iluminada, y `reserveCloudLane` para que Inicio y la portada de la Guía le
  * dejen su franja. El toque, el anclaje y `closeNow` no cambian por ella. Las nubes de
  * las ventanas propias (`SecureWindow`) no la escriben: viven en otra ventana.

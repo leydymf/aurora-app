@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
  * (criterio 3) y los campos se limpian; jamás toca Firebase ni logs.
  *
  * Con el código creado termina la activación: [CompleteCodeSetupUseCase] deja además
- * pendiente el recorrido por Inicio (v0.3.3).
+ * pendiente la guía de Aurora (v0.3.4).
  */
 @HiltViewModel
 class CodeSetupViewModel @Inject constructor(

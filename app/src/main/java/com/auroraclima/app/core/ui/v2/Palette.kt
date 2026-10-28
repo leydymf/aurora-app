@@ -86,7 +86,7 @@ object V2Palette {
     val tabIndicator = Color(0xFFE3E0EC)
 
     /**
-     * Velo del recorrido guiado (v0.3.3): la tinta principal al 62 %, que oscurece
+     * Velo de la guía de Aurora (v0.3.3): la tinta principal al 62 %, que oscurece
      * todo menos el elemento iluminado y el globo blanco que lo explica. La nube de
      * regreso al clima queda por encima del velo y nunca se oscurece.
      */

@@ -52,24 +52,24 @@ import com.auroraclima.app.records.ui.JournalListRoute
  *
  * La guía de Aurora (v0.3.4, [WalkthroughHost]) envuelve las pestañas y su barra:
  * sus pantallas las tapan y sus partes 2 y 3 iluminan elementos de Inicio, dos
- * pestañas de la barra y la nube. Su estado también es de esta entrada; [replayTour]
- * llega de Ajustes y se apaga con [onReplayTourHandled].
+ * pestañas de la barra y la nube. Su estado también es de esta entrada;
+ * [replayWalkthrough] llega de Ajustes y se apaga con [onReplayWalkthroughHandled].
  * Los destinos llegan juntos en [actions].
  */
 @Composable
 fun InnerTabsHost(
     isOffline: Boolean,
     actions: InnerTabsActions,
-    replayTour: Boolean,
-    onReplayTourHandled: () -> Unit,
+    replayWalkthrough: Boolean,
+    onReplayWalkthroughHandled: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(HOME_TAB) }
     val tabStateHolder = rememberSaveableStateHolder()
     AuroraV2Theme(V2Voice.Interior) {
         WalkthroughHost(
-            replayRequested = replayTour,
-            onReplayHandled = onReplayTourHandled,
+            replayRequested = replayWalkthrough,
+            onReplayHandled = onReplayWalkthroughHandled,
             onShowHome = { selectedTab = HOME_TAB }
         ) {
             InnerTabsLayout(

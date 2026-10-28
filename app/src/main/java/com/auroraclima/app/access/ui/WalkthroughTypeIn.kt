@@ -120,7 +120,7 @@ internal fun TypeInScreen(state: WalkthroughUiState, actions: WalkthroughActions
 private fun PracticeStatusText(status: PracticeStatus) {
     when (status) {
         PracticeStatus.MATCHED -> Text(
-            text = stringResource(R.string.access_guide_practice_done),
+            text = stringResource(R.string.access_walk_practice_done),
             style = GuideTypeVoice.action,
             color = GuidePalette.ink,
             modifier = Modifier
@@ -128,7 +128,7 @@ private fun PracticeStatusText(status: PracticeStatus) {
                 .semantics { liveRegion = LiveRegionMode.Polite }
         )
         PracticeStatus.MISMATCH -> Text(
-            text = stringResource(R.string.access_guide_practice_retry),
+            text = stringResource(R.string.access_walk_practice_retry),
             style = GuideTypeVoice.body,
             color = GuidePalette.inkSoft,
             modifier = Modifier.padding(horizontal = CIRCLE_ROOM)
