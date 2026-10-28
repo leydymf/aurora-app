@@ -2,16 +2,13 @@ package com.auroraclima.app
 
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.ime
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -21,6 +18,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.auroraclima.app.core.ui.v2.awaitIme
 import com.auroraclima.app.core.ui.v2.configureLikeMainActivity
+import com.auroraclima.app.core.ui.v2.rememberKeyboardOpen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
@@ -55,10 +53,10 @@ class FacadeExitKeyboardTest {
             scope = rememberCoroutineScope()
             val keyboard = LocalSoftwareKeyboardController.current
             val focusManager = LocalFocusManager.current
-            val density = LocalDensity.current
-            val ime = WindowInsets.ime
-            val keyboardOpen = { ime.getBottom(density) > 0 }
-            leave = { onNavigate -> leaveFacade(keyboard, focusManager, keyboardOpen) { onNavigate(keyboardOpen()) } }
+            val keyboardOpen = rememberKeyboardOpen()
+            leave = { onNavigate ->
+                leaveFacade(keyboard, focusManager, keyboardOpen, canEnter = { true }) { onNavigate(keyboardOpen()) }
+            }
             Column(modifier = Modifier.fillMaxSize()) {
                 TextField(value = text, onValueChange = { text = it }, modifier = Modifier.testTag(FIELD))
             }

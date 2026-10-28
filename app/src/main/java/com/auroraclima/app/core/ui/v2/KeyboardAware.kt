@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -68,6 +69,18 @@ fun Modifier.keyboardAware(): Modifier = this
         val keyboardOpen by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
         Modifier.padding(bottom = if (keyboardOpen) CloudReturnClearance else 0.dp)
     }
+
+/**
+ * Si el teclado está abierto ahora (su alto como inset es mayor que cero), para leerlo
+ * desde una corrutina. Es la misma condición que usa [keyboardAware]; la puerta de la
+ * fachada la espera antes de entrar (v0.3.4).
+ */
+@Composable
+fun rememberKeyboardOpen(): () -> Boolean {
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    return remember(ime, density) { { ime.getBottom(density) > 0 } }
+}
 
 /**
  * Solo la parte «tocar fuera quita el foco» de [keyboardAware], para la fachada:

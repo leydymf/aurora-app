@@ -92,6 +92,22 @@ class EntryTransitionGuardTest {
         val navigate = body.indexOf("navigate()")
         assertTrue("debe quitar el foco y cerrar el teclado", hide >= 0 && clear >= 0)
         assertTrue("y solo después navegar", navigate > hide && navigate > clear)
+        // Tras la espera, entrar solo si sigue al frente (A-1): la comprobación
+        // va pegada a la navegación, nunca un aplazamiento hasta volver.
+        assertTrue(body.contains("if (canEnter()) navigate()"))
+        assertTrue(!body.contains("withResumed"))
+    }
+
+    @Test
+    fun `la puerta solo escucha con la fachada al frente`() {
+        // Pasar a segundo plano cancela una entrada pendiente (también la espera del
+        // teclado): el colector vive dentro de repeatOnLifecycle(RESUMED).
+        val effect = navText.substringAfter("private fun GateNavigationEffect(").substringBefore("\n}\n")
+        val repeat = effect.indexOf("repeatOnLifecycle(Lifecycle.State.RESUMED)")
+        val collect = effect.indexOf("gateEvents.collect")
+        assertTrue("falta repeatOnLifecycle(RESUMED) alrededor del colector", repeat in 0 until collect)
+        assertTrue(effect.contains("isAtLeast(Lifecycle.State.RESUMED)"))
+        assertTrue(effect.contains("currentDestination?.route == HOME_ROUTE"))
     }
 
     @Test

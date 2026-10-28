@@ -1,8 +1,6 @@
 package com.auroraclima.app
 
 import androidx.compose.animation.EnterTransition
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -10,13 +8,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -55,6 +53,7 @@ import com.auroraclima.app.core.security.secureGraph
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
 import com.auroraclima.app.core.ui.v2.V2TabBarHeight
 import com.auroraclima.app.core.ui.v2.V2Voice
+import com.auroraclima.app.core.ui.v2.rememberKeyboardOpen
 import com.auroraclima.app.questionnaire.ui.GuidanceHistoryRoute
 import com.auroraclima.app.questionnaire.ui.GuidanceRoute
 import com.auroraclima.app.records.ui.ENTRY_IDS_ARG
@@ -447,27 +446,7 @@ private fun HomeRoute(navController: NavHostController) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    val keyboard = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-    val density = LocalDensity.current
-    val ime = WindowInsets.ime
-    val keyboardOpen = { ime.getBottom(density) > 0 }
-    LaunchedEffect(viewModel) {
-        viewModel.gateEvents.collect { destination ->
-            // Al abrir algo, primero se cierra el teclado de la barra (leaveFacade).
-            when (destination) {
-                SearchGateResult.OpenActivation -> leaveFacade(keyboard, focusManager, keyboardOpen) {
-                    navController.navigate(WELCOME_ROUTE)
-                }
-                // Código correcto: primero la marca (~700 ms), después el reingreso. Un código
-                // que no coincide cae en PassThrough y no navega a ninguna parte (RF-12, RF-13).
-                SearchGateResult.OpenAccess -> leaveFacade(keyboard, focusManager, keyboardOpen) {
-                    navController.navigate(ARRIVAL_ROUTE)
-                }
-                SearchGateResult.PassThrough -> Unit
-            }
-        }
-    }
+    GateNavigationEffect(viewModel = viewModel, navController = navController)
     // Voz de FACHADA del tema V2: paleta compartida, tipografía neutra del
     // sistema — jamás Marcellus aquí (decisión F1, camuflaje RNF-05).
     AuroraV2Theme(V2Voice.Facade) {
@@ -480,6 +459,42 @@ private fun HomeRoute(navController: NavHostController) {
             onRetrySearch = viewModel::onRetrySearch,
             onRetryWeather = viewModel::onRetryWeather
         )
+    }
+}
+
+/**
+ * Lo que hace la puerta de búsqueda al abrir algo (RF-12): cerrar el teclado de la barra
+ * y entrar ([leaveFacade]). Solo escucha con la fachada al frente
+ * (`repeatOnLifecycle(RESUMED)`): pasar a segundo plano cancela una entrada pendiente
+ * —también la espera del teclado— y no hay eventos viejos al volver (`gateEvents` no los
+ * repite). Y solo entra si sigue al frente y en la fachada (RF-06). Un código que no
+ * coincide cae en PassThrough y no navega a ninguna parte (RF-12, RF-13).
+ */
+@Composable
+private fun GateNavigationEffect(viewModel: WeatherViewModel, navController: NavHostController) {
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val keyboardOpen = rememberKeyboardOpen()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val canEnter = {
+        lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+            navController.currentDestination?.route == HOME_ROUTE
+    }
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.gateEvents.collect { destination ->
+                when (destination) {
+                    SearchGateResult.OpenActivation -> leaveFacade(keyboard, focusManager, keyboardOpen, canEnter) {
+                        navController.navigate(WELCOME_ROUTE)
+                    }
+                    // Código correcto: primero la marca (~700 ms), después el reingreso.
+                    SearchGateResult.OpenAccess -> leaveFacade(keyboard, focusManager, keyboardOpen, canEnter) {
+                        navController.navigate(ARRIVAL_ROUTE)
+                    }
+                    SearchGateResult.PassThrough -> Unit
+                }
+            }
+        }
     }
 }
 
