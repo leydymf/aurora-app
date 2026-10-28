@@ -50,6 +50,11 @@ data class PulsePlan(val periodMillis: Long) {
         val still = PulsePlan(periodMillis = 0L)
 
         fun forMotion(reduceMotion: Boolean): PulsePlan = if (reduceMotion) still else PulsePlan(PERIOD_MILLIS)
+
+        private const val BREATH_PERIOD_MILLIS = 3_200L
+
+        /** La respiración muy lenta del círculo a mano de la guía (v0.3.4); quieta con animaciones reducidas. */
+        fun breathing(reduceMotion: Boolean): PulsePlan = if (reduceMotion) still else PulsePlan(BREATH_PERIOD_MILLIS)
     }
 }
 

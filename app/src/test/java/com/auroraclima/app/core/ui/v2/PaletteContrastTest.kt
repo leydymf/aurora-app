@@ -134,6 +134,31 @@ class PaletteContrastTest {
         }
     }
 
+    @Test
+    fun `los textos de la guia cumplen AA sobre su fondo`() {
+        // v0.3.4: la guía tiene su propia paleta; sus frases, títulos, etiquetas y
+        // botón se leen sobre el lavanda de la tarjeta (o, el botón, sobre su relleno).
+        mapOf(
+            "ink" to (GuidePalette.ink to GuidePalette.surface),
+            "inkSoft" to (GuidePalette.inkSoft to GuidePalette.surface),
+            "label" to (GuidePalette.label to GuidePalette.surface),
+            "onAction sobre action" to (GuidePalette.onAction to GuidePalette.action)
+        ).forEach { (name, pair) ->
+            val ratio = contrastRatio(pair.first, pair.second)
+            assertTrue("guía $name da ${"%.2f".format(ratio)}:1, se exige >= 4.5:1", ratio >= 4.5)
+        }
+    }
+
+    @Test
+    fun `el boton de la guia se distingue del fondo de la guia`() {
+        // §1.4.11: el relleno del botón contra la tarjeta lavanda, y los trazos a mano
+        // sobre fondo claro (la flecha y el círculo de la parte 1).
+        listOf(GuidePalette.action, GuidePalette.strokeOnLight).forEach { color ->
+            val ratio = contrastRatio(color, GuidePalette.surface)
+            assertTrue("${"%.2f".format(ratio)}:1 contra el fondo de la guía", ratio >= 3.0)
+        }
+    }
+
     /** Ratio de contraste WCAG 2.1 (§ contrast ratio): (Lclaro + 0.05) / (Loscuro + 0.05). */
     private fun contrastRatio(a: Color, b: Color): Double {
         val la = relativeLuminance(a)
