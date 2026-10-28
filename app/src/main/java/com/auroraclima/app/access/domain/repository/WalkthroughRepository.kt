@@ -13,9 +13,21 @@ interface WalkthroughRepository {
     suspend fun mark(mark: WalkthroughMark): Result<Unit>
 
     /**
+     * Si hay una marca guardada, sin abrirla ni consumirla. Barato: no toca la llave.
+     */
+    suspend fun hasMark(): Boolean
+
+    /**
+     * Si la marca ya se puede abrir. La llave es la de la cuenta y falta mientras no
+     * hay sesión: justo después de la nube, hasta que termina el reingreso silencioso.
+     */
+    suspend fun canOpen(): Boolean
+
+    /**
      * La marca que había, y la consume en el mismo paso: la siguiente llamada devuelve
-     * null aunque esta se interrumpa. Lo que no se puede abrir (llave ausente, dato
-     * adulterado) se descarta y cuenta como ninguna.
+     * null aunque esta se interrumpa. Sin llave todavía ([canOpen] en falso) no la toca
+     * y devuelve null: queda para cuando se pueda abrir. Lo que no abre con la llave
+     * presente (otra cuenta, dato adulterado) se descarta y cuenta como ninguna.
      */
     suspend fun consume(): Result<WalkthroughMark?>
 }

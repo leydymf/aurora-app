@@ -76,6 +76,10 @@ internal fun stepTexts(context: Context, step: WalkthroughStep): Pair<String, St
 }
 
 private class MemoryMark(private var stored: WalkthroughMark?) : WalkthroughRepository {
+    override suspend fun hasMark(): Boolean = stored != null
+
+    override suspend fun canOpen(): Boolean = true
+
     override suspend fun mark(mark: WalkthroughMark): Result<Unit> {
         stored = mark
         return Result.success(Unit)

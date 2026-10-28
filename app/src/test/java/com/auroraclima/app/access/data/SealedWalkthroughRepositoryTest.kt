@@ -151,6 +151,36 @@ class SealedWalkthroughRepositoryTest {
         assertNull(tampered.consume().getOrThrow())
     }
 
+    @Test
+    fun `sin llave todavia la marca no se consume ni se pierde`() = runTest {
+        val cipher = SwitchableCipher()
+        val reader = SealedWalkthroughRepository(context, cipher)
+        reader.mark(WalkthroughMark.TO_FINISH).getOrThrow()
+        cipher.ready = false
+
+        assertTrue(reader.hasMark())
+        assertFalse(reader.canOpen())
+        assertNull(reader.consume().getOrThrow())
+        assertTrue("sigue guardada", reader.hasMark())
+
+        cipher.ready = true
+        assertEquals(WalkthroughMark.TO_FINISH, reader.consume().getOrThrow())
+        assertFalse(reader.hasMark())
+    }
+
+    /** Como el de la DEK: sin sesión, no hay llave. */
+    private class SwitchableCipher : PayloadCipher {
+        private val inner = ReversiblePayloadCipher()
+        var ready = true
+
+        override fun seal(plaintext: ByteArray): SealedPayload = inner.seal(plaintext)
+
+        override fun open(sealed: SealedPayload): ByteArray =
+            if (ready) inner.open(sealed) else throw IllegalStateException()
+
+        override fun isReady(): Boolean = ready
+    }
+
     private class FailingCipher(private val sealWorks: Boolean = false) : PayloadCipher {
         private val inner = ReversiblePayloadCipher()
 

@@ -38,8 +38,9 @@ import kotlinx.coroutines.withContext
  * al LLEGAR al paso de la nube, en una escritura que no se cancela, y se desarma si se
  * deja ese paso por otro camino («Atrás», «Después», «Saltar guía», el gesto atrás).
  * En la siguiente entrada con el código de acceso, el panel crea un ViewModel nuevo
- * —después de la transición de entrada—, que consume la marca y muestra «¡Listo!» una
- * sola vez. Si la sesión se cierra en ese paso por inactividad o segundo plano también
+ * —después de la transición de entrada—, que espera a que la llave de la cuenta vuelva
+ * (la nube cierra también la sesión del proveedor y el reingreso silencioso termina
+ * después de abrir Inicio), consume la marca y muestra «¡Listo!» una sola vez. Si la sesión se cierra en ese paso por inactividad o segundo plano también
  * se muestra; es inofensivo y evita guardar el paso en cada avance (RNF-04).
  *
  * La parte 1 es la práctica de entrada de siempre: la barra evalúa lo tecleado con la
@@ -60,6 +61,7 @@ class WalkthroughViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            if (!awaitReadableMark()) return@launch
             when (repository.consume().getOrNull()) {
                 WalkthroughMark.FROM_START -> _uiState.update { it.copy(step = WalkthroughStep.OVERVIEW) }
                 WalkthroughMark.TO_FINISH -> _uiState.update {
@@ -71,6 +73,23 @@ class WalkthroughViewModel @Inject constructor(
                 null -> Unit
             }
         }
+    }
+
+    /**
+     * Si hay una marca, espera a poder abrirla: la llave es la de la cuenta y, tras la
+     * nube, falta hasta que termina el reingreso silencioso (lo normal, 1–2 s después de
+     * Inicio). Sin marca, sale enseguida. Si el plazo vence (sin red), la marca no se
+     * toca y queda para la próxima entrada.
+     */
+    private suspend fun awaitReadableMark(): Boolean {
+        if (!repository.hasMark()) return false
+        var waited = 0L
+        while (!repository.canOpen()) {
+            if (waited >= KEY_WAIT_MILLIS) return false
+            delay(KEY_POLL_MILLIS)
+            waited += KEY_POLL_MILLIS
+        }
+        return true
     }
 
     /** «Empezar», en «Conoce Aurora». */
@@ -205,6 +224,10 @@ class WalkthroughViewModel @Inject constructor(
     companion object {
         /** Cuánto se ve la confirmación de la parte 1 antes de pasar a Inicio. */
         const val CONFIRM_MILLIS = 1_500L
+
+        /** Cuánto se espera, como mucho, a la llave de la cuenta para leer la marca. */
+        const val KEY_WAIT_MILLIS = 10_000L
+        private const val KEY_POLL_MILLIS = 250L
     }
 }
 

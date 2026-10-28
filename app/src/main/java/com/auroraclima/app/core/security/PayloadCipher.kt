@@ -17,6 +17,14 @@ interface PayloadCipher {
 
     /** Abre lo sellado. Lanza si el material está corrupto o la llave se invalidó. */
     fun open(sealed: SealedPayload): ByteArray
+
+    /**
+     * Si ya hay llave para sellar y abrir. Con la DEK de la cuenta (RF-39) no la hay
+     * mientras no hay sesión: tras la nube, hasta que termina el reingreso silencioso.
+     * Quien guarda algo que debe sobrevivir a ese hueco (la marca de la guía, v0.3.4)
+     * lo pregunta antes de abrir, para no perderlo.
+     */
+    fun isReady(): Boolean = true
 }
 
 /**

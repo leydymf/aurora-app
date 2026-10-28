@@ -374,6 +374,50 @@ class WalkthroughViewModelTest {
             return Result.success(Unit)
         }
 
+        override suspend fun hasMark(): Boolean = stored != null
+
+        override suspend fun canOpen(): Boolean = true
+
         override suspend fun consume(): Result<WalkthroughMark?> = Result.success(stored.also { stored = null })
+    }
+
+    @Test
+    fun `tras la nube espera a la llave de la cuenta y despues muestra Listo`() = runTest {
+        // La nube cierra también la sesión: la llave vuelve con el reingreso silencioso.
+        val repository = FakeWalkthroughRepository(WalkthroughMark.TO_FINISH).apply { ready = false }
+        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher))
+        advanceTimeBy(1_000)
+        runCurrent()
+        assertNull("sin llave aún no hay guía", viewModel.uiState.value.step)
+        assertEquals("y la marca sigue ahí", WalkthroughMark.TO_FINISH, repository.stored)
+
+        repository.ready = true
+        advanceTimeBy(500)
+        runCurrent()
+
+        assertEquals(WalkthroughStep.DONE, viewModel.uiState.value.step)
+        assertNull(repository.stored)
+    }
+
+    @Test
+    fun `si la llave no llega en el plazo la marca queda para la siguiente entrada`() = runTest {
+        val repository = FakeWalkthroughRepository(WalkthroughMark.TO_FINISH).apply { ready = false }
+        val viewModel = viewModel(repository)
+
+        assertNull(viewModel.uiState.value.step)
+        assertEquals(WalkthroughMark.TO_FINISH, repository.stored)
+
+        repository.ready = true
+        assertEquals(WalkthroughStep.DONE, viewModel(repository).uiState.value.step)
+    }
+
+    @Test
+    fun `sin marca no espera a la llave`() = runTest {
+        val repository = FakeWalkthroughRepository(null).apply { ready = false }
+        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher))
+        runCurrent()
+
+        assertNull(viewModel.uiState.value.step)
+        assertEquals("ni siquiera intenta leerla", 0, repository.consumeCalls)
     }
 }

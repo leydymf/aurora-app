@@ -35,6 +35,9 @@ class DekPayloadCipher @Inject constructor(
         return cipher.doFinal(sealed.ciphertext)
     }
 
+    /** Hay DEK para la sesión vigente; sin sesión (tras la nube, antes del reingreso) no. */
+    override fun isReady(): Boolean = keyManager.currentDek() != null
+
     // Excepción neutra y sin mensaje (regla 4): se traduce aguas arriba.
     private fun requireKey(): SecretKeySpec {
         val dek = keyManager.currentDek() ?: throw IllegalStateException()

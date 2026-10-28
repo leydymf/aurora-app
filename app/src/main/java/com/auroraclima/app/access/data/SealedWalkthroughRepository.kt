@@ -27,7 +27,8 @@ import kotlinx.coroutines.withContext
  * con otra (respaldo reiniciado) la marca no abre y la guía simplemente no
  * aparece; es el fallo aceptable, nunca un error visible.
  *
- * Consumir borra la marca ANTES de abrirla: si el proceso muere en medio, lo que
+ * Consumir borra la marca ANTES de abrirla (si ya hay llave para abrirla; sin llave
+ * no la toca, ver [consume]): si el proceso muere en medio, lo que
  * señalaba se pierde en lugar de repetirse (ocurre una sola vez, a lo sumo). Si
  * ni el borrado se confirma en disco, la marca podría reaparecer; es de mejor
  * esfuerzo, como el resto de los borrados. El borrado total de la cuenta lo
@@ -62,8 +63,19 @@ class SealedWalkthroughRepository @Inject constructor(
         }
     }
 
+    override suspend fun hasMark(): Boolean = withContext(Dispatchers.IO) {
+        runCatching { preferences.contains(BLOB_KEY) }.getOrDefault(false)
+    }
+
+    override suspend fun canOpen(): Boolean = withContext(Dispatchers.IO) {
+        runCatching { cipher.isReady() }.getOrDefault(false)
+    }
+
     override suspend fun consume(): Result<WalkthroughMark?> = lock.withLock {
         withContext(Dispatchers.IO) {
+            // Sin llave todavía (tras la nube, antes del reingreso) no se toca: borrarla
+            // ahora la perdería sin haberla podido leer nunca.
+            if (!runCatching { cipher.isReady() }.getOrDefault(false)) return@withContext Result.success(null)
             val stored = runCatching {
                 preferences.getString(IV_KEY, null) to preferences.getString(BLOB_KEY, null)
             }.getOrNull()
