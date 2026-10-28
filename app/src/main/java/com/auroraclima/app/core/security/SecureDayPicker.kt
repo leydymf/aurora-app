@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -60,9 +61,12 @@ fun SecureDayPicker(
     SecureWindow(
         onDismissRequest = onDismiss,
         contentAlignment = Alignment.Center,
-        // Centrada en lo que la nube deja libre, como el diálogo: nunca debajo de ella.
+        // Centrada en lo que la nube deja libre, como el diálogo: nunca debajo de ella. Lee
+        // los mismos insets que la nube (barras y teclado): sin el del teclado, un inset
+        // espurio en API 26 subía la nube y esta quedaba encima de «Aceptar».
         contentModifier = Modifier
             .systemBarsPadding()
+            .imePadding()
             .padding(bottom = CloudReturnClearance),
         // El selector trae su propia cuadrícula de años: alto fijo, sin desplazamiento.
         scrollable = false

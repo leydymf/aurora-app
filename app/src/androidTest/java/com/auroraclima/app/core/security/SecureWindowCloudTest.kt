@@ -113,8 +113,8 @@ class SecureWindowCloudTest {
             )
         }
         // La nube no tapa la tarjeta: va en la franja que la tarjeta le deja abajo. Se
-        // espera al diseño final: en API 26 la nube llega a medirse más arriba durante
-        // unos cuadros.
+        // espera al diseño final por si el primer cuadro aún no lo tiene. El cruce que en
+        // API 26 duraba toda la apertura era de los insets y lo mide `SecureDayPickerInsetsTest`.
         fun cloudTop() = cloudNode().fetchSemanticsNode().positionOnScreen.y
         fun confirmBottom() = composeRule.onNodeWithText(CONFIRM).fetchSemanticsNode()
             .let { it.positionOnScreen.y + it.size.height }
