@@ -7,9 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * El globo del recorrido va debajo del elemento si cabe, si no encima, y si no cabe en
- * ninguno de los dos lados (letra grande en pantalla baja) se pega al borde del lado
- * con más espacio, siempre dentro de la franja usable.
+ * La tarjeta de la guía va debajo del elemento si cabe, si no encima, y si no cabe
+ * entera en ninguno de los dos lados (letra grande en pantalla baja) va en el lado con
+ * más espacio con el alto de ese lado: nunca tapa el elemento (v0.3.4).
  */
 class SpotlightPlacementTest {
     private val top = 40f
@@ -19,8 +19,8 @@ class SpotlightPlacementTest {
         edgeMargin = 16f,
         maxBubbleWidth = 480f,
         gap = 14f,
+        arrowGap = 64f,
         holePadding = 6f,
-        caretInset = 28f,
         bubblePadding = 20f
     )
 
@@ -41,24 +41,62 @@ class SpotlightPlacementTest {
     }
 
     @Test
-    fun `sin sitio en ningun lado se pega al borde del lado mas amplio`() {
-        // Elemento muy alto: 300 de aire arriba y 400 abajo, globo de 500.
-        val spot = SpotlightPlacement.place(Rect(0f, 350f, 300f, 590f), 500f, top, bottom, gap)
+    fun `sin sitio en ningun lado va al lado mas amplio sin tapar el elemento`() {
+        // Elemento muy alto: 300 de aire arriba y 400 abajo, tarjeta de 500.
+        val target = Rect(0f, 350f, 300f, 590f)
+        val spot = SpotlightPlacement.place(target, 500f, top, bottom, gap)
 
         assertTrue(spot.below)
-        assertEquals(bottom - 500f, spot.top, 0f)
+        assertFalse(spot.fits)
+        assertEquals(target.bottom + gap, spot.top, 0f)
+        assertEquals("se acorta al alto de ese lado", bottom - (target.bottom + gap), spot.maxHeight, 0f)
     }
 
     @Test
-    fun `un globo mas alto que la franja empieza en su borde superior`() {
-        val spot = SpotlightPlacement.place(Rect(0f, 300f, 300f, 400f), 2_000f, top, bottom, gap)
+    fun `una tarjeta mas alta que la franja queda entera de su lado`() {
+        val target = Rect(0f, 300f, 300f, 400f)
+        val spot = SpotlightPlacement.place(target, 2_000f, top, bottom, gap)
 
-        assertEquals("nunca por encima de la franja usable", top, spot.top, 0f)
+        assertTrue("debajo hay más sitio", spot.below)
+        assertTrue(spot.top >= target.bottom)
+        assertTrue(spot.top + spot.maxHeight <= bottom)
     }
 
     @Test
-    fun `si el globo cruza la nube su fila de botones termina antes de ella`() {
-        // Globo de 16 a 344 de ancho, nube de 288 a 340 a la altura de sus botones.
+    fun `con letra grande en pantalla baja la tarjeta nunca tapa el elemento`() {
+        // Pantalla de 568 de alto; elementos a varias alturas, tarjetas de varios altos.
+        val shortTop = 24f
+        val shortBottom = 544f
+        listOf(60f, 200f, 300f, 420f, 480f).forEach { y ->
+            val target = Rect(16f, y, 344f, y + 60f)
+            listOf(120f, 300f, 600f).forEach { height ->
+                val frame = SpotlightPlacement.frame(target, null, 360f, shortTop, shortBottom, height, metrics)
+                assertFalse(
+                    "tarjeta de $height con el elemento en $y lo tapa",
+                    frame.bubble.overlaps(frame.hole)
+                )
+                assertTrue(frame.bubble.top >= shortTop - 0.001f && frame.bubble.bottom <= shortBottom + 0.001f)
+            }
+        }
+    }
+
+    @Test
+    fun `la tarjeta deja libre el circulo y si cabe el sitio de la flecha`() {
+        val target = Rect(16f, 200f, 344f, 260f)
+        val ring = { hole: Rect -> hole.inflate(20f) }
+        val frame = SpotlightPlacement.frame(target, null, 360f, 40f, 1_000f, 200f, metrics, ringOf = ring)
+
+        assertEquals(frame.hole.inflate(20f), frame.ring)
+        assertFalse(frame.bubble.overlaps(frame.ring))
+        assertEquals("se aparta lo que pide la flecha", frame.ring.bottom + 64f, frame.bubble.top, 0.001f)
+        // Sin sitio para la flecha, al menos el aire mínimo.
+        val tight = SpotlightPlacement.frame(target, null, 360f, 40f, 560f, 230f, metrics, ringOf = ring)
+        assertFalse(tight.bubble.overlaps(tight.ring))
+    }
+
+    @Test
+    fun `si la tarjeta cruza la nube su fila de botones termina antes de ella`() {
+        // Tarjeta de 16 a 344 de ancho, nube de 288 a 340 a la altura de sus botones.
         val bubble = Rect(16f, 400f, 344f, 600f)
         val cloud = Rect(288f, 540f, 340f, 592f)
 
@@ -69,7 +107,7 @@ class SpotlightPlacementTest {
     }
 
     @Test
-    fun `si el globo no cruza la nube la fila conserva su ancho`() {
+    fun `si la tarjeta no cruza la nube la fila conserva su ancho`() {
         val bubble = Rect(16f, 100f, 344f, 300f)
         val cloud = Rect(288f, 540f, 340f, 592f)
 
@@ -79,7 +117,7 @@ class SpotlightPlacementTest {
 
     @Test
     fun `de derecha a izquierda la nube esta a la izquierda y el recorte tambien`() {
-        // Globo de 16 a 344; nube a la izquierda, de 20 a 72, a la altura de sus botones.
+        // Tarjeta de 16 a 344; nube a la izquierda, de 20 a 72, a la altura de sus botones.
         val bubble = Rect(16f, 400f, 344f, 600f)
         val cloud = Rect(20f, 540f, 72f, 592f)
 
@@ -98,9 +136,9 @@ class SpotlightPlacementTest {
     }
 
     @Test
-    fun `el cuadro no deja bajar el globo de la nube y le recorta los botones`() {
+    fun `el cuadro no deja bajar la tarjeta de la nube y le recorta los botones`() {
         // Pantalla de 360 de ancho; el elemento (una pestaña) abajo de todo y la nube 20
-        // por encima de la barra, a la derecha: el globo va encima del elemento y la cruza.
+        // por encima de la barra, a la derecha: la tarjeta va encima del elemento y la cruza.
         val tab = Rect(130f, 900f, 230f, 960f)
         val cloud = Rect(288f, 828f, 340f, 880f)
 
@@ -114,36 +152,45 @@ class SpotlightPlacementTest {
             metrics = metrics
         )
 
-        assertTrue("el globo no baja del borde inferior de la nube", frame.bubble.bottom <= cloud.bottom + 0.001f)
+        assertTrue("la tarjeta no baja del borde inferior de la nube", frame.bubble.bottom <= cloud.bottom + 0.001f)
         assertTrue(
             "la fila de botones termina antes de la nube",
             frame.bubble.right - 20f - frame.actionsEndInset <= cloud.left - 14f
         )
-        assertFalse("el pico apunta hacia abajo, al elemento", frame.caretPointsUp)
-        assertEquals("la franja del globo termina en la nube", cloud.bottom - 40f, frame.maxBubbleHeight, 0.001f)
+        assertTrue("la tarjeta va encima del elemento", frame.bubble.bottom <= frame.hole.top)
+        assertFalse(frame.bubble.overlaps(frame.hole))
     }
 
     @Test
-    fun `el cuadro centra el globo y deja el pico sobre el elemento`() {
+    fun `el cuadro centra la tarjeta debajo del engranaje`() {
         val gear = Rect(300f, 60f, 348f, 108f)
 
         val frame = SpotlightPlacement.frame(gear, null, 360f, 40f, 1_000f, 200f, metrics)
 
         assertEquals(16f, frame.bubble.left, 0.001f)
         assertEquals(344f, frame.bubble.right, 0.001f)
-        assertTrue(frame.caretPointsUp)
-        // El pico no se sale del globo aunque el elemento esté en la esquina.
-        assertEquals(344f - 28f, frame.caretX, 0.001f)
+        assertTrue(frame.bubble.top >= frame.hole.bottom)
         assertEquals(0f, frame.actionsEndInset, 0f)
     }
 
     @Test
-    fun `un elemento abajo de todo deja el globo encima y dentro de la franja`() {
+    fun `un elemento abajo de todo deja la tarjeta encima y dentro de la franja`() {
         // La barra de pestañas: pegada al borde inferior.
         val spot = SpotlightPlacement.place(Rect(0f, 940f, 120f, 1_000f), 240f, top, bottom, gap)
 
         assertFalse(spot.below)
         assertEquals(940f - gap - 240f, spot.top, 0f)
         assertTrue(spot.top >= top)
+    }
+
+    @Test
+    fun `sin medir va al lado con mas sitio y no a uno sin espacio`() {
+        // Una pestaña abajo de todo: debajo no hay sitio. Sin el alto de la tarjeta
+        // aún, debe ir encima con el alto de ese lado para poder medirse.
+        val tab = Rect(130f, 940f, 230f, 1_000f)
+        val spot = SpotlightPlacement.place(tab, 0f, top, bottom, gap)
+
+        assertFalse(spot.below)
+        assertTrue(spot.maxHeight > 0f)
     }
 }

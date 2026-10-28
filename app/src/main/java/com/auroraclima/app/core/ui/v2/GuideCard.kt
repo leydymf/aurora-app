@@ -59,8 +59,10 @@ class GuideAction(val label: String, val onClick: () -> Unit)
  * la esquina final; título, frase y [extra]; y la fila de botones: [back] y
  * [secondary] como texto, [primary] lleno. Etiqueta, título y frase son un solo nodo
  * con región viva: TalkBack los lee juntos en cada paso. Con letra muy grande los
- * botones se apilan y el texto se desplaza dentro de la tarjeta. [actionsEndInset]
- * acorta la fila de botones por el lado final para que ninguno quede bajo la nube.
+ * botones se apilan y, si la tarjeta tiene un alto máximo, el texto se desplaza dentro
+ * de ella ([scrollable]; en falso cuando la tarjeta va dentro de algo que ya se
+ * desplaza). [actionsEndInset] acorta la fila de botones por el lado final para que
+ * ninguno quede bajo la nube.
  */
 @Composable
 fun GuideCard(
@@ -73,6 +75,7 @@ fun GuideCard(
     secondary: GuideAction? = null,
     skip: GuideAction? = null,
     actionsEndInset: Dp = 0.dp,
+    scrollable: Boolean = true,
     extra: @Composable ColumnScope.() -> Unit = {}
 ) {
     Column(
@@ -81,7 +84,7 @@ fun GuideCard(
             .shadow(elevation = 6.dp, shape = GuideCorner.card)
             .clip(GuideCorner.card)
             .background(GuidePalette.surface)
-            .verticalScroll(rememberScrollState())
+            .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .padding(CARD_PADDING)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

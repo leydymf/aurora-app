@@ -198,7 +198,7 @@ private fun WalkthroughSceneContent(
             val step = remember { StepHolder() }.also { holder ->
                 state.step?.takeIf { WalkthroughScene.of(it) == scene }?.let { holder.step = it }
             }.step
-            if (step != null) StepCardScene(step = step, actions = actions)
+            if (step != null) HomeScene(step = step, actions = actions, motion = motion)
         }
     }
 }

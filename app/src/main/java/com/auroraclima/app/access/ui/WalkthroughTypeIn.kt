@@ -84,7 +84,9 @@ internal fun TypeInScreen(state: WalkthroughUiState, actions: WalkthroughActions
             WalkthroughStepCard(
                 step = WalkthroughStep.TYPE_IN,
                 actions = actions,
-                modifier = Modifier.onGloballyPositioned { card = it.boundsInWindow() }
+                modifier = Modifier.onGloballyPositioned { card = it.boundsInWindow() },
+                // La pantalla entera ya se desplaza.
+                scrollable = false
             )
             Spacer(modifier = Modifier.height(ARROW_ROOM))
             PracticeSearchBar(

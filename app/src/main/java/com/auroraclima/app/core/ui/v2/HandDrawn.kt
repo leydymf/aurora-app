@@ -265,12 +265,24 @@ fun HandDrawnCue(
     }
 }
 
+/**
+ * Lo que ocupa el círculo a mano alrededor de [target] (su caja): la capa de recorrido
+ * aparta la tarjeta de aquí para que no tape el círculo.
+ */
+fun handCueRing(target: Rect, density: Density): Rect = boundsOf(handCircleAround(target, density))
+
+private fun handCircleAround(target: Rect, density: Density): List<Offset> =
+    HandDrawnGeometry.handCircle(target, margin = with(density) { CIRCLE_MARGIN.toPx() })
+
+private fun boundsOf(points: List<Offset>): Rect =
+    Rect(points.minOf { it.x }, points.minOf { it.y }, points.maxOf { it.x }, points.maxOf { it.y })
+
 /** El círculo y, si cabe, la flecha de una señal. */
 private class Cue(val circle: List<Offset>, val arrow: CurlArrowShape?)
 
 private fun cueFor(target: Rect, card: Rect?, avoid: List<Rect>, density: Density): Cue = with(density) {
-    val circle = HandDrawnGeometry.handCircle(target, margin = CIRCLE_MARGIN.toPx())
-    val ring = Rect(circle.minOf { it.x }, circle.minOf { it.y }, circle.maxOf { it.x }, circle.maxOf { it.y })
+    val circle = handCircleAround(target, density)
+    val ring = boundsOf(circle)
     val arrow = card?.let { from ->
         val gap = ARROW_GAP.toPx()
         val targetBelow = ring.center.y > from.center.y

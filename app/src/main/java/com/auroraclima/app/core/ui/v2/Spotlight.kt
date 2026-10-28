@@ -1,44 +1,36 @@
 package com.auroraclima.app.core.ui.v2
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -46,18 +38,12 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -131,34 +117,49 @@ fun Modifier.spotlightTarget(key: Any): Modifier = composed {
 }
 
 /**
- * Dónde va todo lo que dibuja la capa (v0.3.3). Puro, para probarlo en la JVM: el
- * globo va debajo del elemento si cabe; si no, encima; y si no cabe en ninguno de los
- * dos lados (letra muy grande en una pantalla baja), pegado al borde del lado con más
- * espacio, aunque cubra parte del elemento. Todo en las coordenadas de la capa.
+ * Dónde va todo lo que dibuja la capa (v0.3.3; v0.3.4 para la guía). Puro, para
+ * probarlo en la JVM: la tarjeta va debajo del elemento si cabe; si no, encima; y si
+ * no cabe entera en ninguno de los dos lados (letra muy grande en una pantalla baja),
+ * en el lado con más espacio y con el alto de ese lado (se desplaza por dentro):
+ * **la tarjeta nunca tapa el elemento iluminado**. Todo en las coordenadas de la capa.
  */
 object SpotlightPlacement {
     /**
      * [target] y el resultado en coordenadas de la capa; [top]..[bottom] es la franja
-     * usable (sin barras del sistema) y [gap] el aire entre elemento y globo.
+     * usable (sin barras del sistema) y [gap] el aire entre elemento y tarjeta.
      */
     fun place(target: Rect, bubbleHeight: Float, top: Float, bottom: Float, gap: Float): BubbleSpot {
-        val roomBelow = bottom - (target.bottom + gap)
-        val roomAbove = (target.top - gap) - top
+        val roomBelow = (bottom - (target.bottom + gap)).coerceAtLeast(0f)
+        val roomAbove = ((target.top - gap) - top).coerceAtLeast(0f)
+        // Sin medir todavía (alto cero) va al lado más amplio: así se mide con sitio de
+        // verdad y no queda «entrando» en un lado sin espacio, con alto cero para siempre.
+        val measured = bubbleHeight > 0f
         return when {
-            bubbleHeight <= roomBelow -> BubbleSpot(top = target.bottom + gap, below = true)
-            bubbleHeight <= roomAbove -> BubbleSpot(top = target.top - gap - bubbleHeight, below = false)
-            roomBelow >= roomAbove -> BubbleSpot(top = (bottom - bubbleHeight).coerceAtLeast(top), below = true)
-            else -> BubbleSpot(top = top, below = false)
+            measured && bubbleHeight <= roomBelow -> BubbleSpot(
+                top = target.bottom + gap,
+                below = true,
+                maxHeight = roomBelow,
+                fits = true
+            )
+            measured && bubbleHeight <= roomAbove ->
+                BubbleSpot(top = target.top - gap - bubbleHeight, below = false, maxHeight = roomAbove, fits = true)
+            roomBelow >= roomAbove -> BubbleSpot(
+                top = target.bottom + gap,
+                below = true,
+                maxHeight = roomBelow,
+                fits = false
+            )
+            else -> BubbleSpot(top = target.top - gap - roomAbove, below = false, maxHeight = roomAbove, fits = false)
         }
     }
 
     /**
-     * Cuánto acortar por el lado final la fila de botones del globo [bubble] para que
-     * [keepClear] (la nube) no quede encima de ninguno: cero si no se cruzan. La nube
-     * va por encima de la capa y un toque en ella sale al clima; un botón debajo de
-     * ella sería una salida por accidente. [contentPadding] es el margen interior del
-     * globo, que ya separa la fila de su borde. Con [rightToLeft] el lado final es el
-     * izquierdo, y allí está también la nube.
+     * Cuánto acortar por el lado final la fila de botones de la tarjeta [bubble] para
+     * que [keepClear] (la nube) no quede encima de ninguno: cero si no se cruzan. La
+     * nube va por encima de la capa y un toque en ella sale al clima; un botón debajo
+     * de ella sería una salida por accidente. [contentPadding] es el margen interior de
+     * la tarjeta, que ya separa la fila de su borde. Con [rightToLeft] el lado final es
+     * el izquierdo, y allí está también la nube.
      */
     fun actionsEndInset(
         bubble: Rect,
@@ -179,10 +180,13 @@ object SpotlightPlacement {
     }
 
     /**
-     * El cuadro completo de un paso: el hueco alrededor de [target], el globo de alto
-     * [bubbleHeight] centrado en [areaWidth], su pico y el margen de su fila de botones.
-     * El globo no baja del borde inferior de [keepClear]: así la nube solo puede cruzar
-     * su franja de botones, y esa franja se acorta (ver [actionsEndInset]).
+     * El cuadro completo de un paso: el hueco alrededor de [target], lo que hay que
+     * dejar libre alrededor del hueco ([ringOf]: el círculo a mano) y la tarjeta de alto
+     * [bubbleHeight] centrada en [areaWidth]. Si cabe, la tarjeta se aparta
+     * [SpotlightMetrics.arrowGap] para que quepa la flecha; si no, solo
+     * [SpotlightMetrics.gap]. La tarjeta no baja del borde inferior de [keepClear]: así
+     * la nube solo puede cruzar su franja de botones, y esa franja se acorta (ver
+     * [actionsEndInset]).
      */
     fun frame(
         target: Rect,
@@ -192,80 +196,148 @@ object SpotlightPlacement {
         bottom: Float,
         bubbleHeight: Float,
         metrics: SpotlightMetrics,
-        rightToLeft: Boolean = false
+        rightToLeft: Boolean = false,
+        ringOf: (Rect) -> Rect = { it }
     ): SpotlightFrame {
         val hole = target.inflate(metrics.holePadding)
+        val ring = ringOf(hole)
         val lowest = keepClear?.let { min(bottom, it.bottom) } ?: bottom
         val width = min(areaWidth - 2 * metrics.edgeMargin, metrics.maxBubbleWidth)
         val left = (areaWidth - width) / 2
-        val spot = place(hole, bubbleHeight, top, lowest, metrics.gap)
-        val bubble = Rect(left, spot.top, left + width, spot.top + bubbleHeight)
-        val caretMin = left + metrics.caretInset
-        val caretMax = left + width - metrics.caretInset
+        val roomy = place(ring, bubbleHeight, top, lowest, metrics.arrowGap)
+        val spot = if (roomy.fits) roomy else place(ring, bubbleHeight, top, lowest, metrics.gap)
+        val height = min(bubbleHeight, spot.maxHeight)
+        val bubble = Rect(left, spot.top, left + width, spot.top + height)
         return SpotlightFrame(
             hole = hole,
+            ring = ring,
             bubble = bubble,
-            maxBubbleHeight = (lowest - top).coerceAtLeast(0f),
-            caretX = if (caretMin <= caretMax) hole.center.x.coerceIn(caretMin, caretMax) else bubble.center.x,
-            caretPointsUp = spot.below,
+            maxBubbleHeight = spot.maxHeight,
             actionsEndInset = actionsEndInset(bubble, keepClear, metrics.gap, metrics.bubblePadding, rightToLeft)
         )
     }
 }
 
-/** El globo empieza en [top]; [below] dice si va debajo del elemento (su pico apunta hacia arriba). */
-data class BubbleSpot(val top: Float, val below: Boolean)
+/**
+ * La tarjeta empieza en [top]; [below] dice si va debajo del elemento; [maxHeight] es
+ * el alto del lado elegido y [fits] si entra entera.
+ */
+data class BubbleSpot(val top: Float, val below: Boolean, val maxHeight: Float, val fits: Boolean)
 
 /** Medidas de la capa en píxeles; las fija la capa con su densidad. */
 data class SpotlightMetrics(
     val edgeMargin: Float,
     val maxBubbleWidth: Float,
     val gap: Float,
+    val arrowGap: Float,
     val holePadding: Float,
-    val caretInset: Float,
     val bubblePadding: Float
 )
 
 /** Lo que dibuja la capa en un paso, en sus coordenadas. */
 data class SpotlightFrame(
     val hole: Rect,
+    val ring: Rect,
     val bubble: Rect,
     val maxBubbleHeight: Float,
-    val caretX: Float,
-    val caretPointsUp: Boolean,
     val actionsEndInset: Float
 )
 
 /**
- * Capa de recorrido: un velo que oscurece toda su área menos [targetBounds] (en
- * coordenadas de la ventana, con un poco de aire) y, al lado que tenga sitio, el
- * globo [bubble] con su pico hacia el elemento. Sin límites todavía solo pinta el
- * velo. El velo se traga los toques: nada de lo que hay debajo se activa. Lo que
- * esté POR ENCIMA de esta capa (la nube del grafo seguro) sigue recibiendo el suyo.
+ * Cómo se mueve y se señala la capa (v0.3.4): el hueco se desliza a cada elemento en
+ * [holeMillis], la tarjeta aparece con un fundido corto en [cardMillis], y el círculo
+ * a mano y la flecha (en [cueColor]; sin color, ninguno) se trazan con [draw] y el
+ * círculo respira con [breath]. Con ceros y planes quietos, todo aparece en su sitio.
+ */
+@Immutable
+data class SpotlightStyle(
+    val holeMillis: Int = 0,
+    val cardMillis: Int = 0,
+    val draw: DrawPlan = DrawPlan.still,
+    val breath: PulsePlan = PulsePlan.still,
+    val cueColor: Color? = null
+)
+
+/**
+ * Capa de recorrido: un velo que oscurece toda su área menos el hueco alrededor de
+ * [targetBounds] (en coordenadas de la ventana) y, al lado que tenga sitio, la
+ * tarjeta [bubble], que nunca tapa el elemento. El hueco se desliza de un elemento al
+ * siguiente; el círculo a mano lo rodea y la flecha sale de la tarjeta hacia él. Sin
+ * límites todavía solo pinta el velo. El velo se traga los toques: nada de lo que hay
+ * debajo se activa, tampoco lo iluminado. Lo que esté POR ENCIMA de esta capa (la
+ * nube del grafo seguro) sigue recibiendo el suyo.
  *
- * [keepClear] es un área que el globo respeta (la nube, en ventana): el globo no baja
- * de su borde inferior y, si la cruza, su fila de botones se acorta por el lado final
- * (lo recibe [bubble] como margen) para que ningún botón quede debajo.
+ * [keepClear] es un área que la tarjeta y la flecha respetan (la nube, en ventana):
+ * la tarjeta no baja de su borde inferior y, si la cruza, su fila de botones se acorta
+ * por el lado final (lo recibe [bubble] como margen). [stepKey] identifica el paso:
+ * al cambiar, la tarjeta vuelve a aparecer y los trazos se dibujan otra vez. Con
+ * [showBubble] en falso solo se ven el velo y el hueco (mientras el elemento se trae
+ * a la vista).
  */
 @Composable
 fun SpotlightLayer(
     targetBounds: Rect?,
     modifier: Modifier = Modifier,
     keepClear: Rect? = null,
+    style: SpotlightStyle = SpotlightStyle(),
+    stepKey: Any? = null,
+    showBubble: Boolean = true,
     bubble: @Composable (actionsEndInset: Dp) -> Unit
 ) {
     val window = rememberWindowFrame()
-    var bubbleHeight by remember { mutableIntStateOf(0) }
+    var bubbleHeight by remember(stepKey) { mutableIntStateOf(0) }
+    val keepLocal = keepClear?.let(window::toLocal)
     val frame = spotlightFrameOf(window, targetBounds, keepClear, bubbleHeight)
-    // Alineación absoluta: el globo se coloca con coordenadas reales de la capa, y una
-    // alineación relativa lo reflejaría en derecha a izquierda antes de desplazarlo.
+    val hole = rememberSlidingHole(frame?.hole, style.holeMillis)
+    // Alineación absoluta: la tarjeta se coloca con coordenadas reales de la capa, y
+    // una alineación relativa la reflejaría en derecha a izquierda antes de desplazarla.
     Box(modifier = modifier.fillMaxSize().trackWindowFrame(window), contentAlignment = AbsoluteAlignment.TopLeft) {
-        // Sin el alto del globo, ni pico ni globo: no se muestran en un lugar falso.
-        Scrim(hole = frame?.hole, caret = frame?.takeIf { bubbleHeight > 0 }?.caret())
-        if (frame != null) {
-            BubbleSlot(frame = frame, measured = bubbleHeight > 0, onHeight = { bubbleHeight = it }, bubble = bubble)
+        Scrim(hole = hole)
+        if (frame != null && showBubble) {
+            val measured = bubbleHeight > 0
+            if (style.cueColor != null && measured) {
+                HandDrawnCue(
+                    target = frame.hole,
+                    card = frame.bubble,
+                    avoid = listOfNotNull(keepLocal),
+                    color = style.cueColor,
+                    draw = style.draw,
+                    breath = style.breath,
+                    key = stepKey
+                )
+            }
+            key(stepKey) {
+                BubbleSlot(
+                    frame = frame,
+                    measured = measured,
+                    appearMillis = style.cardMillis,
+                    onHeight = { bubbleHeight = it },
+                    bubble = bubble
+                )
+            }
         }
     }
+}
+
+/**
+ * El hueco en su sitio, deslizándose y cambiando de tamaño hacia [target] en
+ * [millis] con curva suave; el primero aparece sin moverse, y con cero no se mueve
+ * nunca. Si el elemento se desplaza (letra grande), el hueco lo sigue.
+ */
+@Composable
+private fun rememberSlidingHole(target: Rect?, millis: Int): Rect? {
+    val hole = remember { Animatable(Rect.Zero, Rect.VectorConverter) }
+    var placed by remember { mutableStateOf(false) }
+    LaunchedEffect(target, millis) {
+        if (target == null) return@LaunchedEffect
+        if (!placed || millis == 0) {
+            hole.snapTo(target)
+            placed = true
+        } else {
+            hole.animateTo(target, tween(durationMillis = millis, easing = FastOutSlowInEasing))
+        }
+    }
+    return if (placed) hole.value else null
 }
 
 /** El cuadro del paso con las medidas, las barras del sistema y la dirección de esta pantalla. */
@@ -292,26 +364,34 @@ private fun spotlightFrameOf(
                 edgeMargin = EDGE_MARGIN.toPx(),
                 maxBubbleWidth = BUBBLE_MAX_WIDTH.toPx(),
                 gap = GAP.toPx(),
+                arrowGap = ARROW_GAP.toPx(),
                 holePadding = HOLE_PADDING.toPx(),
-                caretInset = CARET_INSET.toPx(),
                 bubblePadding = BUBBLE_PADDING.toPx()
             ),
-            rightToLeft = rightToLeft
+            rightToLeft = rightToLeft,
+            ringOf = { handCueRing(it, density) }
         )
     }
 }
 
 /**
- * El globo en su lugar. Posición absoluta (no se refleja en derecha a izquierda): el
- * cuadro ya viene en coordenadas reales de la capa.
+ * La tarjeta en su lugar. Posición absoluta (no se refleja en derecha a izquierda): el
+ * cuadro ya viene en coordenadas reales de la capa. Aparece con un fundido corto y un
+ * leve desplazamiento en [appearMillis] (con cero, de golpe); hasta medirse no se ve,
+ * para no mostrarla en un lugar falso.
  */
 @Composable
 private fun BubbleSlot(
     frame: SpotlightFrame,
     measured: Boolean,
+    appearMillis: Int,
     onHeight: (Int) -> Unit,
     bubble: @Composable (actionsEndInset: Dp) -> Unit
 ) {
+    val appear = remember { Animatable(if (appearMillis == 0) 1f else 0f) }
+    LaunchedEffect(measured, appearMillis) {
+        if (measured && appearMillis > 0) appear.animateTo(1f, tween(durationMillis = appearMillis))
+    }
     with(LocalDensity.current) {
         Box(
             modifier = Modifier
@@ -319,124 +399,19 @@ private fun BubbleSlot(
                 .width(frame.bubble.width.toDp())
                 .heightIn(max = frame.maxBubbleHeight.toDp())
                 .onSizeChanged { onHeight(it.height) }
-                .graphicsLayer { alpha = if (measured) 1f else 0f }
+                .graphicsLayer {
+                    alpha = if (measured) appear.value else 0f
+                    translationY = (1f - appear.value) * CARD_TRAVEL.toPx()
+                }
         ) {
             bubble(frame.actionsEndInset.toDp())
         }
     }
 }
 
-/**
- * Globo del recorrido: título en negrita, frase y contador, que TalkBack lee juntos
- * en cada paso (un nodo, región viva), y los botones de al menos 48 dp. «Saltar»
- * ([skipLabel]) es la acción callada; el botón lleno avanza. Con letra muy grande
- * los botones se apilan y el texto se desplaza dentro del globo. [actionsEndInset]
- * acorta la fila de botones por el lado final (la nube, ver [SpotlightLayer]).
- */
 @Composable
-fun SpotlightBubble(
-    title: String,
-    body: String,
-    counter: String,
-    primaryLabel: String,
-    onPrimary: () -> Unit,
-    skipLabel: String?,
-    onSkip: () -> Unit,
-    modifier: Modifier = Modifier,
-    actionsEndInset: Dp = 0.dp
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(elevation = 8.dp, shape = V2Corner.card)
-            .clip(V2Corner.card)
-            .background(V2Palette.cardSurface)
-            .verticalScroll(rememberScrollState())
-            .padding(BUBBLE_PADDING)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
-        ) {
-            Text(
-                text = title,
-                style = InteriorTypeVoice.cardTitle,
-                color = V2Palette.inkPrimary,
-                modifier = Modifier.semantics { heading() }
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = body, style = InteriorTypeVoice.body, color = V2Palette.inkSecondary)
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(text = counter, style = InteriorTypeVoice.label, color = V2Palette.inkSecondary)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        BubbleActions(
-            primaryLabel = primaryLabel,
-            onPrimary = onPrimary,
-            skipLabel = skipLabel,
-            onSkip = onSkip,
-            modifier = Modifier.padding(end = actionsEndInset)
-        )
-    }
-}
-
-/** «Saltar» y el botón lleno; con letra muy grande, apilados (el lleno primero). */
-@Composable
-private fun BubbleActions(
-    primaryLabel: String,
-    onPrimary: () -> Unit,
-    skipLabel: String?,
-    onSkip: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    if (LocalDensity.current.fontScale >= STACKED_BUTTONS_FONT_SCALE) {
-        Column(modifier = modifier) {
-            V2PrimaryButton(text = primaryLabel, onClick = onPrimary)
-            if (skipLabel != null) {
-                SkipButton(label = skipLabel, onClick = onSkip, modifier = Modifier.fillMaxWidth())
-            }
-        }
-    } else {
-        Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (skipLabel != null) SkipButton(label = skipLabel, onClick = onSkip)
-            V2PrimaryButton(text = primaryLabel, onClick = onPrimary, modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun SkipButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    TextButton(onClick = onClick, modifier = modifier.heightIn(min = MIN_TOUCH)) {
-        Text(text = label, style = InteriorTypeVoice.bodyStrong, color = V2Palette.inkPrimary)
-    }
-}
-
-/** Pico del globo: base sobre su borde en [baseY], apuntando arriba o abajo. */
-private data class Caret(val x: Float, val baseY: Float, val pointsUp: Boolean)
-
-private fun SpotlightFrame.caret(): Caret = Caret(
-    x = caretX,
-    baseY = if (caretPointsUp) bubble.top else bubble.bottom,
-    pointsUp = caretPointsUp
-)
-
-@Composable
-private fun Scrim(hole: Rect?, caret: Caret?) {
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                // Se traga cada gesto entero: ni toques ni desplazamientos llegan abajo.
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false).consume()
-                    do {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { it.consume() }
-                    } while (event.changes.any { it.pressed })
-                }
-            }
-    ) {
+private fun Scrim(hole: Rect?) {
+    Canvas(modifier = Modifier.fillMaxSize().swallowTouches()) {
         // Esquinas que acompañan la forma: un círculo si el hueco es pequeño y cuadrado.
         val rounded = hole?.let {
             RoundRect(it, CornerRadius(min(HOLE_RADIUS.toPx(), min(it.width, it.height) / 2)))
@@ -447,20 +422,6 @@ private fun Scrim(hole: Rect?, caret: Caret?) {
             rounded?.let { addRoundRect(it) }
         }
         drawPath(veil, V2Palette.spotlightScrim)
-        rounded?.let {
-            drawPath(Path().apply { addRoundRect(it) }, color = Color.White, style = Stroke(width = RING_WIDTH.toPx()))
-        }
-        caret?.let {
-            val half = CARET_HALF_WIDTH.toPx()
-            val tipY = if (it.pointsUp) it.baseY - CARET_HEIGHT.toPx() else it.baseY + CARET_HEIGHT.toPx()
-            val pointer = Path().apply {
-                moveTo(it.x - half, it.baseY)
-                lineTo(it.x, tipY)
-                lineTo(it.x + half, it.baseY)
-                close()
-            }
-            drawPath(pointer, V2Palette.cardSurface)
-        }
     }
 }
 
@@ -468,11 +429,7 @@ private val EDGE_MARGIN = 16.dp
 private val BUBBLE_PADDING = 20.dp
 private val BUBBLE_MAX_WIDTH = 480.dp
 private val GAP = 14.dp
+private val ARROW_GAP = 64.dp
 private val HOLE_PADDING = 6.dp
 private val HOLE_RADIUS = 28.dp
-private val RING_WIDTH = 2.dp
-private val CARET_INSET = 28.dp
-private val CARET_HALF_WIDTH = 9.dp
-private val CARET_HEIGHT = 9.dp
-private val MIN_TOUCH: Dp = 48.dp
-private const val STACKED_BUTTONS_FONT_SCALE = 1.5f
+private val CARD_TRAVEL = 8.dp

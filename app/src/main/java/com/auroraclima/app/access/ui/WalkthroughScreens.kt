@@ -1,9 +1,7 @@
 package com.auroraclima.app.access.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -35,8 +33,6 @@ import com.auroraclima.app.core.ui.v2.GuidePrimaryButton
 import com.auroraclima.app.core.ui.v2.GuideSurface
 import com.auroraclima.app.core.ui.v2.GuideTextButton
 import com.auroraclima.app.core.ui.v2.GuideTypeVoice
-import com.auroraclima.app.core.ui.v2.V2Palette
-import com.auroraclima.app.core.ui.v2.swallowTouches
 
 /**
  * «Conoce Aurora» (pantalla 0): título, «3 pasos. 2 minutos.», las tres partes
@@ -164,6 +160,7 @@ internal fun WalkthroughStepCard(
     actions: WalkthroughActions,
     modifier: Modifier = Modifier,
     actionsEndInset: Dp = 0.dp,
+    scrollable: Boolean = true,
     extra: @Composable ColumnScope.() -> Unit = {}
 ) {
     GuideCard(
@@ -180,6 +177,7 @@ internal fun WalkthroughStepCard(
         },
         skip = GuideAction(stringResource(R.string.access_walk_skip), actions.onFinishEarly),
         actionsEndInset = actionsEndInset,
+        scrollable = scrollable,
         extra = extra
     )
 }
@@ -194,24 +192,6 @@ internal fun stepTag(step: WalkthroughStep): String = when (step.part) {
         WalkthroughStep.spaceCount
     )
     else -> stringResource(R.string.access_walk_tag_exit)
-}
-
-/**
- * Escena provisional de un paso: la tarjeta sobre el velo, arriba. La reemplazan la
- * práctica (parte 1) y el hueco de luz (partes 2 y 3).
- */
-@Composable
-internal fun StepCardScene(step: WalkthroughStep, actions: WalkthroughActions) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(V2Palette.spotlightScrim)
-            .swallowTouches()
-            .statusBarsPadding()
-            .padding(16.dp)
-    ) {
-        WalkthroughStepCard(step = step, actions = actions)
-    }
 }
 
 private val LEAD_WIDTH = 36.dp
