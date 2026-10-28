@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.auroraclima.app.core.security.LocalSessionManager
@@ -140,6 +141,13 @@ fun WalkthroughLayer(
     content: @Composable () -> Unit
 ) {
     val open = state.step != null
+    val scene = WalkthroughScene.of(state.step)
+    val keyboard = LocalSoftwareKeyboardController.current
+    // Solo la parte 1 tiene dónde escribir: en las demás escenas un teclado abierto (el
+    // de la barra de la fachada, que puede seguir arriba al entrar) tapaba los botones.
+    LaunchedEffect(scene) {
+        if (scene != WalkthroughScene.NONE && scene != WalkthroughScene.TYPE_IN) keyboard?.hide()
+    }
     BackHandler(enabled = open, onBack = actions.onBackGesture)
     CompositionLocalProvider(LocalSpotlightTargets provides targets) {
         Box(modifier = modifier.fillMaxSize()) {
@@ -152,7 +160,7 @@ fun WalkthroughLayer(
                 content()
             }
             Crossfade(
-                targetState = WalkthroughScene.of(state.step),
+                targetState = scene,
                 animationSpec = if (motion.isStatic) snap() else tween(motion.screenFadeMillis),
                 label = "escena"
             ) { scene ->

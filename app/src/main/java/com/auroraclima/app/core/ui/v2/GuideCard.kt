@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,7 +37,6 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -58,8 +59,8 @@ class GuideAction(val label: String, val onClick: () -> Unit)
  * Tarjeta de un paso: etiqueta de parte arriba con el enlace [skip] («Saltar guía») en
  * la esquina final; título, frase y [extra]; y la fila de botones: [back] y
  * [secondary] como texto, [primary] lleno. Etiqueta, título y frase son un solo nodo
- * con región viva: TalkBack los lee juntos en cada paso. Con letra muy grande los
- * botones se apilan y, si la tarjeta tiene un alto máximo, el título y la frase se
+ * con región viva: TalkBack los lee juntos en cada paso. Con letra grande los botones
+ * pasan a otra línea solo si no caben juntos y, si la tarjeta tiene un alto máximo, el título y la frase se
  * desplazan dentro de ella mientras los botones quedan fijos al pie ([scrollable]; en
  * falso cuando la tarjeta va dentro de algo que ya se desplaza). [actionsEndInset] acorta la fila de botones por el lado final para que
  * ninguno quede bajo la nube.
@@ -137,7 +138,15 @@ fun GuideCard(
     }
 }
 
-/** La fila de botones; con letra muy grande, apilados (el lleno primero). */
+/**
+ * La fila de botones: «Atrás» a un lado y el lleno (o «Después») al otro. Con letra
+ * grande pasan a la línea siguiente solo si no caben juntos: apilarlos siempre gastaba
+ * un alto que la tarjeta no tiene junto a un elemento alto (corrida con letra 2.0).
+ * `FlowRow` sigue experimental en foundation 1.7.8 (BOM fijado); es la vía de la
+ * plataforma para «en fila si cabe» y admite medidas intrínsecas, que usa la capa para
+ * saber el alto entero de la tarjeta.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GuideActions(
     primary: GuideAction?,
@@ -145,34 +154,20 @@ private fun GuideActions(
     secondary: GuideAction?,
     modifier: Modifier = Modifier
 ) {
-    if (LocalDensity.current.fontScale >= STACKED_FONT_SCALE) {
-        Column(modifier = modifier.fillMaxWidth()) {
-            primary?.let {
-                GuidePrimaryButton(
-                    text = it.label,
-                    onClick = it.onClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            secondary?.let { GuideTextButton(action = it, modifier = Modifier.fillMaxWidth()) }
-            back?.let { GuideTextButton(action = it, modifier = Modifier.fillMaxWidth()) }
-        }
-    } else {
-        Row(
-            modifier = modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            back?.let { GuideTextButton(action = it) }
-            Spacer(modifier = Modifier.weight(1f))
-            secondary?.let { GuideTextButton(action = it) }
-            primary?.let {
-                GuidePrimaryButton(
-                    text = it.label,
-                    onClick = it.onClick,
-                    modifier = Modifier.widthIn(min = PRIMARY_MIN_WIDTH)
-                )
-            }
+    val count = listOfNotNull(primary, back, secondary).size
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = if (count == 1) Arrangement.End else Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        back?.let { GuideTextButton(action = it) }
+        secondary?.let { GuideTextButton(action = it) }
+        primary?.let {
+            GuidePrimaryButton(
+                text = it.label,
+                onClick = it.onClick,
+                modifier = Modifier.widthIn(min = PRIMARY_MIN_WIDTH)
+            )
         }
     }
 }
@@ -285,4 +280,3 @@ private val CARD_PADDING = 20.dp
 private val BUTTON_HEIGHT = 52.dp
 private val MIN_TOUCH = 48.dp
 private val PRIMARY_MIN_WIDTH = 120.dp
-private const val STACKED_FONT_SCALE = 1.5f

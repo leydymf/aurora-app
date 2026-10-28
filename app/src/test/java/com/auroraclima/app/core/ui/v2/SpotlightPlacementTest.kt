@@ -21,6 +21,7 @@ class SpotlightPlacementTest {
         gap = 14f,
         arrowGap = 64f,
         holePadding = 6f,
+        minLit = 96f,
         bubblePadding = 20f
     )
 
@@ -192,5 +193,28 @@ class SpotlightPlacementTest {
 
         assertFalse(spot.below)
         assertTrue(spot.maxHeight > 0f)
+    }
+
+    @Test
+    fun `un elemento muy alto deja la tarjeta entera abajo y se ilumina lo que queda encima`() {
+        // Acciones rápidas apiladas con letra 2.0: casi toda la altura útil.
+        val section = Rect(16f, 590f, 1064f, 1390f)
+        val cloud = Rect(890f, 1510f, 1027f, 1645f)
+        val frame = SpotlightPlacement.frame(section, cloud, 1080f, 105f, 1752f, 540f, metrics)
+
+        assertEquals("la tarjeta tiene su alto entero", 540f, frame.bubble.height, 0.5f)
+        assertTrue("y no baja de la nube", frame.bubble.bottom <= cloud.bottom + 0.5f)
+        assertFalse("no tapa lo iluminado", frame.bubble.overlaps(frame.hole))
+        assertTrue("lo iluminado es parte del elemento", frame.hole.top >= section.top - 6f - 0.5f)
+        assertTrue("y se ve algo de él", frame.hole.height >= 96f)
+    }
+
+    @Test
+    fun `si casi nada quedaria iluminado se aplica la regla general`() {
+        val section = Rect(16f, 1300f, 1064f, 1390f)
+        val frame = SpotlightPlacement.frame(section, null, 1080f, 1000f, 1752f, 900f, metrics)
+
+        assertFalse(frame.bubble.overlaps(frame.hole))
+        assertEquals(section.inflate(6f), frame.hole)
     }
 }

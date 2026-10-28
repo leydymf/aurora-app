@@ -40,8 +40,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -217,6 +217,10 @@ object SpotlightPlacement {
         val left = (areaWidth - width) / 2
         val roomy = place(ring, bubbleHeight, top, lowest, metrics.arrowGap)
         val spot = if (roomy.fits) roomy else place(ring, bubbleHeight, top, lowest, metrics.gap)
+        if (!spot.fits && bubbleHeight > 0f) {
+            overflowFrame(hole, keepClear, left, width, top, lowest, bubbleHeight, metrics, rightToLeft, ringOf)
+                ?.let { return it }
+        }
         val height = min(bubbleHeight, spot.maxHeight)
         val bubble = Rect(left, spot.top, left + width, spot.top + height)
         return SpotlightFrame(
@@ -227,6 +231,47 @@ object SpotlightPlacement {
             actionsEndInset = actionsEndInset(bubble, keepClear, metrics.gap, metrics.bubblePadding, rightToLeft)
         )
     }
+
+    /**
+     * Cuando la tarjeta no entra entera en ningún lado (un elemento muy alto con letra
+     * grande, como Acciones rápidas apiladas): la tarjeta va abajo, con su alto y como
+     * mucho [OVERFLOW_SHARE] de la franja, y el hueco se queda con la parte del elemento
+     * que queda a la vista encima de ella. Se ilumina menos del elemento, pero la tarjeta
+     * sigue sin tapar nada de lo iluminado y se lee entera. Null si lo que quedaría
+     * iluminado es menos que [SpotlightMetrics.minLit]: entonces gana la regla general.
+     */
+    private fun overflowFrame(
+        hole: Rect,
+        keepClear: Rect?,
+        left: Float,
+        width: Float,
+        top: Float,
+        lowest: Float,
+        bubbleHeight: Float,
+        metrics: SpotlightMetrics,
+        rightToLeft: Boolean,
+        ringOf: (Rect) -> Rect
+    ): SpotlightFrame? {
+        val maxHeight = (lowest - top) * OVERFLOW_SHARE
+        val height = min(bubbleHeight, maxHeight)
+        val cardTop = lowest - height
+        val ringBelow = ringOf(hole).bottom - hole.bottom
+        val litBottom = min(hole.bottom, cardTop - metrics.gap - ringBelow)
+        val litTop = maxOf(hole.top, top)
+        if (litBottom - litTop < metrics.minLit) return null
+        val lit = Rect(hole.left, litTop, hole.right, litBottom)
+        val bubble = Rect(left, cardTop, left + width, lowest)
+        return SpotlightFrame(
+            hole = lit,
+            ring = ringOf(lit),
+            bubble = bubble,
+            maxBubbleHeight = maxHeight,
+            actionsEndInset = actionsEndInset(bubble, keepClear, metrics.gap, metrics.bubblePadding, rightToLeft)
+        )
+    }
+
+    /** Lo más que ocupa la tarjeta de la franja cuando el elemento no le deja sitio. */
+    const val OVERFLOW_SHARE = 0.6f
 }
 
 /**
@@ -242,6 +287,7 @@ data class SpotlightMetrics(
     val gap: Float,
     val arrowGap: Float,
     val holePadding: Float,
+    val minLit: Float = 0f,
     val bubblePadding: Float
 )
 
@@ -381,6 +427,7 @@ private fun spotlightFrameOf(
                 gap = GAP.toPx(),
                 arrowGap = ARROW_GAP.toPx(),
                 holePadding = HOLE_PADDING.toPx(),
+                minLit = MIN_LIT.toPx(),
                 bubblePadding = BUBBLE_PADDING.toPx()
             ),
             rightToLeft = rightToLeft,
@@ -413,7 +460,13 @@ private fun BubbleSlot(
                 .absoluteOffset { IntOffset(frame.bubble.left.roundToInt(), frame.bubble.top.roundToInt()) }
                 .width(frame.bubble.width.toDp())
                 .heightIn(max = frame.maxBubbleHeight.toDp())
-                .onSizeChanged { onHeight(it.height) }
+                // El alto que la tarjeta querría, no el recortado: con él se decide dónde
+                // va (con el recortado nunca se sabría que no entra entera).
+                .layout { measurable, constraints ->
+                    onHeight(measurable.maxIntrinsicHeight(constraints.maxWidth))
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                }
                 .graphicsLayer {
                     alpha = if (measured) appear.value else 0f
                     translationY = (1f - appear.value) * CARD_TRAVEL.toPx()
@@ -445,6 +498,7 @@ private val BUBBLE_PADDING = 20.dp
 private val BUBBLE_MAX_WIDTH = 480.dp
 private val GAP = 14.dp
 private val ARROW_GAP = 64.dp
+private val MIN_LIT = 96.dp
 private val HOLE_PADDING = 6.dp
 private val HOLE_RADIUS = 28.dp
 private val CARD_TRAVEL = 8.dp
