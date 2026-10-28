@@ -1,10 +1,16 @@
 package com.auroraclima.app.access.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
@@ -18,6 +24,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.auroraclima.app.R
@@ -214,6 +222,56 @@ class WalkthroughLayerTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText(text(R.string.access_home_start)).performClick()
         assertEquals(listOf("empezar"), taps)
+    }
+
+    @Test
+    fun conLetraGrandeConoceAuroraSeDesplazaHastaEmpezar() {
+        // Con letra 2.0 en una pantalla pequeña, «Empezar» queda debajo: la pantalla
+        // de la guía debe desplazarse (antes, la capa que bloquea la app de abajo
+        // consumía el arrastre y no se podía llegar al botón).
+        var started = 0
+        session.setContent(composeRule) {
+            val base = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(base.density, 2f)) {
+                Box(modifier = Modifier.requiredSize(320.dp, 568.dp)) {
+                    WalkthroughHarness(
+                        state = WalkthroughUiState(step = WalkthroughStep.OVERVIEW),
+                        actions = idleActions().copyWith(onStart = { started++ }),
+                        targets = SpotlightTargets()
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        val start = composeRule.onNode(hasText(text(R.string.access_walk_start)) and hasClickAction())
+        repeat(4) { composeRule.onRoot().performTouchInput { swipeUp() } }
+        composeRule.waitForIdle()
+
+        start.assertIsDisplayed().performClick()
+        assertEquals(1, started)
+    }
+
+    @Test
+    fun bajoUnaPantallaDeLaGuiaLaAppNoRecibeToques() {
+        val taps = mutableListOf<String>()
+        session.setContent(composeRule) {
+            WalkthroughHarness(
+                state = WalkthroughUiState(step = WalkthroughStep.OVERVIEW),
+                targets = SpotlightTargets(),
+                app = { taps += it }
+            )
+        }
+        composeRule.waitForIdle()
+        // Toques por toda la pantalla, donde debajo están las tarjetas y las pestañas.
+        listOf(0.2f, 0.4f, 0.6f, 0.8f, 0.95f).forEach { y ->
+            composeRule.onRoot().performTouchInput {
+                click(
+                    androidx.compose.ui.geometry.Offset(width * 0.3f, height * y)
+                )
+            }
+        }
+        composeRule.waitForIdle()
+        assertTrue("llegó a la app: $taps", taps.isEmpty())
     }
 
     @Test

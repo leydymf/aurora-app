@@ -483,7 +483,7 @@ private fun BubbleSlot(
 
 @Composable
 private fun Scrim(hole: Rect?) {
-    Canvas(modifier = Modifier.fillMaxSize().swallowTouches()) {
+    Canvas(modifier = Modifier.fillMaxSize().blockTouchesBelow()) {
         // Esquinas que acompañan la forma: un círculo si el hueco es pequeño y cuadrado.
         val rounded = hole?.let {
             RoundRect(it, CornerRadius(min(HOLE_RADIUS.toPx(), min(it.width, it.height) / 2)))

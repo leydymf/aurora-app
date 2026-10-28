@@ -160,8 +160,7 @@ internal fun WalkthroughStepCard(
     actions: WalkthroughActions,
     modifier: Modifier = Modifier,
     actionsEndInset: Dp = 0.dp,
-    scrollable: Boolean = true,
-    extra: @Composable ColumnScope.() -> Unit = {}
+    scrollable: Boolean = true
 ) {
     GuideCard(
         tag = stepTag(step),
@@ -177,8 +176,7 @@ internal fun WalkthroughStepCard(
         },
         skip = GuideAction(stringResource(R.string.access_walk_skip), actions.onFinishEarly),
         actionsEndInset = actionsEndInset,
-        scrollable = scrollable,
-        extra = extra
+        scrollable = scrollable
     )
 }
 

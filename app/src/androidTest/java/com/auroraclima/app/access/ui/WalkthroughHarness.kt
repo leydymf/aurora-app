@@ -48,6 +48,18 @@ internal fun WalkthroughHarness(
 /** Acciones que no hacen nada: la prueba fija el paso. */
 internal fun idleActions() = WalkthroughActions({}, {}, {}, {}, {}, {}, {}, {})
 
+/** Las mismas acciones con otro «Empezar». */
+internal fun WalkthroughActions.copyWith(onStart: () -> Unit) = WalkthroughActions(
+    onStart = onStart,
+    onNotNow = onNotNow,
+    onNext = onNext,
+    onBack = onBack,
+    onFinishEarly = onFinishEarly,
+    onFinish = onFinish,
+    onBackGesture = onBackGesture,
+    onPracticeInputChange = onPracticeInputChange
+)
+
 /** El ViewModel real con una marca y sin código de acceso guardado (la práctica no coincide). */
 internal fun walkthroughViewModel(mark: WalkthroughMark?): WalkthroughViewModel =
     WalkthroughViewModel(MemoryMark(mark), ValidateSecretCodeUseCase(NoCodes, PlainHasher))

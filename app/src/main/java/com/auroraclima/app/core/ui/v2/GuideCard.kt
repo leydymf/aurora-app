@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -56,14 +55,14 @@ import androidx.compose.ui.unit.dp
 class GuideAction(val label: String, val onClick: () -> Unit)
 
 /**
- * Tarjeta de un paso: etiqueta de parte arriba con el enlace [skip] («Saltar guía») en
- * la esquina final; título, frase y [extra]; y la fila de botones: [back] y
- * [secondary] como texto, [primary] lleno. Etiqueta, título y frase son un solo nodo
- * con región viva: TalkBack los lee juntos en cada paso. Con letra grande los botones
- * pasan a otra línea solo si no caben juntos y, si la tarjeta tiene un alto máximo, el título y la frase se
- * desplazan dentro de ella mientras los botones quedan fijos al pie ([scrollable]; en
- * falso cuando la tarjeta va dentro de algo que ya se desplaza). [actionsEndInset] acorta la fila de botones por el lado final para que
- * ninguno quede bajo la nube.
+ * Tarjeta de un paso: la etiqueta de parte con el enlace [skip] («Saltar guía») en la
+ * esquina final, el título y la frase, y la fila de botones: [back] y [secondary] como
+ * texto, [primary] lleno. Título y frase son un nodo con región viva: TalkBack los lee
+ * juntos en cada paso. Con letra grande los botones pasan a otra línea solo si no caben.
+ * Si la tarjeta tiene un alto máximo, todo menos los botones se desplaza dentro de ella
+ * y los botones quedan fijos al pie ([scrollable]; en falso cuando la tarjeta va dentro
+ * de algo que ya se desplaza). [actionsEndInset] acorta la fila de botones por el lado
+ * final para que ninguno quede bajo la nube.
  */
 @Composable
 fun GuideCard(
@@ -76,8 +75,7 @@ fun GuideCard(
     secondary: GuideAction? = null,
     skip: GuideAction? = null,
     actionsEndInset: Dp = 0.dp,
-    scrollable: Boolean = true,
-    extra: @Composable ColumnScope.() -> Unit = {}
+    scrollable: Boolean = true
 ) {
     Column(
         modifier = modifier
@@ -87,20 +85,8 @@ fun GuideCard(
             .background(GuidePalette.surface)
             .padding(CARD_PADDING)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = tag,
-                style = GuideTypeVoice.partLabel,
-                color = GuidePalette.label,
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics { liveRegion = LiveRegionMode.Polite }
-            )
-            if (skip != null) GuideLink(action = skip)
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        // Con un alto máximo, lo que se desplaza es el texto: los botones quedan
-        // siempre a la vista al pie de la tarjeta.
+        // Con un alto máximo se desplaza todo menos los botones: quedan siempre a la
+        // vista al pie, también con letra grande junto a un elemento alto.
         Column(
             modifier = if (scrollable) {
                 Modifier
@@ -110,21 +96,9 @@ fun GuideCard(
                 Modifier
             }
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
-            ) {
-                Text(
-                    text = title,
-                    style = GuideTypeVoice.cardTitle,
-                    color = GuidePalette.ink,
-                    modifier = Modifier.semantics { heading() }
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(text = body, style = GuideTypeVoice.body, color = GuidePalette.inkSoft)
-            }
-            extra()
+            GuideCardHeader(tag = tag, skip = skip)
+            Spacer(modifier = Modifier.height(4.dp))
+            GuideCardText(title = title, body = body)
         }
         if (primary != null || back != null || secondary != null) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -135,6 +109,41 @@ fun GuideCard(
                 modifier = Modifier.padding(end = actionsEndInset)
             )
         }
+    }
+}
+
+/** La etiqueta de parte y, en la esquina final, el enlace «Saltar guía». */
+@Composable
+private fun GuideCardHeader(tag: String, skip: GuideAction?) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = tag,
+            style = GuideTypeVoice.partLabel,
+            color = GuidePalette.label,
+            modifier = Modifier
+                .weight(1f)
+                .semantics { liveRegion = LiveRegionMode.Polite }
+        )
+        if (skip != null) GuideLink(action = skip)
+    }
+}
+
+/** Título y frase: un solo nodo con región viva, que TalkBack lee junto. */
+@Composable
+private fun GuideCardText(title: String, body: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+    ) {
+        Text(
+            text = title,
+            style = GuideTypeVoice.cardTitle,
+            color = GuidePalette.ink,
+            modifier = Modifier.semantics { heading() }
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = body, style = GuideTypeVoice.body, color = GuidePalette.inkSoft)
     }
 }
 
@@ -223,26 +232,26 @@ fun GuideSurface(modifier: Modifier = Modifier, content: @Composable BoxScope.()
         modifier = modifier
             .fillMaxSize()
             .background(GuidePalette.surface)
-            .swallowTouches(),
+            .blockTouchesBelow(),
         content = content
     )
 }
 
-/** Se traga cada gesto entero: ni toques ni desplazamientos llegan a lo de abajo. */
-fun Modifier.swallowTouches(): Modifier = pointerInput(Unit) {
-    awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false).consume()
-        do {
-            val event = awaitPointerEvent()
-            event.changes.forEach { it.consume() }
-        } while (event.changes.any { it.pressed })
-    }
+/**
+ * Ningún toque ni desplazamiento llega a lo que hay debajo: Compose entrega el gesto
+ * solo al hermano de más arriba que tenga entrada de puntero en ese punto, así que
+ * basta con estar aquí. No consume nada a propósito: consumir en la pasada principal
+ * cancelaba el arrastre de lo que hay DENTRO (la pantalla de la guía no se desplazaba
+ * con letra grande y «Empezar» quedaba fuera de alcance, corrida de v0.3.4).
+ */
+fun Modifier.blockTouchesBelow(): Modifier = pointerInput(Unit) {
+    awaitEachGesture { awaitFirstDown(requireUnconsumed = false) }
 }
 
 /**
  * Apaga lo que dibuja: sin color (saturación cero) y un poco lavado, para que ningún
  * botón de la app parezca una acción mientras la guía está abierta. Solo cambia cómo
- * se ve; que no responda lo garantiza quien lo cubre ([swallowTouches] o el velo).
+ * se ve; que no responda lo garantiza quien lo cubre ([blockTouchesBelow] o el velo).
  * Funciona en todas las versiones (capa con filtro de color, sin `RenderEffect`).
  */
 fun Modifier.muted(enabled: Boolean): Modifier = if (!enabled) {
