@@ -102,8 +102,10 @@ class CamouflageResourcesTest {
         }
     }
 
+    // La apertura no puede ser una etiqueta que se cierra sola (`<string name="a"/>`): si
+    // lo fuera, la etiqueta siguiente, con su `name=`, caería en la prosa.
     private val prosaDeRecurso =
-        Regex("""(<(?:string|item)\b[^>]*>)(.*?)(</(?:string|item)>)""", RegexOption.DOT_MATCHES_ALL)
+        Regex("""(<(?:string|item)\b[^>]*(?<!/)>)([^<]*?)(</(?:string|item)>)""", RegexOption.DOT_MATCHES_ALL)
 
     /** El texto de los <string> e <item> de un recurso: la prosa que ve la persona. */
     private fun textoDeStrings(xml: String): String =
@@ -118,6 +120,9 @@ class CamouflageResourcesTest {
         val xml = """<string name="btnsos">3 pasos</string>"""
         assertTrue("el nombre del recurso sigue como subcadena", "sos" in sinTextoDeStrings(xml))
         assertFalse("la prosa no", contieneEnTexto(textoDeStrings(xml), "sos"))
+        // Una etiqueta que se cierra sola no arrastra a la siguiente a la prosa.
+        val vacia = "<string name=\"a\"/>\n<string name=\"btnsosx\">t</string>"
+        assertTrue("sos" in sinTextoDeStrings(vacia))
     }
 
     @Test

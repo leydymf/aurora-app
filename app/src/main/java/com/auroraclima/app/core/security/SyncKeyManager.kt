@@ -17,6 +17,8 @@ interface SyncKeyManager {
      * DEK vigente para sellar/abrir payloads, o null si aún no se establece en
      * este dispositivo. Lanza si la copia local existe pero no descifra
      * (corrupción del Keystore) — quien consume traduce a `Result` (§3).
+     * Siempre una copia nueva (el almacén descifra en cada lectura): quien la recibe
+     * puede borrarla, y `DekPayloadCipher.isReady()` lo hace.
      */
     fun currentDek(): ByteArray?
 

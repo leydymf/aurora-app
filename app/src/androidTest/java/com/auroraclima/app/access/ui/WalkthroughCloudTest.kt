@@ -21,6 +21,7 @@ import com.auroraclima.app.core.security.TestSession
 import com.auroraclima.app.core.ui.v2.SpotlightTargets
 import com.auroraclima.app.core.ui.v2.configureLikeMainActivity
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -74,8 +75,12 @@ class WalkthroughCloudTest(
         composeRule.waitForIdle()
         val context = composeRule.activity
         val title = context.getString(step.titleRes)
-        // A la vista de verdad: con alto, dentro de la pantalla.
-        composeRule.onNode(hasText(title)).assertIsDisplayed()
+        // La guía está a la vista de verdad (con alto, dentro de la pantalla): en una
+        // tarjeta, su etiqueta de parte y sus botones; con letra 2.0 junto a un
+        // elemento muy alto el título se lee desplazando la tarjeta, que no lo tapa.
+        val (tag, _) = stepTexts(context, step)
+        composeRule.onNode(hasText(tag.ifEmpty { title })).assertIsDisplayed()
+        step.next?.let { composeRule.onNode(hasText(context.getString(R.string.access_walk_next))).assertIsDisplayed() }
         val cloud = composeRule.onNodeWithContentDescription(context.getString(R.string.access_back_to_weather))
         val cloudBounds = cloud.fetchSemanticsNode().boundsInWindow
 
@@ -89,7 +94,11 @@ class WalkthroughCloudTest(
             )
         }
         if (step.part == WalkthroughStep.SPACE_PART) {
-            val lit = requireNotNull(targets.boundsOf(step)) { "$case sin elemento iluminado" }
+            // Lo iluminado de verdad: el elemento entero o, si con letra grande no le
+            // deja sitio a la tarjeta, la parte de arriba. Debe seguir siendo del elemento.
+            val element = requireNotNull(targets.boundsOf(step)) { "$case sin elemento" }
+            val lit = requireNotNull(targets.lit) { "$case sin nada iluminado" }
+            assertTrue("$case lo iluminado ($lit) no es del elemento ($element)", lit.overlaps(element))
             (composeRule.onAllNodesWithText(title).fetchSemanticsNodes() + buttons).forEach { node ->
                 assertFalse(
                     "$case la tarjeta (${node.boundsInWindow}) tapa el elemento iluminado ($lit)",

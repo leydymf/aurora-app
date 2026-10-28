@@ -63,8 +63,12 @@ class SealedWalkthroughRepository @Inject constructor(
         }
     }
 
-    override suspend fun hasMark(): Boolean = withContext(Dispatchers.IO) {
-        runCatching { preferences.contains(BLOB_KEY) }.getOrDefault(false)
+    // Con el candado: una marca que se está escribiendo (la de la nube, justo antes de
+    // salir) cuenta como presente en cuanto termina, no se la saltea.
+    override suspend fun hasMark(): Boolean = lock.withLock {
+        withContext(Dispatchers.IO) {
+            runCatching { preferences.contains(BLOB_KEY) }.getOrDefault(false)
+        }
     }
 
     override suspend fun canOpen(): Boolean = withContext(Dispatchers.IO) {

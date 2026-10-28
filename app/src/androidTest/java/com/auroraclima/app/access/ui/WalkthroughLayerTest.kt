@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -244,7 +245,9 @@ class WalkthroughLayerTest {
         }
         composeRule.waitForIdle()
         val start = composeRule.onNode(hasText(text(R.string.access_walk_start)) and hasClickAction())
-        repeat(4) { composeRule.onRoot().performTouchInput { swipeUp() } }
+        // Un arrastre de verdad sobre la pantalla de la guía (no una acción de
+        // accesibilidad): es lo que se cancelaba.
+        repeat(4) { composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp() } }
         composeRule.waitForIdle()
 
         start.assertIsDisplayed().performClick()

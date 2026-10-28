@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -27,7 +28,9 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -51,6 +54,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Lo que una capa de recorrido puede iluminar (v0.3.3). Cada elemento marcado con
@@ -74,6 +79,14 @@ class SpotlightTargets {
     fun boundsOf(key: Any): Rect? = bounds[key]
 
     /**
+     * Lo que la capa ilumina de verdad, en coordenadas de la ventana: el elemento entero
+     * o, si la tarjeta no le deja sitio, la parte de arriba (ver [SpotlightPlacement]).
+     * Null sin capa o antes de colocarla.
+     */
+    var lit: Rect? by mutableStateOf(null)
+        internal set
+
+    /**
      * Desplaza lo que lo contenga hasta que [key] se vea entero (con letra grande
      * puede estar fuera de la pantalla) y, si se puede, con [roomBelow] píxeles libres
      * debajo: ahí cabe la tarjeta de la guía sin apretarse contra el elemento (v0.3.4).
@@ -81,12 +94,28 @@ class SpotlightTargets {
      */
     suspend fun bringIntoView(key: Any, roomBelow: Float = 0f) {
         val requester = requesters[key] ?: return
-        val size = sizes[key]
-        if (size == null || roomBelow <= 0f) {
-            requester.bringIntoView()
-        } else {
-            requester.bringIntoView(Rect(0f, 0f, size.width.toFloat(), size.height + roomBelow))
-        }
+        // Antes de la primera colocación desplazar no hace nada: se espera a que el
+        // elemento tenga límites (la capa puede empezar en el mismo cuadro que Inicio).
+        withTimeoutOrNull(LAYOUT_WAIT_MILLIS) { snapshotFlow { bounds[key] }.first { it != null } }
+        // Primero, que se vea entero; después, si se puede, con sitio debajo. Si ese
+        // segundo paso lo dejó recortado (no había tanto que desplazar), se vuelve a
+        // traer entero: verlo importa más que el sitio de la tarjeta.
+        requester.bringIntoView()
+        val size = sizes[key] ?: return
+        if (roomBelow <= 0f) return
+        requester.bringIntoView(Rect(0f, 0f, size.width.toFloat(), size.height + roomBelow))
+        withFrameNanos { }
+        if (!isFullyVisible(key)) requester.bringIntoView()
+    }
+
+    private companion object {
+        const val LAYOUT_WAIT_MILLIS = 1_000L
+    }
+
+    private fun isFullyVisible(key: Any): Boolean {
+        val rect = bounds[key] ?: return false
+        val size = sizes[key] ?: return false
+        return rect.height >= size.height - 1f && rect.width >= size.width - 1f
     }
 
     internal fun attach(key: Any, requester: BringIntoViewRequester) {
@@ -350,6 +379,9 @@ fun SpotlightLayer(
     val keepLocal = keepClear?.let(window::toLocal)
     val frame = spotlightFrameOf(window, targetBounds, keepClear, bubbleHeight)
     val hole = rememberSlidingHole(frame?.hole, style.holeMillis)
+    val targets = LocalSpotlightTargets.current
+    val litInWindow = frame?.hole?.let { local -> window.origin?.let { local.translate(it) } }
+    SideEffect { targets?.lit = litInWindow }
     // Alineación absoluta: la tarjeta se coloca con coordenadas reales de la capa, y
     // una alineación relativa la reflejaría en derecha a izquierda antes de desplazarla.
     Box(modifier = modifier.fillMaxSize().trackWindowFrame(window), contentAlignment = AbsoluteAlignment.TopLeft) {
