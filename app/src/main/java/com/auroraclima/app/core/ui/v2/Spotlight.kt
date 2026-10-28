@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlin.math.min
@@ -67,31 +68,41 @@ import kotlin.math.roundToInt
 class SpotlightTargets {
     private val bounds = mutableStateMapOf<Any, Rect>()
     private val requesters = mutableMapOf<Any, BringIntoViewRequester>()
+    private val sizes = mutableMapOf<Any, IntSize>()
 
     /** Límites del elemento [key] en la ventana; null si no está en composición. */
     fun boundsOf(key: Any): Rect? = bounds[key]
 
     /**
      * Desplaza lo que lo contenga hasta que [key] se vea entero (con letra grande
-     * puede estar fuera de la pantalla). Vuelve al terminar; sin nada que desplazar,
-     * vuelve enseguida.
+     * puede estar fuera de la pantalla) y, si se puede, con [roomBelow] píxeles libres
+     * debajo: ahí cabe la tarjeta de la guía sin apretarse contra el elemento (v0.3.4).
+     * Vuelve al terminar; sin nada que desplazar, vuelve enseguida.
      */
-    suspend fun bringIntoView(key: Any) {
-        requesters[key]?.bringIntoView()
+    suspend fun bringIntoView(key: Any, roomBelow: Float = 0f) {
+        val requester = requesters[key] ?: return
+        val size = sizes[key]
+        if (size == null || roomBelow <= 0f) {
+            requester.bringIntoView()
+        } else {
+            requester.bringIntoView(Rect(0f, 0f, size.width.toFloat(), size.height + roomBelow))
+        }
     }
 
     internal fun attach(key: Any, requester: BringIntoViewRequester) {
         requesters[key] = requester
     }
 
-    internal fun place(key: Any, rect: Rect) {
+    internal fun place(key: Any, rect: Rect, size: IntSize) {
         bounds[key] = rect
+        sizes[key] = size
     }
 
     internal fun detach(key: Any, requester: BringIntoViewRequester) {
         if (requesters[key] === requester) {
             requesters.remove(key)
             bounds.remove(key)
+            sizes.remove(key)
         }
     }
 }
@@ -113,7 +124,7 @@ fun Modifier.spotlightTarget(key: Any): Modifier = composed {
     }
     Modifier
         .bringIntoViewRequester(requester)
-        .onGloballyPositioned { targets.place(key, it.boundsInWindow()) }
+        .onGloballyPositioned { targets.place(key, it.boundsInWindow(), it.size) }
 }
 
 /**
@@ -303,7 +314,8 @@ fun SpotlightLayer(
                     color = style.cueColor,
                     draw = style.draw,
                     breath = style.breath,
-                    key = stepKey
+                    key = stepKey,
+                    area = window.area()
                 )
             }
             key(stepKey) {
@@ -318,6 +330,9 @@ fun SpotlightLayer(
         }
     }
 }
+
+/** Toda el área de la capa, en sus coordenadas: hasta ahí llegan los trazos. */
+private fun WindowFrame.area(): Rect = Rect(0f, 0f, size.width.toFloat(), size.height.toFloat())
 
 /**
  * El hueco en su sitio, deslizándose y cambiando de tamaño hacia [target] en
@@ -369,7 +384,7 @@ private fun spotlightFrameOf(
                 bubblePadding = BUBBLE_PADDING.toPx()
             ),
             rightToLeft = rightToLeft,
-            ringOf = { handCueRing(it, density) }
+            ringOf = { handCueRing(it, density, window.area()) }
         )
     }
 }

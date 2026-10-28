@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.auroraclima.app.core.security.LocalCloudAnchor
 import com.auroraclima.app.core.ui.v2.GuidePalette
 import com.auroraclima.app.core.ui.v2.LocalSpotlightTargets
@@ -20,20 +22,24 @@ import com.auroraclima.app.core.ui.v2.SpotlightStyle
  * trazan en el lila claro de la capa oscura.
  *
  * En cada paso primero desplaza lo necesario para que el elemento se vea entero (con
- * letra grande puede estar fuera) y después muestra la tarjeta; mientras tanto el
- * hueco lo sigue. La nube no se ilumina con un objetivo propio: su sitio lo da el
- * grafo seguro ([LocalCloudAnchor]), y queda por encima de la capa en todos los pasos.
+ * letra grande puede estar fuera) y, si se puede, con sitio debajo para la tarjeta; y
+ * después muestra la tarjeta. Mientras tanto el hueco lo sigue. La nube no se ilumina
+ * con un objetivo propio: su sitio lo da el grafo seguro ([LocalCloudAnchor]), y queda
+ * por encima de la capa en todos los pasos.
  */
 @Composable
 internal fun HomeScene(step: WalkthroughStep, actions: WalkthroughActions, motion: WalkthroughMotion) {
     val targets = LocalSpotlightTargets.current
     val cloud = LocalCloudAnchor.current?.bounds
     var revealed by remember { mutableStateOf<WalkthroughStep?>(null) }
+    val roomForCard = with(LocalDensity.current) { CARD_ROOM.toPx() }
     LaunchedEffect(step) {
-        if (step != WalkthroughStep.CLOUD) targets?.bringIntoView(step)
+        if (step != WalkthroughStep.CLOUD) targets?.bringIntoView(step, roomBelow = roomForCard)
         revealed = step
     }
-    val bounds = if (step == WalkthroughStep.CLOUD) cloud else targets?.boundsOf(step)
+    // Un elemento fuera de la vista mide cero (sus límites vienen recortados): mientras
+    // se trae a la vista, el hueco se queda donde estaba en lugar de irse a una esquina.
+    val bounds = (if (step == WalkthroughStep.CLOUD) cloud else targets?.boundsOf(step))?.takeUnless { it.isEmpty }
     SpotlightLayer(
         targetBounds = bounds,
         // La nube queda libre: ni la tarjeta baja de ella, ni un botón queda debajo, ni
@@ -52,3 +58,6 @@ internal fun HomeScene(step: WalkthroughStep, actions: WalkthroughActions, motio
         WalkthroughStepCard(step = step, actions = actions, actionsEndInset = actionsEndInset)
     }
 }
+
+/** Sitio que se pide debajo del elemento al traerlo a la vista: el de una tarjeta y su flecha. */
+private val CARD_ROOM = 300.dp

@@ -128,4 +128,29 @@ class HandDrawnGeometryTest {
     private fun samples(shape: CurlArrowShape): List<Offset> =
         shape.body.flatMap { segment -> (0..40).map { segment.pointAt(it / 40f) } } +
             listOf(shape.headLeft, shape.headRight)
+
+    @Test
+    fun `en una esquina el circulo no sale del area ni entra al elemento`() {
+        // El engranaje arriba a la derecha y la nube abajo a la derecha (1080 de ancho).
+        val area = Rect(0f, 0f, 1080f, 1920f).deflate(16f)
+        listOf(Rect(902f, 74f, 1007f, 179f), Rect(874f, 1494f, 1043f, 1663f)).forEach { corner ->
+            val points = HandDrawnGeometry.handCircle(corner, margin = 37f, within = area)
+            points.forEach { point ->
+                assertTrue("sale del área en $point", area.inflate(1f).contains(point))
+                assertFalse("entra al elemento en $point", corner.contains(point))
+            }
+        }
+    }
+
+    @Test
+    fun `un elemento alto queda rodeado de cerca`() {
+        // La tarjeta «Reconocer tu situación»: la curva la abraza con su margen, sin
+        // agrandarse en proporción a su alto como una elipse.
+        val card = Rect(48f, 664f, 1032f, 1128f)
+        val points = HandDrawnGeometry.handCircle(card, margin = 37f)
+        val top = points.minOf { it.y }
+        val bottom = points.maxOf { it.y }
+        assertTrue("arriba se aparta ${card.top - top}", card.top - top < 80f)
+        assertTrue("abajo se aparta ${bottom - card.bottom}", bottom - card.bottom < 80f)
+    }
 }

@@ -59,9 +59,9 @@ class GuideAction(val label: String, val onClick: () -> Unit)
  * la esquina final; título, frase y [extra]; y la fila de botones: [back] y
  * [secondary] como texto, [primary] lleno. Etiqueta, título y frase son un solo nodo
  * con región viva: TalkBack los lee juntos en cada paso. Con letra muy grande los
- * botones se apilan y, si la tarjeta tiene un alto máximo, el texto se desplaza dentro
- * de ella ([scrollable]; en falso cuando la tarjeta va dentro de algo que ya se
- * desplaza). [actionsEndInset] acorta la fila de botones por el lado final para que
+ * botones se apilan y, si la tarjeta tiene un alto máximo, el título y la frase se
+ * desplazan dentro de ella mientras los botones quedan fijos al pie ([scrollable]; en
+ * falso cuando la tarjeta va dentro de algo que ya se desplaza). [actionsEndInset] acorta la fila de botones por el lado final para que
  * ninguno quede bajo la nube.
  */
 @Composable
@@ -84,7 +84,6 @@ fun GuideCard(
             .shadow(elevation = 6.dp, shape = GuideCorner.card)
             .clip(GuideCorner.card)
             .background(GuidePalette.surface)
-            .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .padding(CARD_PADDING)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -99,21 +98,33 @@ fun GuideCard(
             if (skip != null) GuideLink(action = skip)
         }
         Spacer(modifier = Modifier.height(4.dp))
+        // Con un alto máximo, lo que se desplaza es el texto: los botones quedan
+        // siempre a la vista al pie de la tarjeta.
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+            modifier = if (scrollable) {
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+            } else {
+                Modifier
+            }
         ) {
-            Text(
-                text = title,
-                style = GuideTypeVoice.cardTitle,
-                color = GuidePalette.ink,
-                modifier = Modifier.semantics { heading() }
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = body, style = GuideTypeVoice.body, color = GuidePalette.inkSoft)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+            ) {
+                Text(
+                    text = title,
+                    style = GuideTypeVoice.cardTitle,
+                    color = GuidePalette.ink,
+                    modifier = Modifier.semantics { heading() }
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(text = body, style = GuideTypeVoice.body, color = GuidePalette.inkSoft)
+            }
+            extra()
         }
-        extra()
         if (primary != null || back != null || secondary != null) {
             Spacer(modifier = Modifier.height(16.dp))
             GuideActions(

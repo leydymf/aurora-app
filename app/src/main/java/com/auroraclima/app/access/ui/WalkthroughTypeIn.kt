@@ -107,7 +107,8 @@ internal fun TypeInScreen(state: WalkthroughUiState, actions: WalkthroughActions
             color = GuidePalette.strokeOnLight,
             draw = motion.draw,
             breath = motion.breath,
-            key = WalkthroughStep.TYPE_IN
+            key = WalkthroughStep.TYPE_IN,
+            area = Rect(0f, 0f, window.size.width.toFloat(), window.size.height.toFloat())
         )
     }
 }

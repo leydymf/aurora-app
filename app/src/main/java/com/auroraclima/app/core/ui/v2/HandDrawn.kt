@@ -23,8 +23,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.sign
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * Trazos a mano de la guía de Aurora (v0.3.4): la flecha con rizo y el círculo que
@@ -78,30 +81,57 @@ object HandDrawnGeometry {
     }
 
     /**
-     * Círculo trazado a mano alrededor de [around]: una elipse imperfecta (radio que
-     * ondula un poco y crece al avanzar) que da más de una vuelta y se pasa de donde
-     * empezó. Devuelve la polilínea en orden de trazo.
+     * Círculo trazado a mano alrededor de [around]: una curva cerrada imperfecta (radio
+     * que ondula un poco y crece al avanzar) que da más de una vuelta y se pasa de
+     * donde empezó. Devuelve la polilínea en orden de trazo.
+     *
+     * Es una superelipse (exponente 4) y no una elipse: una elipse que rodee un
+     * rectángulo alto (una tarjeta) tiene que ser mucho más grande que él, y la de
+     * v0.3.4 en el emulador salía de la pantalla y empujaba la tarjeta de la guía hasta
+     * cortarle los botones. Esta curva abraza la forma con [margin] a cada lado y se ve
+     * igual de hecha a mano.
      */
-    fun handCircle(around: Rect, margin: Float, points: Int = CIRCLE_POINTS): List<Offset> {
+    fun handCircle(around: Rect, margin: Float, within: Rect? = null, points: Int = CIRCLE_POINTS): List<Offset> {
         val center = around.center
-        val radiusX = around.width / 2f + margin + around.height * 0.1f
-        val radiusY = around.height / 2f * 1.35f + margin
+        val radiusX = fitted(around.width / 2f, margin, within?.let { minOf(center.x - it.left, it.right - center.x) })
+        val radiusY = fitted(around.height / 2f, margin, within?.let { minOf(center.y - it.top, it.bottom - center.y) })
         return (0..points).map { index ->
             val share = index.toFloat() / points
             val angle = CIRCLE_START + CIRCLE_SWEEP * share
-            val wobble = 1f + 0.03f * sin(2f * angle + 0.7f) + 0.015f * sin(5f * angle + 1.9f)
-            val drift = 0.975f + 0.05f * share
+            val wobble = 1f + 0.025f * sin(2f * angle + 0.7f) + 0.012f * sin(5f * angle + 1.9f)
+            val drift = 0.985f + 0.04f * share
             Offset(
-                center.x + radiusX * wobble * drift * cos(angle),
-                center.y + radiusY * wobble * drift * sin(angle)
+                center.x + radiusX * wobble * drift * squircle(cos(angle)),
+                center.y + radiusY * wobble * drift * squircle(sin(angle))
             )
         }
     }
+
+    /**
+     * El radio de un eje: la mitad del elemento más [margin], acortado si con su
+     * ondulación saldría de [room] (lo que hay hasta el borde del área), pero nunca
+     * por dentro del elemento. Un elemento en una esquina (el engranaje, la nube)
+     * queda rodeado sin que el trazo se corte en el borde de la pantalla.
+     */
+    private fun fitted(half: Float, margin: Float, room: Float?): Float {
+        val wanted = half + margin
+        if (room == null) return wanted
+        return minOf(wanted, room / MAX_SPREAD).coerceAtLeast(half + MIN_CLEARANCE * margin)
+    }
+
+    /** Coordenada de la superelipse de exponente 4: signo por la raíz del valor absoluto. */
+    private fun squircle(value: Float): Float = sign(value) * sqrt(abs(value))
 
     /** Lo que recorre el círculo, en radianes: más de una vuelta. */
     const val CIRCLE_SWEEP = (2 * PI + 0.45).toFloat()
 
     private const val CIRCLE_START = -2.2f
+
+    // Lo más que la ondulación y el crecimiento estiran el radio (1,037 × 1,025).
+    private const val MAX_SPREAD = 1.07f
+
+    // Aire mínimo entre el elemento y el trazo cuando el borde obliga a acortar.
+    private const val MIN_CLEARANCE = 0.25f
     private const val CIRCLE_POINTS = 72
     private const val LOOP_MIN_FACTOR = 4f
     private const val SAMPLES_PER_SEGMENT = 24
@@ -249,13 +279,14 @@ fun HandDrawnCue(
     draw: DrawPlan,
     breath: PulsePlan,
     key: Any?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    area: Rect? = null
 ) {
     val density = LocalDensity.current
     val progress = rememberDrawProgress(draw, key)
     val phase = rememberPulsePhase(breath)
-    val cue = remember(target, card, avoid, density) {
-        target?.let { with(density) { cueFor(it, card, avoid, this) } }
+    val cue = remember(target, card, avoid, density, area) {
+        target?.let { cueFor(it, card, avoid, density, area) }
     }
     Canvas(modifier = modifier.fillMaxSize()) {
         val shape = cue ?: return@Canvas
@@ -266,13 +297,16 @@ fun HandDrawnCue(
 }
 
 /**
- * Lo que ocupa el círculo a mano alrededor de [target] (su caja): la capa de recorrido
- * aparta la tarjeta de aquí para que no tape el círculo.
+ * Lo que ocupa el círculo a mano alrededor de [target] (su caja), dentro de [area]: la
+ * capa de recorrido aparta la tarjeta de aquí para que no tape el círculo.
  */
-fun handCueRing(target: Rect, density: Density): Rect = boundsOf(handCircleAround(target, density))
+fun handCueRing(target: Rect, density: Density, area: Rect? = null): Rect =
+    boundsOf(handCircleAround(target, density, area))
 
-private fun handCircleAround(target: Rect, density: Density): List<Offset> =
-    HandDrawnGeometry.handCircle(target, margin = with(density) { CIRCLE_MARGIN.toPx() })
+private fun handCircleAround(target: Rect, density: Density, area: Rect?): List<Offset> = with(density) {
+    // El borde del área menos medio trazo y un poco de aire: el círculo no se corta.
+    HandDrawnGeometry.handCircle(target, margin = CIRCLE_MARGIN.toPx(), within = area?.deflate(EDGE_INSET.toPx()))
+}
 
 private fun boundsOf(points: List<Offset>): Rect =
     Rect(points.minOf { it.x }, points.minOf { it.y }, points.maxOf { it.x }, points.maxOf { it.y })
@@ -280,25 +314,26 @@ private fun boundsOf(points: List<Offset>): Rect =
 /** El círculo y, si cabe, la flecha de una señal. */
 private class Cue(val circle: List<Offset>, val arrow: CurlArrowShape?)
 
-private fun cueFor(target: Rect, card: Rect?, avoid: List<Rect>, density: Density): Cue = with(density) {
-    val circle = handCircleAround(target, density)
+private fun cueFor(target: Rect, card: Rect?, avoid: List<Rect>, density: Density, area: Rect?): Cue = with(density) {
+    val circle = handCircleAround(target, density, area)
     val ring = boundsOf(circle)
     val arrow = card?.let { from ->
         val gap = ARROW_GAP.toPx()
         val targetBelow = ring.center.y > from.center.y
-        // Sale del borde de la tarjeta que mira al objetivo, corrida hacia el lado
-        // contrario, para que el trazo vaya en diagonal y haya sitio para la vuelta.
-        val towardRight = ring.center.x > from.center.x
-        val startX = if (towardRight) from.left + from.width * 0.28f else from.right - from.width * 0.28f
+        // Sale del borde de la tarjeta que mira al objetivo, un poco antes de él en
+        // horizontal: el trazo va en diagonal corta y deja sitio para la vuelta.
+        val toward = if (ring.center.x >= from.center.x) 1f else -1f
+        val edge = CARD_EDGE.toPx()
+        val startX = (ring.center.x - toward * ARROW_LEAD.toPx())
+            .coerceIn(from.left + edge, (from.right - edge).coerceAtLeast(from.left + edge))
         val start = Offset(startX, if (targetBelow) from.bottom + gap else from.top - gap)
-        val endX = (ring.center.x + (if (startX < ring.center.x) -1f else 1f) * target.width * 0.12f)
-            .coerceIn(ring.left, ring.right)
+        val endX = (ring.center.x - toward * target.width * 0.12f).coerceIn(ring.left, ring.right)
         val end = Offset(endX, if (targetBelow) ring.top - gap else ring.bottom + gap)
         HandDrawnGeometry.curlArrow(
             from = start,
             to = end,
             avoid = avoid + from + target,
-            within = null,
+            within = area,
             metrics = CurlMetrics(
                 loopRadius = LOOP_RADIUS.toPx(),
                 headLength = HEAD_LENGTH.toPx(),
@@ -310,12 +345,15 @@ private fun cueFor(target: Rect, card: Rect?, avoid: List<Rect>, density: Densit
     Cue(circle, arrow)
 }
 
-private val CIRCLE_MARGIN = 10.dp
+private val CIRCLE_MARGIN = 14.dp
+private val EDGE_INSET = 6.dp
 private val ARROW_GAP = 8.dp
 private val LOOP_RADIUS = 13.dp
 private val HEAD_LENGTH = 12.dp
 private val CLEARANCE = 2.dp
 private val MIN_ARROW = 28.dp
+private val ARROW_LEAD = 72.dp
+private val CARD_EDGE = 28.dp
 
 /** Escala del círculo que respira: casi nada, despacio ([PulsePlan.breathing]). */
 fun breathScale(phase: Float): Float = 1f + BREATH_AMPLITUDE * phase
