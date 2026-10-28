@@ -26,11 +26,6 @@ class TerminologyGuardTest {
     // Exención declarada: va justo bajo el título «Tu código de acceso.», así que «Este código» no es ambiguo.
     private val idsExentosDeCodigoCompleto = setOf("access_setup_difference")
 
-    // Exención declarada (v0.3.3, decisión de la autora): el paso «Mi registro» del recorrido
-    // cuenta que el PDF se protege «con contraseña» sin nombrar ninguna credencial de la cuenta;
-    // la contraseña del archivo PDF se nombra entera en la pantalla de exportación.
-    private val idsExentosDeContrasenaDeCuenta = setOf("access_tour_journal_body")
-
     private fun violaciones(patron: Regex, exentos: List<String> = emptyList()): List<String> =
         strings.filter { (id, texto) -> exentos.none { id.startsWith(it) } && patron.containsMatchIn(texto) }
             .map { (id, texto) -> "$id: $texto" }
@@ -45,7 +40,7 @@ class TerminologyGuardTest {
     @Test
     fun `toda contrasena nombrada es la de la cuenta`() {
         val sinCuenta = strings.filter { (id, texto) ->
-            prefijosExentosDeContrasena.none { id.startsWith(it) } && id !in idsExentosDeContrasenaDeCuenta &&
+            prefijosExentosDeContrasena.none { id.startsWith(it) } &&
                 Regex("""contraseña""", RegexOption.IGNORE_CASE).containsMatchIn(texto) &&
                 !texto.contains("cuenta", ignoreCase = true)
         }.map { (id, texto) -> "$id: $texto" }
@@ -122,7 +117,7 @@ class TerminologyGuardTest {
         // el recorrido y la pista del tutorial la nombraban de dos maneras.
         assertEquals("Ajustes", strings.getValue("access_settings_title"))
         assertEquals("Ajustes", strings.getValue("access_panel_settings"))
-        assertEquals("Ajustes", strings.getValue("access_tour_settings_title"))
+        assertEquals("Ajustes", strings.getValue("access_walk_settings_title"))
         val conOtroNombre = violaciones(Regex("""configuración""", RegexOption.IGNORE_CASE))
 
         assertTrue("«Configuración» en un texto:\n" + conOtroNombre.joinToString("\n"), conOtroNombre.isEmpty())

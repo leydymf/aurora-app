@@ -5,9 +5,9 @@ import com.auroraclima.app.access.domain.model.CodeSlot
 import com.auroraclima.app.access.domain.usecase.CompleteCodeSetupUseCase
 import com.auroraclima.app.access.domain.usecase.CreateSecretCodeUseCase
 import com.auroraclima.app.access.domain.usecase.FakeCityNameDirectory
-import com.auroraclima.app.access.domain.usecase.FakeHomeTourRepository
 import com.auroraclima.app.access.domain.usecase.FakeSecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.FakeSecretCodeRepository
+import com.auroraclima.app.access.domain.usecase.FakeWalkthroughRepository
 import com.auroraclima.app.core.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -31,11 +31,11 @@ class CodeSetupViewModelTest {
 
     private val hasher = FakeSecretCodeHasher()
     private val repository = FakeSecretCodeRepository()
-    private val homeTour = FakeHomeTourRepository()
+    private val walkthrough = FakeWalkthroughRepository()
     private val viewModel = CodeSetupViewModel(
         CompleteCodeSetupUseCase(
             CreateSecretCodeUseCase(repository, hasher, FakeCityNameDirectory("bucaramanga", "bogota")),
-            homeTour
+            walkthrough
         )
     )
 
@@ -86,12 +86,12 @@ class CodeSetupViewModelTest {
     }
 
     @Test
-    fun `crear el codigo deja pendiente el recorrido antes de continuar`() = runTest {
-        // Con el código creado termina la activación: el recorrido por Inicio sale
-        // la primera vez que se llega al panel, se termine o se salte el tutorial.
+    fun `crear el codigo deja pendiente la guia antes de continuar`() = runTest {
+        // Con el código creado termina la activación: la guía sale la primera vez
+        // que se llega al panel.
         var pendingWhenContinued: Boolean? = null
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            viewModel.continueEvents.collect { pendingWhenContinued = homeTour.pending }
+            viewModel.continueEvents.collect { pendingWhenContinued = walkthrough.stored != null }
         }
 
         viewModel.onCodeChange("cielo2026")
@@ -101,18 +101,18 @@ class CodeSetupViewModelTest {
         advanceUntilIdle()
 
         assertEquals(true, pendingWhenContinued)
-        assertEquals(1, homeTour.markCalls)
+        assertEquals(1, walkthrough.markCalls)
     }
 
     @Test
-    fun `una confirmacion distinta no deja pendiente el recorrido`() = runTest {
+    fun `una confirmacion distinta no deja pendiente la guia`() = runTest {
         viewModel.onCodeChange("cielo2026")
         viewModel.onConfirmCodeChange("cielo2027")
         advanceUntilIdle()
         viewModel.onSubmit()
         advanceUntilIdle()
 
-        assertEquals(0, homeTour.markCalls)
+        assertEquals(0, walkthrough.markCalls)
     }
 
     @Test

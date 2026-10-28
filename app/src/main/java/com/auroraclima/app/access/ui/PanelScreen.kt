@@ -63,8 +63,8 @@ import com.auroraclima.app.core.ui.v2.spotlightTarget
  * engranaje arriba a la derecha (decisión D3). Los destinos los deciden la
  * navegación raíz y el host de pestañas (guardia RF-06, §2: sin imports entre
  * features — los accesos rápidos solo emiten callbacks). Es un menú estático
- * (guía §3, decisión 2026-07-10). Lo que el recorrido por Inicio ilumina va
- * marcado con `spotlightTarget`; fuera de la capa del recorrido no agrega nada.
+ * (guía §3, decisión 2026-07-10). Lo que la guía de Aurora ilumina va
+ * marcado con `spotlightTarget`; fuera de la capa de la guía no agrega nada.
  */
 @Composable
 fun PanelScreen(
@@ -94,7 +94,7 @@ fun PanelScreen(
             BrandHeader(modifier = Modifier.weight(1f))
             IconButton(
                 onClick = onOpenSettings,
-                modifier = Modifier.spotlightTarget(HomeTourStep.SETTINGS)
+                modifier = Modifier.spotlightTarget(WalkthroughStep.SETTINGS)
             ) {
                 Icon(
                     painter = painterResource(V2Icons.settings),
@@ -130,7 +130,7 @@ fun PanelScreen(
         // «Resultados guardados» (v0.3.3: un toque en el texto no hacía nada).
         SoftCard(
             modifier = Modifier
-                .spotlightTarget(HomeTourStep.START)
+                .spotlightTarget(WalkthroughStep.START)
                 .clip(V2Corner.card)
                 .clickable(onClick = onStartGuidance, role = Role.Button)
         ) {
@@ -150,7 +150,7 @@ fun PanelScreen(
         Spacer(modifier = Modifier.height(14.dp))
         // Resultados guardados (RF-31): el listado vive junto al cuestionario
         // que los produce; el destino lo decide la navegación raíz (RF-06, §2).
-        SoftCard(modifier = Modifier.spotlightTarget(HomeTourStep.SAVED)) {
+        SoftCard(modifier = Modifier.spotlightTarget(WalkthroughStep.SAVED)) {
             IconListRow(
                 iconRes = V2Icons.date,
                 accent = V2Palette.accentRecognize,
@@ -161,8 +161,8 @@ fun PanelScreen(
             )
         }
         Spacer(modifier = Modifier.height(24.dp))
-        // La sección entera (rótulo y tarjetas) es un solo paso del recorrido.
-        Column(modifier = Modifier.spotlightTarget(HomeTourStep.SHORTCUTS)) {
+        // La sección entera (rótulo y tarjetas) es un solo paso de la guía.
+        Column(modifier = Modifier.spotlightTarget(WalkthroughStep.SHORTCUTS)) {
             Text(
                 text = stringResource(R.string.access_home_section_quick),
                 style = InteriorTypeVoice.label,

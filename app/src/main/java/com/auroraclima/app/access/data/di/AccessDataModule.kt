@@ -1,14 +1,14 @@
 package com.auroraclima.app.access.data.di
 
 import com.auroraclima.app.access.data.AccessCredentialsEraser
-import com.auroraclima.app.access.data.HomeTourEraser
 import com.auroraclima.app.access.data.KeystoreSecretCodeHasher
 import com.auroraclima.app.access.data.LocalSecretCodeRepository
 import com.auroraclima.app.access.data.RawCityNameDirectory
-import com.auroraclima.app.access.data.SealedHomeTourRepository
+import com.auroraclima.app.access.data.SealedWalkthroughRepository
+import com.auroraclima.app.access.data.WalkthroughEraser
 import com.auroraclima.app.access.domain.repository.CityNameDirectory
-import com.auroraclima.app.access.domain.repository.HomeTourRepository
 import com.auroraclima.app.access.domain.repository.SecretCodeRepository
+import com.auroraclima.app.access.domain.repository.WalkthroughRepository
 import com.auroraclima.app.access.domain.security.SecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.CheckAccessCodeUseCase
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
@@ -46,12 +46,12 @@ abstract class AccessDataModule {
     @IntoSet
     abstract fun bindAccessCredentialsEraser(impl: AccessCredentialsEraser): LocalAccountDataEraser
 
-    /** Recorrido por Inicio de la primera llegada tras la activación. */
+    /** Marca de la guía de Aurora (primera vez y pantalla final tras la salida). */
     @Binds
-    abstract fun bindHomeTourRepository(impl: SealedHomeTourRepository): HomeTourRepository
+    abstract fun bindWalkthroughRepository(impl: SealedWalkthroughRepository): WalkthroughRepository
 
-    /** El recorrido pendiente muere con la cuenta (RF-20). */
+    /** La marca de la guía muere con la cuenta (RF-20). */
     @Binds
     @IntoSet
-    abstract fun bindHomeTourEraser(impl: HomeTourEraser): LocalAccountDataEraser
+    abstract fun bindWalkthroughEraser(impl: WalkthroughEraser): LocalAccountDataEraser
 }

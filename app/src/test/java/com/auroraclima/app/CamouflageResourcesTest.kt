@@ -1,6 +1,7 @@
 package com.auroraclima.app
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -72,6 +73,46 @@ class CamouflageResourcesTest {
      */
     private val identificadoresAceptados = setOf("Questionnaire", "ConsentPoint", "ConsentUiState")
 
+    /** Largo hasta el que un término se busca como palabra entera en los recursos. */
+    private val largoDePalabraCorta = 3
+
+    /**
+     * Cómo se busca un término en el texto de un recurso. Los de más de tres letras,
+     * como subcadena. Los de tres o menos («sos») solo como palabra: sin una letra
+     * pegada a ningún lado, la misma frontera que aplica el guardián del DEX
+     * (ADR 2026-10-24). Como subcadena, «sos» cazaba palabras corrientes del español
+     * («pasos», «casos», «precisos»), y un texto de la guía no podía decir «3 pasos»
+     * (v0.3.4, decisión de la autora). Así «SOS» suelto, «ic_sos» o «btn-sos» se
+     * siguen cazando.
+     *
+     * Solo para el texto de los recursos, que es prosa. Los literales y los
+     * identificadores de Kotlin conservan la subcadena: ahí un `sosBoton` sí sería un
+     * nombre propio, y es la red que el guardián del DEX declara que lo cubre.
+     */
+    private fun contieneEnTexto(texto: String, termino: String): Boolean {
+        if (termino.length > largoDePalabraCorta) return termino in texto
+        var desde = 0
+        while (true) {
+            val i = texto.indexOf(termino, desde)
+            if (i < 0) return false
+            val antes = texto.getOrNull(i - 1)
+            val despues = texto.getOrNull(i + termino.length)
+            if (antes?.isLetter() != true && despues?.isLetter() != true) return true
+            desde = i + 1
+        }
+    }
+
+    @Test
+    fun `un termino corto se caza como palabra y no dentro de otra`() {
+        assertTrue(contieneEnTexto("toca sos ahora", "sos"))
+        assertTrue(contieneEnTexto("ic_sos.xml", "sos"))
+        assertTrue(contieneEnTexto("<string>sos</string>", "sos"))
+        assertFalse(contieneEnTexto("3 pasos. 2 minutos.", "sos"))
+        assertFalse(contieneEnTexto("casos precisos", "sos"))
+        // Los largos siguen como subcadena.
+        assertTrue(contieneEnTexto("autoayuda", "ayuda"))
+    }
+
     @Test
     fun `los recursos y fuentes visibles no revelan el proposito real`() {
         val violations = mainDir
@@ -83,7 +124,7 @@ class CamouflageResourcesTest {
                 val haystack = file.readText().lowercase() +
                     if (isResource) "\n" + file.name.lowercase() else ""
                 terms
-                    .filter { it in haystack }
+                    .filter { if (isResource) contieneEnTexto(haystack, it) else it in haystack }
                     .map { term -> "${file.relativeTo(mainDir)}: contiene \"$term\"" }
             }
             .toList()

@@ -16,9 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.auroraclima.app.access.ui.HomeTourHost
-import com.auroraclima.app.access.ui.HomeTourStep
 import com.auroraclima.app.access.ui.PanelScreen
+import com.auroraclima.app.access.ui.WalkthroughHost
+import com.auroraclima.app.access.ui.WalkthroughStep
 import com.auroraclima.app.content.ui.GuideHomeScreen
 import com.auroraclima.app.core.ui.v2.AccentChip
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
@@ -50,9 +50,10 @@ import com.auroraclima.app.records.ui.JournalListRoute
  * [rememberSaveableStateHolder] conserva scroll y estado de UI al alternar pestañas;
  * todo muere junto con el pop del grafo (salida rápida, inactividad, background).
  *
- * El recorrido por Inicio (v0.3.3, [HomeTourHost]) envuelve las pestañas y su barra:
- * ilumina elementos de Inicio, dos pestañas de la barra y la nube. Su estado también
- * es de esta entrada; [replayTour] llega de Ajustes y se apaga con [onReplayTourHandled].
+ * La guía de Aurora (v0.3.4, [WalkthroughHost]) envuelve las pestañas y su barra:
+ * sus pantallas las tapan y sus partes 2 y 3 iluminan elementos de Inicio, dos
+ * pestañas de la barra y la nube. Su estado también es de esta entrada; [replayTour]
+ * llega de Ajustes y se apaga con [onReplayTourHandled].
  * Los destinos llegan juntos en [actions].
  */
 @Composable
@@ -66,7 +67,7 @@ fun InnerTabsHost(
     var selectedTab by rememberSaveable { mutableIntStateOf(HOME_TAB) }
     val tabStateHolder = rememberSaveableStateHolder()
     AuroraV2Theme(V2Voice.Interior) {
-        HomeTourHost(
+        WalkthroughHost(
             replayRequested = replayTour,
             onReplayHandled = onReplayTourHandled,
             onShowHome = { selectedTab = HOME_TAB }
@@ -91,7 +92,7 @@ fun InnerTabsHost(
 /**
  * La maquetación de las pestañas: el chip sin conexión, la pestaña elegida ([page]) y
  * la barra. La usan [InnerTabsHost] y las pruebas que necesitan la composición real (la
- * franja de la nube, el recorrido por Inicio), para que no haya copias que diverjan.
+ * franja de la nube, la guía de Aurora), para que no haya copias que diverjan.
  */
 @Composable
 internal fun InnerTabsLayout(
@@ -188,9 +189,8 @@ private fun TabPage(
 }
 
 /**
- * La barra Inicio · Guía · Mi registro. Guía y Mi registro son dos pasos del
- * recorrido por Inicio: aquí se marcan, en el único sitio que sabe qué pestaña es
- * cuál.
+ * La barra Inicio · Guía · Mi registro. Guía y Mi registro son dos pasos de la
+ * guía de Aurora: aquí se marcan, en el único sitio que sabe qué pestaña es cuál.
  */
 @Composable
 private fun InnerTabBar(selectedTab: Int, onSelect: (Int) -> Unit) {
@@ -204,8 +204,8 @@ private fun InnerTabBar(selectedTab: Int, onSelect: (Int) -> Unit) {
         onSelect = onSelect,
         itemModifier = { index ->
             when (index) {
-                GUIDE_TAB -> Modifier.spotlightTarget(HomeTourStep.GUIDE)
-                JOURNAL_TAB -> Modifier.spotlightTarget(HomeTourStep.JOURNAL)
+                GUIDE_TAB -> Modifier.spotlightTarget(WalkthroughStep.GUIDE)
+                JOURNAL_TAB -> Modifier.spotlightTarget(WalkthroughStep.JOURNAL)
                 else -> Modifier
             }
         }
