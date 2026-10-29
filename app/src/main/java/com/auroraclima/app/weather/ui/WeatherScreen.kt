@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -33,30 +32,33 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.SecureTextEntry
 import com.auroraclima.app.core.ui.v2.AuroraV2Theme
+import com.auroraclima.app.core.ui.v2.FacadeConditionsSummary
+import com.auroraclima.app.core.ui.v2.FacadePinIcon
+import com.auroraclima.app.core.ui.v2.FacadeSearchIcon
+import com.auroraclima.app.core.ui.v2.FacadeSearchPlaceholder
+import com.auroraclima.app.core.ui.v2.FacadeSky
 import com.auroraclima.app.core.ui.v2.FacadeTypeVoice
 import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2Corner
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2Voice
 import com.auroraclima.app.core.ui.v2.clearFocusOnTap
+import com.auroraclima.app.core.ui.v2.facadeSearchFieldColors
+import com.auroraclima.app.core.ui.v2.facadeSearchKeyboardOptions
 import com.auroraclima.app.weather.domain.model.City
 import com.auroraclima.app.weather.domain.model.WeatherCondition
 
@@ -88,7 +90,7 @@ fun WeatherScreen(
         val skyBackground = if (state.isSearchActive) {
             Modifier.background(V2Palette.screenBackground)
         } else {
-            Modifier.background(Brush.verticalGradient(listOf(V2Palette.skyTop, V2Palette.skyBottom)))
+            Modifier.background(FacadeSky.brush)
         }
         Column(
             modifier = Modifier
@@ -157,29 +159,18 @@ fun WeatherScreen(
     }
 }
 
-/** Bloque protagonista de P01: ciudad, temperatura y condición en blanco sobre el cielo. */
+/**
+ * Bloque protagonista de P01 (pieza compartida con la práctica de la guía: ver
+ * [FacadeConditionsSummary]) con las máximas, mínimas y la hora del dato debajo.
+ */
 @Composable
-private fun CurrentConditionsSummary(weather: WeatherCardUiState, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+private fun CurrentConditionsSummary(weather: WeatherCardUiState) {
+    FacadeConditionsSummary(
+        city = weather.cityName,
+        temperature = weather.temperature,
+        condition = stringResource(weather.condition.labelRes()),
+        modifier = Modifier.padding(top = 28.dp)
     ) {
-        Spacer(modifier = Modifier.height(28.dp))
-        Text(
-            text = weather.cityName,
-            style = FacadeTypeVoice.bodyStrong,
-            color = V2Palette.onSky
-        )
-        Text(
-            text = weather.temperature,
-            style = FacadeTypeVoice.displayTemperature,
-            color = V2Palette.onSky
-        )
-        Text(
-            text = stringResource(weather.condition.labelRes()),
-            style = FacadeTypeVoice.body,
-            color = V2Palette.onSky
-        )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.weather_max_min, weather.maxTemperature, weather.minTemperature),
@@ -226,13 +217,7 @@ private fun WeatherSearchBar(
             onValueChange = onQueryChange,
             modifier = modifier.then(outline),
             textStyle = FacadeTypeVoice.body,
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.weather_search_hint),
-                    style = FacadeTypeVoice.body,
-                    color = V2Palette.inkSecondary
-                )
-            },
+            placeholder = { FacadeSearchPlaceholder() },
             leadingIcon = {
                 if (isActive) {
                     IconButton(onClick = onBack) {
@@ -244,12 +229,7 @@ private fun WeatherSearchBar(
                         )
                     }
                 } else {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_weather_search),
-                        contentDescription = null,
-                        tint = V2Palette.inkSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    FacadeSearchIcon()
                 }
             },
             trailingIcon = {
@@ -270,38 +250,18 @@ private fun WeatherSearchBar(
                         }
                     }
                 } else {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_weather_pin),
-                        contentDescription = null,
-                        tint = V2Palette.inkSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    FacadePinIcon()
                 }
             },
             singleLine = true,
-            // Sin autocorrección porque es plausible en una búsqueda de nombres
-            // propios de ciudades, y punto. NO protege de que el teclado aprenda:
-            // se midió el EditorInfo con `dumpsys input_method` y esta bandera solo
-            // RETIRA `TYPE_TEXT_FLAG_AUTO_CORRECT`; esta barra enviaba `inputType=0x1`
-            // pelado, sin nada que hable de aprendizaje. De que no aprenda se encarga
-            // `SecureTextEntry`, que envuelve esta barra (H-7, P-94).
-            keyboardOptions = KeyboardOptions(
-                autoCorrectEnabled = false,
-                imeAction = ImeAction.Search
-            ),
+            // Sin autocorrección y con «Buscar»; de que el teclado no aprenda se encarga
+            // `SecureTextEntry` (ver [facadeSearchKeyboardOptions]).
+            keyboardOptions = facadeSearchKeyboardOptions,
             // Los resultados ya se ven mientras se escribe: «Buscar» solo cierra el
             // teclado. La puerta del código sigue evaluando cada tecla (RF-12).
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             shape = V2Corner.pill,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = V2Palette.cardSurface,
-                unfocusedContainerColor = V2Palette.cardSurface,
-                focusedTextColor = V2Palette.inkPrimary,
-                unfocusedTextColor = V2Palette.inkPrimary,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = V2Palette.inkPrimary
-            )
+            colors = facadeSearchFieldColors()
         )
     }
 }
