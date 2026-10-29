@@ -1,7 +1,7 @@
 # Aurora — Manual técnico
 
 > Entregable «manual técnico de la aplicación» de la Fase 3.
-> Última revisión: 2026-10-27 · Versión del código descrita: `v0.3.3-trl4`.
+> Última revisión: 2026-10-28 · Versión del código descrita: `v0.3.4-trl4`.
 
 ## 1. Propósito y alcance del manual
 
@@ -159,7 +159,7 @@ MVVM con Clean Architecture en tres capas, organizado **por feature**:
 app/src/main/java/com/auroraclima/app/
 ├── core/            Transversal: security, database, network, catalog, directory, ui, startup
 ├── weather/         Fachada de clima (RF-01..RF-04)
-├── access/          Entrada por código, tutorial, configuración (RF-05..RF-16)
+├── access/          Entrada por código, Guía de Aurora, Ajustes (RF-05..RF-16)
 ├── accounts/        Cuenta, consentimiento, sincronización de llaves (RF-07, RF-17..RF-20, RF-46)
 ├── content/         Guía de orientación (RF-21..RF-26)
 ├── questionnaire/   Cuestionario y su resultado (RF-27..RF-31)
@@ -427,7 +427,7 @@ keystore propio fuera del repositorio (`.gitignore` ya veda `*.jks` y
 v2 y v3.
 
 **Versión.** `versionCode = 1` y `versionName = "1.0"` nunca se subieron; la
-versión real del proyecto la llevan las etiquetas de git (`v0.3.3-trl4` es la
+versión real del proyecto la llevan las etiquetas de git (`v0.3.4-trl4` es la
 vigente). Si el proyecto va a distribuirse, hay que empezar a versionar el
 `build.gradle.kts`.
 
@@ -509,8 +509,8 @@ búsqueda de ciudades. Hay dos ranuras (`CodeSlot`):
 
 1. **`ACTIVATION`.** El código de activación, único del prototipo, que abre el
    primer uso: bienvenida → consentimiento → cuenta → código de acceso →
-   tutorial → recorrido guiado por Inicio. La bienvenida se agregó en v0.3.2 y el
-   recorrido en v0.3.3.
+   Guía de Aurora. La bienvenida se agregó en v0.3.2; la Guía (v0.3.4) reemplazó
+   al tutorial y al recorrido guiado por Inicio de versiones anteriores.
 2. **`USER`.** El código de acceso que crea la propia usuaria (mínimo 6
    caracteres y que no sea el nombre de una ciudad real, verificado contra un
    directorio local de unas 620 entradas en `res/raw/city_index.txt`). Desde
@@ -544,8 +544,8 @@ de cada uno están en los ADR de esa versión en `docs/ARQUITECTURA.md`):
 - **Entrada con el código de acceso.** Se muestra unos 700 ms la marca de Aurora,
   ya dentro del grafo seguro, antes del Inicio.
 - **Tutorial saltado.** El Inicio mostró, en v0.3.2, una sola vez una tarjeta que recordaba
-  cómo volver a entrar. En v0.3.3 se retiró y la reemplaza el recorrido guiado
-  (abajo).
+  cómo volver a entrar. En v0.3.3 se retiró y la reemplazó el recorrido guiado, que a su
+  vez fue absorbido por la Guía de Aurora en v0.3.4 (abajo).
 - **Salida rápida.** La nube queda sobre el teclado y sale con un solo toque
   también con una hoja, un diálogo o el selector de fecha abiertos.
 - **Salir con cambios sin guardar.** El editor de registros y el cuestionario
@@ -556,13 +556,13 @@ de cada uno están en los ADR de esa versión en `docs/ARQUITECTURA.md`):
 - **Fachada.** La búsqueda y el clima muestran carga, y ante un fallo o tras 10 s,
   un error con «Reintentar».
 
-**Flujos que cambiaron en v0.3.3** (tercer evaluador de la evaluación heurística; el
+**Flujos que cambiaron en v0.3.3** (varios de ellos sustituidos en v0.3.4, ver la sección siguiente; tercer evaluador de la evaluación heurística; el
 detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
 
-- **Práctica del tutorial.** La barra de búsqueda se resalta con un halo que
+- **Práctica del tutorial** (sustituida por la parte 1 de la Guía en v0.3.4). La barra de búsqueda se resalta con un halo que
   respira, una flecha y una etiqueta; al coincidir el código, la señal pasa a la
   nube real. Con «Quitar animaciones» el halo queda fijo (`PulsePlan`).
-- **Recorrido guiado por Inicio.** Siete pasos (reconocer la situación, resultados
+- **Recorrido guiado por Inicio** (sustituido por la Guía de Aurora en v0.3.4). Siete pasos (reconocer la situación, resultados
   guardados, Guía, Mi registro, Ajustes, Acciones rápidas y la nube), con
   «Siguiente» y «Saltar». Sale la primera vez que se llega a Inicio después de
   crear el código de acceso, se haya terminado el tutorial o se haya saltado. La
@@ -583,6 +583,63 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
 - **Selector de fecha.** Su contenido aparta el teclado igual que la nube
   (`imePadding()`): en API 26 la plataforma reporta a veces un inset de teclado sin
   teclado y la nube subía sobre «Aceptar» (P-138).
+
+**Flujos que cambiaron en v0.3.4** (pruebas SUS; el detalle está en los tres ADR del
+2026-10-28 de `docs/ARQUITECTURA.md`):
+
+- **Guía de Aurora (RF-10, RF-11).** Una sola experiencia reemplaza al tutorial y al
+  recorrido guiado por Inicio: la portada «Conoce Aurora» («Empezar» / «Ahora no»), la
+  parte 1 *Entrar* (práctica del código en la barra de la fachada, con círculo y flecha
+  dibujados a mano), la parte 2 *Tu espacio* (Guía, Mi registro, Reconocer tu situación,
+  Resultados guardados, Acciones rápidas y Ajustes) y la parte 3 *Salir* (tocar la nube),
+  más «¡Listo!». Vive como una capa sobre las pestañas dentro de la ruta `panel` del grafo
+  seguro (`WalkthroughHost`/`WalkthroughLayer` en `access/ui`), así que hereda
+  `FLAG_SECURE`, la nube encima de todo y la muerte con el pop. Un solo
+  `WalkthroughViewModel` lleva los diez pasos (`WalkthroughStep`). Crear el código de
+  acceso lleva directo a `panel`; se retiraron las rutas `guide` y `guide_review`, y las
+  clases `TutorialScreen`, `TutorialViewModel`, `HomeTour` y sus pruebas.
+  Controles: «Atrás», «Siguiente» y «Saltar guía»; en la parte 3 la acción es la nube y se
+  ofrece «Después». «Siguiente» de la parte 1 permite no practicar (D-2 de RF-10).
+- **Marca y reanudación.** `WalkthroughRepository` guarda en `view_meta` (preferencias
+  neutras, sellado con la DEK de la cuenta, 16 bytes, claves `v0`/`v1`) una marca con dos
+  valores: `FROM_START` («guía desde el inicio», la deja `CompleteCodeSetupUseCase` al
+  crear el código; se consume antes de abrir) y `TO_FINISH` («guía por cerrar», se arma al
+  llegar al paso de la nube y se desarma si se deja sin salir). La marca de v0.3.3 se lee
+  como `FROM_START`. En la siguiente entrada la guía muestra «¡Listo!» una vez. Como la nube
+  cierra también la sesión del proveedor y sin sesión no hay DEK, el ViewModel consulta
+  `PayloadCipher.isReady()` cada 250 ms hasta 10 s antes de abrir la marca; si el plazo
+  vence (sin red), la marca queda para la siguiente entrada. Muere con la eliminación de la
+  cuenta y con el descarte de una activación sin terminar (`WalkthroughEraser`).
+- **Estilo propio.** Paleta lavanda aparte de `V2Palette` (`GuidePalette`), tarjeta y botón
+  (`GuideCard`, `GuidePrimaryButton`), trazos a mano (`HandDrawn.kt`, con `Path` y
+  `PathMeasure`, sin imágenes) y la fuente Patrick Hand (OFL; el archivo `.ttf` es la única
+  dependencia nueva, ~210 KB, y su licencia está en `docs/licencias/`). El hueco que ilumina
+  (`Spotlight.kt`) se desliza y la tarjeta nunca tapa lo iluminado. Con «Quitar animaciones»
+  todo queda completo y quieto.
+- **Ajustes.** Una sola fila, «Ver la guía de Aurora»; deja una bandera neutra en `panel` y
+  la guía arranca en «Conoce Aurora».
+- **El teclado se cierra al entrar desde la fachada.** `leaveFacade` (`FacadeExit.kt`)
+  quita el foco, cierra el teclado y espera hasta 500 ms a que baje antes de abrir el espacio
+  privado, tanto con el código de acceso como con el de activación. El tope existe porque en
+  API 26 el alto del teclado puede ser espurio (P-138). La entrada solo ocurre con la app al
+  frente (`repeatOnLifecycle(RESUMED)` y la comprobación `canEnter`): si pasa a segundo plano
+  durante la espera, se pierde, para que nadie vuelva desde recientes y encuentre el
+  interior sin teclear el código (RF-06). Un código que no coincide sigue siendo una
+  búsqueda de ciudad (RF-13).
+- **El hash del código corre fuera del hilo principal.** `SecretCodeHasher.hash` es
+  `suspend`; `KeystoreSecretCodeHasher` calcula el HMAC en un carril de un solo hilo
+  (`Dispatchers.IO.limitedParallelism(1)`, experimental en kotlinx-coroutines 1.7.3: el
+  `@OptIn` sale al subir de versión) y la guarda `computeHmac` lanza si corre en el hilo
+  principal, incluso en release. La puerta degrada ese fallo a «búsqueda sin resultados»
+  y la creación del código a `StorageFailure`. Hay una pausa de 400 ms tras la última tecla
+  antes de calcular (la fachada y la práctica de la guía; «Aún no coincide» aparece a esos
+  400 ms) y la puerta tiene el plazo de la red. `WalkthroughViewModel`, `ChangeCodeViewModel`
+  y `CodeSetupViewModel` registran un limpiador en `SessionManager` que cancela el cálculo
+  en curso dentro de `closeSession()`. La eliminación total (RF-20) borra la llave por el
+  mismo carril. Quedan dos residuales (P-140).
+- **Guarda de camuflaje.** `CamouflageResourcesTest` busca los términos de tres letras como
+  palabra entera, pero solo en el texto de `<string>` e `<item>`; nombres de archivo,
+  identificadores y atributos siguen como subcadena (el texto «3 pasos» contenía «sos»).
 
 Consecuencias prácticas:
 
@@ -846,10 +903,10 @@ porque los guardianes de camuflaje y de recursos deben valer en ambas.
 - `docs/INFORME_SEGURIDAD_OWASP.md` — la evaluación MASVS/MASTG sobre el APK de
   release, con las evidencias en `docs/evidencias-owasp/`.
 
-Cifras vigentes al cierre de `v0.3.3-trl4` (2026-10-27): 1015 pruebas de JVM por
-variante en 131 clases, sin fallos (eran 973 en `v0.3.2-trl4` y 802 en
-`v0.3.1-trl4`); 169 instrumentadas en 36 clases, sin fallos en API 26 y API 30
-(eran 107), con una omitida en API 26 —la del gesto de atrás de
+Cifras vigentes al cierre de `v0.3.4-trl4` (2026-10-28): 1057 pruebas de JVM por
+variante en 131 clases, sin fallos (eran 1015 en `v0.3.3-trl4`, 973 en `v0.3.2-trl4` y
+802 en `v0.3.1-trl4`); 181 instrumentadas en 37 clases, sin fallos en API 26 y API 30
+(eran 169), con una omitida en API 26 —la del gesto de atrás de
 `AttachPickerCancelTest`, que no existe antes de Android 10—; ktlint sin
 violaciones; Android Lint con 0 errores; el panel con 91 pruebas en verde. Las
 instrumentadas se corren en API 26 y en API 30:
@@ -1153,7 +1210,9 @@ fallan sin que la app tenga nada que ver. Además, `adb` puede quedar colgado
 - Si el equipo anfitrión está cargado, arrancar el AVD sin ventana
   (`emulator -avd <nombre> -no-snapshot -no-window`): con la ventana, la suite
   completa se proyectaba en más de 90 minutos y sin ella tardó menos de dos
-  minutos (2026-10-27). Las pruebas no necesitan ver la pantalla.
+  minutos (2026-10-27). Las pruebas no necesitan ver la pantalla. Se repitió el
+  2026-10-28 con API 30: con ventana, una prueba cada ~30 s y fallos de «el teclado
+  no llegó a abrirse»; sin ventana, 181 pruebas en 2 min 29 s y ninguna falla.
 - En API 26 la prueba del gesto de atrás de `AttachPickerCancelTest` se omite a
   propósito: el gesto llegó con Android 10, y antes deslizar desde el borde abre el
   cajón del selector de documentos.
@@ -1178,6 +1237,8 @@ personas. El detalle de cada punto está en `docs/PENDIENTES.md` con su número.
 |---|---|
 | **P-109** | Desactivar el registro de cuentas al terminar las sesiones de evaluación; confirmar plan Spark; activar **App Check con Play Integrity** antes del piloto |
 | **P-92** | Evaluar retirar con `tools:node="remove"` las dos actividades exportadas que `firebase-auth` fusiona en el manifiesto (`genericidp://` y `recaptcha://`), que Aurora no usa, y **verificar después** que login, creación de cuenta y recuperación siguen funcionando: Firebase puede usar reCAPTCHA como defensa antiabuso |
+| **P-139** | Corrida manual de la Guía de Aurora (orden, salida real y reanudación, Ajustes, letra grande, TalkBack, recientes, teclado sobre Inicio y selector de fecha en API 26) en el teléfono y en `Aurora_API26` |
+| **P-140** | «Eliminar todo» y la llave del código: una consulta de la puerta en el instante del borrado puede volver a crear la llave (se cierra haciendo que solo la creación del código la genere), y el borrado de la llave puede seguir aunque se cancele (`runCatching` atrapa la `CancellationException` en `AccessCredentialsEraser`) |
 | **P-118** | Ligar el dispositivo a la cuenta del primer inicio de sesión con código. Hoy, si alguien cierra sesión y entra con otra cuenta en el mismo teléfono, los registros locales de la primera pueden subir a la nube de la segunda. No afecta a las sesiones de evaluación: teléfonos propios, una cuenta de prueba por participante y reinstalación entre sesiones. Cambia el reingreso, por eso se dejó para después de ellas |
 | **P-112** | Hermano del anterior, solo en debug: retirar la `androidx.activity.ComponentActivity` exportada que fusiona `ui-test-manifest`, o mover esa dependencia a `androidTestImplementation`, y fijar la retirada en `ManifestMinimizationTest`. No se ve en pantalla y no afecta a las sesiones de evaluación, pero es superficie innecesaria en el artefacto que se instala en los teléfonos |
 | **P-131** | Repetir en un teléfono con Android 8.0 u 8.1, y en el del piloto, la prueba y la medición de adjuntos grandes. El defecto del Keystore de esas versiones y su corrección (v0.3.2) solo se midieron en emulador; guardar 10 MB con verificación tardó 5–6,6 s en el emulador de API 30 con el computador cargado |
@@ -1191,7 +1252,7 @@ personas. El detalle de cada punto está en `docs/PENDIENTES.md` con su número.
 ### 14.3 Tareas de documentación de la autora
 
 Pendientes que no tocan código pero sí los entregables académicos: **P-08, P-17,
-P-25, P-41, P-45, P-52, P-73(a), P-85, P-88(a)** — reflejar en el xlsx de
+P-25, P-41, P-45, P-52, P-73(a), P-85, P-88(a), P-141** — reflejar en el xlsx de
 requisitos y en los mockups del entregable A2-6 las redacciones y los cambios que
 la implementación introdujo por camuflaje o por decisión posterior (entre ellos el
 retiro de la pestaña «Lugares» de la fachada).

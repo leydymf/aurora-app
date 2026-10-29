@@ -59,6 +59,8 @@ admin/.env.*.local
 # se versionan son docs/mockups/, docs/mockups-v2/, docs/evidencias-owasp/ y
 # docs/manual-de-marca.pdf, y ninguna cae en estos patrones.
 /evidencias-corrida/
+# Capturas de la guía de v0.3.4 (emulador): llevan pantallas del espacio interno.
+/docs/evidencias-v034-guia/
 capturas-api*/
 captura-*.png
 export-*.pdf

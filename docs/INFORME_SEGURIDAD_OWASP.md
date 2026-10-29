@@ -2559,7 +2559,7 @@ corridas, 2 de 60, 1 de 60 y en la apertura 76 de 120 con la prueba nueva.
 `SecureWindow` lo lleven, y `SecureDayPickerInsetsTest` abre el selector 120 veces y exige
 que «Aceptar» termine sobre la nube (pasó 120, 200 y 300 aperturas en API 26, y en API 30).
 El efecto aceptado es que con un inset espurio la tarjeta se achica 95 px (el calendario cede
-alto, los botones se miden primero). Falta confirmar en un teléfono real con Android 8 (P-137, paso 9).
+alto, los botones se miden primero). Falta confirmar en un teléfono real con Android 8 (P-139, paso 12; antes P-137, paso 9).
 
 ### 12.3 Recuento y estado de la suite
 
@@ -2573,7 +2573,7 @@ alto, los botones se miden primero). Falta confirmar en un teléfono real con An
 El recuento no cambia: ningún cambio de v0.3.3 abre ni cierra una observación de un control.
 Las observaciones vivas siguen siendo las de §11.4 (P-118, P-115, P-125, P-130, P-132, P-133;
 P-131 es una verificación pendiente). El «Pasa» de AUTH-2 sigue colgando de la corrida manual
-P-116, y la del recorrido (P-137) no es de seguridad, pero verifica a mano la miniatura de
+P-116, y la del recorrido (P-137, hoy P-139) no es de seguridad, pero verifica a mano la miniatura de
 recientes con el recorrido a la vista.
 
 Corrida del 2026-10-27 sobre `c1e5c5a`:
@@ -2583,4 +2583,65 @@ Corrida del 2026-10-27 sobre `c1e5c5a`:
   en verde y 0 hallazgos nuevos.
 - **Instrumentadas:** 169 en 36 clases, 0 fallos en API 30 y en API 26 (eran 107). En API 26 se
   omite la variante con gesto de `AttachPickerCancelTest`.
+- **Panel:** 91 pruebas en verde.
+
+## 13. Re-verificación en v0.3.4
+
+v0.3.4 (etiqueta `v0.3.4-trl4`, 2026-10-28) cierra la versión para las pruebas SUS con tres
+cambios: la **Guía de Aurora**, que reemplaza al tutorial y al recorrido guiado de v0.3.3; el
+**cierre del teclado al entrar desde la fachada**; y el **cálculo del hash del código fuera del
+hilo principal**. Igual que en §11 y §12, no se repitió la evaluación completa: se revisaron
+el código y las pruebas de cada cambio y, en cada tramo, la auditora de seguridad del
+proyecto. No cambió ningún permiso ni el manifiesto; la única dependencia nueva es un archivo
+de fuente (Patrick Hand, OFL, ~210 KB). No hay hallazgos nuevos de seguridad que cambien el
+resultado de un control; la auditora dejó dos residuales (§13.2).
+
+### 13.1 Qué controles tocaron los cambios
+
+| Cambio de v0.3.4 | Commits | Controles | Efecto en el resultado |
+|---|---|---|---|
+| La Guía de Aurora vive en la **misma ventana** que las pestañas (la ruta `panel`), como el recorrido que reemplaza: hereda `FLAG_SECURE`, el registro de interacción y la nube, que se dibuja encima de todo; la app de abajo queda sin toques ni semántica | `c62dc0b` … `8f8761f` | PLATFORM-3 (captura y recientes), AUTH-2 (cierre de sesión, RNF-03) | Sin ventana propia nueva. Un toque en la nube dentro de la guía es la salida rápida de siempre y cancela el ViewModel en el mismo cuadro. Sin cambio |
+| La marca sellada en `view_meta` pasa de un bit a **dos valores** («guía desde el inicio» y «guía por cerrar»). La segunda se arma al llegar al paso de la nube, para mostrar «¡Listo!» tras volver a entrar; la primera se consume antes de abrir. Misma DEK, mismo archivo neutro, mismos 16 bytes y claves; la marca de v0.3.3 se lee como «desde el inicio» | `66c9f27`, `0214efd` | STORAGE-1 | Sin dato nuevo en disco ni en la nube: la marca sigue sellada, con nombre neutro, y muere con RF-20 y con el descarte de una activación sin terminar (`WalkthroughEraser`). Se acepta un efecto: un cierre por inactividad o por segundo plano en el paso de la nube también deja armada la marca y muestra «¡Listo!»; es inofensivo y evita guardar el paso en cada avance (RNF-04). Sin cambio |
+| Para abrir la marca tras la nube, la guía espera hasta 10 s a la llave de la cuenta (`PayloadCipher.isReady()`, que borra la copia de la DEK que lee) | `0214efd` | STORAGE-1, CRYPTO-2 | `currentDek()` devuelve siempre una copia nueva; sin llave, `consume()` no toca la marca. Sin cambio |
+| `leaveFacade`: el teclado se cierra (y se espera hasta 500 ms) antes de abrir el espacio privado; la entrada solo ocurre con la app al frente | `326105d`, `c1164d7` | AUTH-2 (RF-06, RF-12) | Las tres revisoras rechazaron la primera versión (A-1): la espera dejaba abrir el interior con la app en segundo plano. La corrección usa `repeatOnLifecycle(RESUMED)` y `canEnter`, y el evento se pierde, que es el lado seguro. Sin cambio |
+| `SecretCodeHasher.hash` es `suspend` y calcula el HMAC en un carril de un solo hilo; `computeHmac` lanza si corre en el hilo principal, también en release; la puerta tiene el plazo de la red | `e0b25e0` … `c22e4b6` | AUTH-2 (indistinguibilidad, RF-13), CRYPTO-1 | El HMAC sigue usando la llave no exportable del Keystore y la comparación sigue siendo de tiempo constante. Las pruebas comparan la línea de tiempo de un código erróneo con la de una ciudad inexistente, con un cálculo más lento que la red. Una mutación (quitar el cambio de hilo) hace fallar `KeystoreSecretCodeHasherTest`. Sin cambio |
+| Los ViewModels que calculan (`WalkthroughViewModel`, `ChangeCodeViewModel`, `CodeSetupViewModel`) registran un limpiador en `SessionManager` que cancela el cálculo y borra lo tecleado dentro de `closeSession()` | `3939659` | AUTH-2 (cierre de sesión, RNF-03) | Lo tecleado no sobrevive a la salida rápida ni a la inactividad. `WalkthroughUiState.toString()` omite la entrada de la práctica. Sin cambio |
+| Textos de la guía con el léxico de la app; el guardián de camuflaje busca los términos de tres letras como palabra entera solo en la prosa de los recursos | `e94699d` | Camuflaje (RNF-05) | Los literales, los identificadores y los atributos conservan la subcadena. El guardián del DEX sigue con 0 hallazgos nuevos sobre el release (§13.3). Sin cambio |
+
+### 13.2 Residuales de la auditora
+
+Registrados como **P-140** en `docs/PENDIENTES.md`, para antes del piloto. No se corrigieron
+en este cierre.
+
+- **R-1.** `obtainKey` vuelve a crear la llave del código si falta. Entre `destroyKey` y
+  `clearAll` de «Eliminar todo» (RF-20), una consulta de la puerta puede dejar una llave
+  nueva. Se cierra haciendo que solo la creación del código genere la llave.
+- **R-2.** `runCatching` atrapa la `CancellationException` en `AccessCredentialsEraser`, de
+  modo que el borrado de la llave puede seguir aunque se cancele.
+
+Ninguno de los dos reclasifica un control en este cierre. Queda como decisión de la autora si
+alguno pasa a una observación de AUTH-2 o de STORAGE-1.
+
+### 13.3 Recuento y estado de la suite
+
+| Resultado | v0.3.3 (§12.3) | v0.3.4 |
+|---|---|---|
+| **Pasa** | 7 | **7** |
+| **Pasa con observación** | 10 | **10** |
+| **Falla** | 0 | **0** |
+| **No aplica** | 3 | 3 |
+
+El recuento no cambia: ningún cambio de v0.3.4 abre ni cierra por sí mismo una observación de
+un control. Las observaciones vivas son las de §11.4 y P-140. El «Pasa» de AUTH-2 sigue
+colgando de la corrida manual P-116, y la de la guía (P-139) añade a mano la miniatura de
+recientes con la guía a la vista y la comprobación de que el teclado no queda abierto sobre
+Inicio al volver a entrar tras salir con la nube desde la práctica.
+
+Corrida del 2026-10-28 sobre `784a7fd`:
+- **Host:** `ktlintCheck assembleDebug lint test assembleRelease`. 1057 pruebas de JVM por
+  variante en 131 clases, 0 fallos (eran 1015). ktlint sin violaciones. Lint con 0 errores.
+  Guardián del DEX: 398 434 cadenas (152 578 distintas), 49 términos, 58 excepciones, canarios
+  en verde y 0 hallazgos nuevos.
+- **Instrumentadas:** 181 en 37 clases, 0 fallos en API 30 y en API 26 (eran 169). En API 26
+  se omite la variante con gesto de `AttachPickerCancelTest`.
 - **Panel:** 91 pruebas en verde.

@@ -42,7 +42,7 @@ La aplicación sigue el patrón MVVM con inyección de dependencias con Hilt. El
 ```
 app/src/main/java/com/auroraclima/app/
 ├── weather/        pantalla de clima (API Open-Meteo)
-├── access/         entrada con código, tutorial y configuración
+├── access/         entrada con código, Guía de Aurora y ajustes
 ├── accounts/       cuenta, sincronización, recuperación y borrado
 ├── content/        guía de orientación
 ├── records/        registro de hechos y exportación
