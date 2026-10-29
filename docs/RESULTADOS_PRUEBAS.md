@@ -27,25 +27,26 @@ recorrido guiado de v0.3.3 (RF-10, RF-11); el **cierre del teclado al entrar des
 fachada** (`leaveFacade`, RF-12, RF-06); y el **cálculo del hash del código fuera del hilo
 principal** (prompt 9b, RF-08, RF-09, RF-10, RF-12, RF-13, RF-16). El detalle de diseño está en
 los tres ADR del 2026-10-28 de `docs/ARQUITECTURA.md`. El 2026-10-29 la parte 1 de Cómo usar
-Aurora pasó a practicarse sobre una réplica de la pantalla de clima (§0B.3c). La §0A describe
-`v0.3.3-trl4`.
+Aurora pasó a practicarse sobre una réplica de la pantalla de clima (§0B.3c) y, por la tarde,
+«Conoce Aurora» y «¡Listo!» pasaron al estilo del interior con una sola numeración, «Paso N
+de 8» (§0B.3d). La §0A describe `v0.3.3-trl4`.
 
 ### 0B.1 Corrida automatizada
 
 | Qué | `v0.3.3-trl4` | `v0.3.4-trl4` | Cambio |
 |---|---|---|---|
-| Pruebas de JVM por variante (debug y release) | 1015 en 131 clases | **1065 en 131 clases**, 0 fallos, 0 ignoradas | +50 netas (+8 de la réplica, §0B.3c) |
-| Instrumentadas | 169 en 36 clases | **192 en 38 clases** | +23 netas (+11 de `WalkthroughPracticeTest`, §0B.3c) |
-| — en API 30 (`Aurora_GamaMedia_API30`) | 169, 0 fallos, 0 omitidas | suite completa 181/181 (2026-10-29, antes de la réplica); afectadas por la réplica 61/61 | |
-| — en API 26 (`Aurora_API26`, `minSdk`) | 169, 0 fallos, 1 omitida | suite completa 181, 0 fallos, 1 omitida (antes de la réplica); afectadas por la réplica 61/61, 0 omitidas | la omitida es la del gesto de atrás (§0) |
+| Pruebas de JVM por variante (debug y release) | 1015 en 131 clases | **1066 en 131 clases**, 0 fallos, 0 ignoradas | +51 netas (+8 de la réplica, §0B.3c; +1 de la cifra de la portada, §0B.3d) |
+| Instrumentadas | 169 en 36 clases | **196 en 38 clases** | +27 netas (+11 de `WalkthroughPracticeTest`, §0B.3c; +4 de `WalkthroughLayerTest`, §0B.3d) |
+| — en API 30 (`Aurora_GamaMedia_API30`) | 169, 0 fallos, 0 omitidas | suite completa 181/181 (2026-10-29, antes de la réplica); afectadas por la réplica 61/61; afectadas por §0B.3d 59/59 | |
+| — en API 26 (`Aurora_API26`, `minSdk`) | 169, 0 fallos, 1 omitida | suite completa 181, 0 fallos, 1 omitida (antes de la réplica); afectadas por la réplica 61/61, 0 omitidas; afectadas por §0B.3d 59/59 | la omitida es la del gesto de atrás (§0) |
 | Panel web (`npm test`, vitest) | 91 | **91**, 0 fallos | sin cambios en `admin/` |
 | ktlint | sin violaciones | sin violaciones | |
 | Android Lint (debug) | 0 errores, 61 avisos | 0 errores, 61 avisos | |
-| Guardián del DEX (`verificarCamuflajeDex`) | 0 hallazgos nuevos; 396 870 cadenas (150 101 distintas) | 0 hallazgos nuevos; 407 307 cadenas (153 295 distintas), 49 términos, 58 excepciones, canarios en verde | |
-| APK debug de las sesiones | 38 931 365 bytes | 39 144 308 bytes (+212 943, +0,5 %) | `docs/PREPARACION_SESIONES.md` §2 |
+| Guardián del DEX (`verificarCamuflajeDex`) | 0 hallazgos nuevos; 396 870 cadenas (150 101 distintas) | 0 hallazgos nuevos; 400 105 cadenas (152 831 distintas), 49 términos, 58 excepciones, canarios en verde | |
+| APK debug de las sesiones | 38 931 365 bytes | 38 400 382 bytes (compilado tras `clean`; ver §0B.3d) | `docs/PREPARACION_SESIONES.md` §2 |
 
-Corrida final del 2026-10-29 sobre `d72427a`, el último commit de código de la versión
-(réplica de la fachada, §0B.3c); la anterior, sobre `fb708b8`, dio 1057 por variante (la corrida del 2026-10-28 sobre `784a7fd` dio las mismas cifras de pruebas; el cambio de
+Corrida final del 2026-10-29 sobre `67b91bb`, el último commit de código de la versión
+(§0B.3d); la de `d72427a` (réplica de la fachada, §0B.3c) dio 1065 y la de `fb708b8`, 1057 por variante (la corrida del 2026-10-28 sobre `784a7fd` dio las mismas cifras de pruebas; el cambio de
 nombre y de textos no agregó ni quitó métodos de prueba). Comando:
 `./gradlew ktlintCheck assembleDebug lint test assembleRelease`; las pruebas de JVM se
 forzaron además sin caché (`cleanTestDebugUnitTest cleanTestReleaseUnitTest test`). Las
@@ -180,6 +181,57 @@ commits `763a6fc` y `d72427a`):
   momento sugerencias de diccionario al teclear en la barra (residual de H-10, P-142, por
   comprobar con `dumpsys input_method`) y, con letra 2.0, el teclado quedó abierto sobre Ajustes tras
   entrar con `input text` (P-139, paso 11).
+
+### 0B.3d Tercera reapertura (2026-10-29): pantallas completas del interior y «Paso N de 8»
+
+Al revisar Cómo usar Aurora, la autora pidió dos ajustes (enmienda del 2026-10-29 de
+`docs/ARQUITECTURA.md`; commits `9e6ab83`, `c8a499f` y `67b91bb`):
+
+- **Estilo.** «Conoce Aurora» y «¡Listo!» no se superponen a ninguna pantalla de la app y
+  pasaron al estilo del interior, con piezas que ya existían en `core/ui/v2`: fondo del
+  interior, título en Marcellus, textos en Plex Sans, listas en una tarjeta blanca con filas
+  de icono, `V2PrimaryButton` y el botón de texto del interior, fijos abajo. La portada nombra
+  Entrar, Tu espacio y Salir sin números. Las ocho tarjetas superpuestas no cambiaron y son lo
+  único que conserva Patrick Hand.
+- **Numeración.** La etiqueta de cada tarjeta es solo «Paso N de 8» (`common_step_label`); el
+  total sale de las tarjetas (`WalkthroughStep.cardCount`). Se retiraron «1/3 · Entrar»,
+  «2/3 · Tu espacio · N de 6» y «3/3 · Salir» y la portada dice «8 pasos cortos. Unos 2
+  minutos.». D-3 de RF-10 queda así.
+- **Strings.** Cambiado: `access_walk_intro_sub` («3 pasos. 2 minutos.» → «8 pasos cortos.
+  Unos 2 minutos.»). Retirados: `access_walk_tag_enter`, `access_walk_tag_space` y
+  `access_walk_tag_exit`. Reutilizado: `common_step_label`. Ninguno nuevo. Las guardas de
+  terminología y de camuflaje aceptaron los textos.
+- **Revisoras.** Las tres dieron APROBADO. La auditora observó (O-1) que, dentro del panel, la
+  nube va sobre la barra de pestañas, más arriba que los botones fijos, y con letra grande
+  tapaba el final de «Discreta»; se corrigió con `reserveCloudLane()` en la zona que se
+  desplaza y una aserción en `WalkthroughCloudTest`. La revisora de arquitectura pidió filas
+  como datos, cabecera aparte, los botones de la tarjeta privados y que la cifra de la portada
+  no quedara sin control: va literal (con un `%1$d` lint pedía plurales) y una prueba JVM la
+  compara con `cardCount`. La verificadora pidió poner al día `docs/MANUAL_TECNICO.md`. Queda
+  como deuda un botón de texto compartido del interior (M-5).
+- **Pruebas.** JVM 1066 por variante (+1, en `WalkthroughViewModelTest`, que pasa a 42). `WalkthroughLayerTest` pasa de 11 a 15: los ocho
+  pasos de «Paso 1 de 8» a «Paso 8 de 8» con la etiqueta en región viva; el título de las
+  pantallas completas en la letra del interior y el de las tarjetas en la letra a mano (leído
+  del `TextLayoutResult`); y, con letra 2.0 a 320×568, «Conoce Aurora» y las dos variantes de
+  «¡Listo!» se desplazan y sus botones están a la vista sin desplazar.
+- **Corrida.** `./gradlew clean` y `ktlintCheck assembleDebug lint test assembleRelease` en
+  verde (lint 0 errores y 61 avisos, guardián del DEX 0 hallazgos). Instrumentadas afectadas
+  (`WalkthroughLayerTest`, `WalkthroughCloudTest`, `WalkthroughPracticeTest`,
+  `WalkthroughResumeTest`, `SettingsWalkthroughRowTest`): 59 de 59 en API 30 y 59 de 59 en
+  API 26, un emulador a la vez, sin ventana. Tres tropiezos del entorno, no de la app: con el
+  emulador con ventana y el anfitrión cargado (carga ~12) fallaron dos pruebas de la práctica
+  por tiempo y pasaron al reiniciarlo sin ventana; con `--rerun-tasks`, lint leyó fuentes de
+  Hilt mientras se regeneraban (se repitió con `clean`); y el emulador de API 30 quedó con la
+  letra del sistema en 2.0 tras las capturas, y dos pruebas que asumen letra normal fallaron
+  hasta restablecerla.
+- **Capturas** (API 30, por adb, letra 1.0 y 2.0), en `docs/evidencias-v034-guia/`
+  (`pantallas-*.png`): «Conoce Aurora»; «¡Listo!» tras la salida real, tras «Después» y tras
+  «Saltar»; pasos 1, 2 y 8; y «¡Listo!» con letra 2.0 desplazado hasta «Discreta». En ninguna
+  la nube tapa «Empezar», «Ahora no», «Ir a mi espacio» ni el último texto.
+- **APK.** Compilado tras `clean`, mide 38 400 382 bytes, 743 926 menos que el anterior: el
+  build debug no es reproducible byte a byte y el reparto de los `classes*.dex` depende de la
+  compilación incremental (el código de la app no se redujo). Se instaló y se probó la entrada
+  y «Conoce Aurora» en API 30.
 
 ### 0B.4 Corridas manuales pendientes
 
@@ -540,7 +592,7 @@ respecto de v0.3.0 en **negrita**.
 | CP-03 | RF-05, RF-06 | PASA + MANUAL (§8-A1/A2) | Auto: `ValidateSecretCodeUseCaseTest` (10) + guardianes. |
 | CP-04 | RF-07 | PASA + MANUAL (§8-A2) | Auto: `CreateAccountViewModelTest` (10), `CreateAccountUseCaseTest` (**11 — al crear la cuenta se guardan las credenciales cifradas para el reingreso silencioso**), `FirebaseAuthRepositoryTest` (15). |
 | CP-05 | RF-08, RF-09 | PASA + MANUAL ✅/parcial (§8-A3) | Auto: como v0.2.0. P-53 ✅; resta Device Explorer (P-28), **ahora junto a `account_meta.xml`** (§8-A3). |
-| CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ + **§8-A2** | Auto: `TutorialViewModelTest` (**10 — «Saltar por ahora»: el salto fija el logro sin práctica y la práctica sigue disponible desde Ajustes**), `TutorialUiStateTest` (5). P-34/P-53 ✅ (tutorial completo); **el salto se verifica en §8-A2**. **v0.3.3 (retirado en v0.3.4):** `HomeTourViewModelTest`, `SealedHomeTourRepositoryTest`, `TutorialPracticeCueTest`, `HomeTourLayerTest`. **v0.3.4, Cómo usar Aurora (RF-10, RF-11):** `WalkthroughViewModelTest` (41 — orden de los diez pasos, controles, gesto atrás, práctica con el aviso de no coincidir a los 400 ms y con «Buscar» en el acto, armado y desarmado de la marca, «¡Listo!» una vez, marca escrita aunque el ViewModel se limpie), `SealedWalkthroughRepositoryTest` (13), `CompleteCodeSetupUseCaseTest` (5), `CodeSetupViewModelTest` (9), `ChangeCodeViewModelTest` (9), `HandDrawnGeometryTest` (11), `SpotlightPlacementTest` (15), `PaletteContrastTest` (9), `PulsePlanTest`, `CamouflageResourcesTest` (5), `TerminologyGuardTest` (11) (JVM); `WalkthroughLayerTest` (11), `WalkthroughPracticeTest` (11 — réplica de la fachada, correcto con pausa y con «Buscar», incorrecto con «Ese no es tu código de acceso…» debajo de la barra y como región viva, «Siguiente» sin practicar, letra 2.0 sin solapes, nube con un toque; §0B.3c), `WalkthroughResumeTest` (2, con Keystore y `view_meta` reales), `SettingsWalkthroughRowTest` (1) (instrumentadas). Manual pendiente: **P-139** (CP-06 completo); decisiones D-2 y D-3: **P-141** (D-1 resuelta el 2026-10-29). |
+| CP-06 | RF-10, RF-11 | PASA + MANUAL ✅ + **§8-A2** | Auto: `TutorialViewModelTest` (**10 — «Saltar por ahora»: el salto fija el logro sin práctica y la práctica sigue disponible desde Ajustes**), `TutorialUiStateTest` (5). P-34/P-53 ✅ (tutorial completo); **el salto se verifica en §8-A2**. **v0.3.3 (retirado en v0.3.4):** `HomeTourViewModelTest`, `SealedHomeTourRepositoryTest`, `TutorialPracticeCueTest`, `HomeTourLayerTest`. **v0.3.4, Cómo usar Aurora (RF-10, RF-11):** `WalkthroughViewModelTest` (42 — orden de las diez pantallas, numeración «Paso 1 de 8» a «Paso 8 de 8», la cifra de «8 pasos cortos…» igual a `cardCount`, controles, gesto atrás, práctica con el aviso de no coincidir a los 400 ms y con «Buscar» en el acto, armado y desarmado de la marca, «¡Listo!» una vez, marca escrita aunque el ViewModel se limpie), `SealedWalkthroughRepositoryTest` (13), `CompleteCodeSetupUseCaseTest` (5), `CodeSetupViewModelTest` (9), `ChangeCodeViewModelTest` (9), `HandDrawnGeometryTest` (11), `SpotlightPlacementTest` (15), `PaletteContrastTest` (9), `PulsePlanTest`, `CamouflageResourcesTest` (5), `TerminologyGuardTest` (11) (JVM); `WalkthroughLayerTest` (15 — los ocho pasos con «Paso N de 8» en región viva, título de «Conoce Aurora» y «¡Listo!» en la letra del interior y de las tarjetas en la letra a mano, letra 2.0 a 320×568 con los botones a la vista; §0B.3d), `WalkthroughCloudTest` (30), `WalkthroughPracticeTest` (11 — réplica de la fachada, correcto con pausa y con «Buscar», incorrecto con «Ese no es tu código de acceso…» debajo de la barra y como región viva, «Siguiente» sin practicar, letra 2.0 sin solapes, nube con un toque; §0B.3c), `WalkthroughResumeTest` (2, con Keystore y `view_meta` reales), `SettingsWalkthroughRowTest` (1) (instrumentadas). Manual pendiente: **P-139** (CP-06 completo); decisiones D-2 y D-3: **P-141** (D-1 resuelta el 2026-10-29). |
 | CP-07 | RF-12, RF-13, RF-14 | PASA + MANUAL (§8-A1) | Auto: `ValidateSecretCodeUseCaseTest` (10), `ConstantTimeTest` (4), **`NoTracesGuardTest` (8 — `RecentsThumbnailGuard` es el único archivo que toca la miniatura de recientes) y `RecentsThumbnailGuardTest` (6 — la decisión del latch, aislada como lógica pura porque la API de Android no expone getter del flag)**. **P-14 ✅ (2026-10-05): la miniatura SÍ mostraba el código a medias; la guard (API 33+, solo mientras se busca) se re-verificó en emulador con el APK `429f283`, y la auditoría final (A-1) la enganchó al ciclo de vida para cerrar la carrera sub-frame con la limpieza de ON_PAUSE.** P-11 bloqueante y **P-84 (residual: bajo API 33 no hay API y queda solo ON_PAUSE; mirado ya en §8-C2 (2026-10-13): confirmado en API 26 — en 3 de 4 corridas la miniatura conserva el texto tecleado y sus resultados; con una pantalla interna delante sale en blanco).** P-11 en §8-A1. **El reingreso silencioso no toca la barra: el código sigue siendo la única puerta (RF-12).** **v0.3.4:** `FacadeExitTest` (4 — el teclado se cierra antes de entrar, tope de 500 ms, sin entrada si la app pasó a segundo plano, sin espera con el teclado cerrado), `EntryTransitionGuardTest` (9), `WeatherViewModelTest` (31 — un código erróneo recorre los mismos estados y tiempos que una ciudad inexistente, el correcto no responde antes que uno erróneo, la puerta tiene el plazo de la red), `KeystoreSecretCodeHasherTest` (7 — el hash pedido desde el hilo principal se calcula fuera de él; el cálculo bloqueante lo rechaza); instrumentada `FacadeExitKeyboardTest` (1). La búsqueda espera 400 ms tras la última tecla; en la práctica de la guía, «Buscar» evalúa en el acto. Las piezas de la barra se compartieron con la práctica el 2026-10-29 sin cambiar la fachada (§0B.3c). |
 | CP-08 | RF-15 | PASA + MANUAL (§8-A4/A5) | Auto: `SignInUseCaseTest` (16), `LoginViewModelTest` (11), **`SilentSignInUseCaseTest` (9 — éxito, rechazo definitivo destruye el blob, deshacer bajo `NonCancellable` tras la salida), `SilentSessionCoordinatorTest` (10 — local-first, confirmación en segundo plano, monitor de red, reintento acotado con espera creciente P-81), `SilentSessionViewModelTest` (2); instrumentada `LocalCredentialStoreTest` (11)**. Manual: P-29 (login manual) y **P-71 (reingreso silencioso)** en §8-A4/A5. |
 | CP-09 | RF-16 | PASA + MANUAL (§8-A4, A11) | Auto: `SessionManagerTest` (20), `SecureFlagLedgerTest` (5), **`SilentSignInUseCaseTest` (la salida rápida con el silencioso en vuelo deshace el login)**. Manual: P-27 (§8-A11) y **P-71(7)** (§8-A4). **v0.3.3:** `CloudLaneReserveTest`, `CloudLaneReserveLayoutTest`, `InnerTabsCloudClearanceTest`, `HomeTourCloudTest`, `SecureDayPickerInsetsTest`, `SecureWindowInsetsGuardTest` (P-138, §0A.2); `HomeTourCloudTest` se retiró en v0.3.4. **v0.3.4:** `WalkthroughCloudTest` (un toque a la nube en los diez pasos de la guía con letra 1.0 y 2.0 y a 320×568; ningún botón bajo la nube; la tarjeta no tapa lo iluminado) y `WalkthroughPracticeTest` (un toque a la nube con el aviso de la práctica a la vista, letra 1.0 y 2.0); los limpiadores de `WalkthroughViewModel`, `ChangeCodeViewModel` y `CodeSetupViewModel` cancelan el cálculo del código dentro de `closeSession()`. |

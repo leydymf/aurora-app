@@ -598,10 +598,21 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
   `WalkthroughViewModel` lleva los diez pasos (`WalkthroughStep`). Crear el código de
   acceso lleva directo a `panel`; se retiraron las rutas `guide` y `guide_review`, y las
   clases `TutorialScreen`, `TutorialViewModel`, `HomeTour` y sus pruebas.
-  Controles: «Atrás», «Siguiente» y «Saltar»; la tarjeta «3/3 · Salir» lleva una segunda
+  Controles: «Atrás», «Siguiente» y «Saltar»; la tarjeta del paso 8 («Toca la nube») lleva una segunda
   frase, más pequeña (`GuideCard` admite una `note`), y «¡Listo!» cuatro recordatorios,
   el último «Discreta» (D-1 de RF-10); en la parte 3 la acción es la nube y se
   ofrece «Después». «Siguiente» de la parte 1 permite no practicar (D-2 de RF-10).
+- **Una sola numeración y pantallas completas del interior (2026-10-29).** Las ocho
+  tarjetas se numeran de seguido: la etiqueta es solo «Paso N de 8» (`common_step_label`
+  con `WalkthroughStep.number` y `cardCount`, que salen de las tarjetas y no de un valor
+  fijo); se retiraron las etiquetas «1/3 · Entrar», «2/3 · Tu espacio · N de 6» y
+  «3/3 · Salir». La portada dice «8 pasos cortos. Unos 2 minutos.» (literal; una prueba
+  JVM lo compara con `cardCount`) y nombra Entrar, Tu espacio y Salir sin números. «Conoce Aurora» y «¡Listo!»,
+  que no se superponen a la app, se arman con piezas del interior (`SoftCard`,
+  `IconListRow`, `V2PrimaryButton`, `CloudLaneStack`/`CloudLaneBar`, `InteriorTypeVoice`):
+  el contenido se desplaza y termina antes de la nube (`reserveCloudLane`) y los botones
+  quedan fijos abajo. El estilo propio de la guía (lavanda, Patrick Hand, círculo y flecha)
+  queda solo en las tarjetas.
 - **Réplica de la fachada en la parte 1 (2026-10-29).** `WalkthroughTypeIn.kt` pinta,
   bajo la tarjeta, la pantalla de clima en un marco redondeado con datos fijos de ejemplo
   y sin red. Para no duplicarla ni hacer que `access` importe `weather` (§2 de

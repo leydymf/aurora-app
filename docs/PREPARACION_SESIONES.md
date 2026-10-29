@@ -2,7 +2,7 @@
 
 > Para la evaluación heurística (3 a 5 evaluadoras) y las sesiones SUS (10 a 12
 > estudiantes), en uno o dos teléfonos Android propios.
-> Última revisión: 2026-10-29 (build `v0.3.4-trl4`, con la parte 1 de Cómo usar Aurora sobre la réplica del clima).
+> Última revisión: 2026-10-29 (build `v0.3.4-trl4`, con la parte 1 de Cómo usar Aurora sobre la réplica del clima, «Conoce Aurora» y «¡Listo!» con el estilo del interior y una sola numeración, «Paso N de 8»).
 
 Cada participante debe poder hacer el **primer uso completo**: activación con el
 código de activación en el buscador de ciudades → bienvenida → consentimiento →
@@ -127,19 +127,19 @@ cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.
 shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.4.apk   # anotar: identifica el APK de las sesiones
 ```
 
-APK de `v0.3.4-trl4` generado el 2026-10-29 desde `d72427a` (el último commit de
-código; la etiqueta solo agrega documentación), con el JBR 21 de Android Studio. Es el
+APK de `v0.3.4-trl4` generado el 2026-10-29 desde `67b91bb` (el último commit de
+código; la etiqueta solo agrega documentación), tras un `clean`, con el JBR 21 de Android Studio. Es el
 build **debug**: el release no se activa en una instalación limpia (P-111).
 
 | Archivo | Tamaño | SHA-256 |
 |---|---|---|
-| `aurora-clima-0.3.4.apk` | 39 144 308 bytes (37,3 MiB) | `0ab7f06e18820a7faa80c020eebe52da4330b0cd79d21a08f95c8fbffd4e496c` |
+| `aurora-clima-0.3.4.apk` | 38 400 382 bytes (36,6 MiB) | `378bc927fb55959fd82b65fdf8d01cbab258bb7da5973e4a28c2810b9d3dc72e` |
 
-Reemplaza a los APK anteriores de la misma versión (`ecaf377a…`, del 2026-10-29 por la
-mañana, y `d058b77b…`, del 2026-10-28): si un teléfono tiene uno de esos, reinstalar. El
-APK mide 212 943 bytes más (+0,5 %) que el de `v0.3.3-trl4`: Cómo usar Aurora
-reemplazó el tutorial y el recorrido y la fuente nueva pesa ~210 KB; la réplica de la
-fachada en la parte 1 agrega 812 bytes. Hay una copia idéntica en la carpeta de sesiones
+Reemplaza a los APK anteriores de la misma versión (`0ab7f06e…` y `ecaf377a…`, del
+2026-10-29, y `d058b77b…`, del 2026-10-28): si un teléfono tiene uno de esos, reinstalar.
+Cómo usar Aurora reemplazó el tutorial y el recorrido y su fuente pesa ~210 KB. Este APK
+mide 743 926 bytes menos que el `0ab7f06e…` porque se compiló tras un `clean`: el reparto
+de los `classes*.dex` del build debug depende de la compilación incremental, no del código. Hay una copia idéntica en la carpeta de sesiones
 del proyecto de grado.
 
 El SHA-256 identifica **ese archivo**, no el código. El build debug no es
@@ -382,7 +382,7 @@ IANA y no acepta correo.
 6. **Cómo usar Aurora sale sola una vez** (v0.3.4), la primera vez que la
    participante llega a Inicio después de crear su código de acceso. Reemplaza al
    tutorial y al recorrido de las versiones anteriores y es una sola experiencia
-   de tres partes: *Entrar* (escribir su código de acceso en el buscador de una
+   de ocho pasos, numerados «Paso 1 de 8» a «Paso 8 de 8», en tres partes: *Entrar* (escribir su código de acceso en el buscador de una
    pantalla de clima de ejemplo, dentro de un marco, que no es la app real), *Tu espacio* (seis elementos de Inicio, uno por uno) y *Salir* (tocar
    la nube). Se abre con «Conoce Aurora» (**Empezar** o **Ahora no**); en cada
    tarjeta hay «Siguiente» (en la parte 1 no hay «Atrás» y se puede avanzar sin
