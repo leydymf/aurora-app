@@ -199,7 +199,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                 // El inset eleva la nube por encima de la barra de pestañas (RF-16).
                 screen(PANEL_ROUTE, cloudBottomInset = V2TabBarHeight) { entry ->
                     val isOffline by silentSession.isOffline.collectAsState()
-                    // «Ver la guía de Aurora» de Ajustes deja la bandera en esta entrada
+                    // «Ver cómo usar Aurora» de Ajustes deja la bandera en esta entrada
                     // y vuelve; la guía empieza y la bandera se apaga.
                     val replayWalkthrough by entry.savedStateHandle
                         .getStateFlow(WALKTHROUGH_REPLAY_KEY, false)

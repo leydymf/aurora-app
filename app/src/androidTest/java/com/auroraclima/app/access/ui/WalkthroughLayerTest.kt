@@ -24,6 +24,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Density
@@ -104,10 +105,12 @@ class WalkthroughLayerTest {
             assertStep(expected)
             assertEquals(expected, viewModel.uiState.value.step)
         }
-        // En la parte 3: «Atrás», «Después» y «Saltar guía», sin «Siguiente».
+        // En la parte 3: «Atrás», «Después» y «Saltar», sin «Siguiente».
         composeRule.onAllNodesWithText(text(R.string.access_walk_next)).assertCountEquals(0)
         composeRule.onNodeWithText(text(R.string.access_walk_later)).assertIsDisplayed()
         composeRule.onNodeWithText(text(R.string.access_walk_skip)).assertIsDisplayed()
+        // La segunda frase de «Salir» (D-1 de RF-10).
+        composeRule.onNodeWithText("Si la dejas quieta, también vuelve sola.").assertIsDisplayed()
 
         composeRule.onNodeWithText(text(R.string.access_walk_back)).performClick()
         composeRule.waitForIdle()
@@ -119,6 +122,14 @@ class WalkthroughLayerTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText(text(R.string.access_walk_done_title)).assertIsDisplayed()
         composeRule.onNodeWithText(text(R.string.access_walk_done_early)).assertIsDisplayed()
+        // Los cuatro recordatorios, el último recuperado de D-1 de RF-10.
+        listOf(
+            "Tu código de acceso en el buscador.",
+            "La nube.",
+            "Ajustes › Cómo usar Aurora.",
+            "Si alguien escribe un código de acceso equivocado, solo verá el clima."
+        ).forEach { composeRule.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
+        composeRule.onNodeWithText("Discreta").performScrollTo().assertIsDisplayed()
 
         composeRule.onNodeWithText(text(R.string.access_walk_finish)).performClick()
         composeRule.waitForIdle()
@@ -138,13 +149,14 @@ class WalkthroughLayerTest {
     }
 
     @Test
-    fun saltarGuiaLlevaAListoConParaRecordar() {
+    fun saltarLlevaAListoConParaRecordar() {
         val viewModel = showWithViewModel(WalkthroughMark.FROM_START)
         composeRule.onNodeWithText(text(R.string.access_walk_start)).performClick()
         composeRule.onNodeWithText(text(R.string.access_walk_next)).performClick()
         composeRule.waitForIdle()
         assertStep(WalkthroughStep.GUIDE)
 
+        assertEquals("Saltar", text(R.string.access_walk_skip))
         composeRule.onNodeWithText(text(R.string.access_walk_skip)).performClick()
         composeRule.waitForIdle()
 

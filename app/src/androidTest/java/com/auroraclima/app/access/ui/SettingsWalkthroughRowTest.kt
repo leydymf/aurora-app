@@ -17,7 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Ajustes ofrece una sola ayuda para usar la app (v0.3.4): «Ver la guía de Aurora»,
+ * Ajustes ofrece una sola ayuda para usar la app (v0.3.4): «Ver cómo usar Aurora»,
  * que la pide una vez (la empieza el panel). Ya no quedan «Ver el tutorial otra vez»
  * ni «Ver el recorrido por la app».
  */
@@ -46,8 +46,9 @@ class SettingsWalkthroughRowTest {
             }
         }
         val row = composeRule.activity.getString(R.string.access_settings_walkthrough)
+        assertEquals("Ver cómo usar Aurora", row)
         composeRule.onAllNodesWithText(row).assertCountEquals(1)
-        listOf("Ver el tutorial otra vez", "Ver el recorrido por la app").forEach {
+        listOf("Ver el tutorial otra vez", "Ver el recorrido por la app", "Ver la guía de Aurora").forEach {
             composeRule.onAllNodesWithText(it).assertCountEquals(0)
         }
 

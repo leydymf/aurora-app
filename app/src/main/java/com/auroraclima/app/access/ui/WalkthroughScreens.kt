@@ -68,8 +68,8 @@ internal fun OverviewScreen(onStart: () -> Unit, onNotNow: () -> Unit) {
 
 /**
  * «¡Listo!» (pantalla 4): tras la salida real, «Saliste y volviste. Así de fácil.»;
- * si se llegó con «Después» o «Saltar guía» ([reachedEarly]), «Para recordar:». Los
- * tres recordatorios y «Ir a mi espacio».
+ * si se llegó con «Después» o «Saltar» ([reachedEarly]), «Para recordar:». Los
+ * cuatro recordatorios y «Ir a mi espacio».
  */
 @Composable
 internal fun DoneScreen(reachedEarly: Boolean, onFinish: () -> Unit) {
@@ -87,6 +87,11 @@ internal fun DoneScreen(reachedEarly: Boolean, onFinish: () -> Unit) {
         GuideListRow(lead = "›", title = R.string.access_walk_part_enter, body = R.string.access_walk_recall_enter)
         GuideListRow(lead = "›", title = R.string.access_walk_part_exit, body = R.string.access_walk_recall_exit)
         GuideListRow(lead = "›", title = R.string.access_walk_part_recall, body = R.string.access_walk_recall_review)
+        GuideListRow(
+            lead = "›",
+            title = R.string.access_walk_part_discreet,
+            body = R.string.access_walk_recall_discreet
+        )
         Spacer(modifier = Modifier.height(28.dp))
         GuidePrimaryButton(
             text = stringResource(R.string.access_walk_finish),
@@ -150,7 +155,7 @@ private fun GuideListRow(lead: String, @StringRes title: Int, @StringRes body: I
 }
 
 /**
- * La tarjeta de un paso de las partes 1 a 3 con sus controles: «Saltar guía» arriba;
+ * La tarjeta de un paso de las partes 1 a 3 con sus controles: «Saltar» arriba;
  * «Atrás» donde hay a dónde volver; «Siguiente» donde hay siguiente; en la parte 3,
  * «Después» en lugar de «Siguiente», porque ahí la acción es tocar la nube.
  */
@@ -167,6 +172,7 @@ internal fun WalkthroughStepCard(
         title = stringResource(step.titleRes),
         body = stringResource(step.bodyRes),
         modifier = modifier,
+        note = if (step == WalkthroughStep.CLOUD) stringResource(R.string.access_walk_cloud_idle) else null,
         primary = step.next?.let { GuideAction(stringResource(R.string.access_walk_next), actions.onNext) },
         back = step.previous?.let { GuideAction(stringResource(R.string.access_walk_back), actions.onBack) },
         secondary = if (step == WalkthroughStep.CLOUD) {

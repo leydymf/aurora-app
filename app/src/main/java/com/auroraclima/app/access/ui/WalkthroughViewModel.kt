@@ -37,7 +37,7 @@ import kotlinx.coroutines.withContext
  * la salida rápida de siempre (RF-16), que saca el panel de la pila y cancela este
  * ViewModel en el mismo cuadro. Por eso la marca [WalkthroughMark.TO_FINISH] se arma
  * al LLEGAR al paso de la nube, en una escritura que no se cancela, y se desarma si se
- * deja ese paso por otro camino («Atrás», «Después», «Saltar guía», el gesto atrás).
+ * deja ese paso por otro camino («Atrás», «Después», «Saltar», el gesto atrás).
  * En la siguiente entrada con el código de acceso, el panel crea un ViewModel nuevo
  * —después de la transición de entrada—, que espera a que la llave de la cuenta vuelva
  * (la nube cierra también la sesión del proveedor y el reingreso silencioso termina
@@ -122,7 +122,7 @@ class WalkthroughViewModel @Inject constructor(
         _uiState.value.step?.previous?.let(::moveTo)
     }
 
-    /** «Saltar guía» (cualquier tarjeta) y «Después» (parte 3): a «¡Listo!» con «Para recordar:». */
+    /** «Saltar» (cualquier tarjeta) y «Después» (parte 3): a «¡Listo!» con «Para recordar:». */
     fun onFinishEarly() {
         if (_uiState.value.step?.isCard != true) return
         moveTo(WalkthroughStep.DONE)
@@ -260,7 +260,7 @@ class WalkthroughViewModel @Inject constructor(
 
 /**
  * [step] es el paso a la vista (null, sin guía). [reachedEarly]: «¡Listo!» llegó por
- * «Saltar guía» o «Después», sin la salida real (su texto es «Para recordar:»).
+ * «Saltar» o «Después», sin la salida real (su texto es «Para recordar:»).
  * [practiceInput] y [practiceStatus] son la barra de la parte 1.
  */
 data class WalkthroughUiState(

@@ -55,8 +55,8 @@ import androidx.compose.ui.unit.dp
 class GuideAction(val label: String, val onClick: () -> Unit)
 
 /**
- * Tarjeta de un paso: la etiqueta de parte con el enlace [skip] («Saltar guía») en la
- * esquina final, el título y la frase, y la fila de botones: [back] y [secondary] como
+ * Tarjeta de un paso: la etiqueta de parte con el enlace [skip] («Saltar») en la
+ * esquina final, el título, la frase (y, si hay, una [note] más pequeña debajo) y la fila de botones: [back] y [secondary] como
  * texto, [primary] lleno. Título y frase son un nodo con región viva: TalkBack los lee
  * juntos en cada paso. Con letra grande los botones pasan a otra línea solo si no caben.
  * Si la tarjeta tiene un alto máximo, todo menos los botones se desplaza dentro de ella
@@ -70,6 +70,7 @@ fun GuideCard(
     title: String,
     body: String,
     modifier: Modifier = Modifier,
+    note: String? = null,
     primary: GuideAction? = null,
     back: GuideAction? = null,
     secondary: GuideAction? = null,
@@ -98,7 +99,7 @@ fun GuideCard(
         ) {
             GuideCardHeader(tag = tag, skip = skip)
             Spacer(modifier = Modifier.height(4.dp))
-            GuideCardText(title = title, body = body)
+            GuideCardText(title = title, body = body, note = note)
         }
         if (primary != null || back != null || secondary != null) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -112,7 +113,7 @@ fun GuideCard(
     }
 }
 
-/** La etiqueta de parte y, en la esquina final, el enlace «Saltar guía». */
+/** La etiqueta de parte y, en la esquina final, el enlace «Saltar». */
 @Composable
 private fun GuideCardHeader(tag: String, skip: GuideAction?) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -128,9 +129,9 @@ private fun GuideCardHeader(tag: String, skip: GuideAction?) {
     }
 }
 
-/** Título y frase: un solo nodo con región viva, que TalkBack lee junto. */
+/** Título, frase y nota opcional: un solo nodo con región viva, que TalkBack lee junto. */
 @Composable
-private fun GuideCardText(title: String, body: String) {
+private fun GuideCardText(title: String, body: String, note: String?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -144,6 +145,10 @@ private fun GuideCardText(title: String, body: String) {
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(text = body, style = GuideTypeVoice.body, color = GuidePalette.inkSoft)
+        if (note != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(text = note, style = GuideTypeVoice.note, color = GuidePalette.inkSoft)
+        }
     }
 }
 
@@ -209,7 +214,7 @@ fun GuideTextButton(action: GuideAction, modifier: Modifier = Modifier) {
     }
 }
 
-/** El enlace pequeño de la esquina («Saltar guía»): subrayado, con su área de 48 dp. */
+/** El enlace pequeño de la esquina («Saltar»): subrayado, con su área de 48 dp. */
 @Composable
 private fun GuideLink(action: GuideAction) {
     TextButton(onClick = action.onClick, modifier = Modifier.heightIn(min = MIN_TOUCH)) {

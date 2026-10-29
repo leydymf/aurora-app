@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -105,6 +106,29 @@ class WalkthroughCloudTest(
                     node.boundsInWindow.overlaps(lit)
                 )
             }
+        }
+
+        // Con letra grande «Salir» y «¡Listo!» siguen desplazándose: la frase de más
+        // (D-1 de RF-10) y el último recordatorio se alcanzan y el botón queda a la vista,
+        // fuera de la nube.
+        if (step == WalkthroughStep.CLOUD) {
+            // «Después» queda fijo al pie y «Saltar» arriba, antes de desplazar la tarjeta.
+            listOf(R.string.access_walk_later, R.string.access_walk_skip).forEach {
+                composeRule.onNode(hasText(context.getString(it))).assertIsDisplayed()
+            }
+            composeRule.onNode(hasText(context.getString(R.string.access_walk_cloud_idle)))
+                .performScrollTo().assertIsDisplayed()
+            composeRule.onNode(hasText(context.getString(R.string.access_walk_later))).assertIsDisplayed()
+        }
+        if (step == WalkthroughStep.DONE) {
+            composeRule.onNode(hasText(context.getString(R.string.access_walk_recall_discreet)))
+                .performScrollTo().assertIsDisplayed()
+            val finish = composeRule.onNode(hasText(context.getString(R.string.access_walk_finish)))
+            finish.performScrollTo().assertIsDisplayed()
+            assertFalse(
+                "$case la nube ($cloudBounds) tapa «Ir a mi espacio» (${finish.fetchSemanticsNode().boundsInWindow})",
+                finish.fetchSemanticsNode().boundsInWindow.overlaps(cloudBounds)
+            )
         }
 
         cloud.assertIsDisplayed().performClick()
