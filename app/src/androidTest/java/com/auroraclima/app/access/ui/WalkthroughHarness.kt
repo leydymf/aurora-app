@@ -113,5 +113,5 @@ private object NoCodes : SecretCodeRepository {
 private object PlainHasher : SecretCodeHasher {
     override fun newSalt(): ByteArray = ByteArray(16)
 
-    override fun hash(salt: ByteArray, code: String): ByteArray = code.toByteArray()
+    override suspend fun hash(salt: ByteArray, code: String): ByteArray = code.toByteArray()
 }

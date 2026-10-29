@@ -52,7 +52,7 @@ class ValidateSecretCodeUseCase @Inject constructor(
         }
     }
 
-    private fun matches(candidate: String, stored: StoredCodeHash): Boolean =
+    private suspend fun matches(candidate: String, stored: StoredCodeHash): Boolean =
         constantTimeEquals(hasher.hash(stored.salt, candidate), stored.hash)
 
     companion object {
