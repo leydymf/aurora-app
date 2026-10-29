@@ -157,7 +157,9 @@ private fun GuideListRow(lead: String, @StringRes title: Int, @StringRes body: I
 /**
  * La tarjeta de un paso de las partes 1 a 3 con sus controles: «Saltar» arriba;
  * «Atrás» donde hay a dónde volver; «Siguiente» donde hay siguiente; en la parte 3,
- * «Después» en lugar de «Siguiente», porque ahí la acción es tocar la nube.
+ * «Después» en lugar de «Siguiente», porque ahí la acción es tocar la nube. Con
+ * [confirmed] (la práctica de la parte 1 coincidió), la frase pasa a la confirmación;
+ * la región viva de la tarjeta la anuncia.
  */
 @Composable
 internal fun WalkthroughStepCard(
@@ -165,12 +167,13 @@ internal fun WalkthroughStepCard(
     actions: WalkthroughActions,
     modifier: Modifier = Modifier,
     actionsEndInset: Dp = 0.dp,
-    scrollable: Boolean = true
+    scrollable: Boolean = true,
+    confirmed: Boolean = false
 ) {
     GuideCard(
         tag = stepTag(step),
         title = stringResource(step.titleRes),
-        body = stringResource(step.bodyRes),
+        body = stringResource(if (confirmed) R.string.access_walk_practice_done else step.bodyRes),
         modifier = modifier,
         note = if (step == WalkthroughStep.CLOUD) stringResource(R.string.access_walk_cloud_idle) else null,
         primary = step.next?.let { GuideAction(stringResource(R.string.access_walk_next), actions.onNext) },

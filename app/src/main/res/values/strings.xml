@@ -41,7 +41,9 @@
     <string name="access_setup_error_rules">Tu código de acceso aún no cumple las reglas de arriba.</string>
     <string name="access_setup_submit">Guardar y continuar</string>
     <string name="access_setup_toggle">Cambiar visibilidad del código de acceso</string>
-    <string name="access_walk_practice_retry">Aún no coincide. Escríbelo completo, tal como lo creaste.</string>
+    <string name="access_walk_practice_retry">Ese no es tu código de acceso. Inténtalo de nuevo.</string>
+    <string name="access_walk_sample_city">Bucaramanga</string>
+    <string name="access_walk_sample_temperature">24°</string>
     <string name="access_walk_practice_done">Así se entra a Aurora: escribiendo tu código de acceso en el buscador del clima</string>
     <string name="access_back_to_weather">Volver al clima</string>
     <string name="welcome_what">Aurora es un espacio privado para informarte, orientarte y guardar registros de forma segura.</string>

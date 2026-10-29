@@ -175,12 +175,38 @@ class WalkthroughViewModel @Inject constructor(
         if (value.trim().length < ValidateSecretCodeUseCase.MIN_CODE_LENGTH) return
         practiceCheckJob = viewModelScope.launch {
             delay(PRACTICE_DEBOUNCE_MILLIS)
-            val matched = validateSecretCode.inspect(value) == SearchGateResult.OpenAccess
-            // OpenActivation no ocurre con un código de acceso creado; tampoco cuenta.
-            val status = if (matched) PracticeStatus.MATCHED else PracticeStatus.MISMATCH
-            _uiState.update { it.copy(practiceStatus = status) }
-            if (matched) advanceAfterConfirmation()
+            checkPractice(value)
         }
+    }
+
+    /**
+     * «Buscar» en el teclado de la práctica: evalúa en el acto lo que hay en la barra,
+     * sin esperar la pausa (que se cancela). Con la barra vacía no hace nada; por debajo
+     * de la longitud mínima no puede ser el código, así que «no coincide» sin calcular.
+     */
+    fun onPracticeSubmit() {
+        val current = _uiState.value
+        if (current.step != WalkthroughStep.TYPE_IN || current.practiceStatus == PracticeStatus.MATCHED) return
+        val value = current.practiceInput
+        if (value.isBlank()) return
+        practiceCheckJob?.cancel()
+        if (value.trim().length < ValidateSecretCodeUseCase.MIN_CODE_LENGTH) {
+            _uiState.update { it.copy(practiceStatus = PracticeStatus.MISMATCH) }
+            return
+        }
+        practiceCheckJob = viewModelScope.launch { checkPractice(value) }
+    }
+
+    /**
+     * La MISMA puerta de la fachada; el hash corre en el carril propio del Keystore,
+     * nunca en el hilo principal. Al coincidir, la guía sigue sola.
+     */
+    private suspend fun checkPractice(value: String) {
+        val matched = validateSecretCode.inspect(value) == SearchGateResult.OpenAccess
+        // OpenActivation no ocurre con un código de acceso creado; tampoco cuenta.
+        val status = if (matched) PracticeStatus.MATCHED else PracticeStatus.MISMATCH
+        _uiState.update { it.copy(practiceStatus = status) }
+        if (matched) advanceAfterConfirmation()
     }
 
     private fun advanceAfterConfirmation() {
@@ -202,7 +228,7 @@ class WalkthroughViewModel @Inject constructor(
                 it.copy(step = step)
             } else {
                 // La práctica vuelve a empezar si se regresa a la parte 1: con la barra
-                // vacía no debe quedar «Aún no coincide» ni la confirmación.
+                // vacía no debe quedar el aviso de no coincidir ni la confirmación.
                 it.copy(step = step, practiceInput = "", practiceStatus = PracticeStatus.TYPING)
             }
         }

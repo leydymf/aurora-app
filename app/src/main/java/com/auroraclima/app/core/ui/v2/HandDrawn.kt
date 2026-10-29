@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.abs
@@ -267,7 +268,9 @@ fun rememberDrawProgress(plan: DrawPlan, key: Any?): State<Float> {
  * El círculo a mano alrededor de [target] y la flecha con rizo que sale de [card] y
  * lo señala, en las coordenadas de esta capa. La flecha esquiva la tarjeta y lo que
  * haya en [avoid] (la nube); si no cabe, solo queda el círculo. Ambos se trazan con
- * [draw] cada vez que cambia [key] y después el círculo respira con [breath].
+ * [draw] cada vez que cambia [key] y después el círculo respira con [breath]. Con
+ * [halo], cada trazo lleva debajo uno más ancho de ese color: así se lee sobre fondos
+ * claros y oscuros a la vez (la réplica del cielo en la práctica de entrada).
  * Decorativo: no recibe toques ni tiene semántica.
  */
 @Composable
@@ -280,7 +283,8 @@ fun HandDrawnCue(
     breath: PulsePlan,
     key: Any?,
     modifier: Modifier = Modifier,
-    area: Rect? = null
+    area: Rect? = null,
+    halo: Color? = null
 ) {
     val density = LocalDensity.current
     val progress = rememberDrawProgress(draw, key)
@@ -291,7 +295,12 @@ fun HandDrawnCue(
     Canvas(modifier = modifier.fillMaxSize()) {
         val shape = cue ?: return@Canvas
         val drawn = progress.value
-        drawHandCircle(shape.circle, color, drawn, if (drawn >= 1f) breathScale(phase.value) else 1f)
+        val scale = if (drawn >= 1f) breathScale(phase.value) else 1f
+        halo?.let { under ->
+            drawHandCircle(shape.circle, under, drawn, scale, HaloStrokeWidth)
+            shape.arrow?.let { drawCurlArrow(it, under, drawn, HaloStrokeWidth) }
+        }
+        drawHandCircle(shape.circle, color, drawn, scale)
         shape.arrow?.let { drawCurlArrow(it, color, drawn) }
     }
 }
@@ -363,13 +372,21 @@ private const val BREATH_AMPLITUDE = 0.03f
 /** Grosor de los trazos a mano. */
 internal val HandStrokeWidth = 3.dp
 
+/** Grosor del halo bajo un trazo a mano: 2 dp de cada lado. */
+private val HaloStrokeWidth = 7.dp
+
 /** Dibuja la flecha hasta [progress] de su largo; la punta aparece al final. */
-internal fun DrawScope.drawCurlArrow(shape: CurlArrowShape, color: Color, progress: Float) {
+internal fun DrawScope.drawCurlArrow(
+    shape: CurlArrowShape,
+    color: Color,
+    progress: Float,
+    width: Dp = HandStrokeWidth
+) {
     val path = Path().apply {
         moveTo(shape.body.first().start.x, shape.body.first().start.y)
         shape.body.forEach { cubicTo(it.control1.x, it.control1.y, it.control2.x, it.control2.y, it.end.x, it.end.y) }
     }
-    val stroke = handStroke()
+    val stroke = handStroke(width)
     drawPartial(path, progress, color, stroke)
     val head = ((progress - HEAD_FROM) / (1f - HEAD_FROM)).coerceIn(0f, 1f)
     if (head > 0f) {
@@ -386,7 +403,13 @@ internal fun DrawScope.drawCurlArrow(shape: CurlArrowShape, color: Color, progre
 }
 
 /** Dibuja el círculo a mano hasta [progress], con la escala [scale] (la respiración). */
-internal fun DrawScope.drawHandCircle(points: List<Offset>, color: Color, progress: Float, scale: Float = 1f) {
+internal fun DrawScope.drawHandCircle(
+    points: List<Offset>,
+    color: Color,
+    progress: Float,
+    scale: Float = 1f,
+    width: Dp = HandStrokeWidth
+) {
     if (points.size < 2) return
     val path = Path().apply {
         moveTo(points.first().x, points.first().y)
@@ -400,13 +423,13 @@ internal fun DrawScope.drawHandCircle(points: List<Offset>, color: Color, progre
     val xs = points.map { it.x }
     val ys = points.map { it.y }
     val pivot = Offset((xs.min() + xs.max()) / 2f, (ys.min() + ys.max()) / 2f)
-    scale(scale, pivot) { drawPartial(path, progress, color, handStroke()) }
+    scale(scale, pivot) { drawPartial(path, progress, color, handStroke(width)) }
 }
 
 private const val HEAD_FROM = 0.85f
 
-private fun DrawScope.handStroke() =
-    Stroke(width = HandStrokeWidth.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+private fun DrawScope.handStroke(width: Dp) =
+    Stroke(width = width.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
 
 private fun DrawScope.drawPartial(path: Path, progress: Float, color: Color, stroke: Stroke) {
     if (progress >= 1f) {

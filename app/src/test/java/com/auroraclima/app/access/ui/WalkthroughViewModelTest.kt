@@ -551,4 +551,133 @@ class WalkthroughViewModelTest {
         assertEquals(WalkthroughStep.TYPE_IN, viewModel.uiState.value.step)
         assertEquals("lo tecleado no queda en memoria", "", viewModel.uiState.value.practiceInput)
     }
+
+    @Test
+    fun `Buscar valida en el acto sin esperar la pausa`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        hasher.hashCallCount = 0
+
+        viewModel.onPracticeInputChange("amanecer26")
+        viewModel.onPracticeSubmit()
+        runCurrent()
+
+        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
+        assertEquals("un solo cálculo: la pausa pendiente se canceló", 1, hasher.hashCallCount)
+        advanceTimeBy(WalkthroughViewModel.CONFIRM_MILLIS + 1)
+        runCurrent()
+        assertEquals("la guía sigue sola, como con la pausa", WalkthroughStep.GUIDE, viewModel.uiState.value.step)
+        assertEquals(1, hasher.hashCallCount)
+    }
+
+    @Test
+    fun `Buscar con otro codigo no coincide en el acto`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+
+        viewModel.onPracticeInputChange("otracosa1")
+        viewModel.onPracticeSubmit()
+        runCurrent()
+
+        assertEquals(PracticeStatus.MISMATCH, viewModel.uiState.value.practiceStatus)
+        assertEquals(WalkthroughStep.TYPE_IN, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `Buscar con menos de la longitud minima no coincide sin calcular`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        hasher.hashCallCount = 0
+
+        viewModel.onPracticeInputChange("ama")
+        viewModel.onPracticeSubmit()
+        advanceUntilIdle()
+
+        assertEquals(PracticeStatus.MISMATCH, viewModel.uiState.value.practiceStatus)
+        assertEquals(0, hasher.hashCallCount)
+    }
+
+    @Test
+    fun `Buscar con la barra vacia no hace nada`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        hasher.hashCallCount = 0
+
+        viewModel.onPracticeSubmit()
+        viewModel.onPracticeInputChange("   ")
+        viewModel.onPracticeSubmit()
+        advanceUntilIdle()
+
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+        assertEquals(0, hasher.hashCallCount)
+    }
+
+    @Test
+    fun `volver a escribir tras no coincidir quita el aviso`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        viewModel.onPracticeInputChange("otracosa1")
+        viewModel.onPracticeSubmit()
+        runCurrent()
+        assertEquals(PracticeStatus.MISMATCH, viewModel.uiState.value.practiceStatus)
+
+        viewModel.onPracticeInputChange("otracosa")
+
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `Buscar no escucha fuera de la parte 1 ni tras coincidir`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onPracticeSubmit()
+        advanceUntilIdle()
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+
+        viewModel.onStart()
+        typePractice(viewModel, "amanecer26")
+        hasher.hashCallCount = 0
+        viewModel.onPracticeSubmit()
+        runCurrent()
+
+        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
+        assertEquals(0, hasher.hashCallCount)
+    }
+
+    @Test
+    fun `la pausa sin coincidir tambien avisa`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+
+        typePractice(viewModel, "otracosa1")
+
+        assertEquals(PracticeStatus.MISMATCH, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `salir con la nube durante el calculo de Buscar lo cancela y no deja nada`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        val slowHash = CompletableDeferred<Unit>()
+        hasher.hold = slowHash
+        viewModel.onPracticeInputChange("amanecer26")
+        viewModel.onPracticeSubmit()
+        runCurrent()
+        assertEquals("el cálculo de «Buscar» está en curso", 1, hasher.inFlight)
+
+        sessionManager.closeNow()
+        slowHash.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+        assertEquals(WalkthroughStep.TYPE_IN, viewModel.uiState.value.step)
+        assertEquals("lo tecleado no queda en memoria", "", viewModel.uiState.value.practiceInput)
+    }
 }

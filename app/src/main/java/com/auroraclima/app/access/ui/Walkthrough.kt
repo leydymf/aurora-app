@@ -68,6 +68,10 @@ fun WalkthroughHost(
                 // interacción o la inactividad expulsaría a mitad de práctica (P-15).
                 sessionManager.registerInteraction()
                 viewModel.onPracticeInputChange(it)
+            },
+            onPracticeSubmit = {
+                sessionManager.registerInteraction()
+                viewModel.onPracticeSubmit()
             }
         )
     }
@@ -88,7 +92,8 @@ class WalkthroughActions(
     val onFinishEarly: () -> Unit,
     val onFinish: () -> Unit,
     val onBackGesture: () -> Unit,
-    val onPracticeInputChange: (String) -> Unit
+    val onPracticeInputChange: (String) -> Unit,
+    val onPracticeSubmit: () -> Unit
 )
 
 /**

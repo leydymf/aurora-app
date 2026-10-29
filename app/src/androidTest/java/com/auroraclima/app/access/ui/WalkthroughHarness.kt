@@ -52,7 +52,7 @@ internal fun WalkthroughHarness(
 }
 
 /** Acciones que no hacen nada: la prueba fija el paso. */
-internal fun idleActions() = WalkthroughActions({}, {}, {}, {}, {}, {}, {}, {})
+internal fun idleActions() = WalkthroughActions({}, {}, {}, {}, {}, {}, {}, {}, {})
 
 /** Las mismas acciones con otro «Empezar». */
 internal fun WalkthroughActions.copyWith(onStart: () -> Unit) = WalkthroughActions(
@@ -63,12 +63,20 @@ internal fun WalkthroughActions.copyWith(onStart: () -> Unit) = WalkthroughActio
     onFinishEarly = onFinishEarly,
     onFinish = onFinish,
     onBackGesture = onBackGesture,
-    onPracticeInputChange = onPracticeInputChange
+    onPracticeInputChange = onPracticeInputChange,
+    onPracticeSubmit = onPracticeSubmit
 )
 
-/** El ViewModel real con una marca y sin código de acceso guardado (la práctica no coincide). */
-internal fun walkthroughViewModel(mark: WalkthroughMark?): WalkthroughViewModel =
-    WalkthroughViewModel(MemoryMark(mark), ValidateSecretCodeUseCase(NoCodes, PlainHasher), idleSessionManager())
+/**
+ * El ViewModel real con una marca y, si se da [code], ese código de acceso guardado; sin
+ * él, la práctica nunca coincide.
+ */
+internal fun walkthroughViewModel(mark: WalkthroughMark?, code: String? = null): WalkthroughViewModel =
+    WalkthroughViewModel(
+        MemoryMark(mark),
+        ValidateSecretCodeUseCase(code?.let(::OneCode) ?: NoCodes, PlainHasher),
+        idleSessionManager()
+    )
 
 /** Un SessionManager propio, sin sesión iniciada: estas pruebas no cierran sesiones. */
 internal fun idleSessionManager() = SessionManager(
@@ -86,7 +94,8 @@ internal fun WalkthroughViewModel.asActions() = WalkthroughActions(
     onFinishEarly = ::onFinishEarly,
     onFinish = ::onFinish,
     onBackGesture = ::onBackGesture,
-    onPracticeInputChange = ::onPracticeInputChange
+    onPracticeInputChange = ::onPracticeInputChange,
+    onPracticeSubmit = ::onPracticeSubmit
 )
 
 /** Etiqueta de parte y título de un paso, como los muestra la tarjeta. */
@@ -119,6 +128,14 @@ private class MemoryMark(private var stored: WalkthroughMark?) : WalkthroughRepo
 
 private object NoCodes : SecretCodeRepository {
     override suspend fun storedCode(slot: CodeSlot): StoredCodeHash? = null
+
+    override suspend fun saveCode(slot: CodeSlot, value: StoredCodeHash) = Unit
+}
+
+private class OneCode(code: String) : SecretCodeRepository {
+    private val stored = StoredCodeHash(salt = ByteArray(16), hash = code.toByteArray())
+
+    override suspend fun storedCode(slot: CodeSlot): StoredCodeHash? = stored.takeIf { slot == CodeSlot.USER }
 
     override suspend fun saveCode(slot: CodeSlot, value: StoredCodeHash) = Unit
 }
