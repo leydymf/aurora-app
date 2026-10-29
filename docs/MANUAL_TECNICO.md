@@ -159,7 +159,7 @@ MVVM con Clean Architecture en tres capas, organizado **por feature**:
 app/src/main/java/com/auroraclima/app/
 ├── core/            Transversal: security, database, network, catalog, directory, ui, startup
 ├── weather/         Fachada de clima (RF-01..RF-04)
-├── access/          Entrada por código, Guía de Aurora, Ajustes (RF-05..RF-16)
+├── access/          Entrada por código, Cómo usar Aurora, Ajustes (RF-05..RF-16)
 ├── accounts/        Cuenta, consentimiento, sincronización de llaves (RF-07, RF-17..RF-20, RF-46)
 ├── content/         Guía de orientación (RF-21..RF-26)
 ├── questionnaire/   Cuestionario y su resultado (RF-27..RF-31)
@@ -509,7 +509,7 @@ búsqueda de ciudades. Hay dos ranuras (`CodeSlot`):
 
 1. **`ACTIVATION`.** El código de activación, único del prototipo, que abre el
    primer uso: bienvenida → consentimiento → cuenta → código de acceso →
-   Guía de Aurora. La bienvenida se agregó en v0.3.2; la Guía (v0.3.4) reemplazó
+   Cómo usar Aurora. La bienvenida se agregó en v0.3.2; Cómo usar Aurora (v0.3.4) reemplazó
    al tutorial y al recorrido guiado por Inicio de versiones anteriores.
 2. **`USER`.** El código de acceso que crea la propia usuaria (mínimo 6
    caracteres y que no sea el nombre de una ciudad real, verificado contra un
@@ -545,7 +545,7 @@ de cada uno están en los ADR de esa versión en `docs/ARQUITECTURA.md`):
   ya dentro del grafo seguro, antes del Inicio.
 - **Tutorial saltado.** El Inicio mostró, en v0.3.2, una sola vez una tarjeta que recordaba
   cómo volver a entrar. En v0.3.3 se retiró y la reemplazó el recorrido guiado, que a su
-  vez fue absorbido por la Guía de Aurora en v0.3.4 (abajo).
+  vez fue absorbido por Cómo usar Aurora en v0.3.4 (abajo).
 - **Salida rápida.** La nube queda sobre el teclado y sale con un solo toque
   también con una hoja, un diálogo o el selector de fecha abiertos.
 - **Salir con cambios sin guardar.** El editor de registros y el cuestionario
@@ -562,7 +562,7 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
 - **Práctica del tutorial** (sustituida por la parte 1 de la Guía en v0.3.4). La barra de búsqueda se resalta con un halo que
   respira, una flecha y una etiqueta; al coincidir el código, la señal pasa a la
   nube real. Con «Quitar animaciones» el halo queda fijo (`PulsePlan`).
-- **Recorrido guiado por Inicio** (sustituido por la Guía de Aurora en v0.3.4). Siete pasos (reconocer la situación, resultados
+- **Recorrido guiado por Inicio** (sustituido por Cómo usar Aurora en v0.3.4). Siete pasos (reconocer la situación, resultados
   guardados, Guía, Mi registro, Ajustes, Acciones rápidas y la nube), con
   «Siguiente» y «Saltar». Sale la primera vez que se llega a Inicio después de
   crear el código de acceso, se haya terminado el tutorial o se haya saltado. La
@@ -587,7 +587,7 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
 **Flujos que cambiaron en v0.3.4** (pruebas SUS; el detalle está en los tres ADR del
 2026-10-28 de `docs/ARQUITECTURA.md`):
 
-- **Guía de Aurora (RF-10, RF-11).** Una sola experiencia reemplaza al tutorial y al
+- **Cómo usar Aurora (RF-10, RF-11).** Antes «Guía de Aurora»: se renombró el 2026-10-29 porque se confundía con la pestaña «Guía» (solo cambiaron los textos; las clases siguen llamándose `Walkthrough*`). Una sola experiencia reemplaza al tutorial y al
   recorrido guiado por Inicio: la portada «Conoce Aurora» («Empezar» / «Ahora no»), la
   parte 1 *Entrar* (práctica del código en la barra de la fachada, con círculo y flecha
   dibujados a mano), la parte 2 *Tu espacio* (Guía, Mi registro, Reconocer tu situación,
@@ -598,7 +598,9 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
   `WalkthroughViewModel` lleva los diez pasos (`WalkthroughStep`). Crear el código de
   acceso lleva directo a `panel`; se retiraron las rutas `guide` y `guide_review`, y las
   clases `TutorialScreen`, `TutorialViewModel`, `HomeTour` y sus pruebas.
-  Controles: «Atrás», «Siguiente» y «Saltar guía»; en la parte 3 la acción es la nube y se
+  Controles: «Atrás», «Siguiente» y «Saltar»; la tarjeta «3/3 · Salir» lleva una segunda
+  frase, más pequeña (`GuideCard` admite una `note`), y «¡Listo!» cuatro recordatorios,
+  el último «Discreta» (D-1 de RF-10); en la parte 3 la acción es la nube y se
   ofrece «Después». «Siguiente» de la parte 1 permite no practicar (D-2 de RF-10).
 - **Marca y reanudación.** `WalkthroughRepository` guarda en `view_meta` (preferencias
   neutras, sellado con la DEK de la cuenta, 16 bytes, claves `v0`/`v1`) una marca con dos
@@ -616,7 +618,7 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
   dependencia nueva, ~210 KB, y su licencia está en `docs/licencias/`). El hueco que ilumina
   (`Spotlight.kt`) se desliza y la tarjeta nunca tapa lo iluminado. Con «Quitar animaciones»
   todo queda completo y quieto.
-- **Ajustes.** Una sola fila, «Ver la guía de Aurora»; deja una bandera neutra en `panel` y
+- **Ajustes.** Una sola fila, «Ver cómo usar Aurora»; deja una bandera neutra en `panel` y
   la guía arranca en «Conoce Aurora».
 - **El teclado se cierra al entrar desde la fachada.** `leaveFacade` (`FacadeExit.kt`)
   quita el foco, cierra el teclado y espera hasta 500 ms a que baje antes de abrir el espacio
@@ -1237,7 +1239,7 @@ personas. El detalle de cada punto está en `docs/PENDIENTES.md` con su número.
 |---|---|
 | **P-109** | Desactivar el registro de cuentas al terminar las sesiones de evaluación; confirmar plan Spark; activar **App Check con Play Integrity** antes del piloto |
 | **P-92** | Evaluar retirar con `tools:node="remove"` las dos actividades exportadas que `firebase-auth` fusiona en el manifiesto (`genericidp://` y `recaptcha://`), que Aurora no usa, y **verificar después** que login, creación de cuenta y recuperación siguen funcionando: Firebase puede usar reCAPTCHA como defensa antiabuso |
-| **P-139** | Corrida manual de la Guía de Aurora (orden, salida real y reanudación, Ajustes, letra grande, TalkBack, recientes, teclado sobre Inicio y selector de fecha en API 26) en el teléfono y en `Aurora_API26` |
+| **P-139** | Corrida manual de Cómo usar Aurora (orden, salida real y reanudación, Ajustes, letra grande, TalkBack, recientes, teclado sobre Inicio y selector de fecha en API 26) en el teléfono y en `Aurora_API26` |
 | **P-140** | «Eliminar todo» y la llave del código: una consulta de la puerta en el instante del borrado puede volver a crear la llave (se cierra haciendo que solo la creación del código la genere), y el borrado de la llave puede seguir aunque se cancele (`runCatching` atrapa la `CancellationException` en `AccessCredentialsEraser`) |
 | **P-118** | Ligar el dispositivo a la cuenta del primer inicio de sesión con código. Hoy, si alguien cierra sesión y entra con otra cuenta en el mismo teléfono, los registros locales de la primera pueden subir a la nube de la segunda. No afecta a las sesiones de evaluación: teléfonos propios, una cuenta de prueba por participante y reinstalación entre sesiones. Cambia el reingreso, por eso se dejó para después de ellas |
 | **P-112** | Hermano del anterior, solo en debug: retirar la `androidx.activity.ComponentActivity` exportada que fusiona `ui-test-manifest`, o mover esa dependencia a `androidTestImplementation`, y fijar la retirada en `ManifestMinimizationTest`. No se ve en pantalla y no afecta a las sesiones de evaluación, pero es superficie innecesaria en el artefacto que se instala en los teléfonos |

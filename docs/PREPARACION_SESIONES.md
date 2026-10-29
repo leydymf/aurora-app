@@ -6,7 +6,7 @@
 
 Cada participante debe poder hacer el **primer uso completo**: activación con el
 código de activación en el buscador de ciudades → bienvenida → consentimiento →
-crear cuenta → código de acceso → Guía de Aurora. Eso obliga a dejar el teléfono como
+crear cuenta → código de acceso → Cómo usar Aurora. Eso obliga a dejar el teléfono como
 recién instalado entre una persona y la siguiente, porque en cuanto existe un
 código de acceso el código de activación deja de abrir (§3).
 
@@ -127,17 +127,18 @@ cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.
 shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.4.apk   # anotar: identifica el APK de las sesiones
 ```
 
-APK de `v0.3.4-trl4` generado el 2026-10-28 desde `c22e4b6` (el último commit de
+APK de `v0.3.4-trl4` generado el 2026-10-29 desde `fb708b8` (el último commit de
 código; la etiqueta solo agrega documentación), con el JBR 21 de Android Studio:
 
 | Archivo | Tamaño | SHA-256 |
 |---|---|---|
-| `aurora-clima-0.3.4.apk` | 38 775 716 bytes (37,0 MiB) | `d058b77b0447582879f4cdaf371abb6e466686ebde0a31c38f5236b3ed556d58` |
+| `aurora-clima-0.3.4.apk` | 39 143 496 bytes (37,3 MiB) | `ecaf377a49329e82a52313a3354c701cb29cf18a338df021de3578a1fc8e4c4d` |
 
-El APK mide 155 649 bytes menos (−0,4 %) que el de `v0.3.3-trl4`: la Guía de Aurora
-reemplazó el tutorial y el recorrido, y la fuente nueva (~210 KB) no alcanzó a
-compensar el código retirado. Hay una copia idéntica en la carpeta de sesiones del
-proyecto de grado.
+El APK mide 212 131 bytes más (+0,5 %) que el de `v0.3.3-trl4`: Cómo usar Aurora
+reemplazó el tutorial y el recorrido, la fuente nueva pesa ~210 KB y el contenido sin
+comprimir del APK casi no cambia respecto de la primera compilación de la versión (la
+diferencia con esa, 38 775 716 bytes, es de compresión). Hay una copia idéntica en la
+carpeta de sesiones del proyecto de grado.
 
 El SHA-256 identifica **ese archivo**, no el código. El build debug no es
 reproducible byte a byte: el mismo día, una compilación limpia del mismo commit dio
@@ -376,23 +377,25 @@ IANA y no acepta correo.
    comportamiento correcto del producto (RNF-03) y puede ser un hallazgo legítimo
    de usabilidad: la facilitadora debe saberlo para **no confundirlo con un fallo**
    y para anotarlo bien.
-6. **La Guía de Aurora sale sola una vez** (v0.3.4), la primera vez que la
+6. **Cómo usar Aurora sale sola una vez** (v0.3.4), la primera vez que la
    participante llega a Inicio después de crear su código de acceso. Reemplaza al
    tutorial y al recorrido de las versiones anteriores y es una sola experiencia
    de tres partes: *Entrar* (escribir su código de acceso en el buscador del
    clima), *Tu espacio* (seis elementos de Inicio, uno por uno) y *Salir* (tocar
    la nube). Se abre con «Conoce Aurora» (**Empezar** o **Ahora no**); en cada
    tarjeta hay «Siguiente» (en la parte 1 no hay «Atrás» y se puede avanzar sin
-   haber practicado), «Atrás» y «Saltar guía». Si la participante salta o toca la
-   nube, aparece «¡Listo!» con «Para recordar:». Si la sesión se cierra a mitad
+   haber practicado), «Atrás» y «Saltar». Si la participante salta o toca la
+   nube, aparece «¡Listo!» con «Para recordar:» (cuatro recordatorios, el último,
+   «Discreta», dice que un código equivocado solo muestra el clima). No debe
+   confundirse con la pestaña «Guía» de la barra inferior, que es otra cosa. Si la sesión se cierra a mitad
    (inactividad o segundo plano), **no se retoma**, con una excepción: al llegar a
    la parte 3 se arma una marca y, en la siguiente entrada, aparece «¡Listo!» una
-   sola vez (también tras un cierre por inactividad en ese paso). Se repite desde Ajustes → «Ver la
-   guía de Aurora». Para que la siguiente participante la vea, el teléfono debe
+   sola vez (también tras un cierre por inactividad en ese paso). Se repite desde Ajustes → «Ver cómo
+   usar Aurora». Para que la siguiente participante la vea, el teléfono debe
    quedar como recién instalado (§3). La facilitadora debe anotar si la saltó y no
    confundir su ausencia con un fallo.
 7. **«Aún no coincide» no sale al instante** (v0.3.4): aparece 400 ms después de la
-   última tecla, tanto en la barra de la fachada como en la práctica de la Guía.
+   última tecla, tanto en la barra de la fachada como en la práctica de Cómo usar Aurora.
    Es parte del comportamiento, no un retraso del teléfono.
 
 ### 4.5 Encuadre de la sesión

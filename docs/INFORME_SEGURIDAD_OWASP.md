@@ -2588,7 +2588,7 @@ Corrida del 2026-10-27 sobre `c1e5c5a`:
 ## 13. Re-verificación en v0.3.4
 
 v0.3.4 (etiqueta `v0.3.4-trl4`, 2026-10-28) cierra la versión para las pruebas SUS con tres
-cambios: la **Guía de Aurora**, que reemplaza al tutorial y al recorrido guiado de v0.3.3; el
+cambios: **Cómo usar Aurora**, que reemplaza al tutorial y al recorrido guiado de v0.3.3; el
 **cierre del teclado al entrar desde la fachada**; y el **cálculo del hash del código fuera del
 hilo principal**. Igual que en §11 y §12, no se repitió la evaluación completa: se revisaron
 el código y las pruebas de cada cambio y, en cada tramo, la auditora de seguridad del
@@ -2600,12 +2600,13 @@ resultado de un control; la auditora dejó dos residuales (§13.2).
 
 | Cambio de v0.3.4 | Commits | Controles | Efecto en el resultado |
 |---|---|---|---|
-| La Guía de Aurora vive en la **misma ventana** que las pestañas (la ruta `panel`), como el recorrido que reemplaza: hereda `FLAG_SECURE`, el registro de interacción y la nube, que se dibuja encima de todo; la app de abajo queda sin toques ni semántica | `c62dc0b` … `8f8761f` | PLATFORM-3 (captura y recientes), AUTH-2 (cierre de sesión, RNF-03) | Sin ventana propia nueva. Un toque en la nube dentro de la guía es la salida rápida de siempre y cancela el ViewModel en el mismo cuadro. Sin cambio |
+| Cómo usar Aurora vive en la **misma ventana** que las pestañas (la ruta `panel`), como el recorrido que reemplaza: hereda `FLAG_SECURE`, el registro de interacción y la nube, que se dibuja encima de todo; la app de abajo queda sin toques ni semántica | `c62dc0b` … `8f8761f` | PLATFORM-3 (captura y recientes), AUTH-2 (cierre de sesión, RNF-03) | Sin ventana propia nueva. Un toque en la nube dentro de la guía es la salida rápida de siempre y cancela el ViewModel en el mismo cuadro. Sin cambio |
 | La marca sellada en `view_meta` pasa de un bit a **dos valores** («guía desde el inicio» y «guía por cerrar»). La segunda se arma al llegar al paso de la nube, para mostrar «¡Listo!» tras volver a entrar; la primera se consume antes de abrir. Misma DEK, mismo archivo neutro, mismos 16 bytes y claves; la marca de v0.3.3 se lee como «desde el inicio» | `66c9f27`, `0214efd` | STORAGE-1 | Sin dato nuevo en disco ni en la nube: la marca sigue sellada, con nombre neutro, y muere con RF-20 y con el descarte de una activación sin terminar (`WalkthroughEraser`). Se acepta un efecto: un cierre por inactividad o por segundo plano en el paso de la nube también deja armada la marca y muestra «¡Listo!»; es inofensivo y evita guardar el paso en cada avance (RNF-04). Sin cambio |
 | Para abrir la marca tras la nube, la guía espera hasta 10 s a la llave de la cuenta (`PayloadCipher.isReady()`, que borra la copia de la DEK que lee) | `0214efd` | STORAGE-1, CRYPTO-2 | `currentDek()` devuelve siempre una copia nueva; sin llave, `consume()` no toca la marca. Sin cambio |
 | `leaveFacade`: el teclado se cierra (y se espera hasta 500 ms) antes de abrir el espacio privado; la entrada solo ocurre con la app al frente | `326105d`, `c1164d7` | AUTH-2 (RF-06, RF-12) | Las tres revisoras rechazaron la primera versión (A-1): la espera dejaba abrir el interior con la app en segundo plano. La corrección usa `repeatOnLifecycle(RESUMED)` y `canEnter`, y el evento se pierde, que es el lado seguro. Sin cambio |
 | `SecretCodeHasher.hash` es `suspend` y calcula el HMAC en un carril de un solo hilo; `computeHmac` lanza si corre en el hilo principal, también en release; la puerta tiene el plazo de la red | `e0b25e0` … `c22e4b6` | AUTH-2 (indistinguibilidad, RF-13), CRYPTO-1 | El HMAC sigue usando la llave no exportable del Keystore y la comparación sigue siendo de tiempo constante. Las pruebas comparan la línea de tiempo de un código erróneo con la de una ciudad inexistente, con un cálculo más lento que la red. Una mutación (quitar el cambio de hilo) hace fallar `KeystoreSecretCodeHasherTest`. Sin cambio |
 | Los ViewModels que calculan (`WalkthroughViewModel`, `ChangeCodeViewModel`, `CodeSetupViewModel`) registran un limpiador en `SessionManager` que cancela el cálculo y borra lo tecleado dentro de `closeSession()` | `3939659` | AUTH-2 (cierre de sesión, RNF-03) | Lo tecleado no sobrevive a la salida rápida ni a la inactividad. `WalkthroughUiState.toString()` omite la entrada de la práctica. Sin cambio |
+| Segunda frase de «3/3 · Salir» y recordatorio «Discreta» de «¡Listo!» (D-1 de RF-10, 2026-10-29): son recursos estáticos de texto, sin estado; «Discreta» es la frase más explícita del `resources.arsc` sobre el mecanismo («solo verá el clima») y solo se muestra dentro del espacio protegido. Observación de la auditora, riesgo bajo-medio por lectura del `arsc` con acceso físico y técnico; el camuflaje de esta versión ya se da por gastado (P-108) | `fb708b8` | Camuflaje (RNF-05) | Sin término vedado; `TerminologyGuardTest` exige «código de acceso». Sin cambio |
 | Textos de la guía con el léxico de la app; el guardián de camuflaje busca los términos de tres letras como palabra entera solo en la prosa de los recursos | `e94699d` | Camuflaje (RNF-05) | Los literales, los identificadores y los atributos conservan la subcadena. El guardián del DEX sigue con 0 hallazgos nuevos sobre el release (§13.3). Sin cambio |
 
 ### 13.2 Residuales de la auditora
@@ -2637,10 +2638,10 @@ colgando de la corrida manual P-116, y la de la guía (P-139) añade a mano la m
 recientes con la guía a la vista y la comprobación de que el teclado no queda abierto sobre
 Inicio al volver a entrar tras salir con la nube desde la práctica.
 
-Corrida del 2026-10-28 sobre `784a7fd`:
+Corrida del 2026-10-29 sobre `fb708b8`:
 - **Host:** `ktlintCheck assembleDebug lint test assembleRelease`. 1057 pruebas de JVM por
   variante en 131 clases, 0 fallos (eran 1015). ktlint sin violaciones. Lint con 0 errores.
-  Guardián del DEX: 398 434 cadenas (152 578 distintas), 49 términos, 58 excepciones, canarios
+  Guardián del DEX: 399 575 cadenas (153 010 distintas), 49 términos, 58 excepciones, canarios
   en verde y 0 hallazgos nuevos.
 - **Instrumentadas:** 181 en 37 clases, 0 fallos en API 30 y en API 26 (eran 169). En API 26
   se omite la variante con gesto de `AttachPickerCancelTest`.
