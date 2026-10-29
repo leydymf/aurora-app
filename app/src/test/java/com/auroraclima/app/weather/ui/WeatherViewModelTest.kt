@@ -13,6 +13,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
@@ -458,6 +459,150 @@ class WeatherViewModelTest {
         assertEquals("cielo2026", gate.lastQuery)
     }
 
+    @Test
+    fun `escribir rapido en la barra hace un solo calculo con lo ultimo`() = runTest {
+        // Ninguna tecla dispara la puerta mientras la siguiente llega dentro de la pausa.
+        repository.searchResult = Result.success(emptyList())
+        gate.result = SearchGateResult.OpenAccess
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+
+        "cielo2026".indices.forEach { end ->
+            viewModel.onSearchQueryChange("cielo2026".substring(0, end + 1))
+            advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS / 4)
+            runCurrent()
+        }
+        assertEquals("nada durante el tecleo", 0, gate.hashCount)
+
+        advanceUntilIdle()
+
+        assertEquals("un solo cálculo", 1, gate.hashCount)
+        assertEquals("cielo2026", gate.lastQuery)
+        assertEquals(listOf<SearchGateResult>(SearchGateResult.OpenAccess), events)
+    }
+
+    @Test
+    fun `una tecla nueva cancela el calculo en curso y su resultado no abre`() = runTest {
+        repository.searchResult = Result.success(emptyList())
+        gate.results["cielo2026"] = SearchGateResult.OpenAccess
+        val slowHash = CompletableDeferred<Unit>()
+        gate.hold = slowHash
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+        viewModel.onSearchQueryChange("cielo2026")
+        advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS)
+        runCurrent()
+        assertEquals("el cálculo está en curso", 1, gate.inFlight)
+
+        viewModel.onSearchQueryChange("cielo20267")
+        runCurrent()
+        // Con la puerta real, un HMAC ya iniciado termina en su carril, pero su resultado
+        // se descarta; lo que aquí se ve es que el llamador dejó de esperarlo.
+        assertEquals("nadie sigue esperando el cálculo anterior", 0, gate.inFlight)
+        gate.hold = null
+        slowHash.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue("el código anterior ya no abre", events.isEmpty())
+        assertTrue(viewModel.uiState.value.showNoResults)
+    }
+
+    @Test
+    fun `cerrar la busqueda durante un calculo lo cancela y no abre nada despues`() = runTest {
+        // Es lo que hace la fachada en ON_PAUSE (segundo plano) y al cancelar la barra.
+        repository.searchResult = Result.success(emptyList())
+        gate.result = SearchGateResult.OpenAccess
+        val slowHash = CompletableDeferred<Unit>()
+        gate.hold = slowHash
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+        viewModel.onSearchQueryChange("cielo2026")
+        advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS)
+        runCurrent()
+        assertEquals(1, gate.inFlight)
+
+        viewModel.onSearchCancel()
+        slowHash.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue(events.isEmpty())
+        assertEquals("", viewModel.uiState.value.searchQuery)
+        assertFalse(viewModel.uiState.value.isSearching)
+    }
+
+    @Test
+    fun `un calculo trabado no deja la barra buscando para siempre`() = runTest {
+        // La puerta tiene el mismo plazo que la red: vencido, responde como una ciudad.
+        repository.searchResult = Result.success(emptyList())
+        gate.result = SearchGateResult.OpenAccess
+        gate.hold = CompletableDeferred()
+        val viewModel = createViewModel()
+        val events = collectGateEvents(viewModel)
+
+        viewModel.onSearchQueryChange("cielo2026")
+        advanceTimeBy(WeatherViewModel.SEARCH_DEBOUNCE_MS + WeatherViewModel.NETWORK_TIMEOUT_MS - 1)
+        runCurrent()
+        assertTrue("aún dentro del plazo", viewModel.uiState.value.isSearching)
+        advanceTimeBy(2)
+        runCurrent()
+
+        assertFalse(viewModel.uiState.value.isSearching)
+        assertTrue(viewModel.uiState.value.showNoResults)
+        assertTrue(events.isEmpty())
+        assertEquals(0, gate.inFlight)
+    }
+
+    /** Estados visibles (sin el texto) y el instante de cada uno, de una búsqueda completa. */
+    private fun TestScope.visibleTimeline(query: String): List<Pair<Long, WeatherUiState>> {
+        val viewModel = createViewModel()
+        runCurrent()
+        val start = testScheduler.currentTime
+        val timeline = mutableListOf<Pair<Long, WeatherUiState>>()
+        val collector = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect { timeline += (testScheduler.currentTime - start) to it.copy(searchQuery = "") }
+        }
+        viewModel.onSearchQueryChange(query)
+        advanceUntilIdle()
+        collector.cancel()
+        return timeline
+    }
+
+    @Test
+    fun `un codigo erroneo tiene los mismos estados y tiempos que una ciudad inexistente`() = runTest {
+        // RF-13: con un cálculo del Keystore más lento que la red, la respuesta visible
+        // espera igual a la puerta para cualquier texto de longitud de código.
+        repository.searchResult = Result.success(emptyList())
+        repository.searchDelayMs = 300
+        gate.hashDelayMs = 700
+
+        val wrongCode = visibleTimeline("codigofalso")
+        val missingCity = visibleTimeline("villaquimera")
+
+        assertEquals(missingCity, wrongCode)
+        assertTrue(wrongCode.last().second.showNoResults)
+    }
+
+    @Test
+    fun `el codigo correcto no responde antes que uno erroneo`() = runTest {
+        repository.searchResult = Result.success(emptyList())
+        repository.searchDelayMs = 300
+        gate.hashDelayMs = 700
+        gate.results["cielo2026"] = SearchGateResult.OpenAccess
+        val wrongCodeAnsweredAt = visibleTimeline("cielo2027").last().first
+
+        val viewModel = createViewModel()
+        runCurrent()
+        val start = testScheduler.currentTime
+        var openedAt: Long? = null
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.gateEvents.collect { openedAt = testScheduler.currentTime - start }
+        }
+        viewModel.onSearchQueryChange("cielo2026")
+        advanceUntilIdle()
+
+        assertEquals(wrongCodeAnsweredAt, openedAt)
+    }
+
     private fun bucaramanga() = City(
         id = 3688465,
         name = "Bucaramanga",
@@ -480,13 +625,37 @@ class WeatherViewModelTest {
     )
 }
 
+/**
+ * Puerta de prueba. Como la real, solo calcula desde 6 caracteres: entonces cuenta el
+ * cálculo, tarda [hashDelayMs] (el Keystore) y, con [hold] armado, queda suspendida
+ * hasta que se complete. [results] permite un resultado por texto.
+ */
 private class FakeSearchQueryGate : SearchQueryGate {
     var result: SearchGateResult = SearchGateResult.PassThrough
+    val results = mutableMapOf<String, SearchGateResult>()
     var lastQuery: String? = null
+    var hashCount = 0
+    var hashDelayMs = 0L
+    var hold: CompletableDeferred<Unit>? = null
+    var inFlight = 0
+        private set
 
     override suspend fun inspect(query: String): SearchGateResult {
         lastQuery = query
-        return result
+        if (query.length < MIN_CODE_LENGTH) return SearchGateResult.PassThrough
+        hashCount++
+        inFlight++
+        try {
+            if (hashDelayMs > 0) delay(hashDelayMs)
+            hold?.await()
+        } finally {
+            inFlight--
+        }
+        return results[query] ?: result
+    }
+
+    private companion object {
+        const val MIN_CODE_LENGTH = 6
     }
 }
 

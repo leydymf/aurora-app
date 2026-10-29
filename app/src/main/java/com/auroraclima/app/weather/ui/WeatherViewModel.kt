@@ -104,9 +104,14 @@ class WeatherViewModel @Inject constructor(
         // La puerta corre en paralelo con la búsqueda real y la respuesta visible
         // espera SIEMPRE a la búsqueda (o a su plazo): un código erróneo es, en UI,
         // mensajes, tiempos y tráfico de red, exactamente una búsqueda de ciudad, y un
-        // código válido no responde más rápido que una búsqueda (RF-13).
+        // código válido no responde más rápido que una búsqueda (RF-13). La puerta tiene
+        // el mismo plazo que la red, igual para cualquier texto: un cálculo trabado no
+        // deja la barra «buscando» para siempre; vencido, cuenta como una ciudad más.
         val (destination, results) = coroutineScope {
-            val gateResult = async { searchQueryGate.inspect(query) }
+            val gateResult = async {
+                withTimeoutOrNull(NETWORK_TIMEOUT_MS) { searchQueryGate.inspect(query) }
+                    ?: SearchGateResult.PassThrough
+            }
             val found = withTimeoutOrNull(NETWORK_TIMEOUT_MS) { repository.searchCities(query).getOrNull() }
             gateResult.await() to found
         }
