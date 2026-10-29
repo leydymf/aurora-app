@@ -8,6 +8,7 @@ import com.auroraclima.app.access.domain.repository.WalkthroughMark
 import com.auroraclima.app.access.domain.repository.WalkthroughRepository
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
 import com.auroraclima.app.core.security.SearchGateResult
+import com.auroraclima.app.core.security.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineStart
@@ -47,11 +48,17 @@ import kotlinx.coroutines.withContext
  * MISMA puerta que la fachada ([ValidateSecretCodeUseCase]), solo da por logrado el
  * ingreso con el código de acceso real y no abre nada. Lo tecleado vive en el estado
  * mientras se escribe, se borra al dejar la parte 1 y muere con el ViewModel.
+ *
+ * Cualquier cierre de sesión (la nube, inactividad, segundo plano) cancela en el acto la
+ * evaluación en curso y borra lo tecleado: corre dentro de la limpieza de
+ * [SessionManager], antes del pop del grafo, así que un cálculo que termine tarde no
+ * cambia nada (RF-16).
  */
 @HiltViewModel
 class WalkthroughViewModel @Inject constructor(
     private val repository: WalkthroughRepository,
-    private val validateSecretCode: ValidateSecretCodeUseCase
+    private val validateSecretCode: ValidateSecretCodeUseCase,
+    sessionManager: SessionManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WalkthroughUiState())
     val uiState: StateFlow<WalkthroughUiState> = _uiState.asStateFlow()
@@ -61,6 +68,7 @@ class WalkthroughViewModel @Inject constructor(
     private val markJob: Job
 
     init {
+        addCloseable(sessionManager.registerCleaner { discardPractice() })
         markJob = viewModelScope.launch {
             if (!awaitReadableMark()) return@launch
             // Si mientras se esperaba la llave ya empezó un repaso desde Ajustes, la
@@ -148,10 +156,12 @@ class WalkthroughViewModel @Inject constructor(
     }
 
     /**
-     * Evaluación en vivo, como la barra real: cada tecla cuenta y solo la última
-     * importa. Al coincidir, la confirmación se ve un momento ([CONFIRM_MILLIS]) y la
-     * guía pasa sola a Inicio, si sigue en la parte 1. Logrado, queda fijo: editar el
-     * texto no lo quita.
+     * Evaluación en vivo, como la barra real: solo la última tecla importa y se evalúa
+     * tras una pausa ([PRACTICE_DEBOUNCE_MILLIS]), así que escribir rápido no lanza un
+     * cálculo con el Keystore por tecla; por debajo de la longitud mínima ni se intenta.
+     * Al coincidir, la confirmación se ve un momento ([CONFIRM_MILLIS]) y la guía pasa
+     * sola a Inicio, si sigue en la parte 1. Logrado, queda fijo: editar el texto no lo
+     * quita.
      */
     fun onPracticeInputChange(value: String) {
         val current = _uiState.value
@@ -164,6 +174,7 @@ class WalkthroughViewModel @Inject constructor(
         practiceCheckJob?.cancel()
         if (value.trim().length < ValidateSecretCodeUseCase.MIN_CODE_LENGTH) return
         practiceCheckJob = viewModelScope.launch {
+            delay(PRACTICE_DEBOUNCE_MILLIS)
             val matched = validateSecretCode.inspect(value) == SearchGateResult.OpenAccess
             // OpenActivation no ocurre con un código de acceso creado; tampoco cuenta.
             val status = if (matched) PracticeStatus.MATCHED else PracticeStatus.MISMATCH
@@ -228,9 +239,18 @@ class WalkthroughViewModel @Inject constructor(
         advanceJob?.cancel()
     }
 
+    /** Limpieza del cierre de sesión: nada en curso y nada de lo tecleado en memoria. */
+    private fun discardPractice() {
+        cancelPractice()
+        _uiState.update { it.copy(practiceInput = "", practiceStatus = PracticeStatus.TYPING) }
+    }
+
     companion object {
         /** Cuánto se ve la confirmación de la parte 1 antes de pasar a Inicio. */
         const val CONFIRM_MILLIS = 1_500L
+
+        /** Pausa tras la última tecla antes de evaluar la práctica, la misma de la fachada. */
+        const val PRACTICE_DEBOUNCE_MILLIS = 400L
 
         /** Cuánto se espera, como mucho, a la llave de la cuenta para leer la marca. */
         const val KEY_WAIT_MILLIS = 10_000L

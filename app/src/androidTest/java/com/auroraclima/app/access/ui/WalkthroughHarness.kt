@@ -1,6 +1,7 @@
 package com.auroraclima.app.access.ui
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.compose.runtime.Composable
 import com.auroraclima.app.HOME_TAB
 import com.auroraclima.app.InPanelRoute
@@ -13,7 +14,12 @@ import com.auroraclima.app.access.domain.repository.WalkthroughMark
 import com.auroraclima.app.access.domain.repository.WalkthroughRepository
 import com.auroraclima.app.access.domain.security.SecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
+import com.auroraclima.app.core.security.MonotonicClock
+import com.auroraclima.app.core.security.SessionManager
 import com.auroraclima.app.core.ui.v2.SpotlightTargets
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * El Inicio con su barra de pestañas y la guía encima, dentro del grafo seguro real:
@@ -62,7 +68,14 @@ internal fun WalkthroughActions.copyWith(onStart: () -> Unit) = WalkthroughActio
 
 /** El ViewModel real con una marca y sin código de acceso guardado (la práctica no coincide). */
 internal fun walkthroughViewModel(mark: WalkthroughMark?): WalkthroughViewModel =
-    WalkthroughViewModel(MemoryMark(mark), ValidateSecretCodeUseCase(NoCodes, PlainHasher))
+    WalkthroughViewModel(MemoryMark(mark), ValidateSecretCodeUseCase(NoCodes, PlainHasher), idleSessionManager())
+
+/** Un SessionManager propio, sin sesión iniciada: estas pruebas no cierran sesiones. */
+internal fun idleSessionManager() = SessionManager(
+    CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    MonotonicClock(SystemClock::elapsedRealtime),
+    emptySet()
+)
 
 /** Lo que el ViewModel expone, como acciones para la capa. */
 internal fun WalkthroughViewModel.asActions() = WalkthroughActions(

@@ -10,10 +10,15 @@ import com.auroraclima.app.access.domain.usecase.FakeSecretCodeRepository
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
 import com.auroraclima.app.access.domain.usecase.seed
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.MonotonicClock
 import com.auroraclima.app.core.security.SearchGateResult
+import com.auroraclima.app.core.security.SessionManager
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -32,11 +37,20 @@ class ChangeCodeViewModelTest {
     private val hasher = FakeSecretCodeHasher()
     private val repository = FakeSecretCodeRepository()
     private val gate = ValidateSecretCodeUseCase(repository, hasher)
+
+    // Sus temporizadores van en un planificador aparte que nunca avanza: aquí la sesión
+    // solo se cierra cuando la prueba toca la nube (advanceUntilIdle no la caduca).
+    private val sessionManager = SessionManager(
+        scope = CoroutineScope(StandardTestDispatcher()),
+        monotonicClock = MonotonicClock { 0L },
+        boundCleaners = emptySet()
+    ).apply { startSession() }
     private val viewModel = ChangeCodeViewModel(
         ChangeSecretCodeUseCase(
             gate,
             CreateSecretCodeUseCase(repository, hasher, FakeCityNameDirectory("bucaramanga"))
-        )
+        ),
+        sessionManager
     )
 
     private fun TestScope.collectDoneEvents(): List<Unit> {
@@ -187,5 +201,36 @@ class ChangeCodeViewModelTest {
         viewModel.onConfirmCodeChange("lluvia2027")
 
         assertNull(viewModel.uiState.value.confirmErrorRes)
+    }
+
+    @Test
+    fun `salir con la nube durante el calculo lo cancela y no cambia ni avisa nada`() = runTest {
+        // RF-16: el Keystore lento (ANR de API 30) ya no retiene la nube; el cálculo
+        // en curso se cancela con el cierre y su resultado tardío no llega.
+        seedUserCode("cielo2026")
+        val events = collectDoneEvents()
+        viewModel.onCurrentCodeChange("cielo2026")
+        viewModel.onNewCodeChange("lluvia2027")
+        viewModel.onConfirmCodeChange("lluvia2027")
+        advanceUntilIdle()
+        val slowHash = CompletableDeferred<Unit>()
+        hasher.hold = slowHash
+        viewModel.onSubmit()
+        advanceUntilIdle()
+        assertEquals("el cálculo está en curso", 1, hasher.inFlight)
+
+        // El cálculo termina justo después del cierre, antes de que corra nada más:
+        // solo una cancelación hecha en el acto, dentro de la limpieza, lo descarta.
+        sessionManager.closeNow()
+        slowHash.complete(Unit)
+        hasher.hold = null
+        advanceUntilIdle()
+
+        assertEquals(0, events.size)
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals("", viewModel.uiState.value.currentCode)
+        assertEquals("", viewModel.uiState.value.newCode)
+        assertEquals(SearchGateResult.OpenAccess, gate.inspect("cielo2026"))
+        assertEquals(SearchGateResult.PassThrough, gate.inspect("lluvia2027"))
     }
 }

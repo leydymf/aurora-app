@@ -84,8 +84,11 @@ class WalkthroughResumeTest {
                 store,
                 object : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                        WalkthroughViewModel(repository, ValidateSecretCodeUseCase(NoCodes, PlainHasher)) as T
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T = WalkthroughViewModel(
+                        repository,
+                        ValidateSecretCodeUseCase(NoCodes, PlainHasher),
+                        idleSessionManager()
+                    ) as T
                 }
             )[WalkthroughViewModel::class.java]
         }

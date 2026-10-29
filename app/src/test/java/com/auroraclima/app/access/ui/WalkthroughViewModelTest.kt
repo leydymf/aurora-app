@@ -12,8 +12,13 @@ import com.auroraclima.app.access.domain.usecase.FakeWalkthroughRepository
 import com.auroraclima.app.access.domain.usecase.ValidateSecretCodeUseCase
 import com.auroraclima.app.access.domain.usecase.seed
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.MonotonicClock
+import com.auroraclima.app.core.security.SessionManager
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -38,16 +43,34 @@ class WalkthroughViewModelTest {
     private val hasher = FakeSecretCodeHasher()
     private val codes = FakeSecretCodeRepository()
 
+    // Sus temporizadores van en un planificador aparte que nunca avanza: aquí la sesión
+    // solo se cierra cuando la prueba toca la nube (advanceUntilIdle no la caduca).
+    private val sessionManager = SessionManager(
+        scope = CoroutineScope(StandardTestDispatcher()),
+        monotonicClock = MonotonicClock { 0L },
+        boundCleaners = emptySet()
+    ).apply { startSession() }
+
     private fun TestScope.viewModel(
         repository: FakeWalkthroughRepository = FakeWalkthroughRepository(WalkthroughMark.FROM_START)
-    ): WalkthroughViewModel =
-        WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher)).also { advanceUntilIdle() }
+    ): WalkthroughViewModel = WalkthroughViewModel(
+        repository,
+        ValidateSecretCodeUseCase(codes, hasher),
+        sessionManager
+    ).also { advanceUntilIdle() }
 
     private suspend fun seedUserCode(code: String = "amanecer26") {
         codes.seed(CodeSlot.USER, code, hasher)
     }
 
     private val step get() = WalkthroughStep.entries
+
+    /** Teclea en la práctica y deja pasar la pausa: la evaluación queda hecha. */
+    private fun TestScope.typePractice(viewModel: WalkthroughViewModel, value: String) {
+        viewModel.onPracticeInputChange(value)
+        advanceTimeBy(WalkthroughViewModel.PRACTICE_DEBOUNCE_MILLIS)
+        runCurrent()
+    }
 
     @Test
     fun `el orden de los pasos es el pedido`() {
@@ -214,8 +237,7 @@ class WalkthroughViewModelTest {
         assertEquals(PracticeStatus.MISMATCH, viewModel.uiState.value.practiceStatus)
         assertEquals(WalkthroughStep.TYPE_IN, viewModel.uiState.value.step)
 
-        viewModel.onPracticeInputChange("amanecer26")
-        runCurrent()
+        typePractice(viewModel, "amanecer26")
         assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
     }
 
@@ -224,8 +246,7 @@ class WalkthroughViewModelTest {
         seedUserCode()
         val viewModel = viewModel()
         viewModel.onStart()
-        viewModel.onPracticeInputChange("amanecer26")
-        runCurrent()
+        typePractice(viewModel, "amanecer26")
 
         advanceTimeBy(WalkthroughViewModel.CONFIRM_MILLIS - 1)
         runCurrent()
@@ -243,8 +264,7 @@ class WalkthroughViewModelTest {
         seedUserCode()
         val viewModel = viewModel()
         viewModel.onStart()
-        viewModel.onPracticeInputChange("amanecer26")
-        runCurrent()
+        typePractice(viewModel, "amanecer26")
 
         viewModel.onBackGesture()
         advanceUntilIdle()
@@ -278,8 +298,7 @@ class WalkthroughViewModelTest {
         seedUserCode()
         val viewModel = viewModel()
         viewModel.onStart()
-        viewModel.onPracticeInputChange("amanecer26")
-        runCurrent()
+        typePractice(viewModel, "amanecer26")
 
         viewModel.onReplay()
         advanceUntilIdle()
@@ -348,7 +367,7 @@ class WalkthroughViewModelTest {
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    WalkthroughViewModel(slow, ValidateSecretCodeUseCase(codes, hasher)) as T
+                    WalkthroughViewModel(slow, ValidateSecretCodeUseCase(codes, hasher), sessionManager) as T
             }
         )[WalkthroughViewModel::class.java]
         advanceUntilIdle()
@@ -385,7 +404,7 @@ class WalkthroughViewModelTest {
     fun `tras la nube espera a la llave de la cuenta y despues muestra Listo`() = runTest {
         // La nube cierra también la sesión: la llave vuelve con el reingreso silencioso.
         val repository = FakeWalkthroughRepository(WalkthroughMark.TO_FINISH).apply { ready = false }
-        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher))
+        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher), sessionManager)
         advanceTimeBy(1_000)
         runCurrent()
         assertNull("sin llave aún no hay guía", viewModel.uiState.value.step)
@@ -414,7 +433,7 @@ class WalkthroughViewModelTest {
     @Test
     fun `sin marca no espera a la llave`() = runTest {
         val repository = FakeWalkthroughRepository(null).apply { ready = false }
-        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher))
+        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher), sessionManager)
         runCurrent()
 
         assertNull(viewModel.uiState.value.step)
@@ -424,7 +443,7 @@ class WalkthroughViewModelTest {
     @Test
     fun `un repaso pedido mientras se espera la llave no lo pisa Listo`() = runTest {
         val repository = FakeWalkthroughRepository(WalkthroughMark.TO_FINISH).apply { ready = false }
-        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher))
+        val viewModel = WalkthroughViewModel(repository, ValidateSecretCodeUseCase(codes, hasher), sessionManager)
         runCurrent()
         viewModel.onReplay()
         repository.ready = true
@@ -452,5 +471,84 @@ class WalkthroughViewModelTest {
     fun `el estado no muestra lo tecleado al imprimirse`() {
         val state = WalkthroughUiState(step = WalkthroughStep.TYPE_IN, practiceInput = "amanecer26")
         assertFalse(state.toString().contains("amanecer26"))
+    }
+
+    @Test
+    fun `escribir rapido en la practica hace un solo calculo con lo ultimo`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        hasher.hashCallCount = 0
+
+        // Cada tecla llega antes de que pase la pausa: ninguna se evalúa sola.
+        "amanecer26".indices.forEach { end ->
+            viewModel.onPracticeInputChange("amanecer26".substring(0, end + 1))
+            advanceTimeBy(WalkthroughViewModel.PRACTICE_DEBOUNCE_MILLIS / 4)
+            runCurrent()
+        }
+        assertEquals("nada durante el tecleo", 0, hasher.hashCallCount)
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+
+        advanceTimeBy(WalkthroughViewModel.PRACTICE_DEBOUNCE_MILLIS)
+        runCurrent()
+
+        assertEquals("un solo cálculo, con lo último tecleado", 1, hasher.hashCallCount)
+        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `una tecla nueva cancela el calculo en curso de la practica`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        val slowHash = CompletableDeferred<Unit>()
+        hasher.hold = slowHash
+        typePractice(viewModel, "amanecer2")
+        assertEquals(1, hasher.inFlight)
+
+        viewModel.onPracticeInputChange("amanecer26")
+        runCurrent()
+        assertEquals("el cálculo anterior no queda acumulado", 0, hasher.inFlight)
+        hasher.hold = null
+        slowHash.complete(Unit)
+        advanceTimeBy(WalkthroughViewModel.PRACTICE_DEBOUNCE_MILLIS)
+        runCurrent()
+
+        assertEquals(PracticeStatus.MATCHED, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `por debajo de la longitud minima la practica no calcula`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        hasher.hashCallCount = 0
+
+        typePractice(viewModel, "amane")
+        advanceUntilIdle()
+
+        assertEquals(0, hasher.hashCallCount)
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+    }
+
+    @Test
+    fun `salir con la nube durante un calculo de la practica lo cancela y no avanza`() = runTest {
+        seedUserCode()
+        val viewModel = viewModel()
+        viewModel.onStart()
+        val slowHash = CompletableDeferred<Unit>()
+        hasher.hold = slowHash
+        typePractice(viewModel, "amanecer26")
+        assertEquals("el cálculo está en curso", 1, hasher.inFlight)
+
+        // El cálculo termina justo después del cierre, antes de que corra nada más:
+        // solo una cancelación hecha en el acto, dentro de la limpieza, lo descarta.
+        sessionManager.closeNow()
+        slowHash.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(PracticeStatus.TYPING, viewModel.uiState.value.practiceStatus)
+        assertEquals(WalkthroughStep.TYPE_IN, viewModel.uiState.value.step)
+        assertEquals("lo tecleado no queda en memoria", "", viewModel.uiState.value.practiceInput)
     }
 }

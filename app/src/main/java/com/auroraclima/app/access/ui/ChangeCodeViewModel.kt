@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
 import com.auroraclima.app.access.domain.usecase.ChangeSecretCodeResult
 import com.auroraclima.app.access.domain.usecase.ChangeSecretCodeUseCase
+import com.auroraclima.app.core.security.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -19,11 +20,12 @@ import kotlinx.coroutines.launch
 
 /**
  * Cambio de la clave personal (RF-09). Mismo patrón que CodeSetupViewModel,
- * incluida la confirmación del código nuevo (v0.3.2).
+ * incluida la confirmación del código nuevo (v0.3.2) y la limpieza al cerrar sesión.
  */
 @HiltViewModel
 class ChangeCodeViewModel @Inject constructor(
-    private val changeSecretCode: ChangeSecretCodeUseCase
+    private val changeSecretCode: ChangeSecretCodeUseCase,
+    sessionManager: SessionManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ChangeCodeUiState())
     val uiState: StateFlow<ChangeCodeUiState> = _uiState.asStateFlow()
@@ -34,6 +36,14 @@ class ChangeCodeViewModel @Inject constructor(
     val doneEvents: SharedFlow<Unit> = _doneEvents.asSharedFlow()
 
     private var checkJob: Job? = null
+    private var submitJob: Job? = null
+
+    init {
+        // Un cierre de sesión (la nube, inactividad, segundo plano) con el cálculo en
+        // curso lo cancela en el acto: su resultado ya no llega ni avisa nada (RF-16).
+        // Si el cálculo ya había terminado, el cambio queda guardado o no, nunca a medias.
+        addCloseable(sessionManager.registerCleaner { discardInput() })
+    }
 
     fun onCurrentCodeChange(value: String) {
         _uiState.update {
@@ -82,7 +92,15 @@ class ChangeCodeViewModel @Inject constructor(
         _uiState.update {
             it.copy(isLoading = true, currentErrorRes = null, confirmErrorRes = null, generalErrorRes = null)
         }
-        viewModelScope.launch { applyResult(changeSecretCode(current.currentCode, current.newCode)) }
+        submitJob = viewModelScope.launch { applyResult(changeSecretCode(current.currentCode, current.newCode)) }
+    }
+
+    private fun discardInput() {
+        checkJob?.cancel()
+        submitJob?.cancel()
+        _uiState.update {
+            it.copy(isLoading = false, currentCode = "", newCode = "", confirmCode = "")
+        }
     }
 
     private fun applyResult(result: ChangeSecretCodeResult) {

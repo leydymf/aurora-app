@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.auroraclima.app.R
 import com.auroraclima.app.access.domain.usecase.CompleteCodeSetupUseCase
 import com.auroraclima.app.access.domain.usecase.CreateSecretCodeResult
+import com.auroraclima.app.core.security.SessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -24,10 +25,15 @@ import kotlinx.coroutines.launch
  *
  * Con el código creado termina la activación: [CompleteCodeSetupUseCase] deja además
  * pendiente la guía de Aurora (v0.3.4).
+ *
+ * Un cierre de sesión (la nube, inactividad, segundo plano) cancela en el acto el
+ * cálculo en curso y borra lo tecleado: el resultado tardío no continúa el flujo
+ * (RF-16). Si el cálculo ya había terminado, la clave queda guardada o no, nunca a medias.
  */
 @HiltViewModel
 class CodeSetupViewModel @Inject constructor(
-    private val completeCodeSetup: CompleteCodeSetupUseCase
+    private val completeCodeSetup: CompleteCodeSetupUseCase,
+    sessionManager: SessionManager
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CodeSetupUiState())
     val uiState: StateFlow<CodeSetupUiState> = _uiState.asStateFlow()
@@ -38,6 +44,11 @@ class CodeSetupViewModel @Inject constructor(
     val continueEvents: SharedFlow<Unit> = _continueEvents.asSharedFlow()
 
     private var checkJob: Job? = null
+    private var submitJob: Job? = null
+
+    init {
+        addCloseable(sessionManager.registerCleaner { discardInput() })
+    }
 
     fun onCodeChange(value: String) {
         _uiState.update {
@@ -77,7 +88,7 @@ class CodeSetupViewModel @Inject constructor(
             return
         }
         _uiState.update { it.copy(isLoading = true, confirmErrorRes = null, generalErrorRes = null) }
-        viewModelScope.launch {
+        submitJob = viewModelScope.launch {
             when (val result = completeCodeSetup(current.code)) {
                 CreateSecretCodeResult.Created -> {
                     // Higiene de estado sensible: la clave no permanece en memoria
@@ -98,5 +109,11 @@ class CodeSetupViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun discardInput() {
+        checkJob?.cancel()
+        submitJob?.cancel()
+        _uiState.update { it.copy(isLoading = false, code = "", confirmCode = "") }
     }
 }

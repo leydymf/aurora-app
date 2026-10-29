@@ -9,9 +9,14 @@ import com.auroraclima.app.access.domain.usecase.FakeSecretCodeHasher
 import com.auroraclima.app.access.domain.usecase.FakeSecretCodeRepository
 import com.auroraclima.app.access.domain.usecase.FakeWalkthroughRepository
 import com.auroraclima.app.core.MainDispatcherRule
+import com.auroraclima.app.core.security.MonotonicClock
+import com.auroraclima.app.core.security.SessionManager
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -32,11 +37,20 @@ class CodeSetupViewModelTest {
     private val hasher = FakeSecretCodeHasher()
     private val repository = FakeSecretCodeRepository()
     private val walkthrough = FakeWalkthroughRepository()
+
+    // Sus temporizadores van en un planificador aparte que nunca avanza: aquí la sesión
+    // solo se cierra cuando la prueba toca la nube (advanceUntilIdle no la caduca).
+    private val sessionManager = SessionManager(
+        scope = CoroutineScope(StandardTestDispatcher()),
+        monotonicClock = MonotonicClock { 0L },
+        boundCleaners = emptySet()
+    ).apply { startSession() }
     private val viewModel = CodeSetupViewModel(
         CompleteCodeSetupUseCase(
             CreateSecretCodeUseCase(repository, hasher, FakeCityNameDirectory("bucaramanga", "bogota")),
             walkthrough
-        )
+        ),
+        sessionManager
     )
 
     private fun TestScope.collectContinueEvents(): List<Unit> {
@@ -169,6 +183,34 @@ class CodeSetupViewModelTest {
 
         assertEquals(R.string.common_error_generic, viewModel.uiState.value.generalErrorRes)
         assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `salir con la nube durante el calculo lo cancela y no continua el flujo`() = runTest {
+        // RF-16: el cierre cancela el cálculo en curso; el resultado tardío no guarda
+        // la clave, no deja la guía pendiente ni continúa a ninguna parte.
+        val events = collectContinueEvents()
+        viewModel.onCodeChange("cielo2026")
+        viewModel.onConfirmCodeChange("cielo2026")
+        advanceUntilIdle()
+        val slowHash = CompletableDeferred<Unit>()
+        hasher.hold = slowHash
+        viewModel.onSubmit()
+        advanceUntilIdle()
+        assertEquals("el cálculo está en curso", 1, hasher.inFlight)
+
+        // El cálculo termina justo después del cierre, antes de que corra nada más:
+        // solo una cancelación hecha en el acto, dentro de la limpieza, lo descarta.
+        sessionManager.closeNow()
+        slowHash.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(0, events.size)
+        assertNull(repository.storedCode(CodeSlot.USER))
+        assertNull(walkthrough.stored)
+        assertFalse(viewModel.uiState.value.isLoading)
+        assertEquals("", viewModel.uiState.value.code)
+        assertEquals("", viewModel.uiState.value.confirmCode)
     }
 }
 // Los fakes compartidos viven en access/domain/usecase/SecretCodeFakes.kt.
