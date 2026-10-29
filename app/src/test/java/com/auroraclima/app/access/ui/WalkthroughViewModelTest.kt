@@ -14,6 +14,7 @@ import com.auroraclima.app.access.domain.usecase.seed
 import com.auroraclima.app.core.MainDispatcherRule
 import com.auroraclima.app.core.security.MonotonicClock
 import com.auroraclima.app.core.security.SessionManager
+import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -94,6 +95,17 @@ class WalkthroughViewModelTest {
         assertEquals((1..8).toList(), step.filter { it.isCard }.map { it.number })
         assertEquals(0, WalkthroughStep.OVERVIEW.number)
         assertEquals(0, WalkthroughStep.DONE.number)
+    }
+
+    @Test
+    fun `la portada anuncia tantos pasos como tarjetas tiene la guia`() {
+        // «8 pasos cortos…» va literal en el texto (con un %d lint pide plurales): si
+        // cambia el número de tarjetas, esta prueba obliga a cambiar también el texto.
+        val strings = sequenceOf(File("src/main/res/values/strings.xml"), File("app/src/main/res/values/strings.xml"))
+            .first { it.exists() }
+            .readText()
+        val intro = Regex("""<string name="access_walk_intro_sub">(\d+) pasos""").find(strings)
+        assertEquals(WalkthroughStep.cardCount, intro?.groupValues?.get(1)?.toInt())
     }
 
     @Test

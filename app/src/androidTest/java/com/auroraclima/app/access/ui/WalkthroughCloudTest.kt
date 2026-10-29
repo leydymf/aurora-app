@@ -120,9 +120,19 @@ class WalkthroughCloudTest(
                 .performScrollTo().assertIsDisplayed()
             composeRule.onNode(hasText(context.getString(R.string.access_walk_later))).assertIsDisplayed()
         }
+        // En las pantallas completas el último texto, desplazado hasta él, termina antes
+        // de la nube: dentro del panel la nube va más arriba que los botones.
+        val lastText = when (step) {
+            WalkthroughStep.OVERVIEW -> R.string.access_walk_intro_exit
+            WalkthroughStep.DONE -> R.string.access_walk_recall_discreet
+            else -> null
+        }
+        lastText?.let {
+            val node = composeRule.onNode(hasText(context.getString(it))).performScrollTo().assertIsDisplayed()
+            val bounds = node.fetchSemanticsNode().boundsInWindow
+            assertFalse("$case la nube ($cloudBounds) tapa el último texto ($bounds)", bounds.overlaps(cloudBounds))
+        }
         if (step == WalkthroughStep.DONE) {
-            composeRule.onNode(hasText(context.getString(R.string.access_walk_recall_discreet)))
-                .performScrollTo().assertIsDisplayed()
             val finish = composeRule.onNode(hasText(context.getString(R.string.access_walk_finish)))
             finish.assertIsDisplayed()
             assertFalse(

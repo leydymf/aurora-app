@@ -1,5 +1,7 @@
 package com.auroraclima.app.access.ui
 
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
+import com.auroraclima.app.core.security.reserveCloudLane
+import com.auroraclima.app.core.ui.v2.AccentPair
 import com.auroraclima.app.core.ui.v2.CloudLaneBar
 import com.auroraclima.app.core.ui.v2.CloudLaneStack
 import com.auroraclima.app.core.ui.v2.GuideAction
@@ -59,26 +63,7 @@ internal fun OverviewScreen(onStart: () -> Unit, onNotNow: () -> Unit) {
             )
         }
     ) {
-        SoftCard {
-            IconListRow(
-                iconRes = V2Icons.code,
-                accent = V2Palette.accentRecognize,
-                title = stringResource(R.string.access_walk_part_enter),
-                supportingText = stringResource(R.string.access_walk_intro_enter)
-            )
-            IconListRow(
-                iconRes = V2Icons.home,
-                accent = V2Palette.accentGroup,
-                title = stringResource(R.string.access_walk_part_space),
-                supportingText = stringResource(R.string.access_walk_intro_space)
-            )
-            IconListRow(
-                iconRes = V2Icons.cloud,
-                accent = V2Palette.accentCloud,
-                title = stringResource(R.string.access_walk_part_exit),
-                supportingText = stringResource(R.string.access_walk_intro_exit)
-            )
-        }
+        GuideRows(OVERVIEW_ROWS)
     }
 }
 
@@ -100,30 +85,78 @@ internal fun DoneScreen(reachedEarly: Boolean, onFinish: () -> Unit) {
             }
         }
     ) {
-        SoftCard {
+        GuideRows(DONE_ROWS)
+    }
+}
+
+/** Una fila de las pantallas completas: icono con su acento fijo (D2), nombre y frase. */
+private class GuideRow(
+    @DrawableRes val iconRes: Int,
+    val accent: AccentPair,
+    @StringRes val title: Int,
+    @StringRes val body: Int
+)
+
+/** Los tres momentos de la portada, sin números: la numeración es la de los pasos. */
+private val OVERVIEW_ROWS = listOf(
+    GuideRow(
+        iconRes = V2Icons.code,
+        accent = V2Palette.accentRecognize,
+        title = R.string.access_walk_part_enter,
+        body = R.string.access_walk_intro_enter
+    ),
+    GuideRow(
+        iconRes = V2Icons.home,
+        accent = V2Palette.accentGroup,
+        title = R.string.access_walk_part_space,
+        body = R.string.access_walk_intro_space
+    ),
+    GuideRow(
+        iconRes = V2Icons.cloud,
+        accent = V2Palette.accentCloud,
+        title = R.string.access_walk_part_exit,
+        body = R.string.access_walk_intro_exit
+    )
+)
+
+/** Los cuatro recordatorios de «¡Listo!». */
+private val DONE_ROWS = listOf(
+    GuideRow(
+        iconRes = V2Icons.code,
+        accent = V2Palette.accentRecognize,
+        title = R.string.access_walk_part_enter,
+        body = R.string.access_walk_recall_enter
+    ),
+    GuideRow(
+        iconRes = V2Icons.cloud,
+        accent = V2Palette.accentCloud,
+        title = R.string.access_walk_part_exit,
+        body = R.string.access_walk_recall_exit
+    ),
+    GuideRow(
+        iconRes = V2Icons.settings,
+        accent = V2Palette.accentGroup,
+        title = R.string.access_walk_part_recall,
+        body = R.string.access_walk_recall_review
+    ),
+    GuideRow(
+        iconRes = V2Icons.info,
+        accent = V2Palette.accentGroup,
+        title = R.string.access_walk_part_discreet,
+        body = R.string.access_walk_recall_discreet
+    )
+)
+
+/** Las filas en una tarjeta blanca del interior. */
+@Composable
+private fun GuideRows(rows: List<GuideRow>) {
+    SoftCard {
+        rows.forEach { row ->
             IconListRow(
-                iconRes = V2Icons.code,
-                accent = V2Palette.accentRecognize,
-                title = stringResource(R.string.access_walk_part_enter),
-                supportingText = stringResource(R.string.access_walk_recall_enter)
-            )
-            IconListRow(
-                iconRes = V2Icons.cloud,
-                accent = V2Palette.accentCloud,
-                title = stringResource(R.string.access_walk_part_exit),
-                supportingText = stringResource(R.string.access_walk_recall_exit)
-            )
-            IconListRow(
-                iconRes = V2Icons.settings,
-                accent = V2Palette.accentGroup,
-                title = stringResource(R.string.access_walk_part_recall),
-                supportingText = stringResource(R.string.access_walk_recall_review)
-            )
-            IconListRow(
-                iconRes = V2Icons.info,
-                accent = V2Palette.accentGroup,
-                title = stringResource(R.string.access_walk_part_discreet),
-                supportingText = stringResource(R.string.access_walk_recall_discreet)
+                iconRes = row.iconRes,
+                accent = row.accent,
+                title = stringResource(row.title),
+                supportingText = stringResource(row.body)
             )
         }
     }
@@ -133,6 +166,8 @@ internal fun DoneScreen(reachedEarly: Boolean, onFinish: () -> Unit) {
  * Pantalla completa de la guía con el aspecto del interior: tapa la app y se traga
  * sus toques; el contenido se desplaza si la letra es grande y [actions] quedan fijas
  * abajo, en el carril de la nube, así que siempre están a la vista y la nube no las tapa.
+ * Dentro del panel la nube va más arriba (sobre la barra de pestañas): la zona que se
+ * desplaza termina antes de ella para que no tape el final del texto.
  */
 @Composable
 private fun InteriorGuideScreen(
@@ -156,23 +191,30 @@ private fun InteriorGuideScreen(
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .reserveCloudLane()
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = 24.dp)
             ) {
-                Text(
-                    text = title,
-                    style = InteriorTypeVoice.screenTitle,
-                    color = V2Palette.inkPrimary,
-                    modifier = Modifier.semantics { heading() }
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(text = subtitle, style = InteriorTypeVoice.body, color = V2Palette.inkSecondary)
-                Spacer(modifier = Modifier.height(20.dp))
+                InteriorGuideHeader(title = title, subtitle = subtitle)
                 content()
             }
             actions()
         }
     }
+}
+
+/** Título de pantalla del interior (encabezado para TalkBack) y su frase. */
+@Composable
+private fun InteriorGuideHeader(title: String, subtitle: String) {
+    Text(
+        text = title,
+        style = InteriorTypeVoice.screenTitle,
+        color = V2Palette.inkPrimary,
+        modifier = Modifier.semantics { heading() }
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+    Text(text = subtitle, style = InteriorTypeVoice.body, color = V2Palette.inkSecondary)
+    Spacer(modifier = Modifier.height(20.dp))
 }
 
 /**

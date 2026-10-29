@@ -188,11 +188,10 @@ private fun GuideActions(
 
 /**
  * El botón lleno de la guía, en su lavanda: el único lleno en pantalla mientras está
- * abierta. Su ancho lo decide quien lo pone (a lo ancho en una pantalla, a su medida
- * en la fila de una tarjeta).
+ * abierta. Va a su medida en la fila de la tarjeta.
  */
 @Composable
-fun GuidePrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun GuidePrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
         modifier = modifier.heightIn(min = BUTTON_HEIGHT),
@@ -206,9 +205,9 @@ fun GuidePrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = M
     }
 }
 
-/** Botón de texto de la guía («Atrás», «Después», «Ahora no»). */
+/** Botón de texto de la tarjeta («Atrás», «Después»). */
 @Composable
-fun GuideTextButton(action: GuideAction, modifier: Modifier = Modifier) {
+private fun GuideTextButton(action: GuideAction, modifier: Modifier = Modifier) {
     TextButton(onClick = action.onClick, modifier = modifier.heightIn(min = MIN_TOUCH)) {
         Text(text = action.label, style = GuideTypeVoice.action, color = GuidePalette.ink)
     }
