@@ -20,7 +20,7 @@ import com.auroraclima.app.core.ui.theme.PlexSans
  * Los pares de texto cumplen AA sobre [surface] (lo fija `PaletteContrastTest`).
  */
 object GuidePalette {
-    /** Fondo de las tarjetas y de las pantallas completas de la guía. */
+    /** Fondo de las tarjetas de la guía (las pantallas completas usan el del interior). */
     val surface = Color(0xFFECE6F8)
 
     /** Texto principal: títulos y frases. */
@@ -53,18 +53,12 @@ object GuidePalette {
 private val PatrickHand = FontFamily(Font(R.font.patrick_hand_regular, FontWeight.Normal))
 
 /**
- * La voz de la guía: la letra a mano en títulos, etiquetas de parte y números, y el
- * cuerpo del interior (Plex Sans) en las frases y los botones, para que se lean igual
- * que el resto. Todo en sp: respeta el tamaño de letra del sistema.
+ * La voz de las tarjetas de la guía: la letra a mano en el título y en la etiqueta de
+ * parte, y el cuerpo del interior (Plex Sans) en las frases y los botones, para que se
+ * lean igual que el resto. Las pantallas completas («Conoce Aurora», «¡Listo!») no la
+ * usan: van con [InteriorTypeVoice]. Todo en sp: respeta el tamaño de letra del sistema.
  */
 object GuideTypeVoice {
-    /** Título de una pantalla completa («Conoce Aurora», «¡Listo!»). */
-    val screenTitle = TextStyle(
-        fontFamily = PatrickHand,
-        fontSize = 38.sp,
-        lineHeight = 44.sp
-    )
-
     /** Título de una tarjeta. */
     val cardTitle = TextStyle(
         fontFamily = PatrickHand,
@@ -77,20 +71,6 @@ object GuideTypeVoice {
         fontFamily = PatrickHand,
         fontSize = 19.sp,
         lineHeight = 24.sp
-    )
-
-    /** Número de una lista («1», «2», «3»). */
-    val number = TextStyle(
-        fontFamily = PatrickHand,
-        fontSize = 30.sp,
-        lineHeight = 34.sp
-    )
-
-    /** Nombre de un elemento de lista («Entrar», «Salir»). */
-    val itemTitle = TextStyle(
-        fontFamily = PatrickHand,
-        fontSize = 23.sp,
-        lineHeight = 28.sp
     )
 
     /** Frase: el cuerpo del interior. */

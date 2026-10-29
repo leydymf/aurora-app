@@ -1,23 +1,19 @@
 package com.auroraclima.app.access.ui
 
-import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -25,131 +21,156 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
-import com.auroraclima.app.core.security.reserveCloudLane
+import com.auroraclima.app.core.ui.v2.CloudLaneBar
+import com.auroraclima.app.core.ui.v2.CloudLaneStack
 import com.auroraclima.app.core.ui.v2.GuideAction
 import com.auroraclima.app.core.ui.v2.GuideCard
-import com.auroraclima.app.core.ui.v2.GuidePalette
-import com.auroraclima.app.core.ui.v2.GuidePrimaryButton
-import com.auroraclima.app.core.ui.v2.GuideSurface
-import com.auroraclima.app.core.ui.v2.GuideTextButton
-import com.auroraclima.app.core.ui.v2.GuideTypeVoice
+import com.auroraclima.app.core.ui.v2.IconListRow
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
+import com.auroraclima.app.core.ui.v2.SoftCard
+import com.auroraclima.app.core.ui.v2.V2Icons
+import com.auroraclima.app.core.ui.v2.V2Palette
+import com.auroraclima.app.core.ui.v2.V2PrimaryButton
+import com.auroraclima.app.core.ui.v2.blockTouchesBelow
 
 /**
- * «Conoce Aurora» (pantalla 0): título, «3 pasos. 2 minutos.», las tres partes
- * numeradas y «Empezar» (lleno) o «Ahora no» (texto, a Inicio sin guía).
+ * «Conoce Aurora» (pantalla 0): título, cuántos pasos y cuánto dura, los tres
+ * momentos (sin números, como filas del interior) y «Empezar» (lleno) o
+ * «Ahora no» (texto, a Inicio sin guía). No se superpone a ninguna pantalla, así que
+ * se ve como el interior; el estilo propio de la guía queda en las tarjetas.
  */
 @Composable
 internal fun OverviewScreen(onStart: () -> Unit, onNotNow: () -> Unit) {
-    GuideScreen {
-        ScreenTitle(title = stringResource(R.string.access_walk_intro_title))
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.access_walk_intro_sub),
-            style = GuideTypeVoice.partLabel,
-            color = GuidePalette.label
-        )
-        Spacer(modifier = Modifier.height(28.dp))
-        GuideListRow(lead = "1", title = R.string.access_walk_part_enter, body = R.string.access_walk_intro_enter)
-        GuideListRow(lead = "2", title = R.string.access_walk_part_space, body = R.string.access_walk_intro_space)
-        GuideListRow(lead = "3", title = R.string.access_walk_part_exit, body = R.string.access_walk_intro_exit)
-        Spacer(modifier = Modifier.height(28.dp))
-        GuidePrimaryButton(
-            text = stringResource(R.string.access_walk_start),
-            onClick = onStart,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        GuideTextButton(
-            action = GuideAction(stringResource(R.string.access_walk_not_now), onNotNow),
-            modifier = Modifier.fillMaxWidth()
-        )
+    InteriorGuideScreen(
+        title = stringResource(R.string.access_walk_intro_title),
+        subtitle = stringResource(R.string.access_walk_intro_sub),
+        actions = {
+            CloudLaneStack(
+                first = { V2PrimaryButton(text = stringResource(R.string.access_walk_start), onClick = onStart) },
+                second = {
+                    TextButton(onClick = onNotNow) {
+                        Text(
+                            text = stringResource(R.string.access_walk_not_now),
+                            style = InteriorTypeVoice.bodyStrong,
+                            color = V2Palette.inkSecondary
+                        )
+                    }
+                }
+            )
+        }
+    ) {
+        SoftCard {
+            IconListRow(
+                iconRes = V2Icons.code,
+                accent = V2Palette.accentRecognize,
+                title = stringResource(R.string.access_walk_part_enter),
+                supportingText = stringResource(R.string.access_walk_intro_enter)
+            )
+            IconListRow(
+                iconRes = V2Icons.home,
+                accent = V2Palette.accentGroup,
+                title = stringResource(R.string.access_walk_part_space),
+                supportingText = stringResource(R.string.access_walk_intro_space)
+            )
+            IconListRow(
+                iconRes = V2Icons.cloud,
+                accent = V2Palette.accentCloud,
+                title = stringResource(R.string.access_walk_part_exit),
+                supportingText = stringResource(R.string.access_walk_intro_exit)
+            )
+        }
     }
 }
 
 /**
  * «¡Listo!» (pantalla 4): tras la salida real, «Saliste y volviste. Así de fácil.»;
  * si se llegó con «Después» o «Saltar» ([reachedEarly]), «Para recordar:». Los
- * cuatro recordatorios y «Ir a mi espacio».
+ * cuatro recordatorios y «Ir a mi espacio», con el estilo del interior.
  */
 @Composable
 internal fun DoneScreen(reachedEarly: Boolean, onFinish: () -> Unit) {
-    GuideScreen {
-        ScreenTitle(title = stringResource(R.string.access_walk_done_title))
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(
-                if (reachedEarly) R.string.access_walk_done_early else R.string.access_walk_done_back
-            ),
-            style = GuideTypeVoice.partLabel,
-            color = GuidePalette.label
-        )
-        Spacer(modifier = Modifier.height(28.dp))
-        GuideListRow(lead = "›", title = R.string.access_walk_part_enter, body = R.string.access_walk_recall_enter)
-        GuideListRow(lead = "›", title = R.string.access_walk_part_exit, body = R.string.access_walk_recall_exit)
-        GuideListRow(lead = "›", title = R.string.access_walk_part_recall, body = R.string.access_walk_recall_review)
-        GuideListRow(
-            lead = "›",
-            title = R.string.access_walk_part_discreet,
-            body = R.string.access_walk_recall_discreet
-        )
-        Spacer(modifier = Modifier.height(28.dp))
-        GuidePrimaryButton(
-            text = stringResource(R.string.access_walk_finish),
-            onClick = onFinish,
-            modifier = Modifier.fillMaxWidth()
-        )
+    InteriorGuideScreen(
+        title = stringResource(R.string.access_walk_done_title),
+        subtitle = stringResource(
+            if (reachedEarly) R.string.access_walk_done_early else R.string.access_walk_done_back
+        ),
+        actions = {
+            CloudLaneBar {
+                V2PrimaryButton(text = stringResource(R.string.access_walk_finish), onClick = onFinish)
+            }
+        }
+    ) {
+        SoftCard {
+            IconListRow(
+                iconRes = V2Icons.code,
+                accent = V2Palette.accentRecognize,
+                title = stringResource(R.string.access_walk_part_enter),
+                supportingText = stringResource(R.string.access_walk_recall_enter)
+            )
+            IconListRow(
+                iconRes = V2Icons.cloud,
+                accent = V2Palette.accentCloud,
+                title = stringResource(R.string.access_walk_part_exit),
+                supportingText = stringResource(R.string.access_walk_recall_exit)
+            )
+            IconListRow(
+                iconRes = V2Icons.settings,
+                accent = V2Palette.accentGroup,
+                title = stringResource(R.string.access_walk_part_recall),
+                supportingText = stringResource(R.string.access_walk_recall_review)
+            )
+            IconListRow(
+                iconRes = V2Icons.info,
+                accent = V2Palette.accentGroup,
+                title = stringResource(R.string.access_walk_part_discreet),
+                supportingText = stringResource(R.string.access_walk_recall_discreet)
+            )
+        }
     }
 }
 
 /**
- * Pantalla completa de la guía: tapa la app, se desplaza si la letra es grande y
- * termina antes de la nube, así que ningún botón queda debajo de ella.
+ * Pantalla completa de la guía con el aspecto del interior: tapa la app y se traga
+ * sus toques; el contenido se desplaza si la letra es grande y [actions] quedan fijas
+ * abajo, en el carril de la nube, así que siempre están a la vista y la nube no las tapa.
  */
 @Composable
-internal fun GuideScreen(content: @Composable ColumnScope.() -> Unit) {
-    GuideSurface {
+private fun InteriorGuideScreen(
+    title: String,
+    subtitle: String,
+    actions: @Composable () -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(V2Palette.screenBackground)
+            .blockTouchesBelow()
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .reserveCloudLane()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp, vertical = 32.dp)
-                .widthIn(max = SCREEN_MAX_WIDTH),
-            content = content
-        )
-    }
-}
-
-@Composable
-private fun ScreenTitle(title: String) {
-    Text(
-        text = title,
-        style = GuideTypeVoice.screenTitle,
-        color = GuidePalette.ink,
-        modifier = Modifier.semantics { heading() }
-    )
-}
-
-/** Una fila de lista: el número (o la marca) a mano, el nombre a mano y la frase. */
-@Composable
-private fun GuideListRow(lead: String, @StringRes title: Int, @StringRes body: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 18.dp),
-        horizontalArrangement = Arrangement.Start,
-        verticalAlignment = Alignment.Top
-    ) {
-        Text(
-            text = lead,
-            style = GuideTypeVoice.number,
-            color = GuidePalette.label,
-            modifier = Modifier.width(LEAD_WIDTH)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = stringResource(title), style = GuideTypeVoice.itemTitle, color = GuidePalette.ink)
-            Text(text = stringResource(body), style = GuideTypeVoice.body, color = GuidePalette.inkSoft)
+                .systemBarsPadding()
+                .padding(horizontal = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 24.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = InteriorTypeVoice.screenTitle,
+                    color = V2Palette.inkPrimary,
+                    modifier = Modifier.semantics { heading() }
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(text = subtitle, style = InteriorTypeVoice.body, color = V2Palette.inkSecondary)
+                Spacer(modifier = Modifier.height(20.dp))
+                content()
+            }
+            actions()
         }
     }
 }
@@ -200,6 +221,3 @@ internal fun stepTag(step: WalkthroughStep): String = when (step.part) {
     )
     else -> stringResource(R.string.access_walk_tag_exit)
 }
-
-private val LEAD_WIDTH = 36.dp
-private val SCREEN_MAX_WIDTH = 560.dp

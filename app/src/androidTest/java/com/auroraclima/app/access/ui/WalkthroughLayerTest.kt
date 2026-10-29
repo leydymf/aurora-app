@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
@@ -27,12 +28,16 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.auroraclima.app.R
 import com.auroraclima.app.access.domain.repository.WalkthroughMark
 import com.auroraclima.app.core.security.TestSession
+import com.auroraclima.app.core.ui.v2.GuideTypeVoice
+import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
 import com.auroraclima.app.core.ui.v2.SpotlightTargets
 import com.auroraclima.app.core.ui.v2.configureLikeMainActivity
 import org.junit.Assert.assertEquals
@@ -238,32 +243,89 @@ class WalkthroughLayerTest {
     }
 
     @Test
-    fun conLetraGrandeConoceAuroraSeDesplazaHastaEmpezar() {
-        // Con letra 2.0 en una pantalla pequeña, «Empezar» queda debajo: la pantalla
-        // de la guía debe desplazarse (antes, la capa que bloquea la app de abajo
-        // consumía el arrastre y no se podía llegar al botón).
+    fun conLetraGrandeConoceAuroraSeDesplazaYSusBotonesSiguenALaVista() {
+        // Con letra 2.0 en una pantalla pequeña el contenido no cabe: se desplaza (un
+        // arrastre de verdad, no una acción de accesibilidad: es lo que se cancelaba
+        // antes) y «Empezar» y «Ahora no», fijos abajo, están a la vista desde el inicio.
         var started = 0
+        showLarge(WalkthroughUiState(step = WalkthroughStep.OVERVIEW), idleActions().copyWith(onStart = { started++ }))
+        val start = composeRule.onNode(hasText(text(R.string.access_walk_start)) and hasClickAction())
+        start.assertIsDisplayed()
+        composeRule.onNode(hasText(text(R.string.access_walk_not_now)) and hasClickAction()).assertIsDisplayed()
+
+        repeat(4) { composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp() } }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(text(R.string.access_walk_intro_exit)).assertIsDisplayed()
+
+        start.assertIsDisplayed().performClick()
+        assertEquals(1, started)
+    }
+
+    @Test
+    fun conLetraGrandeListoTrasLaSalidaSeDesplazaYIrAMiEspacioSigueALaVista() =
+        assertDoneScrollsWithFinishInView(reachedEarly = false)
+
+    @Test
+    fun conLetraGrandeListoParaRecordarSeDesplazaYIrAMiEspacioSigueALaVista() =
+        assertDoneScrollsWithFinishInView(reachedEarly = true)
+
+    private fun assertDoneScrollsWithFinishInView(reachedEarly: Boolean) {
+        showLarge(WalkthroughUiState(step = WalkthroughStep.DONE, reachedEarly = reachedEarly))
+        val subtitle = if (reachedEarly) R.string.access_walk_done_early else R.string.access_walk_done_back
+        composeRule.onNodeWithText(text(subtitle)).assertIsDisplayed()
+        val finish = composeRule.onNode(hasText(text(R.string.access_walk_finish)) and hasClickAction())
+        finish.assertIsDisplayed()
+
+        repeat(4) { composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp() } }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(text(R.string.access_walk_recall_discreet)).assertIsDisplayed()
+        finish.assertIsDisplayed()
+    }
+
+    /** Letra 2.0 en una pantalla de 320×568: lo más justo que se prueba. */
+    private fun showLarge(state: WalkthroughUiState, actions: WalkthroughActions = idleActions()) {
         session.setContent(composeRule) {
             val base = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(base.density, 2f)) {
                 Box(modifier = Modifier.requiredSize(320.dp, 568.dp)) {
-                    WalkthroughHarness(
-                        state = WalkthroughUiState(step = WalkthroughStep.OVERVIEW),
-                        actions = idleActions().copyWith(onStart = { started++ }),
-                        targets = SpotlightTargets()
-                    )
+                    WalkthroughHarness(state = state, actions = actions, targets = SpotlightTargets())
                 }
             }
         }
         composeRule.waitForIdle()
-        val start = composeRule.onNode(hasText(text(R.string.access_walk_start)) and hasClickAction())
-        // Un arrastre de verdad sobre la pantalla de la guía (no una acción de
-        // accesibilidad): es lo que se cancelaba.
-        repeat(4) { composeRule.onNode(hasScrollAction()).performTouchInput { swipeUp() } }
-        composeRule.waitForIdle()
+    }
 
-        start.assertIsDisplayed().performClick()
-        assertEquals(1, started)
+    @Test
+    fun lasPantallasCompletasVanConLaLetraDelInteriorYLasTarjetasConLaDeLaGuia() {
+        var state by mutableStateOf(WalkthroughUiState(step = WalkthroughStep.OVERVIEW))
+        session.setContent(composeRule) {
+            WalkthroughHarness(state = state, targets = SpotlightTargets())
+        }
+        composeRule.waitForIdle()
+        val handwritten = GuideTypeVoice.cardTitle.fontFamily
+        // «Conoce Aurora» y «¡Listo!» no se superponen a la app: su título es el del
+        // interior (Marcellus), nunca la letra a mano.
+        listOf(
+            WalkthroughStep.OVERVIEW to R.string.access_walk_intro_title,
+            WalkthroughStep.DONE to R.string.access_walk_done_title
+        ).forEach { (step, title) ->
+            composeRule.runOnUiThread { state = WalkthroughUiState(step = step) }
+            composeRule.waitForIdle()
+            val family = fontFamilyOf(text(title))
+            assertEquals("título de $step", InteriorTypeVoice.titleFamily, family)
+            assertTrue("título de $step con la letra a mano", family != handwritten)
+        }
+        // Las tarjetas superpuestas conservan la letra a mano.
+        composeRule.runOnUiThread { state = WalkthroughUiState(step = WalkthroughStep.GUIDE) }
+        composeRule.waitForIdle()
+        assertEquals(handwritten, fontFamilyOf(text(WalkthroughStep.GUIDE.titleRes)))
+    }
+
+    private fun fontFamilyOf(label: String): FontFamily? {
+        val layouts = mutableListOf<TextLayoutResult>()
+        composeRule.onNode(hasText(label)).fetchSemanticsNode()
+            .config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        return layouts.first().layoutInput.style.fontFamily
     }
 
     @Test

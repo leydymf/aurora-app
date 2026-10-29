@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 /**
  * Piezas de la guía de Aurora (v0.3.4) con su estilo propio ([GuidePalette],
  * [GuideTypeVoice], [GuideCorner]): la tarjeta de cada paso, el botón lleno de la guía
- * —el único lleno en pantalla mientras está abierta—, la pantalla completa y el
+ * —el único lleno en pantalla mientras está abierta—, el fondo del paso 1 y el
  * apagado de la app que queda debajo.
  */
 
@@ -228,8 +228,9 @@ private fun GuideLink(action: GuideAction) {
 }
 
 /**
- * Pantalla completa de la guía: el fondo lavanda tapa la app y se traga sus toques,
- * así que solo responden los controles de la guía y la nube, que va por encima.
+ * Fondo lavanda del paso 1 (la práctica sobre la réplica del clima): tapa la app y se
+ * traga sus toques, así que solo responden los controles de la guía y la nube, que va
+ * por encima. «Conoce Aurora» y «¡Listo!» no lo usan: van con el fondo del interior.
  */
 @Composable
 fun GuideSurface(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
