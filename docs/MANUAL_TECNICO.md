@@ -589,8 +589,8 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
 
 - **Cómo usar Aurora (RF-10, RF-11).** Antes «Guía de Aurora»: se renombró el 2026-10-29 porque se confundía con la pestaña «Guía» (solo cambiaron los textos; las clases siguen llamándose `Walkthrough*`). Una sola experiencia reemplaza al tutorial y al
   recorrido guiado por Inicio: la portada «Conoce Aurora» («Empezar» / «Ahora no»), la
-  parte 1 *Entrar* (práctica del código en la barra de la fachada, con círculo y flecha
-  dibujados a mano), la parte 2 *Tu espacio* (Guía, Mi registro, Reconocer tu situación,
+  parte 1 *Entrar* (práctica del código sobre una réplica de la pantalla de clima, con
+  círculo y flecha dibujados a mano), la parte 2 *Tu espacio* (Guía, Mi registro, Reconocer tu situación,
   Resultados guardados, Acciones rápidas y Ajustes) y la parte 3 *Salir* (tocar la nube),
   más «¡Listo!». Vive como una capa sobre las pestañas dentro de la ruta `panel` del grafo
   seguro (`WalkthroughHost`/`WalkthroughLayer` en `access/ui`), así que hereda
@@ -602,6 +602,22 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
   frase, más pequeña (`GuideCard` admite una `note`), y «¡Listo!» cuatro recordatorios,
   el último «Discreta» (D-1 de RF-10); en la parte 3 la acción es la nube y se
   ofrece «Después». «Siguiente» de la parte 1 permite no practicar (D-2 de RF-10).
+- **Réplica de la fachada en la parte 1 (2026-10-29).** `WalkthroughTypeIn.kt` pinta,
+  bajo la tarjeta, la pantalla de clima en un marco redondeado con datos fijos de ejemplo
+  y sin red. Para no duplicarla ni hacer que `access` importe `weather` (§2 de
+  ARQUITECTURA), las piezas compartidas viven en `core/ui/v2/FacadeSky.kt`: el cielo
+  (`FacadeSky.brush`), los colores y el teclado de la píldora (`facadeSearchFieldColors`,
+  `facadeSearchKeyboardOptions`), el texto de
+  ayuda, la lupa, el marcador y el bloque de ciudad, temperatura y condición
+  (`FacadeConditionsSummary`); `WeatherScreen` usa las mismas. El `TextField` lo sigue
+  construyendo cada pantalla dentro de su `SecureTextEntry`, porque la guarda
+  `SensitiveFieldsGuardTest` solo admite campos fuera del kit en esos dos archivos. La
+  réplica no guarda estado: su barra escribe en `WalkthroughUiState`. «Buscar» llama a
+  `WalkthroughViewModel.onPracticeSubmit`, que cancela la pausa y evalúa en el acto con
+  la misma puerta; el aviso «Ese no es tu código de acceso…» es una región viva que se
+  trae a la vista con `BringIntoViewRequester`. `HandDrawnCue` admite un `halo` (trazo
+  blanco más ancho debajo) para que el círculo se lea sobre el cielo oscuro y la flecha
+  sobre el lavanda; sin el borde de la tarjeta a la vista, solo dibuja el círculo.
 - **Marca y reanudación.** `WalkthroughRepository` guarda en `view_meta` (preferencias
   neutras, sellado con la DEK de la cuenta, 16 bytes, claves `v0`/`v1`) una marca con dos
   valores: `FROM_START` («guía desde el inicio», la deja `CompleteCodeSetupUseCase` al
@@ -634,8 +650,8 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
   `@OptIn` sale al subir de versión) y la guarda `computeHmac` lanza si corre en el hilo
   principal, incluso en release. La puerta degrada ese fallo a «búsqueda sin resultados»
   y la creación del código a `StorageFailure`. Hay una pausa de 400 ms tras la última tecla
-  antes de calcular (la fachada y la práctica de la guía; «Aún no coincide» aparece a esos
-  400 ms) y la puerta tiene el plazo de la red. `WalkthroughViewModel`, `ChangeCodeViewModel`
+  antes de calcular (la fachada y la práctica de la guía; en la práctica, «Buscar» evalúa sin
+  esperar la pausa) y la puerta tiene el plazo de la red. `WalkthroughViewModel`, `ChangeCodeViewModel`
   y `CodeSetupViewModel` registran un limpiador en `SessionManager` que cancela el cálculo
   en curso dentro de `closeSession()`. La eliminación total (RF-20) borra la llave por el
   mismo carril. Quedan dos residuales (P-140).

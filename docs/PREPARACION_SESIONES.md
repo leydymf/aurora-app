@@ -2,7 +2,7 @@
 
 > Para la evaluación heurística (3 a 5 evaluadoras) y las sesiones SUS (10 a 12
 > estudiantes), en uno o dos teléfonos Android propios.
-> Última revisión: 2026-10-28 (build `v0.3.4-trl4`).
+> Última revisión: 2026-10-29 (build `v0.3.4-trl4`, con la parte 1 de Cómo usar Aurora sobre la réplica del clima).
 
 Cada participante debe poder hacer el **primer uso completo**: activación con el
 código de activación en el buscador de ciudades → bienvenida → consentimiento →
@@ -127,18 +127,20 @@ cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.
 shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.4.apk   # anotar: identifica el APK de las sesiones
 ```
 
-APK de `v0.3.4-trl4` generado el 2026-10-29 desde `fb708b8` (el último commit de
-código; la etiqueta solo agrega documentación), con el JBR 21 de Android Studio:
+APK de `v0.3.4-trl4` generado el 2026-10-29 desde `d72427a` (el último commit de
+código; la etiqueta solo agrega documentación), con el JBR 21 de Android Studio. Es el
+build **debug**: el release no se activa en una instalación limpia (P-111).
 
 | Archivo | Tamaño | SHA-256 |
 |---|---|---|
-| `aurora-clima-0.3.4.apk` | 39 143 496 bytes (37,3 MiB) | `ecaf377a49329e82a52313a3354c701cb29cf18a338df021de3578a1fc8e4c4d` |
+| `aurora-clima-0.3.4.apk` | 39 144 308 bytes (37,3 MiB) | `0ab7f06e18820a7faa80c020eebe52da4330b0cd79d21a08f95c8fbffd4e496c` |
 
-El APK mide 212 131 bytes más (+0,5 %) que el de `v0.3.3-trl4`: Cómo usar Aurora
-reemplazó el tutorial y el recorrido, la fuente nueva pesa ~210 KB y el contenido sin
-comprimir del APK casi no cambia respecto de la primera compilación de la versión (la
-diferencia con esa, 38 775 716 bytes, es de compresión). Hay una copia idéntica en la
-carpeta de sesiones del proyecto de grado.
+Reemplaza a los APK anteriores de la misma versión (`ecaf377a…`, del 2026-10-29 por la
+mañana, y `d058b77b…`, del 2026-10-28): si un teléfono tiene uno de esos, reinstalar. El
+APK mide 212 943 bytes más (+0,5 %) que el de `v0.3.3-trl4`: Cómo usar Aurora
+reemplazó el tutorial y el recorrido y la fuente nueva pesa ~210 KB; la réplica de la
+fachada en la parte 1 agrega 812 bytes. Hay una copia idéntica en la carpeta de sesiones
+del proyecto de grado.
 
 El SHA-256 identifica **ese archivo**, no el código. El build debug no es
 reproducible byte a byte: el mismo día, una compilación limpia del mismo commit dio
@@ -380,8 +382,8 @@ IANA y no acepta correo.
 6. **Cómo usar Aurora sale sola una vez** (v0.3.4), la primera vez que la
    participante llega a Inicio después de crear su código de acceso. Reemplaza al
    tutorial y al recorrido de las versiones anteriores y es una sola experiencia
-   de tres partes: *Entrar* (escribir su código de acceso en el buscador del
-   clima), *Tu espacio* (seis elementos de Inicio, uno por uno) y *Salir* (tocar
+   de tres partes: *Entrar* (escribir su código de acceso en el buscador de una
+   pantalla de clima de ejemplo, dentro de un marco, que no es la app real), *Tu espacio* (seis elementos de Inicio, uno por uno) y *Salir* (tocar
    la nube). Se abre con «Conoce Aurora» (**Empezar** o **Ahora no**); en cada
    tarjeta hay «Siguiente» (en la parte 1 no hay «Atrás» y se puede avanzar sin
    haber practicado), «Atrás» y «Saltar». Si la participante salta o toca la
@@ -394,9 +396,12 @@ IANA y no acepta correo.
    usar Aurora». Para que la siguiente participante la vea, el teléfono debe
    quedar como recién instalado (§3). La facilitadora debe anotar si la saltó y no
    confundir su ausencia con un fallo.
-7. **«Aún no coincide» no sale al instante** (v0.3.4): aparece 400 ms después de la
-   última tecla, tanto en la barra de la fachada como en la práctica de Cómo usar Aurora.
-   Es parte del comportamiento, no un retraso del teléfono.
+7. **La práctica de *Entrar* responde tras una pausa o con «Buscar»** (v0.3.4): el
+   código se comprueba 400 ms después de la última tecla, como en la barra de la
+   fachada, o en el acto al pulsar la lupa del teclado. Si no coincide, debajo de la
+   barra aparece «Ese no es tu código de acceso. Inténtalo de nuevo.»; si coincide,
+   la tarjeta lo confirma y la guía sigue sola. La pausa es parte del comportamiento,
+   no un retraso del teléfono, y se puede avanzar con «Siguiente» sin practicar.
 
 ### 4.5 Encuadre de la sesión
 
