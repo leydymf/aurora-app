@@ -11,7 +11,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
@@ -140,6 +144,28 @@ class WalkthroughLayerTest {
         composeRule.waitForIdle()
         assertNull(viewModel.uiState.value.step)
         composeRule.onAllNodesWithText(text(R.string.access_walk_done_title)).assertCountEquals(0)
+    }
+
+    @Test
+    fun recorreLosOchoPasosDePaso1A8() {
+        val viewModel = showWithViewModel(WalkthroughMark.FROM_START)
+        composeRule.onNodeWithText(text(R.string.access_walk_start)).performClick()
+        composeRule.waitForIdle()
+        val cards = WalkthroughStep.entries.filter { it.isCard }
+        assertEquals(8, cards.size)
+        cards.forEachIndexed { index, expected ->
+            if (index > 0) {
+                composeRule.onNodeWithText(text(R.string.access_walk_next)).performClick()
+                composeRule.waitForIdle()
+            }
+            assertEquals(expected, viewModel.uiState.value.step)
+            // Una sola numeración, que TalkBack anuncia (región viva) junto al título.
+            composeRule.onNodeWithText("Paso ${index + 1} de 8")
+                .assertIsDisplayed()
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+            composeRule.onNode(hasText(text(expected.titleRes))).assertIsDisplayed()
+            composeRule.onAllNodes(hasText("/3", substring = true)).assertCountEquals(0)
+        }
     }
 
     @Test

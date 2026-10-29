@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 class GuideAction(val label: String, val onClick: () -> Unit)
 
 /**
- * Tarjeta de un paso: la etiqueta de parte con el enlace [skip] («Saltar») en la
+ * Tarjeta de un paso: la etiqueta de paso con el enlace [skip] («Saltar») en la
  * esquina final, el título, la frase (y, si hay, una [note] más pequeña debajo) y la fila de botones: [back] y [secondary] como
  * texto, [primary] lleno. Título y frase son un nodo con región viva: TalkBack los lee
  * juntos en cada paso. Con letra grande los botones pasan a otra línea solo si no caben.
@@ -113,13 +113,13 @@ fun GuideCard(
     }
 }
 
-/** La etiqueta de parte y, en la esquina final, el enlace «Saltar». */
+/** La etiqueta de paso y, en la esquina final, el enlace «Saltar». */
 @Composable
 private fun GuideCardHeader(tag: String, skip: GuideAction?) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = tag,
-            style = GuideTypeVoice.partLabel,
+            style = GuideTypeVoice.stepLabel,
             color = GuidePalette.label,
             modifier = Modifier
                 .weight(1f)

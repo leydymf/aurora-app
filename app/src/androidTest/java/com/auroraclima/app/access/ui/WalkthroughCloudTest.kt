@@ -77,7 +77,7 @@ class WalkthroughCloudTest(
         val context = composeRule.activity
         val title = context.getString(step.titleRes)
         // La guía está a la vista de verdad (con alto, dentro de la pantalla): en una
-        // tarjeta, su etiqueta de parte y sus botones; con letra 2.0 junto a un
+        // tarjeta, su etiqueta «Paso N de 8» y sus botones; con letra 2.0 junto a un
         // elemento muy alto el título se lee desplazando la tarjeta, que no lo tapa.
         val (tag, _) = stepTexts(context, step)
         composeRule.onNode(hasText(tag.ifEmpty { title })).assertIsDisplayed()

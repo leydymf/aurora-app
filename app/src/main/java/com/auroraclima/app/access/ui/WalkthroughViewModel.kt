@@ -314,8 +314,10 @@ enum class PracticeStatus {
 }
 
 /**
- * Los pasos de la guía en su orden: «Conoce Aurora», la parte 1 (Entrar), los seis de
- * la parte 2 (Tu espacio) en el orden pedido, la parte 3 (Salir) y «¡Listo!».
+ * Los pasos de la guía en su orden: «Conoce Aurora», las ocho tarjetas numeradas de
+ * seguido («Paso N de 8»: la parte 1, Entrar; los seis de la parte 2, Tu espacio, en el
+ * orden pedido; la parte 3, Salir) y «¡Listo!». Las partes solo deciden qué pantalla
+ * hay debajo; no se muestran.
  *
  * Los nombres de las constantes llegan LEGIBLES al DEX del release (R8 los conserva
  * porque `name` y `valueOf` son reflexión): por eso son sosos (RNF-05, H-8).
@@ -346,14 +348,16 @@ enum class WalkthroughStep(val part: Int, @StringRes val titleRes: Int, @StringR
     val next: WalkthroughStep?
         get() = if (isCard && this != CLOUD) entries[ordinal + 1] else null
 
-    /** Posición dentro de la parte 2 («N de 6»), desde 1; 0 fuera de ella. */
-    val numberInSpace: Int get() = if (part == SPACE_PART) ordinal - GUIDE.ordinal + 1 else 0
+    /** Número del paso («Paso N de 8»), desde 1 entre las tarjetas; 0 en las pantallas completas. */
+    val number: Int get() = if (isCard) cards.indexOf(this) + 1 else 0
 
     companion object {
         const val SPACE_PART = 2
         private val CARD_PARTS = 1..3
 
-        /** Cuántos pasos tiene la parte 2. */
-        val spaceCount: Int get() = entries.count { it.part == SPACE_PART }
+        private val cards: List<WalkthroughStep> by lazy { entries.filter { it.isCard } }
+
+        /** Cuántos pasos tiene la guía: las tarjetas, no un valor fijo. */
+        val cardCount: Int get() = cards.size
     }
 }

@@ -35,7 +35,7 @@ import com.auroraclima.app.core.ui.v2.blockTouchesBelow
 
 /**
  * «Conoce Aurora» (pantalla 0): título, cuántos pasos y cuánto dura, los tres
- * momentos (sin números, como filas del interior) y «Empezar» (lleno) o
+ * momentos (sin números: la numeración es la de los pasos) y «Empezar» (lleno) o
  * «Ahora no» (texto, a Inicio sin guía). No se superpone a ninguna pantalla, así que
  * se ve como el interior; el estilo propio de la guía queda en las tarjetas.
  */
@@ -176,9 +176,9 @@ private fun InteriorGuideScreen(
 }
 
 /**
- * La tarjeta de un paso de las partes 1 a 3 con sus controles: «Saltar» arriba;
- * «Atrás» donde hay a dónde volver; «Siguiente» donde hay siguiente; en la parte 3,
- * «Después» en lugar de «Siguiente», porque ahí la acción es tocar la nube. Con
+ * La tarjeta de uno de los ocho pasos con sus controles: «Paso N de 8» y «Saltar»
+ * arriba; «Atrás» donde hay a dónde volver; «Siguiente» donde hay siguiente; en el
+ * último, «Después» en lugar de «Siguiente», porque ahí la acción es tocar la nube. Con
  * [confirmed] (la práctica de la parte 1 coincidió), la frase pasa a la confirmación;
  * la región viva de la tarjeta la anuncia.
  */
@@ -210,14 +210,7 @@ internal fun WalkthroughStepCard(
     )
 }
 
-/** «1/3 · Entrar», «2/3 · Tu espacio · N de 6» o «3/3 · Salir». */
+/** «Paso N de 8»: una sola numeración, la de las tarjetas. */
 @Composable
-internal fun stepTag(step: WalkthroughStep): String = when (step.part) {
-    1 -> stringResource(R.string.access_walk_tag_enter)
-    WalkthroughStep.SPACE_PART -> stringResource(
-        R.string.access_walk_tag_space,
-        step.numberInSpace,
-        WalkthroughStep.spaceCount
-    )
-    else -> stringResource(R.string.access_walk_tag_exit)
-}
+internal fun stepTag(step: WalkthroughStep): String =
+    stringResource(R.string.common_step_label, step.number, WalkthroughStep.cardCount)

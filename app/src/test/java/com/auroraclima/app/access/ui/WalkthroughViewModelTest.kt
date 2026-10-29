@@ -89,8 +89,11 @@ class WalkthroughViewModelTest {
             ),
             step
         )
-        assertEquals(6, WalkthroughStep.spaceCount)
-        assertEquals((1..6).toList(), step.filter { it.part == 2 }.map { it.numberInSpace })
+        // Una sola numeración: las ocho tarjetas de seguido; las pantallas no cuentan.
+        assertEquals(8, WalkthroughStep.cardCount)
+        assertEquals((1..8).toList(), step.filter { it.isCard }.map { it.number })
+        assertEquals(0, WalkthroughStep.OVERVIEW.number)
+        assertEquals(0, WalkthroughStep.DONE.number)
     }
 
     @Test

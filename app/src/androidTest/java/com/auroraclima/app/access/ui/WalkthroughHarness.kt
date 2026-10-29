@@ -98,13 +98,12 @@ internal fun WalkthroughViewModel.asActions() = WalkthroughActions(
     onPracticeSubmit = ::onPracticeSubmit
 )
 
-/** Etiqueta de parte y título de un paso, como los muestra la tarjeta. */
+/** Etiqueta «Paso N de 8» y título de un paso, como los muestra la tarjeta; sin etiqueta en las pantallas. */
 internal fun stepTexts(context: Context, step: WalkthroughStep): Pair<String, String> {
-    val tag = when (step.part) {
-        1 -> context.getString(R.string.access_walk_tag_enter)
-        2 -> context.getString(R.string.access_walk_tag_space, step.numberInSpace, WalkthroughStep.spaceCount)
-        3 -> context.getString(R.string.access_walk_tag_exit)
-        else -> ""
+    val tag = if (step.isCard) {
+        context.getString(R.string.common_step_label, step.number, WalkthroughStep.cardCount)
+    } else {
+        ""
     }
     return tag to context.getString(step.titleRes)
 }

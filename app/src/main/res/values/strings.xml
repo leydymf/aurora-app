@@ -147,7 +147,7 @@
     <string name="access_panel_subtitle">Tómate el tiempo que necesites.</string>
     <string name="access_panel_settings">Ajustes</string>
     <string name="access_walk_intro_title">Conoce Aurora</string>
-    <string name="access_walk_intro_sub">3 pasos. 2 minutos.</string>
+    <string name="access_walk_intro_sub">8 pasos cortos. Unos 2 minutos.</string>
     <string name="access_walk_part_enter">Entrar</string>
     <string name="access_walk_part_space">Tu espacio</string>
     <string name="access_walk_part_exit">Salir</string>
@@ -161,9 +161,6 @@
     <string name="access_walk_skip">Saltar</string>
     <string name="access_walk_later">Después</string>
     <string name="access_walk_finish">Ir a mi espacio</string>
-    <string name="access_walk_tag_enter">1/3 · Entrar</string>
-    <string name="access_walk_tag_space">2/3 · Tu espacio · %1$d de %2$d</string>
-    <string name="access_walk_tag_exit">3/3 · Salir</string>
     <string name="access_walk_enter_title">Escribe tu código de acceso</string>
     <string name="access_walk_enter_body">Así entras desde el clima.</string>
     <string name="access_walk_guide_title">Guía</string>

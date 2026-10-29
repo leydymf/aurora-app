@@ -29,7 +29,7 @@ object GuidePalette {
     /** Texto secundario. */
     val inkSoft = Color(0xFF4A4266)
 
-    /** Etiqueta de parte («2/3 · Tu espacio») y números de las listas. */
+    /** Etiqueta de paso de las tarjetas («Paso N de 8»). */
     val label = Color(0xFF5B4A9E)
 
     /** Botón de la guía: el único lleno en pantalla mientras está abierta. */
@@ -54,7 +54,7 @@ private val PatrickHand = FontFamily(Font(R.font.patrick_hand_regular, FontWeigh
 
 /**
  * La voz de las tarjetas de la guía: la letra a mano en el título y en la etiqueta de
- * parte, y el cuerpo del interior (Plex Sans) en las frases y los botones, para que se
+ * paso, y el cuerpo del interior (Plex Sans) en las frases y los botones, para que se
  * lean igual que el resto. Las pantallas completas («Conoce Aurora», «¡Listo!») no la
  * usan: van con [InteriorTypeVoice]. Todo en sp: respeta el tamaño de letra del sistema.
  */
@@ -66,8 +66,8 @@ object GuideTypeVoice {
         lineHeight = 32.sp
     )
 
-    /** Etiqueta de parte y de paso. */
-    val partLabel = TextStyle(
+    /** Etiqueta de paso («Paso N de 8»). */
+    val stepLabel = TextStyle(
         fontFamily = PatrickHand,
         fontSize = 19.sp,
         lineHeight = 24.sp
