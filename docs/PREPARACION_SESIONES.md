@@ -2,7 +2,7 @@
 
 > Para la evaluación heurística (3 a 5 evaluadoras) y las sesiones SUS (10 a 12
 > estudiantes), en uno o dos teléfonos Android propios.
-> Última revisión: 2026-10-29 (build `v0.3.4-trl4`, con la parte 1 de Cómo usar Aurora sobre la réplica del clima, «Conoce Aurora» y «¡Listo!» con el estilo del interior y una sola numeración, «Paso N de 8»).
+> Última revisión: 2026-10-30 (build `v0.3.4-trl4`, con la parte 1 de Cómo usar Aurora sobre la réplica del clima, «Conoce Aurora» y «¡Listo!» con el estilo del interior y una sola numeración, «Paso N de 8», el paso 8 con texto nuevo y «Seguridad en Aurora» en Ajustes).
 
 Cada participante debe poder hacer el **primer uso completo**: activación con el
 código de activación en el buscador de ciudades → bienvenida → consentimiento →
@@ -127,19 +127,20 @@ cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.
 shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.4.apk   # anotar: identifica el APK de las sesiones
 ```
 
-APK de `v0.3.4-trl4` generado el 2026-10-29 desde `67b91bb` (el último commit de
+APK de `v0.3.4-trl4` generado el 2026-10-30 desde `899d5f4` (el último commit de
 código; la etiqueta solo agrega documentación), tras un `clean`, con el JBR 21 de Android Studio. Es el
 build **debug**: el release no se activa en una instalación limpia (P-111).
 
 | Archivo | Tamaño | SHA-256 |
 |---|---|---|
-| `aurora-clima-0.3.4.apk` | 38 400 382 bytes (36,6 MiB) | `378bc927fb55959fd82b65fdf8d01cbab258bb7da5973e4a28c2810b9d3dc72e` |
+| `aurora-clima-0.3.4.apk` | 38 410 506 bytes (36,6 MiB) | `35982f6d967ddc50b96bcbfaff1caa6ebaa7bf85a12457eceb5fb7f30f15a9d7` |
 
-Reemplaza a los APK anteriores de la misma versión (`0ab7f06e…` y `ecaf377a…`, del
-2026-10-29, y `d058b77b…`, del 2026-10-28): si un teléfono tiene uno de esos, reinstalar.
-Cómo usar Aurora reemplazó el tutorial y el recorrido y su fuente pesa ~210 KB. Este APK
-mide 743 926 bytes menos que el `0ab7f06e…` porque se compiló tras un `clean`: el reparto
-de los `classes*.dex` del build debug depende de la compilación incremental, no del código. Hay una copia idéntica en la carpeta de sesiones
+Reemplaza a los APK anteriores de la misma versión (`378bc927…`, `0ab7f06e…` y
+`ecaf377a…`, del 2026-10-29, y `d058b77b…`, del 2026-10-28): si un teléfono tiene uno de
+esos, reinstalar. Cómo usar Aurora reemplazó el tutorial y el recorrido y su fuente pesa
+~210 KB. Desde el 2026-10-29 el APK se compila tras un `clean`, y por eso mide unos 740 KB
+menos que el `0ab7f06e…`: el reparto de los `classes*.dex` del build debug depende de la
+compilación incremental, no del código. Los dos cambios del 2026-10-30 (paso 8 y «Seguridad en Aurora») agregaron 10 124 bytes. Hay una copia idéntica en la carpeta de sesiones
 del proyecto de grado.
 
 El SHA-256 identifica **ese archivo**, no el código. El build debug no es
@@ -402,6 +403,11 @@ IANA y no acepta correo.
    barra aparece «Ese no es tu código de acceso. Inténtalo de nuevo.»; si coincide,
    la tarjeta lo confirma y la guía sigue sola. La pausa es parte del comportamiento,
    no un retraso del teléfono, y se puede avanzar con «Siguiente» sin practicar.
+8. **«Seguridad en Aurora»** (v0.3.4, Ajustes › Tu acceso): una pantalla de solo
+   lectura que resume en diez filas cómo protege la app (la nube, el código de acceso,
+   la inactividad, las capturas, las preguntas que no se guardan, el cifrado en el
+   teléfono y en la cuenta, las fotos y el borrado). Si una participante la abre, es
+   parte de la app, no un error; la facilitadora puede anotar si la encontró sola.
 
 ### 4.5 Encuadre de la sesión
 

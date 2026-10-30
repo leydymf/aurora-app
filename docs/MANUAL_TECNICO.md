@@ -598,9 +598,9 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
   `WalkthroughViewModel` lleva los diez pasos (`WalkthroughStep`). Crear el código de
   acceso lleva directo a `panel`; se retiraron las rutas `guide` y `guide_review`, y las
   clases `TutorialScreen`, `TutorialViewModel`, `HomeTour` y sus pruebas.
-  Controles: «Atrás», «Siguiente» y «Saltar»; la tarjeta del paso 8 («Toca la nube») lleva una segunda
-  frase, más pequeña (`GuideCard` admite una `note`), y «¡Listo!» cuatro recordatorios,
-  el último «Discreta» (D-1 de RF-10); en la parte 3 la acción es la nube y se
+  Controles: «Atrás», «Siguiente» y «Saltar»; «¡Listo!» lleva cuatro recordatorios,
+  el último «Discreta» (D-1 de RF-10; la frase pequeña del paso 8 se retiró el
+  2026-10-30 y con ella el parámetro `note` de `GuideCard`); en la parte 3 la acción es la nube y se
   ofrece «Después». «Siguiente» de la parte 1 permite no practicar (D-2 de RF-10).
 - **Una sola numeración y pantallas completas del interior (2026-10-29).** Las ocho
   tarjetas se numeran de seguido: la etiqueta es solo «Paso N de 8» (`common_step_label`
@@ -613,6 +613,18 @@ detalle está en el ADR 2026-10-27 de `docs/ARQUITECTURA.md`):
   el contenido se desplaza y termina antes de la nube (`reserveCloudLane`) y los botones
   quedan fijos abajo. El estilo propio de la guía (lavanda, Patrick Hand, círculo y flecha)
   queda solo en las tarjetas.
+- **«Seguridad en Aurora» (2026-10-30, RF-11).** Fila en Ajustes › Tu acceso que abre
+  `access/ui/SafetyNotesScreen.kt` (ruta `settings_notes` del grafo seguro): pantalla
+  estática, sin ViewModel, con el esquema de `PrivacyScreen` (`V2BackHeader`, `SoftCard`
+  con `IconListRow`, filas como `IconNote` en `IconNoteCard`, que comparte con «Conoce Aurora» y «¡Listo!»). Sus frases describen
+  comportamientos del código: `SessionManager` (5 min de inactividad, gracia de ida y
+  vuelta al sistema), `SecureNavigation` (`FLAG_SECURE`), `ValidateSecretCodeUseCase`,
+  `GuidanceViewModel` (nada se guarda a mitad), SQLCipher y `KeystoreMediaCipher`,
+  `PayloadCipher`/`RecoverableMediaCipher` con la DEK envuelta por la contraseña,
+  `firestore.rules` (`/users` solo para su dueña), `ImageImporter` (re-codifica sin
+  metadatos), `CaptureBuffer` y `DeleteAccountUseCase` (exige conexión). Si uno de
+  esos comportamientos cambia, hay que cambiar el texto; `SafetyNotesTextTest` ata los
+  «5 minutos» a `SessionManager`. Prueba instrumentada: `SafetyNotesScreenTest`.
 - **Réplica de la fachada en la parte 1 (2026-10-29).** `WalkthroughTypeIn.kt` pinta,
   bajo la tarjeta, la pantalla de clima en un marco redondeado con datos fijos de ejemplo
   y sin red. Para no duplicarla ni hacer que `access` importe `weather` (§2 de
