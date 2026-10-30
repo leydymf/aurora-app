@@ -44,10 +44,10 @@ de 8» (§0B.3d). El 2026-10-30 el paso 8 cambió de texto y Ajustes ganó «Seg
 | ktlint | sin violaciones | sin violaciones | |
 | Android Lint (debug) | 0 errores, 61 avisos | 0 errores, 61 avisos | |
 | Guardián del DEX (`verificarCamuflajeDex`) | 0 hallazgos nuevos; 396 870 cadenas (150 101 distintas) | 0 hallazgos nuevos; 408 313 cadenas (153 716 distintas), 49 términos, 58 excepciones, canarios en verde | |
-| APK debug de las sesiones | 38 931 365 bytes | 38 410 506 bytes (compilado tras `clean`; ver §0B.3d y §0B.3e) | `docs/PREPARACION_SESIONES.md` §2 |
+| APK debug de las sesiones | 38 931 365 bytes | 38 410 482 bytes (compilado tras `clean`; ver §0B.3d y §0B.3e) | `docs/PREPARACION_SESIONES.md` §2 |
 
-Corrida final del 2026-10-30 sobre `899d5f4`, el último commit de código de la versión
-(§0B.3e); la de `67b91bb` (§0B.3d) dio 1066, la de `d72427a` (réplica de la fachada, §0B.3c) dio 1065 y la de `fb708b8`, 1057 por variante (la corrida del 2026-10-28 sobre `784a7fd` dio las mismas cifras de pruebas; el cambio de
+Corrida final del 2026-10-30 sobre `8daea1e`, el último commit de código de la versión
+(§0B.3e; la de `899d5f4` dio las mismas cifras); la de `67b91bb` (§0B.3d) dio 1066, la de `d72427a` (réplica de la fachada, §0B.3c) dio 1065 y la de `fb708b8`, 1057 por variante (la corrida del 2026-10-28 sobre `784a7fd` dio las mismas cifras de pruebas; el cambio de
 nombre y de textos no agregó ni quitó métodos de prueba). Comando:
 `./gradlew ktlintCheck assembleDebug lint test assembleRelease`; las pruebas de JVM se
 forzaron además sin caché (`cleanTestDebugUnitTest cleanTestReleaseUnitTest test`). Las
@@ -262,9 +262,11 @@ La autora pidió dos cambios más antes de las pruebas SUS (enmienda del 2026-10
   (hecha), unificar las filas de texto fijo (`IconNote` e `IconNoteCard` en
   `access/ui/IconNotes.kt`, que ahora usan también «Conoce Aurora» y «¡Listo!») y atar los
   «5 minutos» al código (`SafetyNotesTextTest`). La auditora confirmó cada frase contra el
-  código y anotó dos sugerencias de redacción que quedan para la autora («quien administra
-  Aurora no tiene cómo abrirlos», por el residual P-62(a); y «Quien lo escriba solo verá…»,
-  que le da sujeto a la frase). También pidió sumar estos textos a P-100: son la prosa más
+  código y anotó dos sugerencias de redacción, que la autora adoptó el mismo día con sus
+  propios textos (commit `8daea1e`): «Un código de acceso equivocado» dice ahora «Quien lo
+  escriba solo verá el resultado de una búsqueda de ciudad.», y «En tu cuenta», «… Para
+  abrirlos se necesita la contraseña de tu cuenta.», sin afirmar que quien administra Aurora
+  no puede verlos, por el residual P-62(a). También pidió sumar estos textos a P-100: son la prosa más
   explícita del `resources.arsc` sobre la puerta y la salida.
 - **Corrida.** Tras `clean`, `ktlintCheck assembleDebug lint test assembleRelease` en verde:
   JVM 1068 por variante, lint 0 errores y 61 avisos, guardián del DEX 0 hallazgos.
@@ -278,7 +280,11 @@ La autora pidió dos cambios más antes de las pruebas SUS (enmienda del 2026-10
   (`seguridad-*.png` y `hoja-seguridad-letra{1,2}.png`): Ajustes con la fila nueva, la
   pantalla completa desplazada hasta el final y el paso 8. Con letra 2.0 todo se alcanza
   desplazando y la última línea termina por encima de la nube.
-- **APK.** 38 410 506 bytes, compilado tras `clean` desde `899d5f4`.
+- **Retoque de dos frases (`8daea1e`).** Tras `clean`, la corrida completa repitió las
+  mismas cifras (JVM 1068 por variante, lint 0 errores y 61 avisos, DEX 0 hallazgos), y
+  `SafetyNotesScreenTest` con `SettingsWalkthroughRowTest` dieron 4 de 4 en API 30 y en
+  API 26. Las tres revisoras dieron APROBADO.
+- **APK.** 38 410 482 bytes, compilado tras `clean` desde `8daea1e`.
 
 ### 0B.4 Corridas manuales pendientes
 

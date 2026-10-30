@@ -127,20 +127,20 @@ cp app/build/outputs/apk/debug/app-debug.apk ~/aurora-sesiones/aurora-clima-0.3.
 shasum -a 256 ~/aurora-sesiones/aurora-clima-0.3.4.apk   # anotar: identifica el APK de las sesiones
 ```
 
-APK de `v0.3.4-trl4` generado el 2026-10-30 desde `899d5f4` (el último commit de
+APK de `v0.3.4-trl4` generado el 2026-10-30 desde `8daea1e` (el último commit de
 código; la etiqueta solo agrega documentación), tras un `clean`, con el JBR 21 de Android Studio. Es el
 build **debug**: el release no se activa en una instalación limpia (P-111).
 
 | Archivo | Tamaño | SHA-256 |
 |---|---|---|
-| `aurora-clima-0.3.4.apk` | 38 410 506 bytes (36,6 MiB) | `35982f6d967ddc50b96bcbfaff1caa6ebaa7bf85a12457eceb5fb7f30f15a9d7` |
+| `aurora-clima-0.3.4.apk` | 38 410 482 bytes (36,6 MiB) | `e8a28b98264b9765aed641f7390ff8e77a5cbee322402d52255d2426a1da3559` |
 
-Reemplaza a los APK anteriores de la misma versión (`378bc927…`, `0ab7f06e…` y
+Reemplaza a los APK anteriores de la misma versión (`35982f6d…`, del 2026-10-30, y `378bc927…`, `0ab7f06e…` y
 `ecaf377a…`, del 2026-10-29, y `d058b77b…`, del 2026-10-28): si un teléfono tiene uno de
 esos, reinstalar. Cómo usar Aurora reemplazó el tutorial y el recorrido y su fuente pesa
 ~210 KB. Desde el 2026-10-29 el APK se compila tras un `clean`, y por eso mide unos 740 KB
 menos que el `0ab7f06e…`: el reparto de los `classes*.dex` del build debug depende de la
-compilación incremental, no del código. Los dos cambios del 2026-10-30 (paso 8 y «Seguridad en Aurora») agregaron 10 124 bytes. Hay una copia idéntica en la carpeta de sesiones
+compilación incremental, no del código. Los cambios del 2026-10-30 (paso 8 y «Seguridad en Aurora») agregaron 10 100 bytes. Hay una copia idéntica en la carpeta de sesiones
 del proyecto de grado.
 
 El SHA-256 identifica **ese archivo**, no el código. El build debug no es
