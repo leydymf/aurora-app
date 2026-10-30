@@ -238,7 +238,6 @@ internal fun WalkthroughStepCard(
         title = stringResource(step.titleRes),
         body = stringResource(if (confirmed) R.string.access_walk_practice_done else step.bodyRes),
         modifier = modifier,
-        note = if (step == WalkthroughStep.CLOUD) stringResource(R.string.access_walk_cloud_idle) else null,
         primary = step.next?.let { GuideAction(stringResource(R.string.access_walk_next), actions.onNext) },
         back = step.previous?.let { GuideAction(stringResource(R.string.access_walk_back), actions.onBack) },
         secondary = if (step == WalkthroughStep.CLOUD) {

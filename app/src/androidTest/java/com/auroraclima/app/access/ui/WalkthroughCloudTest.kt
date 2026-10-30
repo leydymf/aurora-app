@@ -108,15 +108,15 @@ class WalkthroughCloudTest(
             }
         }
 
-        // Con letra grande «Salir» y «¡Listo!» siguen desplazándose: la frase de más
-        // (D-1 de RF-10) y el último recordatorio se alcanzan y el botón, fijo abajo en
-        // el carril de la nube, queda a la vista y fuera de ella.
+        // Con letra grande «Salir» y «¡Listo!» siguen desplazándose: la frase de la
+        // tarjeta y el último recordatorio se alcanzan y el botón, fijo abajo en el
+        // carril de la nube, queda a la vista y fuera de ella.
         if (step == WalkthroughStep.CLOUD) {
             // «Después» queda fijo al pie y «Saltar» arriba, antes de desplazar la tarjeta.
             listOf(R.string.access_walk_later, R.string.access_walk_skip).forEach {
                 composeRule.onNode(hasText(context.getString(it))).assertIsDisplayed()
             }
-            composeRule.onNode(hasText(context.getString(R.string.access_walk_cloud_idle)))
+            composeRule.onNode(hasText(context.getString(R.string.access_walk_cloud_body)))
                 .performScrollTo().assertIsDisplayed()
             composeRule.onNode(hasText(context.getString(R.string.access_walk_later))).assertIsDisplayed()
         }

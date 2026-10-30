@@ -176,8 +176,7 @@
     <string name="access_walk_settings_title">Ajustes</string>
     <string name="access_walk_settings_body">Cambia tu código de acceso o vuelve a ver cómo usar Aurora.</string>
     <string name="access_walk_cloud_title">Toca la nube</string>
-    <string name="access_walk_cloud_body">Vuelves al clima al instante. Escribe tu código de acceso para terminar.</string>
-    <string name="access_walk_cloud_idle">Si la dejas quieta, también vuelve sola.</string>
+    <string name="access_walk_cloud_body">Al tocar la nube, regresas al clima al instante. Para entrar otra vez, escribe tu código de acceso en el buscador.</string>
     <string name="access_walk_done_title">¡Listo!</string>
     <string name="access_walk_done_back">Saliste y volviste. Así de fácil.</string>
     <string name="access_walk_done_early">Para recordar:</string>

@@ -80,13 +80,6 @@ object GuideTypeVoice {
         lineHeight = 22.sp
     )
 
-    /** Frase secundaria de una tarjeta, más pequeña que [body]. */
-    val note = TextStyle(
-        fontFamily = PlexSans,
-        fontSize = 13.sp,
-        lineHeight = 19.sp
-    )
-
     /** Texto de los botones y del enlace «Saltar». */
     val action = TextStyle(
         fontFamily = PlexSans,

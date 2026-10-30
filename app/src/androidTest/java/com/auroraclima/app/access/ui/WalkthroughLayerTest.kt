@@ -118,8 +118,12 @@ class WalkthroughLayerTest {
         composeRule.onAllNodesWithText(text(R.string.access_walk_next)).assertCountEquals(0)
         composeRule.onNodeWithText(text(R.string.access_walk_later)).assertIsDisplayed()
         composeRule.onNodeWithText(text(R.string.access_walk_skip)).assertIsDisplayed()
-        // La segunda frase de «Salir» (D-1 de RF-10).
-        composeRule.onNodeWithText("Si la dejas quieta, también vuelve sola.").assertIsDisplayed()
+        // La frase del paso 8 (2026-10-30); la de la inactividad pasó a «Seguridad en Aurora».
+        composeRule.onNodeWithText(
+            "Al tocar la nube, regresas al clima al instante. " +
+                "Para entrar otra vez, escribe tu código de acceso en el buscador."
+        ).assertIsDisplayed()
+        composeRule.onAllNodesWithText("Si la dejas quieta", substring = true).assertCountEquals(0)
 
         composeRule.onNodeWithText(text(R.string.access_walk_back)).performClick()
         composeRule.waitForIdle()

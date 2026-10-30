@@ -56,7 +56,7 @@ class GuideAction(val label: String, val onClick: () -> Unit)
 
 /**
  * Tarjeta de un paso: la etiqueta de paso con el enlace [skip] («Saltar») en la
- * esquina final, el título, la frase (y, si hay, una [note] más pequeña debajo) y la fila de botones: [back] y [secondary] como
+ * esquina final, el título, la frase y la fila de botones: [back] y [secondary] como
  * texto, [primary] lleno. Título y frase son un nodo con región viva: TalkBack los lee
  * juntos en cada paso. Con letra grande los botones pasan a otra línea solo si no caben.
  * Si la tarjeta tiene un alto máximo, todo menos los botones se desplaza dentro de ella
@@ -70,7 +70,6 @@ fun GuideCard(
     title: String,
     body: String,
     modifier: Modifier = Modifier,
-    note: String? = null,
     primary: GuideAction? = null,
     back: GuideAction? = null,
     secondary: GuideAction? = null,
@@ -99,7 +98,7 @@ fun GuideCard(
         ) {
             GuideCardHeader(tag = tag, skip = skip)
             Spacer(modifier = Modifier.height(4.dp))
-            GuideCardText(title = title, body = body, note = note)
+            GuideCardText(title = title, body = body)
         }
         if (primary != null || back != null || secondary != null) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -129,9 +128,9 @@ private fun GuideCardHeader(tag: String, skip: GuideAction?) {
     }
 }
 
-/** Título, frase y nota opcional: un solo nodo con región viva, que TalkBack lee junto. */
+/** Título y frase: un solo nodo con región viva, que TalkBack lee junto. */
 @Composable
-private fun GuideCardText(title: String, body: String, note: String?) {
+private fun GuideCardText(title: String, body: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -145,10 +144,6 @@ private fun GuideCardText(title: String, body: String, note: String?) {
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(text = body, style = GuideTypeVoice.body, color = GuidePalette.inkSoft)
-        if (note != null) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = note, style = GuideTypeVoice.note, color = GuidePalette.inkSoft)
-        }
     }
 }
 
