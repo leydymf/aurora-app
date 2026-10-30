@@ -1,7 +1,5 @@
 package com.auroraclima.app.access.ui
 
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,14 +22,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.auroraclima.app.R
 import com.auroraclima.app.core.security.reserveCloudLane
-import com.auroraclima.app.core.ui.v2.AccentPair
 import com.auroraclima.app.core.ui.v2.CloudLaneBar
 import com.auroraclima.app.core.ui.v2.CloudLaneStack
 import com.auroraclima.app.core.ui.v2.GuideAction
 import com.auroraclima.app.core.ui.v2.GuideCard
-import com.auroraclima.app.core.ui.v2.IconListRow
 import com.auroraclima.app.core.ui.v2.InteriorTypeVoice
-import com.auroraclima.app.core.ui.v2.SoftCard
 import com.auroraclima.app.core.ui.v2.V2Icons
 import com.auroraclima.app.core.ui.v2.V2Palette
 import com.auroraclima.app.core.ui.v2.V2PrimaryButton
@@ -63,7 +58,7 @@ internal fun OverviewScreen(onStart: () -> Unit, onNotNow: () -> Unit) {
             )
         }
     ) {
-        GuideRows(OVERVIEW_ROWS)
+        IconNoteCard(OVERVIEW_ROWS)
     }
 }
 
@@ -85,33 +80,25 @@ internal fun DoneScreen(reachedEarly: Boolean, onFinish: () -> Unit) {
             }
         }
     ) {
-        GuideRows(DONE_ROWS)
+        IconNoteCard(DONE_ROWS)
     }
 }
 
-/** Una fila de las pantallas completas: icono con su acento fijo (D2), nombre y frase. */
-private class GuideRow(
-    @DrawableRes val iconRes: Int,
-    val accent: AccentPair,
-    @StringRes val title: Int,
-    @StringRes val body: Int
-)
-
 /** Los tres momentos de la portada, sin números: la numeración es la de los pasos. */
 private val OVERVIEW_ROWS = listOf(
-    GuideRow(
+    IconNote(
         iconRes = V2Icons.code,
         accent = V2Palette.accentRecognize,
         title = R.string.access_walk_part_enter,
         body = R.string.access_walk_intro_enter
     ),
-    GuideRow(
+    IconNote(
         iconRes = V2Icons.home,
         accent = V2Palette.accentGroup,
         title = R.string.access_walk_part_space,
         body = R.string.access_walk_intro_space
     ),
-    GuideRow(
+    IconNote(
         iconRes = V2Icons.cloud,
         accent = V2Palette.accentCloud,
         title = R.string.access_walk_part_exit,
@@ -121,46 +108,31 @@ private val OVERVIEW_ROWS = listOf(
 
 /** Los cuatro recordatorios de «¡Listo!». */
 private val DONE_ROWS = listOf(
-    GuideRow(
+    IconNote(
         iconRes = V2Icons.code,
         accent = V2Palette.accentRecognize,
         title = R.string.access_walk_part_enter,
         body = R.string.access_walk_recall_enter
     ),
-    GuideRow(
+    IconNote(
         iconRes = V2Icons.cloud,
         accent = V2Palette.accentCloud,
         title = R.string.access_walk_part_exit,
         body = R.string.access_walk_recall_exit
     ),
-    GuideRow(
+    IconNote(
         iconRes = V2Icons.settings,
         accent = V2Palette.accentGroup,
         title = R.string.access_walk_part_recall,
         body = R.string.access_walk_recall_review
     ),
-    GuideRow(
+    IconNote(
         iconRes = V2Icons.info,
         accent = V2Palette.accentGroup,
         title = R.string.access_walk_part_discreet,
         body = R.string.access_walk_recall_discreet
     )
 )
-
-/** Las filas en una tarjeta blanca del interior. */
-@Composable
-private fun GuideRows(rows: List<GuideRow>) {
-    SoftCard {
-        rows.forEach { row ->
-            IconListRow(
-                iconRes = row.iconRes,
-                accent = row.accent,
-                title = stringResource(row.title),
-                supportingText = stringResource(row.body)
-            )
-        }
-    }
-}
 
 /**
  * Pantalla completa de la guía con el aspecto del interior: tapa la app y se traga

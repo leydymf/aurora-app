@@ -48,6 +48,7 @@ import com.auroraclima.app.core.ui.v2.V2PrimaryButton
  * Matices por significado (regla 1, anexo v2-29 normativo por D7): llave lila
  * para el código de acceso, llave neutra para la contraseña de la cuenta
  * (fila conservada por D6 aunque el mockup la omita), libro azul de la guía de Aurora,
+ * información neutra para «Seguridad en Aurora»,
  * escudo AZUL de protección para «qué guardamos» (el anexo prima sobre el
  * verdoso del mockup), puerta arena para cerrar sesión y papelera rosa para
  * eliminar. «Cambiar código secreto» del mockup sigue vedado: «Cambiar tu
@@ -59,6 +60,7 @@ fun SettingsScreen(
     onChangeCode: () -> Unit,
     onChangePassword: () -> Unit,
     onReplayWalkthrough: () -> Unit,
+    onOpenSafetyNotes: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
@@ -118,6 +120,14 @@ fun SettingsScreen(
                 accent = V2Palette.accentProtection,
                 title = stringResource(R.string.access_settings_walkthrough),
                 onClick = onReplayWalkthrough,
+                trailing = { RowChevron() }
+            )
+            // Cómo protege Aurora a la usuaria, en frases cortas (v0.3.4).
+            IconListRow(
+                iconRes = V2Icons.info,
+                accent = V2Palette.accentGroup,
+                title = stringResource(R.string.access_notes_title),
+                onClick = onOpenSafetyNotes,
                 trailing = { RowChevron() }
             )
         }

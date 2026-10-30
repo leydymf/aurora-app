@@ -23,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.auroraclima.app.access.ui.ChangeCodeRoute
 import com.auroraclima.app.access.ui.CodeSetupRoute
 import com.auroraclima.app.access.ui.EntryTransitionRoute
+import com.auroraclima.app.access.ui.SafetyNotesScreen
 import com.auroraclima.app.access.ui.SettingsScreen
 import com.auroraclima.app.accounts.ui.ChangePasswordRoute
 import com.auroraclima.app.accounts.ui.ConsentRoute
@@ -256,6 +257,7 @@ fun AuroraApp(sessionManager: SessionManager) {
                                 ?.set(WALKTHROUGH_REPLAY_KEY, true)
                             navController.popBackStack()
                         },
+                        onOpenSafetyNotes = { navController.navigate(SETTINGS_NOTES_ROUTE) },
                         onOpenPrivacy = { navController.navigate(PRIVACY_ROUTE) },
                         onSignOut = signOutViewModel::onSignOut,
                         onDeleteAccount = { navController.navigate(SETTINGS_ACCOUNT_ROUTE) }
@@ -286,6 +288,10 @@ fun AuroraApp(sessionManager: SessionManager) {
                         onPasswordChanged = { navController.popBackStack() },
                         onBack = { navController.popBackStack() }
                     )
+                }
+                // «Seguridad en Aurora» (v0.3.4): cómo protege la app, en solo lectura.
+                screen(SETTINGS_NOTES_ROUTE) {
+                    SafetyNotesScreen(onBack = { navController.popBackStack() })
                 }
                 // Relectura del acuerdo de datos (RF-17 criterio 2, P-16): el
                 // mismo texto del primer uso, en solo lectura.
@@ -512,6 +518,7 @@ private const val ENTRY_ROUTE = "entry"
 private const val PANEL_ROUTE = "panel"
 private const val SETTINGS_ROUTE = "settings"
 private const val PRIVACY_ROUTE = "privacy"
+private const val SETTINGS_NOTES_ROUTE = "settings_notes"
 private const val SETTINGS_CODE_ROUTE = "settings_code"
 private const val SETTINGS_PASSWORD_ROUTE = "settings_password"
 private const val SETTINGS_ACCOUNT_ROUTE = "settings_account"

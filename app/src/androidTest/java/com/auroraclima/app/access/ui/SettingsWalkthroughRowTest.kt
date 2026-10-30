@@ -39,6 +39,7 @@ class SettingsWalkthroughRowTest {
                     onChangeCode = {},
                     onChangePassword = {},
                     onReplayWalkthrough = { replays++ },
+                    onOpenSafetyNotes = {},
                     onOpenPrivacy = {},
                     onSignOut = {},
                     onDeleteAccount = {}
