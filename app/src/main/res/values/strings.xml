@@ -115,7 +115,7 @@
     <string name="access_notes_enter_title">Para entrar</string>
     <string name="access_notes_enter_body">Escribe tu código de acceso en el buscador del clima.</string>
     <string name="access_notes_wrong_title">Un código de acceso equivocado</string>
-    <string name="access_notes_wrong_body">Solo verá el resultado de una búsqueda de ciudad.</string>
+    <string name="access_notes_wrong_body">Quien lo escriba solo verá el resultado de una búsqueda de ciudad.</string>
     <string name="access_notes_idle_title">Si dejas de usarla</string>
     <string name="access_notes_idle_body">A los 5 minutos sin uso, o si pasas a otra app, Aurora regresa sola al clima. Si sales para tomar una foto o elegir un archivo, te espera hasta 5 minutos.</string>
     <string name="access_notes_captures_title">Capturas de pantalla</string>
@@ -125,7 +125,7 @@
     <string name="access_notes_device_title">En este teléfono</string>
     <string name="access_notes_device_body">Tus registros y archivos se guardan cifrados en este teléfono.</string>
     <string name="access_notes_account_title">En tu cuenta</string>
-    <string name="access_notes_account_body">Tus registros y archivos se cifran en este teléfono antes de subir a tu cuenta. Solo se pueden abrir con la contraseña de tu cuenta; quien administra Aurora no puede verlos.</string>
+    <string name="access_notes_account_body">Tus registros y archivos se cifran en este teléfono antes de subir a tu cuenta. Para abrirlos se necesita la contraseña de tu cuenta.</string>
     <string name="access_notes_files_title">Tus archivos</string>
     <string name="access_notes_files_body">Aurora guarda tus fotos sin la ubicación; el original de tu galería no cambia. Las que tomas directamente desde Aurora con la cámara no van a la galería del celular, aunque algunos celulares guardan su propia copia.</string>
     <string name="access_notes_delete_title">Si eliminas tu cuenta</string>
